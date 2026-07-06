@@ -459,6 +459,13 @@ const IAddressBook=({s=18,c="currentColor"})=><Svg d="M16 2H4a2 2 0 00-2 2v16a2 
 const IChart =({s=18,c="currentColor"})=><Svg d="M3 3v18h18" d2="M18 17V9M13 17V5M8 17v-3" s={s} c={c}/>;
 const IBank  =({s=18,c="currentColor"})=><Svg d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" s={s} c={c}/>;
 const ISearch=({s=18,c="currentColor"})=><Svg d="M11 19a8 8 0 100-16 8 8 0 000 16z" d2="M21 21l-4.35-4.35" s={s} c={c}/>;
+
+// Priority config
+const PRIORITY={
+  high:  {label:"Alta",    color:"#ef4444", bg:"#ef444418", border:"#ef444444", next:"medium"},
+  medium:{label:"Média",   color:"#f59e0b", bg:"#f59e0b18", border:"#f59e0b44", next:"low"},
+  low:   {label:"Baixa",   color:"#6b7280", bg:"#6b728018", border:"#6b728044", next:"high"},
+};
 const IFileText=({s=18,c="currentColor"})=><Svg d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" d2="M14 2v6h6M16 13H8M16 17H8M10 9H8" s={s} c={c}/>;
 const ITrendUp=({s=16,c="currentColor"})=><Svg d="M23 6l-9.5 9.5-5-5L1 18" d2="M17 6h6v6" s={s} c={c}/>;
 
@@ -880,6 +887,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
             {mechs.length>0&&<span style={{color:B.orange}}>🔧 {mechs.map(m=>m.name).join(", ")}</span>}
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10}}>{sc.label}</span>
+            {(()=>{const p=PRIORITY[vehicle.priority||"medium"];return <span style={{background:p.bg,border:`1px solid ${p.border}`,borderRadius:5,padding:"0px 6px",color:p.color,fontWeight:700,fontSize:10}}>▲ {p.label}</span>;})()}
             {photos.length>0&&<span style={{color:B.purple}}>📷 {photos.length}</span>}
           </div>
           {vts.length>0&&<ProgressBar value={done} max={vts.length}/>}
@@ -899,7 +907,15 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 
       {/* Button bar — 4 per row, always visible */}
       <div style={{padding:"6px 10px",background:B.gray800,borderBottom:`1px solid ${B.gray700}66`,display:"flex",flexWrap:"wrap",gap:4}} onClick={e=>e.stopPropagation()}>
-        {/* Row 1 — always shown */}
+        {/* Priority button — always visible when managerMode */}
+        {managerMode&&(()=>{
+          const p=PRIORITY[vehicle.priority||"medium"];
+          const cycle=()=>onUpdateVehicle(vehicle.id,{priority:p.next});
+          return (<button onClick={cycle} title="Clique para alternar prioridade" style={{background:p.bg,border:`1px solid ${p.border}`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:p.color,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+            ▲ {p.label}
+          </button>);
+        })()}
+        {/* Row 1 */}
         {managerMode&&<button onClick={doPDF} disabled={pdfLoading} style={{background:pdfLoading?B.gray700:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:pdfLoading?"wait":"pointer",color:pdfLoading?B.gray400:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           <IFileText s={12} c={pdfLoading?B.gray400:B.amber}/>{pdfLoading?"Gerando…":"PDF"}
         </button>}
@@ -1011,7 +1027,12 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   const [confirmDel,setConfirmDel]=useState(false);
   const [model,setMod]=useState(""); const [plate,setPlate]=useState("");
   const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id) && v.status!=="ready")]
-    .sort((a,b)=>(a.status==="paused"?1:0)-(b.status==="paused"?1:0));
+    .sort((a,b)=>{
+    const pri={high:0,medium:1,low:2};
+    const pA=pri[a.priority||"medium"], pB=pri[b.priority||"medium"];
+    if(pA!==pB) return pA-pB;
+    return (a.status==="paused"?1:0)-(b.status==="paused"?1:0);
+  });
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
   const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase());setMod("");setPlate("");setSF(false);};;
@@ -2199,7 +2220,12 @@ function MechanicLoginScreen({employees,onLogin}) {
 // ─── Mechanic Portal (filtered view for logged-in mechanic) ──────────────────
 function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onLogout}) {
   const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id) && v.status!=="ready")]
-    .sort((a,b)=>(a.status==="paused"?1:0)-(b.status==="paused"?1:0));
+    .sort((a,b)=>{
+    const pri={high:0,medium:1,low:2};
+    const pA=pri[a.priority||"medium"], pB=pri[b.priority||"medium"];
+    if(pA!==pB) return pA-pB;
+    return (a.status==="paused"?1:0)-(b.status==="paused"?1:0);
+  });
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
   return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>

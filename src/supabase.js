@@ -154,7 +154,7 @@ const mapPaymentIn = (p) => ({
 export const db = {
   // Load everything at once
   async loadAll() {
-    const [emp, cli, veh, tsk, stk, set, pay, pur, vmec, vown] = await Promise.all([
+    const [emp, cli, veh, tsk, stk, set, pay, pur, vmec, vown, osh] = await Promise.all([
       supabase.from("employees").select("*").order("created_at"),
       supabase.from("clients").select("*").order("created_at"),
       supabase.from("vehicles").select("*").order("created_at"),
@@ -165,14 +165,13 @@ export const db = {
       supabase.from("stock_purchases").select("*").order("purchase_date", { ascending: false }),
       supabase.from("vehicle_mechanics").select("*"),
       supabase.from("vehicle_owners").select("*").order("started_at"),
+      supabase.from("os_history").select("*").order("delivered_at", { ascending: false }),
     ]);
-    // Build mechanicIds map: vehicleId → [employeeId, ...]
     const mechMap = {};
     (vmec.data || []).forEach(r => {
       if (!mechMap[r.vehicle_id]) mechMap[r.vehicle_id] = [];
       mechMap[r.vehicle_id].push(r.employee_id);
     });
-    // Build currentClientId from vehicle_owners (is_current = true)
     const ownerMap = {};
     (vown.data || []).forEach(r => {
       if (r.is_current) ownerMap[r.vehicle_id] = r.client_id;
@@ -200,6 +199,7 @@ export const db = {
       payments: (pay.data || []).map(mapPaymentIn),
       stockPurchases: (pur.data || []).map(mapPurchaseIn),
       vehicleOwners: vown.data || [],
+      osHistory: osh.data || [],
     };
   },
 
@@ -277,22 +277,49 @@ export const db = {
 
   // Vehicle owner transfer
   async transferVehicleOwner(vehicleId, newClientId) {
-    // Close current owner record
     await supabase.from("vehicle_owners")
       .update({ ended_at: new Date().toISOString(), is_current: false })
       .eq("vehicle_id", vehicleId).eq("is_current", true);
-    // Open new owner record
     const { error } = await supabase.from("vehicle_owners").insert({
       vehicle_id: vehicleId, client_id: newClientId,
       started_at: new Date().toISOString(), is_current: true,
     });
     if (error) throw error;
-    // Keep legacy column in sync
     await supabase.from("vehicles").update({ client_id: newClientId }).eq("id", vehicleId);
   },
 
+  // Archive current OS to history and reset vehicle for next OS
+  async archiveAndResetVehicle(vehicleId, historyRecord) {
+    // 1) Save OS snapshot to os_history
+    const { error: hErr } = await supabase.from("os_history").insert({
+      vehicle_id: vehicleId,
+      os_number: historyRecord.osNumber,
+      client_id: historyRecord.clientId,
+      mechanic_ids: historyRecord.mechanicIds,
+      entered_at: historyRecord.enteredAt,
+      delivered_at: historyRecord.deliveredAt,
+      total_paused_ms: historyRecord.totalPausedMs || 0,
+      tasks_snapshot: historyRecord.tasksSnapshot,
+      total_value: historyRecord.totalValue || 0,
+    });
+    if (hErr) throw hErr;
 
-  async addTask(t) {
+    // 2) Delete all current tasks for this vehicle
+    await supabase.from("tasks").delete().eq("vehicle_id", vehicleId);
+
+    // 3) Reset vehicle: clear timers, os_number, status — keep model/plate/client/mechanics
+    const { error: vErr } = await supabase.from("vehicles").update({
+      entered_at: null,
+      paused_at: null,
+      total_paused_ms: 0,
+      status: "active",
+      os_number: null,
+      priority: "medium",
+    }).eq("id", vehicleId);
+    if (vErr) throw vErr;
+  },
+
+
     const { data, error } = await supabase.from("tasks").insert(mapTaskOut(t)).select().single();
     if (error) throw error;
     return mapTaskIn(data);

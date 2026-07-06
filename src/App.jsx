@@ -20,9 +20,9 @@ const fmtBRL=n  => `R$ ${fmtR2(n)}`;
 const fmtOS  =n  => n!=null ? `OS-${String(n).padStart(3,"0")}` : "";
 
 // Returns elapsed time string + urgency color since a vehicle entered the shop
-function elapsedTime(enteredAt) {
+function elapsedTime(enteredAt, endMs) {
   if (!enteredAt) return null;
-  const ms = Date.now() - new Date(enteredAt).getTime();
+  const ms = (endMs||Date.now()) - new Date(enteredAt).getTime();
   if (ms < 0) return null;
   const totalMins = Math.floor(ms / 60000);
   const totalHrs  = Math.floor(totalMins / 60);
@@ -1749,7 +1749,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 }
 
 // ─── Vehicles Tab ─────────────────────────────────────────────────────────────
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[]}) {
   const [search,setSearch]=useState("");
   const [now,setNow]=useState(Date.now());
 
@@ -1793,24 +1793,29 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
         <div style={{fontSize:13}}>Veículos são criados na aba <b style={{color:B.orange}}>Mecânicos</b>.</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now}/>)}
+      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)}/>)}
     </div>}
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[]}) {
   const [open,setOpen]=useState(false);
+  const [showHistory,setShowHistory]=useState(false);
   const [editEntry,setEditEntry]=useState(false);
   const [entryInput,setEntryInput]=useState(vehicle.enteredAt?new Date(vehicle.enteredAt).toISOString().slice(0,16):"");
 
   const vts    = tasks.filter(t=>t.vehicleId===vehicle.id);
   const done   = vts.filter(t=>t.done);
   const pending= vts.filter(t=>!t.done);
-  const emp    = employees.find(e=>e.id===vehicle.employeeId);
   const cli    = clients.find(c=>c.id===vehicle.clientId);
-  const elapsed= vehicle.enteredAt ? elapsedTime(vehicle.enteredAt) : null;
-  const total  = vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
-  const doneCost=done.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+  const hasActiveOS = !!vehicle.enteredAt || vts.length>0;
+
+  // Timer: if delivered but not yet reset (deliveredAt set, enteredAt still set), freeze at deliveredAt
+  const timerEndMs = vehicle.deliveredAt ? new Date(vehicle.deliveredAt).getTime() : now;
+  const elapsed = vehicle.enteredAt ? elapsedTime(vehicle.enteredAt, timerEndMs) : null;
+
+  const total   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+  const doneCost= done.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
 
   const saveEntry=()=>{
     const val=entryInput?new Date(entryInput).toISOString():null;
@@ -1818,6 +1823,9 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
     setEditEntry(false);
   };
   const clearEntry=()=>{ onUpdateVehicle(vehicle.id,{enteredAt:null}); setEntryInput(""); setEditEntry(false); };
+
+  // Sort osHistory newest first
+  const sortedHistory=[...osHistory].sort((a,b)=>new Date(b.delivered_at||0)-new Date(a.delivered_at||0));
 
   return (<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
     {/* Header row */}
@@ -1832,21 +1840,25 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
           <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
           {vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>}
           {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
-          {emp&&<span style={{color:B.orange}}>🔧 {emp.name}</span>}
+          {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}>📋 {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
         </div>
         {vts.length>0&&<ProgressBar value={done.length} max={vts.length}/>}
       </div>
 
-      {/* Elapsed time badge */}
+      {/* Timer badge */}
       <div style={{flexShrink:0,textAlign:"right",marginRight:4}}>
         {elapsed
           ?<div style={{background:`${elapsed.color}18`,border:`1px solid ${elapsed.color}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
               <div style={{fontSize:9,color:elapsed.color,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Na oficina</div>
               <div style={{fontSize:13,fontWeight:800,color:elapsed.color}}>{elapsed.label}</div>
             </div>
-          :<button onClick={e=>{e.stopPropagation();setEditEntry(true);}} style={{background:B.gray700,border:`1px dashed ${B.gray600}`,borderRadius:8,padding:"4px 10px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:600}}>
-              + Registrar entrada
-            </button>}
+          :!hasActiveOS&&<div style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
+              <div style={{fontSize:9,color:B.green,fontWeight:700}}>Disponível</div>
+              <div style={{fontSize:10,color:B.gray400}}>Sem OS ativa</div>
+            </div>}
+        {!elapsed&&hasActiveOS&&<button onClick={e=>{e.stopPropagation();setEditEntry(true);}} style={{background:B.gray700,border:`1px dashed ${B.gray600}`,borderRadius:8,padding:"4px 10px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:600}}>
+          + Registrar entrada
+        </button>}
       </div>
 
       {/* Task summary */}
@@ -1862,73 +1874,125 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
     {/* Expanded content */}
     {open&&<div style={{padding:"14px 16px"}}>
 
-      {/* Entry time editor */}
-      {(editEntry||vehicle.enteredAt)&&<div style={{marginBottom:14,padding:"10px 14px",background:B.gray900,borderRadius:10,border:`1px solid ${B.gray700}`}}>
-        <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>📅 Data/hora de entrada na oficina</div>
-        {editEntry
-          ?<div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-              <input value={entryInput} onChange={e=>setEntryInput(e.target.value)} type="datetime-local"
-                style={{flex:"1 1 180px",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-              <button onClick={saveEntry} style={{padding:"7px 14px",borderRadius:7,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
-              {vehicle.enteredAt&&<button onClick={clearEntry} style={{padding:"7px 12px",borderRadius:7,background:"transparent",border:`1px solid ${B.red}44`,color:B.red,fontSize:12,cursor:"pointer"}}>Remover</button>}
-              <button onClick={()=>setEditEntry(false)} style={{padding:"7px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>Cancelar</button>
-            </div>
-          :<div style={{display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontSize:12.5,color:B.white,fontWeight:600}}>
-                {new Date(vehicle.enteredAt).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
-              </span>
-              {elapsed&&<span style={{fontSize:12,fontWeight:700,color:elapsed.color}}>— {elapsed.label} atrás</span>}
-              <button onClick={()=>{setEntryInput(new Date(vehicle.enteredAt).toISOString().slice(0,16));setEditEntry(true);}} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray500,display:"flex",alignItems:"center",gap:3,fontSize:11}}>
-                <IEdit s={11}/>Editar
-              </button>
-            </div>}
+      {/* ── Active OS ── */}
+      {hasActiveOS&&<>
+        {/* Entry time */}
+        {(editEntry||vehicle.enteredAt)&&<div style={{marginBottom:14,padding:"10px 14px",background:B.gray900,borderRadius:10,border:`1px solid ${B.gray700}`}}>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>📅 Data/hora de entrada na oficina</div>
+          {editEntry
+            ?<div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                <input value={entryInput} onChange={e=>setEntryInput(e.target.value)} type="datetime-local"
+                  style={{flex:"1 1 180px",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+                <button onClick={saveEntry} style={{padding:"7px 14px",borderRadius:7,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
+                {vehicle.enteredAt&&<button onClick={clearEntry} style={{padding:"7px 12px",borderRadius:7,background:"transparent",border:`1px solid ${B.red}44`,color:B.red,fontSize:12,cursor:"pointer"}}>Remover</button>}
+                <button onClick={()=>setEditEntry(false)} style={{padding:"7px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+              </div>
+            :<div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:12.5,color:B.white,fontWeight:600}}>
+                  {new Date(vehicle.enteredAt).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+                </span>
+                {elapsed&&<span style={{fontSize:12,fontWeight:700,color:elapsed.color}}>— {elapsed.label} atrás</span>}
+                <button onClick={()=>{setEntryInput(new Date(vehicle.enteredAt).toISOString().slice(0,16));setEditEntry(true);}} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray500,display:"flex",alignItems:"center",gap:3,fontSize:11}}>
+                  <IEdit s={11}/>Editar
+                </button>
+              </div>}
+        </div>}
+
+        {!vehicle.enteredAt&&!editEntry&&<button onClick={()=>setEditEntry(true)} style={{marginBottom:14,width:"100%",padding:"8px 0",borderRadius:8,background:"transparent",border:`1px dashed ${B.orange}66`,color:B.orange,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+          <IClock s={13} c={B.orange}/>Registrar data/hora de entrada na oficina
+        </button>}
+
+        {/* Pending services */}
+        {pending.length>0&&<>
+          <div style={{fontSize:10,color:B.amber,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>⏳ Serviços pendentes ({pending.length})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12}}>
+            {pending.map(t=>(
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 10px",background:`${B.amber}11`,border:`1px solid ${B.amber}33`,borderRadius:7}}>
+                <div style={{width:8,height:8,borderRadius:99,background:B.amber,flexShrink:0}}/>
+                <span style={{fontSize:12.5,color:B.gray200,flex:1}}>{t.label}</span>
+                {taskCost(t,defaultRate).total>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>{fmtBRL(taskCost(t,defaultRate).total)}</span>}
+              </div>))}
+          </div>
+        </>}
+
+        {/* Completed services */}
+        {done.length>0&&<>
+          <div style={{fontSize:10,color:B.green,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>✅ Concluídos ({done.length})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:8}}>
+            {done.map(t=>{
+              const tc=taskCost(t,defaultRate);
+              return (<div key={t.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:7}}>
+                <ICheck s={13} c={B.green}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12.5,color:B.gray200,fontWeight:600}}>{t.label}</div>
+                  {(t.materials||[]).length>0&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>
+                    {t.materials.map((m,i)=><span key={i} style={{marginRight:8}}>🔩 {m.name}{(m.qty||1)>1?` ×${m.qty}`:""}</span>)}
+                  </div>}
+                </div>
+                {tc.total>0&&<span style={{fontSize:11,fontWeight:700,color:B.green,flexShrink:0}}>{fmtBRL(tc.total)}</span>}
+              </div>);
+            })}
+          </div>
+          {doneCost>0&&<div style={{marginBottom:12,padding:"7px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:12,color:B.gray400}}>Total OS atual</span>
+            <span style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(doneCost)}</span>
+          </div>}
+        </>}
+
+        {vts.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:B.gray400,fontSize:13}}>Nenhum serviço registrado nesta OS ainda.</div>}
+      </>}
+
+      {/* No active OS */}
+      {!hasActiveOS&&<div style={{textAlign:"center",padding:"16px 0",color:B.gray400}}>
+        <div style={{fontSize:22,marginBottom:4}}>✅</div>
+        <div style={{fontWeight:600,color:B.gray200,fontSize:13}}>Veículo disponível para nova OS</div>
+        <div style={{fontSize:12,color:B.gray500,marginTop:2}}>Registre a entrada na aba Mecânicos para iniciar nova OS</div>
       </div>}
 
-      {!vehicle.enteredAt&&!editEntry&&<button onClick={()=>setEditEntry(true)} style={{marginBottom:14,width:"100%",padding:"8px 0",borderRadius:8,background:"transparent",border:`1px dashed ${B.orange}66`,color:B.orange,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-        <IClock s={13} c={B.orange}/>Registrar data/hora de entrada na oficina
-      </button>}
-
-      {/* Pending services */}
-      {pending.length>0&&<>
-        <div style={{fontSize:10,color:B.amber,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>⏳ Serviços pendentes ({pending.length})</div>
-        <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12}}>
-          {pending.map(t=>(
-            <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 10px",background:`${B.amber}11`,border:`1px solid ${B.amber}33`,borderRadius:7}}>
-              <div style={{width:8,height:8,borderRadius:99,background:B.amber,flexShrink:0}}/>
-              <span style={{fontSize:12.5,color:B.gray200,flex:1}}>{t.label}</span>
-              {taskCost(t,defaultRate).total>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>{fmtBRL(taskCost(t,defaultRate).total)}</span>}
-            </div>))}
-        </div>
-      </>}
-
-      {/* Service history (completed tasks) */}
-      {done.length>0&&<>
-        <div style={{fontSize:10,color:B.green,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>✅ Histórico de serviços concluídos ({done.length})</div>
-        <div style={{display:"flex",flexDirection:"column",gap:4}}>
-          {done.map(t=>{
-            const tc=taskCost(t,defaultRate);
-            return (<div key={t.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:7}}>
-              <ICheck s={13} c={B.green}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:12.5,color:B.gray200,fontWeight:600}}>{t.label}</div>
-                {(t.materials||[]).length>0&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>
-                  {t.materials.map((m,i)=><span key={i} style={{marginRight:8}}>🔩 {m.name}{m.qty>1?` ×${m.qty}`:""}</span>)}
-                </div>}
-                {t.completedAt&&<div style={{fontSize:10,color:B.gray500,marginTop:2}}>
-                  Concluído em {new Date(t.completedAt).toLocaleDateString("pt-BR")}
-                </div>}
+      {/* ── OS History ── */}
+      {sortedHistory.length>0&&<div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
+        <button onClick={()=>setShowHistory(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:showHistory?10:0,width:"100%"}}>
+          <div style={{fontSize:10,color:B.purple,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>📋 Histórico de OSs ({sortedHistory.length})</div>
+          <div style={{color:B.gray400,marginLeft:"auto"}}>{showHistory?<IChevU s={13}/>:<IChevD s={13}/>}</div>
+        </button>
+        {showHistory&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {sortedHistory.map(h=>{
+            const hTasks=Array.isArray(h.tasks_snapshot)?h.tasks_snapshot:(h.tasksSnapshot||[]);
+            const hMechs=(h.mechanic_ids||h.mechanicIds||[]).map(id=>employees.find(e=>e.id===id)?.name).filter(Boolean);
+            const hClient=clients.find(c=>c.id===(h.client_id||h.clientId));
+            const enteredMs=h.entered_at?new Date(h.entered_at).getTime():null;
+            const deliveredMs=h.delivered_at?new Date(h.delivered_at).getTime():null;
+            const totalMs=enteredMs&&deliveredMs?(deliveredMs-enteredMs):null;
+            const pausedMs=Number(h.total_paused_ms||0);
+            const workMs=totalMs?Math.max(0,totalMs-pausedMs):null;
+            const fmtMs=ms=>{
+              if(!ms) return null;
+              const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000);
+              return h>24?`${Math.floor(h/24)}d ${h%24}h`:`${h}h ${m}m`;
+            };
+            return (<div key={h.id} style={{background:B.gray700,borderRadius:9,padding:"10px 12px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
+                <span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 7px",fontWeight:800,fontSize:11}}>{h.os_number?fmtOS(h.os_number):"OS-?"}</span>
+                {hClient&&<span style={{fontSize:11,color:B.blue}}>👤 {hClient.name}</span>}
+                {hMechs.length>0&&<span style={{fontSize:11,color:B.orange}}>🔧 {hMechs.join(", ")}</span>}
+                {h.total_value>0&&<span style={{fontSize:12,fontWeight:800,color:B.amber,marginLeft:"auto"}}>{fmtBRL(h.total_value)}</span>}
               </div>
-              {tc.total>0&&<span style={{fontSize:11,fontWeight:700,color:B.green,flexShrink:0}}>{fmtBRL(tc.total)}</span>}
+              <div style={{fontSize:11,color:B.gray400,display:"flex",gap:12,flexWrap:"wrap",marginBottom:hTasks.length?6:0}}>
+                {h.entered_at&&<span>📅 Entrada: {new Date(h.entered_at).toLocaleDateString("pt-BR")}</span>}
+                {h.delivered_at&&<span>✅ Entrega: {new Date(h.delivered_at).toLocaleDateString("pt-BR")}</span>}
+                {totalMs&&<span>⏱ {fmtMs(totalMs)} total{workMs&&workMs!==totalMs?` · ${fmtMs(workMs)} em serviço`:""}</span>}
+              </div>
+              {hTasks.length>0&&<div style={{display:"flex",flexDirection:"column",gap:3}}>
+                {hTasks.map((t,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 6px",background:t.done?B.greenBg:`${B.amber}11`,borderRadius:5}}>
+                  <span style={{fontSize:10}}>{t.done?"✅":"⏳"}</span>
+                  <span style={{fontSize:11.5,color:B.gray200,flex:1}}>{t.label}</span>
+                  {taskCost(t,defaultRate).total>0&&<span style={{fontSize:10,color:t.done?B.green:B.amber,fontWeight:700}}>{fmtBRL(taskCost(t,defaultRate).total)}</span>}
+                </div>)}
+              </div>}
             </div>);
           })}
-        </div>
-        {doneCost>0&&<div style={{marginTop:8,padding:"7px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontSize:12,color:B.gray400}}>Total serviços concluídos</span>
-          <span style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(doneCost)}</span>
         </div>}
-      </>}
-
-      {vts.length===0&&<div style={{textAlign:"center",padding:"16px 0",color:B.gray400,fontSize:13}}>Nenhum serviço registrado para este veículo ainda.</div>}
+      </div>}
     </div>}
   </div>);
 }
@@ -2318,6 +2382,7 @@ export default function App() {
   const [payments, setPay]=useState([]);
   const [stockPurchases, setStockPurchases]=useState([]);
   const [vehicleOwners, setVehicleOwners]=useState([]);
+  const [osHistory, setOsHistory]=useState([]);
   const [defaultRate,setDR]=useState(0);
   const [company,setCompany]=useState({name:"OSC Performance",address:"",phone:"",document:""});
   const [tab,      setTab]=useState("mechanics");
@@ -2347,6 +2412,7 @@ export default function App() {
       if(d.company) setCompany(d.company);
       setStockPurchases(d.stockPurchases||[]);
       setVehicleOwners(d.vehicleOwners||[]);
+      setOsHistory(d.osHistory||[]);
       setLoading(false);
     }).catch(e=>{ setLE(e.message); setLoading(false); });
   },[]);
@@ -2495,16 +2561,59 @@ export default function App() {
   const deliverVehicle=async(vid)=>{
     const v=vehicles.find(x=>x.id===vid);
     if(!v)return;
-    const now=Date.now();
+    const nowMs=Date.now();
     const deliveredAt=new Date().toISOString();
-    // If still paused, accumulate the current pause time before closing
+
+    // Accumulate any active pause time
     let totalPausedMs=v.totalPausedMs||0;
     if(v.status==="paused"&&v.pausedAt){
-      totalPausedMs+=now-new Date(v.pausedAt).getTime();
+      totalPausedMs+=nowMs-new Date(v.pausedAt).getTime();
     }
-    const patch={deliveredAt,status:"ready",pausedAt:null,totalPausedMs};
-    setVeh(p=>p.map(x=>x.id===vid?{...x,...patch}:x));
-    try{ await db.updateVehicle(vid,patch); toast_("Veículo entregue ✓"); }catch(e){errToast(e);}
+
+    // Snapshot current tasks for history
+    const vTasks=tasks.filter(t=>t.vehicleId===vid);
+    const totalValue=vTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+
+    const historyRecord={
+      osNumber: v.osNumber,
+      clientId: v.clientId,
+      mechanicIds: v.mechanicIds||[],
+      enteredAt: v.enteredAt,
+      deliveredAt,
+      totalPausedMs,
+      tasksSnapshot: vTasks,
+      totalValue,
+    };
+
+    // Optimistic UI: update vehicle, remove its tasks, add to history
+    const newOsEntry={
+      id:`local-${Date.now()}`,
+      vehicle_id:vid,
+      ...historyRecord,
+      created_at:deliveredAt,
+    };
+    setVeh(p=>p.map(x=>x.id===vid?{
+      ...x,
+      deliveredAt,
+      status:"active",
+      pausedAt:null,
+      totalPausedMs:0,
+      enteredAt:null,
+      osNumber:null,
+      priority:"medium",
+    }:x));
+    setTsk(p=>p.filter(t=>t.vehicleId!==vid));
+    setOsHistory(p=>[newOsEntry,...p]);
+
+    try{
+      await db.archiveAndResetVehicle(vid,historyRecord);
+      toast_("Veículo entregue e OS arquivada ✓");
+    }catch(e){
+      errToast(e);
+      // Reload to recover consistent state
+      const d=await db.loadAll();
+      setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]);
+    }
   };
 
   // ── Tasks
@@ -2756,7 +2865,7 @@ export default function App() {
         <div style={{marginBottom:14,padding:"9px 13px",background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:9,fontSize:12,color:B.gray200}}>
           🚗 <b style={{color:B.blue}}>Veículos</b>: visão geral de todos os veículos, tempo na oficina e histórico de serviços realizados.
         </div>
-        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh}/>
+        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <div style={{marginBottom:14,padding:"9px 13px",background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:9,fontSize:12,color:B.gray200}}>

@@ -1507,7 +1507,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       </div>
       {/* preview sale price */}
       <div style={{marginTop:8,fontSize:12,color:B.gray400}}>
-        Custo unitário: <b style={{color:B.white}}>{fmtBRL(form.costPrice||0)}</b> + markup {form.markup||0}% → Preço de venda: <b style={{color:B.amber}}>{fmtBRL(Number(form.costPrice||0)*(1+Number(form.markup||0)/100))}</b>
+        Custo inicial: <b style={{color:B.white}}>{fmtBRL(form.costPrice||0)}</b> + markup {form.markup||0}% → Preço de venda: <b style={{color:B.amber}}>{fmtBRL(Number(form.costPrice||0)*(1+Number(form.markup||0)/100))}</b> · O custo será recalculado automaticamente ao lançar compras.
       </div>
       {/* Photo upload */}
       <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
@@ -1666,7 +1666,7 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
                   style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
               </Field>
             </div>
-            <div style={{fontSize:11.5,color:B.gray500}}>O custo unitário é usado para calcular o preço de venda. Ele não muda sozinho quando você lança uma nova compra — ajuste aqui manualmente se necessário.</div>
+            <div style={{fontSize:11.5,color:B.gray500}}>O custo unitário é atualizado automaticamente como a <b style={{color:B.gray300}}>média ponderada</b> das compras registradas. O preço de venda = custo médio × (1 + markup%).</div>
             <Field label="Foto do produto">
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 {form.photo?<img src={form.photo} alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,border:`1px solid ${B.gray600}`}}/>:null}
@@ -2929,14 +2929,34 @@ export default function App() {
     try{ await db.deleteTask(id); }catch(e){errToast(e);}
   };
   const updTask=async(id,patch)=>{
+    // If materials changed, check if any fromStock item qty changed and sync stock balance
+    if(patch.materials){
+      const oldTask=tasks.find(t=>t.id===id);
+      const oldMats=oldTask?.materials||[];
+      const newMats=patch.materials;
+      // For each fromStock material, compare old qty vs new qty and adjust stock
+      newMats.forEach(nm=>{
+        if(!nm.fromStock||!nm.stockItemId) return;
+        const oldMat=oldMats.find(om=>om.fromStock&&om.stockItemId===nm.stockItemId);
+        const oldQty=Number(oldMat?.qty||0);
+        const newQty=Number(nm.qty||1);
+        const delta=newQty-oldQty; // positive = more consumed, negative = returned
+        if(delta!==0){
+          setStk(p=>p.map(s=>s.id===nm.stockItemId?{...s,qty:Math.max(0,s.qty-delta)}:s));
+          const stockItem=stock.find(s=>s.id===nm.stockItemId);
+          if(stockItem) db.updateStock(nm.stockItemId,{qty:Math.max(0,stockItem.qty-delta)}).catch(()=>{});
+        }
+      });
+    }
     setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));
     try{ await db.updateTask(id,patch); }catch(e){errToast(e);}
   };
   // Adds a stock item as a new material entry (list grows, no limit)
   const consumeStock=async(taskId,item,currentMats)=>{
-    const newQty=Math.max(0,item.qty-1);
+    const matQty=1; // initial qty when adding from stock picker — user can edit afterwards
+    const newQty=Math.max(0,item.qty-matQty);
     const mats = currentMats || tasks.find(t=>t.id===taskId)?.materials || [];
-    const newMats = [...mats,{name:item.name,cost:item.salePrice,qty:1,fromStock:true,stockItemId:item.id}];
+    const newMats = [...mats,{name:item.name,cost:item.costPrice,qty:matQty,fromStock:true,stockItemId:item.id}];
     setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
     try{
@@ -2984,26 +3004,59 @@ export default function App() {
     setStk(p=>p.filter(s=>s.id!==id));
     try{ await db.deleteStock(id); toast_("Produto removido ✓"); }catch(e){errToast(e);}
   };
+  // Recalculates weighted average unit cost from all purchases of a stock item
+  const recalcStockCost=async(stockId, allPurchases)=>{
+    const itemPurchases=allPurchases.filter(p=>p.stockId===stockId);
+    if(itemPurchases.length===0) return;
+    const totalQty=itemPurchases.reduce((s,p)=>s+Number(p.qty||0),0);
+    if(totalQty<=0) return;
+    const totalCost=itemPurchases.reduce((s,p)=>s+Number(p.qty||0)*Number(p.unitCost||0),0);
+    const avgCost=totalCost/totalQty;
+    const item=stock.find(s=>s.id===stockId);
+    if(!item) return;
+    const newSalePrice=avgCost*(1+Number(item.markup||0)/100);
+    setStk(p=>p.map(s=>s.id===stockId?{...s,costPrice:avgCost,salePrice:newSalePrice}:s));
+    try{ await db.updateStock(stockId,{costPrice:avgCost,salePrice:newSalePrice}); }catch(e){}
+  };
+
   const addPurchase=async(purchase)=>{
     try{
       const row=await db.addPurchase(purchase);
-      setStockPurchases(p=>[row,...p]);
+      const newPurchases=[row,...stockPurchases];
+      setStockPurchases(newPurchases);
+      // Update stock balance
       const item=stock.find(s=>s.id===purchase.stockId);
       if(item){
         const newQty=item.qty+purchase.qty;
         setStk(p=>p.map(s=>s.id===purchase.stockId?{...s,qty:newQty}:s));
         await db.updateStock(purchase.stockId,{qty:newQty});
       }
+      // Recalculate weighted average cost
+      await recalcStockCost(purchase.stockId, newPurchases);
       toast_(`Compra registrada: +${purchase.qty} ${item?.name||""} ✓`);
     }catch(e){errToast(e);}
   };
   const updatePurchase=async(id,patch)=>{
-    setStockPurchases(p=>p.map(x=>x.id===id?{...x,...patch}:x));
-    try{ await db.updatePurchase(id,patch); toast_("Compra atualizada ✓"); }catch(e){errToast(e);}
+    const newPurchases=stockPurchases.map(x=>x.id===id?{...x,...patch}:x);
+    setStockPurchases(newPurchases);
+    try{
+      await db.updatePurchase(id,patch);
+      // Recalculate after edit
+      const affected=newPurchases.find(p=>p.id===id);
+      if(affected) await recalcStockCost(affected.stockId,newPurchases);
+      toast_("Compra atualizada ✓");
+    }catch(e){errToast(e);}
   };
   const deletePurchase=async(id)=>{
-    setStockPurchases(p=>p.filter(x=>x.id!==id));
-    try{ await db.deletePurchase(id); toast_("Compra excluída ✓"); }catch(e){errToast(e);}
+    const affected=stockPurchases.find(p=>p.id===id);
+    const newPurchases=stockPurchases.filter(x=>x.id!==id);
+    setStockPurchases(newPurchases);
+    try{
+      await db.deletePurchase(id);
+      // Recalculate after deletion
+      if(affected) await recalcStockCost(affected.stockId,newPurchases);
+      toast_("Compra excluída ✓");
+    }catch(e){errToast(e);}
   };
 
   // ── Settings

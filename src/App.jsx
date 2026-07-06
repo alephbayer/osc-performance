@@ -109,7 +109,8 @@ const taskCost=(t,defaultRate)=>{
   const labor = Number(t.hours||0)*rate;
   const mats  = Array.isArray(t.materials) ? t.materials : [];
   const mat   = mats.reduce((s,m)=>s+Number(m.cost||0)*Number(m.qty||1),0);
-  return {labor,mat,total:labor+mat};
+  const freight = mats.reduce((s,m)=>s+Number(m.freight||0),0);
+  return {labor,mat,freight,total:labor+mat+freight};
 };
 
 // ─── Image upload (Supabase Storage) ─────────────────────────────────────────
@@ -313,27 +314,30 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   drawTableHeader();
 
-  let laborTotal = 0, partsTotal = 0;
+  let laborTotal = 0, partsTotal = 0, freightTotal = 0;
   const ts = tasksOverride || tasks.filter(t => t.vehicleId === vehicle.id);
+  const fuelCostVal = Number(vehicle.fuelCost || 0);
 
   ts.forEach((t, idx) => {
     const c = taskCost(t, defaultRate);
     laborTotal += c.labor;
     partsTotal += c.mat;
+    freightTotal += c.freight || 0;
 
     const mats = t.materials || [];
     const rate  = t.ratePerHour != null ? Number(t.ratePerHour) : Number(defaultRate || 0);
+    const isOutsourced = !!t.outsourced;
 
-    // Calculate label wrap
     doc.setFont("helvetica","bold"); doc.setFontSize(9);
-    const labelLines = doc.splitTextToSize(t.label, cDescW);
+    const labelText = isOutsourced ? `[Terceirizado] ${t.label}` : t.label;
+    const labelLines = doc.splitTextToSize(labelText, cDescW);
 
-    // Calculate material lines (each mat may also wrap)
     const matTextLines = mats.map(m => {
       const qty = m.qty || 1;
-      const txt = `· ${m.name}${m.fromStock?" (estoque)":""}${qty>1?` ×${qty}`:""}`;
+      const freight = Number(m.freight || 0);
+      const txt = `· ${m.name}${m.fromStock?" (estoque)":""}${qty>1?` ×${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
       doc.setFont("helvetica","normal"); doc.setFontSize(8);
-      return { lines: doc.splitTextToSize(txt, cDescW - 6), mat: m, qty };
+      return { lines: doc.splitTextToSize(txt, cDescW - 6), mat: m, qty, freight };
     });
 
     const labelH  = labelLines.length * 5;
@@ -342,30 +346,31 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
     checkPageBreak(rowH + 2);
 
-    // Row background
-    doc.setFillColor(idx % 2 === 0 ? 255 : 249, idx % 2 === 0 ? 255 : 249, idx % 2 === 0 ? 255 : 249);
+    if (isOutsourced) {
+      doc.setFillColor(237, 233, 254);
+    } else {
+      doc.setFillColor(idx % 2 === 0 ? 255 : 249, idx % 2 === 0 ? 255 : 249, idx % 2 === 0 ? 255 : 249);
+    }
     doc.setDrawColor(225, 225, 225);
     doc.rect(marginX, y, contentW, rowH, "FD");
 
-    // Service label (multi-line)
-    doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...black);
+    doc.setFont("helvetica","bold"); doc.setFontSize(9);
+    const labelColor = isOutsourced ? [109, 40, 217] : black;
+    doc.setTextColor(...labelColor);
     labelLines.forEach((line, li) => doc.text(line, marginX + 3, y + 5 + li * 5));
 
-    // Right-side values (aligned to first label line)
     doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
     if (t.hours > 0) doc.text(`${t.hours}h`, cQty,  y + 5, { align: "right" });
     doc.text(t.hours > 0 ? fmtBRL(rate) : "—",   cUnit, y + 5, { align: "right" });
     doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...black);
     doc.text(fmtBRL(c.labor), cTotal, y + 5, { align: "right" });
 
-    // Material sub-lines
     let matY = y + 5 + labelLines.length * 5;
-    matTextLines.forEach(({ lines, mat, qty }) => {
+    matTextLines.forEach(({ lines, mat, qty, freight }) => {
       const matCost = Number(mat.cost || 0);
-      const matTotal = matCost * qty;
+      const matTotal = matCost * qty + freight;
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
       lines.forEach((line, li) => doc.text(line, marginX + 7, matY + li * 4.5));
-      // Only show costs on first line of this material
       doc.text(String(qty), cQty, matY, { align: "right" });
       doc.text(fmtBRL(matCost), cUnit, matY, { align: "right" });
       doc.setTextColor(180, 100, 0);
@@ -376,33 +381,56 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     y += rowH + 1;
   });
 
+  // Fuel cost row
+  if (fuelCostVal > 0) {
+    checkPageBreak(10);
+    doc.setFillColor(254, 249, 236);
+    doc.setDrawColor(225, 225, 225);
+    doc.rect(marginX, y, contentW, 8, "FD");
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+    doc.text("Combustivel", marginX + 3, y + 5.5);
+    doc.setFont("helvetica","bold"); doc.setTextColor(...black);
+    doc.text(fmtBRL(fuelCostVal), cTotal, y + 5.5, { align: "right" });
+    y += 9;
+  }
+
   y += 5;
-  checkPageBreak(42);
+  checkPageBreak(50);
 
   // ── Totals box ───────────────────────────────────────────────────────────────
+  const grandTotal = partsTotal + freightTotal + laborTotal + fuelCostVal;
+  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelCostVal > 0 ? 1 : 0);
+  const boxH_inner = 26 + extraLines * 8;
   const boxW = 85, boxX = pageW - marginX - boxW;
   doc.setDrawColor(220,220,220);
   doc.setFillColor(250,250,250);
-  doc.roundedRect(boxX, y, boxW, 34, 2, 2, "FD");
+  doc.roundedRect(boxX, y, boxW, boxH_inner, 2, 2, "FD");
 
   doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
-  doc.text("Total de Peças/Materiais",  boxX + 5, y + 9);
-  doc.text("Total de Mão de Obra",      boxX + 5, y + 17);
+  doc.text("Total de Pecas/Materiais",  boxX + 5, y + 9);
+  doc.text("Total de Mao de Obra",      boxX + 5, y + 17);
+  let nextY = 25;
+  if (freightTotal > 0) { doc.text("Total de Frete",  boxX + 5, y + nextY); nextY += 8; }
+  if (fuelCostVal  > 0) { doc.text("Combustivel",     boxX + 5, y + nextY); nextY += 8; }
+
   doc.setFont("helvetica","bold"); doc.setTextColor(...black);
   doc.text(fmtBRL(partsTotal),  boxX + boxW - 5, y + 9,  { align: "right" });
   doc.text(fmtBRL(laborTotal),  boxX + boxW - 5, y + 17, { align: "right" });
+  let nextY2 = 25;
+  if (freightTotal > 0) { doc.text(fmtBRL(freightTotal), boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
+  if (fuelCostVal  > 0) { doc.text(fmtBRL(fuelCostVal),  boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
 
   doc.setDrawColor(...orange); doc.setLineWidth(0.4);
-  doc.line(boxX + 5, y + 21, boxX + boxW - 5, y + 21);
+  doc.line(boxX + 5, y + nextY2 - 2, boxX + boxW - 5, y + nextY2 - 2);
   doc.setLineWidth(0.2);
 
   doc.setFillColor(...orange);
-  doc.roundedRect(boxX, y + 23, boxW, 11, 2, 2, "F");
+  doc.roundedRect(boxX, y + nextY2, boxW, 11, 2, 2, "F");
   doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...white);
-  doc.text("TOTAL GERAL", boxX + 5, y + 30);
-  doc.text(fmtBRL(partsTotal + laborTotal), boxX + boxW - 5, y + 30, { align: "right" });
+  doc.text("TOTAL GERAL", boxX + 5, y + nextY2 + 7);
+  doc.text(fmtBRL(grandTotal), boxX + boxW - 5, y + nextY2 + 7, { align: "right" });
 
-  y += 42;
+  y += boxH_inner + 13;
 
   // ── Footer ───────────────────────────────────────────────────────────────────
   if (y + 14 > 282) { doc.addPage(); y = 16; }
@@ -873,6 +901,7 @@ function StockPickerModal({stock,onPick,onClose}) {
 function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=false,editableQty=false}) {
   const qty = mat.qty || 1;
   const lineTotal = Number(mat.cost||0)*qty;
+  const freight = Number(mat.freight||0);
   return (<div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",background:mat.fromStock?B.purpleBg:B.gray700,border:mat.fromStock?`1px solid ${B.purple}44`:"none",borderRadius:6,padding:"5px 9px",width:"100%",boxSizing:"border-box"}}>
     {mat.fromStock?<IWarehouse s={12} c={B.purple}/>:<IBox s={12} c={B.gray400}/>}
     {readOnlyName||mat.fromStock
@@ -893,6 +922,12 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
     )}
     {showCost&&mat.fromStock&&<span style={{fontSize:11,color:B.purple,marginLeft:4,paddingLeft:6,borderLeft:`1px solid ${B.purple}44`}}>{fmtBRL(mat.cost)}/un</span>}
     {showCost&&qty>1&&<span style={{fontSize:11,color:B.amber,fontWeight:700,marginLeft:4,paddingLeft:6,borderLeft:`1px solid ${B.amber}44`}}>{fmtBRL(lineTotal)}</span>}
+    {/* Freight per material */}
+    {showCost&&<span style={{display:"flex",alignItems:"center",gap:3,marginLeft:4,paddingLeft:6,borderLeft:`1px solid ${B.gray600}`,flexShrink:0}} title="Frete">
+      <span style={{fontSize:9,color:B.gray500}}>🚚</span>
+      <InlineEdit value={freight?fmtR2(freight):""} onSave={v=>onUpdate(idx,{...mat,freight:parseFloat(v.replace(",","."))||0})} placeholder="0" type="number"/>
+    </span>}
+    {showCost&&freight>0&&<span style={{fontSize:10,color:B.gray400,marginLeft:2}}>=frete</span>}
     <button onClick={()=>onRemove(idx)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:1,display:"flex",marginLeft:2}}
       onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={11}/></button>
   </div>);
@@ -1001,7 +1036,14 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           {task.done&&<ICheck/>}
         </button>
         <div style={{flex:1,minWidth:0}}>
-          <TaskLabel task={task} onUpdate={onUpdate}/>
+          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+            <TaskLabel task={task} onUpdate={onUpdate}/>
+            {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
+            <button onClick={()=>onUpdate(task.id,{outsourced:!task.outsourced})} title={task.outsourced?"Marcar como interno":"Marcar como terceirizado"}
+              style={{background:task.outsourced?"#a78bfa22":"none",border:`1px solid ${task.outsourced?"#a78bfa44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.outsourced?"#a78bfa":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
+              {task.outsourced?"✓ 3º":"3º"}
+            </button>
+          </div>
           {signer&&task.done&&<div style={{marginTop:2}}>
             <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
           </div>}
@@ -1217,9 +1259,21 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             <IAI s={13} c={aiL?B.gray400:B.orange}/>{aiL?"…":"IA"}
           </button>
         </div>
-        {managerMode&&total>0&&<div style={{marginTop:10,padding:"8px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontSize:12,color:B.gray400}}>Total deste veículo</span>
-          <span style={{fontSize:15,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</span>
+        {managerMode&&<div style={{marginTop:10,padding:"8px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontSize:13}}>⛽</span>
+          <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Combustível:</span>
+          <span style={{display:"flex",alignItems:"center",gap:3}}>
+            <span style={{fontSize:11,color:B.amber}}>R$</span>
+            <InlineEdit value={vehicle.fuelCost?fmtR2(vehicle.fuelCost):""} onSave={v=>{const val=parseFloat(v.replace(",","."))||0;onUpdateVehicle(vehicle.id,{fuelCost:val});}} placeholder="0" type="number"/>
+          </span>
+          {vehicle.fuelCost>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(vehicle.fuelCost)}</span>}
+        </div>}
+        {managerMode&&(total+Number(vehicle.fuelCost||0))>0&&<div style={{marginTop:8,padding:"8px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:12,color:B.gray400}}>Total deste veículo</span>
+            <span style={{fontSize:15,fontWeight:800,color:B.amber}}>{fmtBRL(total+Number(vehicle.fuelCost||0))}</span>
+          </div>
+          {vehicle.fuelCost>0&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>Serviços: {fmtBRL(total)} · Combustível: {fmtBRL(vehicle.fuelCost)}</div>}
         </div>}
       </div>}
     </div>

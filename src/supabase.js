@@ -72,6 +72,7 @@ const mapVehicleIn = (v) => ({
   pausedAt: v.paused_at || null,
   totalPausedMs: Number(v.total_paused_ms || 0),
   priority: v.priority || "medium",
+  fuelCost: Number(v.fuel_cost || 0),
   mechanicIds: [],    // hydrated separately after load
   currentClientId: v.client_id,      // convenience alias
 });
@@ -94,6 +95,7 @@ const mapTaskIn = (t) => ({
   ratePerHour: t.rate_per_hour,
   completedAt: t.completed_at,
   completedByEmployeeId: t.completed_by_employee_id || null,
+  outsourced: t.outsourced || false,
 });
 const mapTaskOut = (t) => ({
   vehicle_id: t.vehicleId,
@@ -274,6 +276,7 @@ export const db = {
     if ("deliveredAt" in patch) dbPatch.delivered_at = patch.deliveredAt;
     if ("status"      in patch) dbPatch.status       = patch.status;
     if ("priority"    in patch) dbPatch.priority     = patch.priority;
+    if ("fuelCost"    in patch) dbPatch.fuel_cost    = patch.fuelCost;
     if ("pausedAt"      in patch) dbPatch.paused_at      = patch.pausedAt;
     if ("totalPausedMs" in patch) dbPatch.total_paused_ms= patch.totalPausedMs;
     const { error } = await supabase.from("vehicles").update(dbPatch).eq("id", id);
@@ -334,6 +337,7 @@ export const db = {
       status: "active",
       os_number: null,
       priority: "medium",
+      fuel_cost: 0,
     }).eq("id", vehicleId);
     if (vErr) throw vErr;
   },
@@ -346,7 +350,7 @@ export const db = {
   },
   async updateTask(id, patch) {
     const dbPatch = {};
-    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id" };
+    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced" };
     Object.keys(patch).forEach((k) => { if (map[k]) dbPatch[map[k]] = patch[k]; });
     const { error } = await supabase.from("tasks").update(dbPatch).eq("id", id);
     if (error) throw error;

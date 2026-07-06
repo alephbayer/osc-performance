@@ -200,7 +200,7 @@ function loadJsPDF() {
   return _jsPDFPromise;
 }
 
-async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate) {
+async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride) {
   const jsPDFCtor = await loadJsPDF();
   const doc = new jsPDFCtor({ unit: "mm", format: "a4" });
   const pageW = 210, marginX = 14, contentW = pageW - marginX * 2;
@@ -314,7 +314,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   drawTableHeader();
 
   let laborTotal = 0, partsTotal = 0;
-  const ts = tasks.filter(t => t.vehicleId === vehicle.id);
+  const ts = tasksOverride || tasks.filter(t => t.vehicleId === vehicle.id);
 
   ts.forEach((t, idx) => {
     const c = taskCost(t, defaultRate);
@@ -1855,7 +1855,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 }
 
 // ─── Vehicles Tab ─────────────────────────────────────────────────────────────
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,company}) {
   const [search,setSearch]=useState("");
   const [now,setNow]=useState(Date.now());
 
@@ -1899,16 +1899,17 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
         <div style={{fontSize:13}}>Veículos são criados na aba <b style={{color:B.orange}}>Mecânicos</b>.</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS}/>)}
+      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} company={company}/>)}
     </div>}
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,company}) {
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
   const [showOpenOS,setShowOpenOS]=useState(false);
   const [editEntry,setEditEntry]=useState(false);
+  const [pdfLoading,setPdfLoading]=useState(null); // holds history record id while loading
   const [entryInput,setEntryInput]=useState(vehicle.enteredAt?new Date(vehicle.enteredAt).toISOString().slice(0,16):"");
 
   const vts    = tasks.filter(t=>t.vehicleId===vehicle.id);
@@ -2088,6 +2089,17 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 {hClient&&<span style={{fontSize:11,color:B.blue}}>👤 {hClient.name}</span>}
                 {hMechs.length>0&&<span style={{fontSize:11,color:B.orange}}>🔧 {hMechs.join(", ")}</span>}
                 {h.total_value>0&&<span style={{fontSize:12,fontWeight:800,color:B.amber,marginLeft:"auto"}}>{fmtBRL(h.total_value)}</span>}
+                <button disabled={pdfLoading===h.id} onClick={async()=>{
+                  setPdfLoading(h.id);
+                  try{
+                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model};
+                    const hEmployee=employees.find(e=>(h.mechanic_ids||[]).includes(e.id))||null;
+                    await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks);
+                  }catch(err){alert("Erro ao gerar PDF: "+err.message);}
+                  setPdfLoading(null);
+                }} style={{background:pdfLoading===h.id?B.gray600:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"3px 9px",cursor:pdfLoading===h.id?"wait":"pointer",color:pdfLoading===h.id?B.gray400:B.amber,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                  <IFileText s={11} c={pdfLoading===h.id?B.gray400:B.amber}/>{pdfLoading===h.id?"PDF…":"PDF"}
+                </button>
               </div>
               <div style={{fontSize:11,color:B.gray400,display:"flex",gap:12,flexWrap:"wrap",marginBottom:hTasks.length?6:0}}>
                 {h.entered_at&&<span>📅 Entrada: {new Date(h.entered_at).toLocaleDateString("pt-BR")}</span>}
@@ -2997,7 +3009,7 @@ export default function App() {
         <div style={{marginBottom:14,padding:"9px 13px",background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:9,fontSize:12,color:B.gray200}}>
           🚗 <b style={{color:B.blue}}>Veículos</b>: visão geral de todos os veículos, tempo na oficina e histórico de serviços realizados.
         </div>
-        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS}/>
+        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} company={company}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <div style={{marginBottom:14,padding:"9px 13px",background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:9,fontSize:12,color:B.gray200}}>

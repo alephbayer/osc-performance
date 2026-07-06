@@ -1955,15 +1955,20 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
       {/* Timer badge */}
       <div style={{flexShrink:0,textAlign:"right",marginRight:4}}>
-        {elapsed
-          ?<div style={{background:`${elapsed.color}18`,border:`1px solid ${elapsed.color}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
-              <div style={{fontSize:9,color:elapsed.color,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Na oficina</div>
-              <div style={{fontSize:13,fontWeight:800,color:elapsed.color}}>{elapsed.label}</div>
+        {elapsed&&vehicle.deliveredAt
+          ?<div style={{background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
+              <div style={{fontSize:9,color:B.green,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>✅ Entregue</div>
+              <div style={{fontSize:12,fontWeight:800,color:B.green}}>{elapsed.label}</div>
             </div>
-          :!hasActiveOS&&<div style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
-              <div style={{fontSize:9,color:B.green,fontWeight:700}}>Disponível</div>
-              <div style={{fontSize:10,color:B.gray400}}>Sem OS ativa</div>
-            </div>}
+          :elapsed
+            ?<div style={{background:`${elapsed.color}18`,border:`1px solid ${elapsed.color}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:elapsed.color,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Na oficina</div>
+                <div style={{fontSize:13,fontWeight:800,color:elapsed.color}}>{elapsed.label}</div>
+              </div>
+            :!hasActiveOS&&<div style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:B.green,fontWeight:700}}>Disponível</div>
+                <div style={{fontSize:10,color:B.gray400}}>Sem OS ativa</div>
+              </div>}
         {!elapsed&&hasActiveOS&&<button onClick={e=>{e.stopPropagation();setEditEntry(true);}} style={{background:B.gray700,border:`1px dashed ${B.gray600}`,borderRadius:8,padding:"4px 10px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:600}}>
           + Registrar entrada
         </button>}

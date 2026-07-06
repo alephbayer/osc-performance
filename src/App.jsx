@@ -712,6 +712,125 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose}) {
 }
 
 
+// ─── Create Vehicle modal — from Vehicles tab ─────────────────────────────────
+function CreateVehicleModal({clients,onConfirm,onClose}) {
+  const [model,setModel]=useState("");
+  const [plate,setPlate]=useState("");
+  const [clientMode,setClientMode]=useState("none"); // "none" | "existing" | "new"
+  const [selectedClientId,setSelectedClientId]=useState("");
+  const [clientSearch,setClientSearch]=useState("");
+  const [newName,setNewName]=useState("");
+  const [newPhone,setNewPhone]=useState("");
+  const [newEmail,setNewEmail]=useState("");
+
+  const filteredClients=clients.filter(c=>
+    c.name.toLowerCase().includes(clientSearch.toLowerCase())||
+    (c.phone||"").includes(clientSearch)
+  );
+
+  const canSave=model.trim()&&plate.trim()&&
+    (clientMode==="none"||
+     (clientMode==="existing"&&selectedClientId)||
+     (clientMode==="new"&&newName.trim()));
+
+  const confirm=()=>{
+    if(!canSave) return;
+    onConfirm({
+      model,plate,
+      clientId:clientMode==="existing"?selectedClientId:null,
+      newClient:clientMode==="new"?{name:newName,phone:newPhone,email:newEmail}:null,
+    });
+  };
+
+  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:480,width:"100%",overflow:"hidden",border:`1px solid ${B.orange}55`,maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+
+      {/* Header */}
+      <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <div style={{width:34,height:34,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={17} c={B.orange}/></div>
+        <div style={{fontWeight:700,fontSize:14,color:B.white}}>Novo veículo</div>
+        <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
+      </div>
+
+      <div style={{padding:18,overflowY:"auto",flex:1}}>
+        {/* Vehicle fields */}
+        <div style={{marginBottom:14}}>
+          <FieldLabel>Modelo do veículo</FieldLabel>
+          <input value={model} onChange={e=>setModel(e.target.value)} placeholder="Ex: Honda Civic 2022" autoFocus
+            style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{marginBottom:18}}>
+          <FieldLabel>Placa</FieldLabel>
+          <input value={plate} onChange={e=>setPlate(e.target.value.toUpperCase())} placeholder="Ex: ABC-1234"
+            style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:1}}/>
+        </div>
+
+        {/* Client section */}
+        <div style={{paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
+          <div style={{fontSize:11,color:B.gray300,fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>Cliente (opcional)</div>
+
+          {/* Mode selector */}
+          <div style={{display:"flex",gap:6,marginBottom:12}}>
+            {[["none","Sem cliente"],["existing","Existente"],["new","Novo cliente"]].map(([val,lbl])=>(
+              <button key={val} onClick={()=>setClientMode(val)}
+                style={{flex:1,padding:"7px 0",borderRadius:8,border:`1px solid ${clientMode===val?B.orange:B.gray600}`,background:clientMode===val?`${B.orange}22`:B.gray700,color:clientMode===val?B.orange:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12}}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+
+          {/* Existing client picker */}
+          {clientMode==="existing"&&<>
+            <input value={clientSearch} onChange={e=>setClientSearch(e.target.value)} placeholder="Buscar cliente por nome ou telefone…"
+              style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+            <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:180,overflowY:"auto"}}>
+              {filteredClients.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:B.gray500,fontSize:13}}>Nenhum cliente encontrado.</div>}
+              {filteredClients.map(c=>(
+                <button key={c.id} onClick={()=>setSelectedClientId(c.id)}
+                  style={{textAlign:"left",padding:"9px 12px",borderRadius:8,border:`1px solid ${selectedClientId===c.id?B.blue:B.gray600}`,background:selectedClientId===c.id?B.blueBg:B.gray700,color:B.white,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+                  <IUser s={14} c={selectedClientId===c.id?B.blue:B.gray400}/>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:13}}>{c.name}</div>
+                    {c.phone&&<div style={{fontSize:11,color:B.gray400}}>{c.phone}</div>}
+                  </div>
+                  {selectedClientId===c.id&&<span style={{marginLeft:"auto",color:B.blue,fontWeight:700}}>✓</span>}
+                </button>
+              ))}
+            </div>
+          </>}
+
+          {/* New client form */}
+          {clientMode==="new"&&<div style={{display:"flex",flexDirection:"column",gap:9}}>
+            <div>
+              <FieldLabel>Nome do cliente</FieldLabel>
+              <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nome completo"
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <FieldLabel>WhatsApp (opcional)</FieldLabel>
+              <input value={newPhone} onChange={e=>setNewPhone(e.target.value)} placeholder="5511999998888"
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <FieldLabel>E-mail (opcional)</FieldLabel>
+              <input value={newEmail} onChange={e=>setNewEmail(e.target.value)} placeholder="email@exemplo.com"
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+          </div>}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{padding:"12px 18px",borderTop:`1px solid ${B.gray700}`,flexShrink:0}}>
+        <button onClick={confirm} disabled={!canSave}
+          style={{width:"100%",padding:"11px 0",borderRadius:9,background:canSave?B.orange:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:canSave?"pointer":"not-allowed"}}>
+          Cadastrar veículo{clientMode==="new"&&newName.trim()?` + cliente ${newName.trim()}`:""}
+        </button>
+      </div>
+    </div>
+  </div>);
+}
+
 function StockPickerModal({stock,onPick,onClose}) {
   const [q,setQ]=useState("");
   const filtered=stock.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())||s.brand.toLowerCase().includes(q.toLowerCase()));
@@ -1854,12 +1973,134 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
   </div>);
 }
 
+// ─── Create Vehicle Modal ─────────────────────────────────────────────────────
+function CreateVehicleModal({clients,onConfirm,onClose}) {
+  const [model,setModel]=useState("");
+  const [plate,setPlate]=useState("");
+  const [clientMode,setClientMode]=useState("none"); // "none" | "existing" | "new"
+  const [selectedClientId,setSelectedClientId]=useState(null);
+  const [newClientName,setNewClientName]=useState("");
+  const [newClientPhone,setNewClientPhone]=useState("");
+  const [newClientEmail,setNewClientEmail]=useState("");
+  const [clientSearch,setClientSearch]=useState("");
+
+  const filteredClients=clients.filter(c=>
+    c.name.toLowerCase().includes(clientSearch.toLowerCase())||
+    (c.phone||"").includes(clientSearch)
+  );
+
+  const canSave=model.trim()&&plate.trim()&&(
+    clientMode==="none"||
+    (clientMode==="existing"&&selectedClientId)||
+    (clientMode==="new"&&newClientName.trim())
+  );
+
+  const handleConfirm=()=>{
+    if(!canSave)return;
+    onConfirm({
+      model:model.trim(),
+      plate:plate.trim().toUpperCase(),
+      clientMode,
+      existingClientId:clientMode==="existing"?selectedClientId:null,
+      newClient:clientMode==="new"?{name:newClientName.trim(),phone:newClientPhone.trim(),email:newClientEmail.trim()}:null,
+    });
+  };
+
+  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:480,width:"100%",overflow:"hidden",border:`1px solid ${B.orange}55`,maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+
+      {/* Header */}
+      <div style={{padding:"16px 20px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <div style={{width:36,height:36,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={18} c={B.orange}/></div>
+        <div><div style={{fontWeight:700,fontSize:15,color:B.white}}>Novo veículo</div><div style={{fontSize:12,color:B.gray400}}>Cadastrar veículo no sistema</div></div>
+        <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
+      </div>
+
+      <div style={{padding:20,overflowY:"auto",flex:1}}>
+        {/* Vehicle data */}
+        <div style={{fontSize:11,color:B.orange,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Dados do veículo</div>
+        <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
+          <div>
+            <FieldLabel>Modelo</FieldLabel>
+            <input value={model} onChange={e=>setModel(e.target.value)} placeholder="Ex: Honda Civic 2022" autoFocus
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          <div>
+            <FieldLabel>Placa</FieldLabel>
+            <input value={plate} onChange={e=>setPlate(e.target.value.toUpperCase())} placeholder="Ex: ABC-1234"
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:1}}/>
+          </div>
+        </div>
+
+        {/* Client section */}
+        <div style={{fontSize:11,color:B.blue,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Cliente <span style={{color:B.gray500,fontWeight:400,fontSize:10}}>(opcional)</span></div>
+        <div style={{display:"flex",gap:6,marginBottom:12}}>
+          {[["none","Sem cliente"],["existing","Cliente existente"],["new","Novo cliente"]].map(([val,label])=>(
+            <button key={val} onClick={()=>{setClientMode(val);setSelectedClientId(null);}} style={{flex:1,padding:"7px 0",borderRadius:7,border:`1px solid ${clientMode===val?B.blue:B.gray600}`,background:clientMode===val?B.blueBg:B.gray700,color:clientMode===val?B.blue:B.gray300,cursor:"pointer",fontSize:11.5,fontWeight:clientMode===val?700:400}}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {clientMode==="existing"&&<>
+          <div style={{position:"relative",marginBottom:8}}>
+            <input value={clientSearch} onChange={e=>setClientSearch(e.target.value)} placeholder="Buscar cliente por nome ou telefone…"
+              style={{width:"100%",padding:"8px 12px 8px 30px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray400}}><ISearch s={13}/></span>
+          </div>
+          <div style={{maxHeight:180,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+            {filteredClients.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:B.gray400,fontSize:12}}>Nenhum cliente encontrado.</div>}
+            {filteredClients.map(c=>(
+              <button key={c.id} onClick={()=>setSelectedClientId(c.id)} style={{textAlign:"left",padding:"8px 12px",borderRadius:8,border:`1px solid ${selectedClientId===c.id?B.blue:B.gray600}`,background:selectedClientId===c.id?B.blueBg:B.gray700,color:B.white,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:6,background:`${B.blue}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IUser s={13} c={B.blue}/></div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:600,fontSize:13}}>{c.name}</div>
+                  {c.phone&&<div style={{fontSize:11,color:B.gray400}}>{c.phone}</div>}
+                </div>
+                {selectedClientId===c.id&&<span style={{color:B.blue,fontWeight:700}}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </>}
+
+        {clientMode==="new"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div>
+            <FieldLabel>Nome do cliente</FieldLabel>
+            <input value={newClientName} onChange={e=>setNewClientName(e.target.value)} placeholder="Ex: João Silva"
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <div style={{flex:1}}>
+              <FieldLabel>WhatsApp <span style={{color:B.gray500,fontWeight:400}}>(opcional)</span></FieldLabel>
+              <input value={newClientPhone} onChange={e=>setNewClientPhone(e.target.value)} placeholder="5511999998888"
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{flex:1}}>
+              <FieldLabel>E-mail <span style={{color:B.gray500,fontWeight:400}}>(opcional)</span></FieldLabel>
+              <input value={newClientEmail} onChange={e=>setNewClientEmail(e.target.value)} placeholder="email@exemplo.com"
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+          </div>
+        </div>}
+      </div>
+
+      {/* Footer */}
+      <div style={{padding:"12px 20px",borderTop:`1px solid ${B.gray700}`,flexShrink:0,display:"flex",gap:8}}>
+        <button onClick={handleConfirm} disabled={!canSave} style={{flex:1,padding:"10px 0",borderRadius:9,background:canSave?B.orange:B.gray700,border:"none",color:B.white,fontWeight:800,cursor:canSave?"pointer":"not-allowed",fontSize:14}}>
+          Cadastrar veículo
+        </button>
+        <button onClick={onClose} style={{padding:"10px 16px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontWeight:600,fontSize:13}}>Cancelar</button>
+      </div>
+    </div>
+  </div>);
+}
+
 // ─── Vehicles Tab ─────────────────────────────────────────────────────────────
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,company}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,company,onCreateVehicle}) {
   const [search,setSearch]=useState("");
   const [now,setNow]=useState(Date.now());
+  const [showCreate,setShowCreate]=useState(false);
 
-  // Tick every minute to keep elapsed time fresh
   useEffect(()=>{
     const t=setInterval(()=>setNow(Date.now()),60000);
     return ()=>clearInterval(t);
@@ -1872,7 +2113,6 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
     (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase())
   );
 
-  // Sort: vehicles with enteredAt first (most time in shop at top), then by createdAt
   const sorted=[...filtered].sort((a,b)=>{
     if(a.enteredAt && b.enteredAt) return new Date(a.enteredAt)-new Date(b.enteredAt);
     if(a.enteredAt) return -1;
@@ -1881,7 +2121,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
   });
 
   return (<div>
-    {/* Search bar */}
+    {/* Search bar + new vehicle button */}
     <div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center"}}>
       <div style={{position:"relative",flex:1,maxWidth:340}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
@@ -1889,14 +2129,19 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
         <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray400}}><ISearch s={14}/></span>
         {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={13}/></button>}
       </div>
-      <div style={{marginLeft:"auto",fontSize:11,color:B.gray400}}>{sorted.length} veículo{sorted.length!==1?"s":""}</div>
+      <button onClick={()=>setShowCreate(true)} style={{padding:"8px 14px",borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+        <IPlus s={14} c={B.orange}/>Novo veículo
+      </button>
+      <div style={{fontSize:11,color:B.gray400,flexShrink:0}}>{sorted.length} veículo{sorted.length!==1?"s":""}</div>
     </div>
+
+    {showCreate&&<CreateVehicleModal clients={clients} onConfirm={(data)=>{onCreateVehicle&&onCreateVehicle(data);setShowCreate(false);}} onClose={()=>setShowCreate(false)}/>}
 
     {sorted.length===0?
       <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
         <div style={{fontSize:40,marginBottom:12}}>🚗</div>
         <div style={{fontWeight:700,color:B.gray200,marginBottom:4}}>{search?"Nenhum veículo encontrado":"Nenhum veículo cadastrado"}</div>
-        <div style={{fontSize:13}}>Veículos são criados na aba <b style={{color:B.orange}}>Mecânicos</b>.</div>
+        <div style={{fontSize:13}}>Clique em <b style={{color:B.orange}}>+ Novo veículo</b> para cadastrar o primeiro.</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} company={company}/>)}
@@ -2632,6 +2877,26 @@ export default function App() {
       setVeh(p=>[...p,row]); toast_("Veículo adicionado ✓");
     }catch(e){errToast(e);}
   };
+
+  // Create vehicle from Vehicles tab — optionally link to existing or new client
+  const createVehicleFromTab=async({model,plate,clientId,newClient})=>{
+    try{
+      let finalClientId=clientId||null;
+      // If user typed a new client, create it first
+      if(newClient?.name?.trim()){
+        const row=await db.addClient(newClient.name.trim(),newClient.phone?.trim()||"",newClient.email?.trim()||"");
+        setCli(p=>[...p,row]);
+        finalClientId=row.id;
+      }
+      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),photo:null,photos:[]});
+      // Hydrate mechanicIds for UI consistency
+      vRow.mechanicIds=[];
+      setVeh(p=>[...p,vRow]);
+      toast_("Veículo cadastrado ✓");
+    }catch(e){errToast(e);}
+  };
+
+
   const delVeh=async id=>{
     setTsk(p=>p.filter(t=>t.vehicleId!==id));
     setVeh(p=>p.filter(v=>v.id!==id));
@@ -3014,7 +3279,7 @@ export default function App() {
         <div style={{marginBottom:14,padding:"9px 13px",background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:9,fontSize:12,color:B.gray200}}>
           🚗 <b style={{color:B.blue}}>Veículos</b>: visão geral de todos os veículos, tempo na oficina e histórico de serviços realizados.
         </div>
-        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} company={company}/>
+        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} company={company} onCreateVehicle={createVehicleFromTab}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <div style={{marginBottom:14,padding:"9px 13px",background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:9,fontSize:12,color:B.gray200}}>

@@ -319,7 +319,8 @@ export const db = {
     if (vErr) throw vErr;
   },
 
-
+  // Tasks
+  async addTask(t) {
     const { data, error } = await supabase.from("tasks").insert(mapTaskOut(t)).select().single();
     if (error) throw error;
     return mapTaskIn(data);

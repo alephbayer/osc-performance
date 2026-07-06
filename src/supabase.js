@@ -65,6 +65,7 @@ const mapVehicleIn = (v) => ({
   photo: v.photo,
   photos: v.photos || [],
   enteredAt: v.entered_at || null,
+  deliveredAt: v.delivered_at || null,
   createdAt: v.created_at,
   osNumber: v.os_number || null,
   status: v.status || "active",
@@ -249,7 +250,8 @@ export const db = {
     if ("plate"         in patch) dbPatch.plate          = patch.plate;
     if ("photo"         in patch) dbPatch.photo          = patch.photo;
     if ("photos"        in patch) dbPatch.photos         = patch.photos;
-    if ("enteredAt"     in patch) dbPatch.entered_at     = patch.enteredAt;
+    if ("enteredAt"   in patch) dbPatch.entered_at   = patch.enteredAt;
+    if ("deliveredAt" in patch) dbPatch.delivered_at = patch.deliveredAt;
     if ("status"        in patch) dbPatch.status         = patch.status;
     if ("pausedAt"      in patch) dbPatch.paused_at      = patch.pausedAt;
     if ("totalPausedMs" in patch) dbPatch.total_paused_ms= patch.totalPausedMs;

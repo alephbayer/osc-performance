@@ -614,7 +614,104 @@ function TransferModal({title,subtitle,items,onPick,onClose}) {
   </div>);
 }
 
-// ─── Stock picker modal ───────────────────────────────────────────────────────
+// ─── Vehicle picker modal — pick existing or create new ──────────────────────
+function VehiclePickerModal({vehicles,employees,clients,employeeId,onPickExisting,onCreateNew,onClose}) {
+  const [q,setQ]=useState("");
+  // Show all vehicles not already assigned to this mechanic
+  const available=vehicles.filter(v=>
+    !(v.mechanicIds||[v.employeeId]).includes(employeeId) &&
+    (v.model.toLowerCase().includes(q.toLowerCase())||v.plate.toLowerCase().includes(q.toLowerCase()))
+  );
+  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",overflow:"hidden",border:`1px solid ${B.orange}55`,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+      <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <div style={{width:34,height:34,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={16} c={B.orange}/></div>
+        <div><div style={{fontWeight:700,fontSize:14,color:B.white}}>Adicionar veículo</div><div style={{fontSize:12,color:B.gray400}}>Escolha um existente ou cadastre novo</div></div>
+        <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
+      </div>
+      <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray700}`,flexShrink:0}}>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar por modelo ou placa…" autoFocus
+          style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+      </div>
+      <div style={{padding:12,overflowY:"auto",flex:1}}>
+        {available.length===0&&q&&<div style={{textAlign:"center",padding:"16px 0",color:B.gray400,fontSize:13}}>Nenhum veículo encontrado.</div>}
+        {available.map(v=>{
+          const cli=clients.find(c=>c.id===v.clientId);
+          const hasOS=!!v.enteredAt;
+          return (<button key={v.id} onClick={()=>onPickExisting(v.id)} style={{width:"100%",textAlign:"left",padding:"10px 12px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",marginBottom:6,display:"flex",alignItems:"center",gap:9}}
+            onMouseEnter={e=>{e.currentTarget.style.background=`${B.orange}22`;e.currentTarget.style.borderColor=B.orange;}}
+            onMouseLeave={e=>{e.currentTarget.style.background=B.gray700;e.currentTarget.style.borderColor=B.gray600;}}>
+            <div style={{width:32,height:32,borderRadius:7,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              {v.photo?<img src={v.photo} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:7}}/>:<ICar s={17} c={B.orange}/>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:700,fontSize:13,color:B.white}}>{v.model}</div>
+              <div style={{fontSize:11,color:B.gray400,display:"flex",gap:6,flexWrap:"wrap"}}>
+                <span style={{fontFamily:"monospace"}}>{v.plate}</span>
+                {v.osNumber&&<span style={{color:B.orange}}>{fmtOS(v.osNumber)}</span>}
+                {cli&&<span>👤 {cli.name}</span>}
+                {hasOS&&<span style={{color:B.amber}}>● OS aberta</span>}
+              </div>
+            </div>
+          </button>);
+        })}
+        {!q&&available.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:B.gray400,fontSize:13}}>Todos os veículos já estão atribuídos a você.</div>}
+      </div>
+      <div style={{padding:12,borderTop:`1px solid ${B.gray700}`,flexShrink:0}}>
+        <button onClick={onCreateNew} style={{width:"100%",padding:"10px 0",borderRadius:9,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+          <IPlus s={14} c={B.orange}/>Cadastrar novo veículo
+        </button>
+      </div>
+    </div>
+  </div>);
+}
+
+// ─── Open OS modal — select mechanic and open new OS on existing vehicle ──────
+function OpenOSModal({vehicle,employees,onConfirm,onClose}) {
+  const [selectedEmp,setSelectedEmp]=useState(null);
+  const [entryInput,setEntryInput]=useState(new Date().toISOString().slice(0,16));
+  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",overflow:"hidden",border:`1px solid ${B.green}55`,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+      <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.green}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <div style={{width:34,height:34,borderRadius:8,background:B.greenBg,display:"flex",alignItems:"center",justifyContent:"center"}}><IFileText s={16} c={B.green}/></div>
+        <div>
+          <div style={{fontWeight:700,fontSize:14,color:B.white}}>Abrir nova OS</div>
+          <div style={{fontSize:12,color:B.gray400}}>{vehicle.model} · {vehicle.plate}</div>
+        </div>
+        <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
+      </div>
+      <div style={{padding:16,overflowY:"auto",flex:1}}>
+        <div style={{marginBottom:14}}>
+          <FieldLabel>Data/hora de entrada</FieldLabel>
+          <input value={entryInput} onChange={e=>setEntryInput(e.target.value)} type="datetime-local"
+            style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <FieldLabel>Selecione o mecânico responsável</FieldLabel>
+        <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>
+          {employees.map(emp=>(
+            <button key={emp.id} onClick={()=>setSelectedEmp(emp.id)}
+              style={{textAlign:"left",padding:"10px 12px",borderRadius:9,background:selectedEmp===emp.id?B.greenBg:B.gray700,border:`1px solid ${selectedEmp===emp.id?B.green:B.gray600}`,color:B.white,cursor:"pointer",display:"flex",alignItems:"center",gap:9}}>
+              <div style={{width:30,height:30,borderRadius:7,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={14} c={B.orange}/></div>
+              <div>
+                <div style={{fontWeight:700,fontSize:13}}>{emp.name}</div>
+                {emp.phone&&<div style={{fontSize:11,color:B.gray400}}>{emp.phone}</div>}
+              </div>
+              {selectedEmp===emp.id&&<span style={{marginLeft:"auto",color:B.green,fontWeight:700}}>✓</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{padding:12,borderTop:`1px solid ${B.gray700}`,flexShrink:0}}>
+        <button onClick={()=>selectedEmp&&onConfirm(selectedEmp,entryInput)} disabled={!selectedEmp}
+          style={{width:"100%",padding:"10px 0",borderRadius:9,background:selectedEmp?B.green:B.gray700,border:"none",color:B.white,cursor:selectedEmp?"pointer":"not-allowed",fontWeight:800,fontSize:14}}>
+          Abrir OS
+        </button>
+      </div>
+    </div>
+  </div>);
+}
+
+
 function StockPickerModal({stock,onPick,onClose}) {
   const [q,setQ]=useState("");
   const filtered=stock.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())||s.brand.toLowerCase().includes(q.toLowerCase()));
@@ -1024,6 +1121,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRate,onAddVehicle,onDeleteVehicle,onTransferMechanic,onTransferOwner,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onUpdateVehicle,onConsumeStock,onReturnStock,onDelete,onSendWA,onUpdatePhone,onUpdateName,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,isOwner=false}) {
   const [open,setOpen]=useState(false);
   const [showF,setSF]=useState(false);
+  const [showPicker,setShowPicker]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
   const [model,setMod]=useState(""); const [plate,setPlate]=useState("");
   const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id) && v.status!=="ready")]
@@ -1068,10 +1166,18 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
           style={{flex:"0 1 110px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",fontFamily:"monospace",letterSpacing:1}}/>
         <button onClick={addV} style={{padding:"7px 14px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700}}>Salvar</button>
         <button onClick={()=>setSF(false)} style={{padding:"7px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer"}}>✕</button>
-      </div>:<button onClick={()=>setSF(true)} style={{marginTop:4,padding:"7px 12px",borderRadius:8,background:"transparent",border:`1px dashed ${B.orange}66`,color:B.orange,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontWeight:600,fontSize:13}}
+      </div>:<button onClick={()=>setShowPicker(true)} style={{marginTop:4,padding:"7px 12px",borderRadius:8,background:"transparent",border:`1px dashed ${B.orange}66`,color:B.orange,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontWeight:600,fontSize:13}}
         onMouseEnter={e=>e.currentTarget.style.background=`${B.orange}15`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
         <ICar s={13} c={B.orange}/>+ Veículo
       </button>}
+      {showPicker&&<VehiclePickerModal
+        vehicles={vehicles}
+        employees={employees}
+        clients={clients}
+        employeeId={employee.id}
+        onPickExisting={vid=>{onAddMechanic&&onAddMechanic(vid,employee.id);setShowPicker(false);}}
+        onCreateNew={()=>{setShowPicker(false);setSF(true);}}
+        onClose={()=>setShowPicker(false)}/>}
     </div>}
   </div>
   {confirmDel&&<ConfirmModal title="Remover mecânico?" message={<>Tem certeza que deseja remover <b style={{color:B.white}}>{employee.name}</b>? Todos os veículos e tarefas associados também serão removidos.</>} confirmLabel="Remover mecânico" onConfirm={()=>{onDelete(employee.id);setConfirmDel(false);}} onCancel={()=>setConfirmDel(false)}/>}
@@ -1749,7 +1855,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 }
 
 // ─── Vehicles Tab ─────────────────────────────────────────────────────────────
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[]}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS}) {
   const [search,setSearch]=useState("");
   const [now,setNow]=useState(Date.now());
 
@@ -1793,14 +1899,15 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
         <div style={{fontSize:13}}>Veículos são criados na aba <b style={{color:B.orange}}>Mecânicos</b>.</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)}/>)}
+      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS}/>)}
     </div>}
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[]}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS}) {
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
+  const [showOpenOS,setShowOpenOS]=useState(false);
   const [editEntry,setEditEntry]=useState(false);
   const [entryInput,setEntryInput]=useState(vehicle.enteredAt?new Date(vehicle.enteredAt).toISOString().slice(0,16):"");
 
@@ -1946,8 +2053,13 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       {!hasActiveOS&&<div style={{textAlign:"center",padding:"16px 0",color:B.gray400}}>
         <div style={{fontSize:22,marginBottom:4}}>✅</div>
         <div style={{fontWeight:600,color:B.gray200,fontSize:13}}>Veículo disponível para nova OS</div>
-        <div style={{fontSize:12,color:B.gray500,marginTop:2}}>Registre a entrada na aba Mecânicos para iniciar nova OS</div>
+        <div style={{fontSize:12,color:B.gray500,marginTop:2,marginBottom:10}}>Nenhuma OS em andamento neste momento</div>
+        {onOpenOS&&<button onClick={()=>setShowOpenOS(true)} style={{padding:"8px 20px",borderRadius:9,background:B.greenBg,border:`1px solid ${B.green}44`,color:B.green,cursor:"pointer",fontWeight:700,fontSize:13,display:"inline-flex",alignItems:"center",gap:6}}>
+          <IPlus s={14} c={B.green}/>Abrir nova OS
+        </button>}
       </div>}
+
+      {showOpenOS&&<OpenOSModal vehicle={vehicle} employees={employees} onConfirm={(empId,entryStr)=>{onOpenOS(vehicle.id,empId,entryStr);setShowOpenOS(false);}} onClose={()=>setShowOpenOS(false)}/>}
 
       {/* ── OS History ── */}
       {sortedHistory.length>0&&<div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
@@ -2610,10 +2722,23 @@ export default function App() {
       toast_("Veículo entregue e OS arquivada ✓");
     }catch(e){
       errToast(e);
-      // Reload to recover consistent state
       const d=await db.loadAll();
       setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]);
     }
+  };
+
+  const openNewOS=async(vid,employeeId,enteredAtStr)=>{
+    try{
+      const osNumber=await db.openNewOS(vid,employeeId);
+      const enteredAt=enteredAtStr?new Date(enteredAtStr).toISOString():new Date().toISOString();
+      setVeh(p=>p.map(x=>x.id===vid?{
+        ...x, osNumber, enteredAt,
+        status:"active", pausedAt:null, totalPausedMs:0, priority:"medium",
+        deliveredAt:null,
+        mechanicIds:[...new Set([...(x.mechanicIds||[]),employeeId])],
+      }:x));
+      toast_(`OS ${fmtOS(osNumber)} aberta ✓`);
+    }catch(e){ errToast(e); }
   };
 
   // ── Tasks
@@ -2835,14 +2960,21 @@ export default function App() {
             </button>
           </div>
         </div>
-        {clients.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>👤</div><div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum cliente</div><div style={{fontSize:13}}>Cadastre clientes para gerar OS e enviar progresso por WhatsApp.</div></div>
-          :clients.map(cli=><ClientCard key={cli.id} client={cli} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} company={company}
+        {/* Only show clients that have at least one vehicle with an active OS */}
+        {(()=>{
+          const activeClients=clients.filter(cli=>{
+            const cliVs=vehicles.filter(v=>v.clientId===cli.id);
+            return cliVs.some(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));
+          });
+          if(activeClients.length===0) return <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>👤</div><div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum cliente com OS ativa</div><div style={{fontSize:13}}>Clientes aparecem aqui quando seus veículos tiverem uma OS em andamento.</div></div>;
+          return activeClients.map(cli=><ClientCard key={cli.id} client={cli} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} company={company}
             onUpdatePhone={updCliP} onUpdateName={updCliN} onUpdateEmail={updCliE} onDelete={delCli} onSendWA={sendCliWA}
             onTransferMechanic={xferMech} onTransferOwner={xferOwn}
             onToggleTask={toggleT} onDeleteTask={delTask} onAddTask={addTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
             onConsumeStock={consumeStock} onReturnStock={returnStock}
             payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment}
-            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}/>)}
+            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}/>);
+        })()}
       </>}
 
       {/* ══ STOCK ══ */}
@@ -2865,7 +2997,7 @@ export default function App() {
         <div style={{marginBottom:14,padding:"9px 13px",background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:9,fontSize:12,color:B.gray200}}>
           🚗 <b style={{color:B.blue}}>Veículos</b>: visão geral de todos os veículos, tempo na oficina e histórico de serviços realizados.
         </div>
-        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory}/>
+        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <div style={{marginBottom:14,padding:"9px 13px",background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:9,fontSize:12,color:B.gray200}}>

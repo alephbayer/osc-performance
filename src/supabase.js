@@ -243,6 +243,25 @@ export const db = {
     if (error) throw error;
     return mapVehicleIn(data);
   },
+
+  // Open a new OS on an existing vehicle: generate OS number, set entered_at, assign mechanic
+  async openNewOS(vehicleId, employeeId) {
+    // Use Postgres to get next OS number via RPC or update
+    // We update the vehicle with entered_at + reset fields, then get the new os_number via a DB function
+    // Since we can't call nextval directly from JS, we insert a dummy and read back
+    const enteredAt = new Date().toISOString();
+    // Trick: set os_number to null first so the default nextval fires on update via a workaround —
+    // actually we'll use a raw SQL RPC. Simpler: use upsert to trigger default.
+    // Cleanest approach: update with os_number = nextval via SQL function call
+    const { data, error } = await supabase.rpc("open_vehicle_os", {
+      p_vehicle_id: vehicleId,
+      p_employee_id: employeeId,
+      p_entered_at: enteredAt,
+    });
+    if (error) throw error;
+    return data; // returns the new os_number
+  },
+
   async updateVehicle(id, patch) {
     const dbPatch = {};
     if ("employeeId"    in patch) dbPatch.employee_id    = patch.employeeId;

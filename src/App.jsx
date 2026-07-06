@@ -829,7 +829,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
 }
 
 // ─── VehicleCard ──────────────────────────────────────────────────────────────
-function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,isOwner=false}) {
+function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,isOwner=false}) {
   const [open,setOpen] = useState(false);
   const [newT,setNewT] = useState("");
   const [aiL, setAiL] = useState(false);
@@ -840,6 +840,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const [cpLink,setCPL]=useState(false);
   const [showAccount,setSA]=useState(false);
   const [confirmDelV,setConfirmDelV]=useState(false);
+  const [confirmDeliver,setConfirmDeliver]=useState(false);
   const [pdfLoading,setPdfLoading]=useState(false);
 
   const vts   = tasks.filter(t=>t.vehicleId===vehicle.id);
@@ -928,9 +929,15 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           {vehicle.status!=="ready"&&<button onClick={()=>onSetStatus(vehicle.id,"ready")} style={{background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
             ✓ Pronto
           </button>}
-          {vehicle.status==="ready"&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+          {vehicle.status==="ready"&&!vehicle.deliveredAt&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
             ↩ Reabrir
           </button>}
+          {vehicle.status==="ready"&&!vehicle.deliveredAt&&isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
+            🚗 Entregar
+          </button>}
+          {vehicle.deliveredAt&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
+            ✅ Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
+          </span>}
         </>}
         {!hideManagerButtons&&<button onClick={()=>setConfirmDelV(true)} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}
           onMouseEnter={e=>{e.currentTarget.style.background=`${B.red}33`;}} onMouseLeave={e=>{e.currentTarget.style.background=`${B.red}15`;}}>
@@ -993,11 +1000,12 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
     {showAccount&&<AccountModal vehicle={vehicle} tasks={tasks} payments={payments} defaultRate={defaultRate}
       onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onClose={()=>setSA(false)}/>}
     {confirmDelV&&<ConfirmModal title="Remover veículo?" message={<>Tem certeza que deseja remover <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b>? Todas as tarefas desta OS também serão removidas.</>} confirmLabel="Remover veículo" onConfirm={()=>{onDeleteVehicle(vehicle.id);setConfirmDelV(false);}} onCancel={()=>setConfirmDelV(false)}/>}
+    {confirmDeliver&&<ConfirmModal title="Confirmar entrega?" danger={false} message={<>Registrar a entrega de <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b> ao cliente? O timer será encerrado. Esta ação pode ser revertida pelo botão Reabrir.</>} confirmLabel="Confirmar entrega" onConfirm={()=>{onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
   </>);
 }
 
 // ─── EmployeeCard ─────────────────────────────────────────────────────────────
-function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRate,onAddVehicle,onDeleteVehicle,onTransferMechanic,onTransferOwner,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onUpdateVehicle,onConsumeStock,onReturnStock,onDelete,onSendWA,onUpdatePhone,onUpdateName,onAddMechanic,onRemoveMechanic,onSetStatus,isOwner=false}) {
+function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRate,onAddVehicle,onDeleteVehicle,onTransferMechanic,onTransferOwner,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onUpdateVehicle,onConsumeStock,onReturnStock,onDelete,onSendWA,onUpdatePhone,onUpdateName,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,isOwner=false}) {
   const [open,setOpen]=useState(false);
   const [showF,setSF]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
@@ -1031,7 +1039,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
         onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
         onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
-        onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} isOwner={isOwner}/>)}
+        onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}/>)}
       {showF?<div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:4}}>
         <input value={model} onChange={e=>setMod(e.target.value)} placeholder="Modelo (ex: Honda Civic 2020)"
           style={{flex:"1 1 160px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
@@ -1050,7 +1058,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
 }
 
 // ─── ClientCard ───────────────────────────────────────────────────────────────
-function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,onUpdatePhone,onUpdateName,onUpdateEmail,onDelete,onSendWA,onTransferMechanic,onTransferOwner,onToggleTask,onDeleteTask,onAddTask,onUpdateTask,onUpdateVehicle,onDeleteVehicle,onConsumeStock,onReturnStock,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,isOwner=false}) {
+function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,onUpdatePhone,onUpdateName,onUpdateEmail,onDelete,onSendWA,onTransferMechanic,onTransferOwner,onToggleTask,onDeleteTask,onAddTask,onUpdateTask,onUpdateVehicle,onDeleteVehicle,onConsumeStock,onReturnStock,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,isOwner=false}) {
   const [open,setOpen]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
   const cliV=vehicles.filter(v=>v.clientId===client.id);
@@ -1091,7 +1099,7 @@ function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,o
           onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
           onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
           payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} company={company}
-          onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} isOwner={isOwner}/>)}
+          onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}/>)}
       {grand>0&&(()=>{const grandPaid=cliV.reduce((s,v)=>s+vehiclePaid(v.id,payments),0); const grandBal=grand-grandPaid; return (
         <div style={{marginTop:4,padding:"11px 16px",background:B.amberBg,border:`1px solid ${B.amber}55`,borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
           <span style={{fontWeight:700,color:B.amber}}>💰 Total do cliente</span>
@@ -2458,6 +2466,21 @@ export default function App() {
     try{ await db.updateVehicle(vid,patch); }catch(e){errToast(e);}
   };
 
+  const deliverVehicle=async(vid)=>{
+    const v=vehicles.find(x=>x.id===vid);
+    if(!v)return;
+    const now=Date.now();
+    const deliveredAt=new Date().toISOString();
+    // If still paused, accumulate the current pause time before closing
+    let totalPausedMs=v.totalPausedMs||0;
+    if(v.status==="paused"&&v.pausedAt){
+      totalPausedMs+=now-new Date(v.pausedAt).getTime();
+    }
+    const patch={deliveredAt,status:"ready",pausedAt:null,totalPausedMs};
+    setVeh(p=>p.map(x=>x.id===vid?{...x,...patch}:x));
+    try{ await db.updateVehicle(vid,patch); toast_("Veículo entregue ✓"); }catch(e){errToast(e);}
+  };
+
   // ── Tasks
   const addTask=async(vid,lbl)=>{
     try{
@@ -2653,7 +2676,7 @@ export default function App() {
             onAddVehicle={addVeh} onDeleteVehicle={delVeh} onTransferMechanic={xferMech} onTransferOwner={xferOwn}
             onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh}
             onConsumeStock={consumeStock} onReturnStock={returnStock}
-            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} isOwner={adminRole==="owner"}
+            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}
             onDelete={delEmp} onSendWA={sendMechWA} onUpdatePhone={updEmpP} onUpdateName={updEmpN}/>)}
       </>}
 
@@ -2684,7 +2707,7 @@ export default function App() {
             onToggleTask={toggleT} onDeleteTask={delTask} onAddTask={addTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
             onConsumeStock={consumeStock} onReturnStock={returnStock}
             payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment}
-            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} isOwner={adminRole==="owner"}/>)}
+            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}/>)}
       </>}
 
       {/* ══ STOCK ══ */}

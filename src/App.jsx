@@ -287,10 +287,10 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   // ── Table ────────────────────────────────────────────────────────────────────
   // Columns: desc (stretchy) | qty | unit | total
-  const cQty   = marginX + contentW - 76;
-  const cUnit  = marginX + contentW - 46;
-  const cTotal = marginX + contentW;
-  const cDescW = cQty - marginX - 8;   // more breathing room for description text
+  const cQty   = marginX + contentW - 78;
+  const cUnit  = marginX + contentW - 48;
+  const cTotal = marginX + contentW - 4;   // 4mm internal right padding
+  const cDescW = cQty - marginX - 8;
 
   const drawTableHeader = () => {
     doc.setFillColor(...orange);

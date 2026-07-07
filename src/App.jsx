@@ -2365,35 +2365,37 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
   return (<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
     {/* Header row */}
-    <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",cursor:"pointer",background:B.gray900}} onClick={()=>setOpen(o=>!o)}>
-      {vehicle.photo
-        ?<img src={vehicle.photo} alt="" style={{width:42,height:42,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray700}`}}/>
-        :<div style={{width:42,height:42,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={19} c={B.orange}/></div>}
+    <div className="osc-vhc-header" style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",cursor:"pointer",background:B.gray900}} onClick={()=>setOpen(o=>!o)}>
+      <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
+        {vehicle.photo
+          ?<img src={vehicle.photo} alt="" style={{width:42,height:42,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray700}`}}/>
+          :<div style={{width:42,height:42,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={19} c={B.orange}/></div>}
 
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehicle.model}</div>
-        <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
-          <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
-          {vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>}
-          {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
-          {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}>📋 {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehicle.model}</div>
+          <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
+            <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
+            {vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>}
+            {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
+            {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}>📋 {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
+          </div>
+          {vts.length>0&&<ProgressBar value={done.length} max={vts.length}/>}
         </div>
-        {vts.length>0&&<ProgressBar value={done.length} max={vts.length}/>}
       </div>
 
-      {/* Timer badge */}
-      <div style={{flexShrink:0,textAlign:"right",marginRight:4}}>
+      {/* Timer badge — stacks below on mobile */}
+      <div className="osc-vhc-timer" style={{flexShrink:0,textAlign:"right",marginRight:4}}>
         {elapsed&&vehicle.deliveredAt
-          ?<div style={{background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
+          ?<div style={{background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",display:"flex",alignItems:"center",gap:6}}>
               <div style={{fontSize:9,color:B.green,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>✅ Entregue</div>
               <div style={{fontSize:12,fontWeight:800,color:B.green}}>{elapsed.label}</div>
             </div>
           :elapsed
-            ?<div style={{background:`${elapsed.color}18`,border:`1px solid ${elapsed.color}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
-                <div style={{fontSize:9,color:elapsed.color,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Na oficina</div>
+            ?<div style={{background:`${elapsed.color}18`,border:`1px solid ${elapsed.color}44`,borderRadius:8,padding:"4px 10px",display:"flex",alignItems:"center",gap:6}}>
+                <div style={{fontSize:9,color:elapsed.color,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>⏱ Na oficina</div>
                 <div style={{fontSize:13,fontWeight:800,color:elapsed.color}}>{elapsed.label}</div>
               </div>
-            :!hasActiveOS&&<div style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
+            :!hasActiveOS&&<div style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",display:"flex",alignItems:"center",gap:6}}>
                 <div style={{fontSize:9,color:B.green,fontWeight:700}}>Disponível</div>
                 <div style={{fontSize:10,color:B.gray400}}>Sem OS ativa</div>
               </div>}
@@ -2403,7 +2405,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       </div>
 
       {/* Task summary */}
-      {vts.length>0&&<div style={{flexShrink:0,textAlign:"right",marginRight:4}}>
+      {vts.length>0&&<div className="osc-vhc-summary" style={{flexShrink:0,textAlign:"right",marginRight:4}}>
         <div style={{fontSize:10,color:B.gray400}}>Serviços</div>
         <div style={{fontSize:12,fontWeight:700,color:B.white}}>{done.length}/{vts.length}</div>
         {total>0&&<div style={{fontSize:11,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>}
@@ -2926,6 +2928,27 @@ function AdminLoginScreen({onLogin}) {
 }
 
 export default function App() {
+  // Inject responsive styles once
+  useEffect(()=>{
+    if(document.getElementById("osc-responsive-styles")) return;
+    const s=document.createElement("style");
+    s.id="osc-responsive-styles";
+    s.textContent=`
+      @media (max-width: 600px) {
+        .osc-topbar-stats { display: none !important; }
+        .osc-topbar-inner { height: auto !important; padding: 10px 0 !important; flex-wrap: wrap; gap: 8px !important; }
+        .osc-topbar-brand { flex: 1; }
+        .osc-topbar-actions { flex-wrap: nowrap !important; margin-left: auto; }
+        .osc-vhc-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+        .osc-vhc-timer { width: 100% !important; text-align: left !important; }
+        .osc-vhc-timer > div { display: flex !important; align-items: center !important; gap: 8px !important; }
+        .osc-vhc-summary { width: 100% !important; text-align: left !important; flex-direction: row !important; gap: 12px !important; }
+        .osc-tab-btn span.tab-label { display: none; }
+      }
+    `;
+    document.head.appendChild(s);
+  },[]);
+
   // Check for public vehicle link
   const params=new URLSearchParams(window.location.search);
   const publicVehicleId=params.get("v");
@@ -3393,27 +3416,31 @@ export default function App() {
 
 
   const doneT=tasks.filter(t=>t.done).length;
-  const tabBtn=(key,lbl,ico,ac)=>(<button onClick={()=>setTab(key)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:13,transition:"all .2s",background:tab===key?ac:"transparent",color:tab===key?B.white:B.gray400}}>{ico}{lbl}</button>);
+  const tabBtn=(key,lbl,ico,ac)=>(<button className="osc-tab-btn" onClick={()=>setTab(key)} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 12px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,transition:"all .2s",background:tab===key?ac:"transparent",color:tab===key?B.white:B.gray400}}>{ico}<span className="tab-label">{lbl}</span></button>);
   const IGear2=()=><Svg d="M12 15a3 3 0 100-6 3 3 0 000 6z" d2="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" s={17} c={B.amber}/>;
 
   return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Topbar */}
     <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"0 20px",position:"sticky",top:0,zIndex:20,boxShadow:"0 2px 20px rgba(0,0,0,.6)"}}>
-      <div style={{maxWidth:820,margin:"0 auto",display:"flex",alignItems:"center",height:60,gap:12}}>
-        <div style={{width:38,height:38,borderRadius:9,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={20} c={B.white}/></div>
-        <div><div style={{fontWeight:900,fontSize:15,color:B.white,letterSpacing:"-.5px"}}>OSC <span style={{color:B.orange}}>Performance</span></div><div style={{fontSize:9,color:B.gray400,textTransform:"uppercase",letterSpacing:.6}}>{ROLE_CONFIG[adminRole]?.label||"Gestão de Oficina"}</div></div>
-        <div style={{marginLeft:"auto",display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}>
+      <div className="osc-topbar-inner" style={{maxWidth:820,margin:"0 auto",display:"flex",alignItems:"center",height:60,gap:12}}>
+        <div className="osc-topbar-brand" style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+          <div style={{width:38,height:38,borderRadius:9,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={20} c={B.white}/></div>
+          <div><div style={{fontWeight:900,fontSize:15,color:B.white,letterSpacing:"-.5px"}}>OSC <span style={{color:B.orange}}>Performance</span></div><div style={{fontSize:9,color:B.gray400,textTransform:"uppercase",letterSpacing:.6}}>{ROLE_CONFIG[adminRole]?.label||"Gestão de Oficina"}</div></div>
+        </div>
+        <div className="osc-topbar-stats" style={{marginLeft:"auto",display:"flex",gap:5,alignItems:"center"}}>
           {[{l:"Mec.",v:employees.length,c:B.orange},{l:"Clientes",v:clients.length,c:B.blue},{l:"Veículos",v:vehicles.length,c:B.gray200},{l:"Tarefas",v:`${doneT}/${tasks.length}`,c:B.green},{l:"Estoque",v:stock.length,c:B.purple}].map(s=>(
             <div key={s.l} style={{textAlign:"center",background:B.gray800,borderRadius:7,padding:"3px 8px",border:`1px solid ${B.gray700}`}}>
               <div style={{fontSize:12,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:9,color:B.gray400,whiteSpace:"nowrap"}}>{s.l}</div>
             </div>))}
-          <button onClick={()=>{navigator.clipboard?.writeText(getMechanicPortalLink());toast_("Link da área do mecânico copiado ✓");}} title="Copiar link da área do mecânico" style={{width:34,height:34,borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,marginLeft:4}}>
+        </div>
+        <div className="osc-topbar-actions" style={{display:"flex",gap:5,alignItems:"center",marginLeft:"auto"}}>
+          <button onClick={()=>{navigator.clipboard?.writeText(getMechanicPortalLink());toast_("Link da área do mecânico copiado ✓");}} title="Copiar link da área do mecânico" style={{width:34,height:34,borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
             <ILock s={16} c={B.orange}/>
           </button>
-          <button onClick={()=>setSCfg(true)} style={{width:34,height:34,borderRadius:8,background:B.amberBg,border:`1px solid ${B.amber}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,marginLeft:4}}>
+          <button onClick={()=>setSCfg(true)} style={{width:34,height:34,borderRadius:8,background:B.amberBg,border:`1px solid ${B.amber}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
             <IGear2/>
           </button>
-          <button onClick={()=>{setAdminRole(null);try{sessionStorage.removeItem(ADMIN_SESSION_KEY);}catch{}}} title="Sair (logout)" style={{width:34,height:34,borderRadius:8,background:`${B.red}1a`,border:`1px solid ${B.red}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,marginLeft:4}}>
+          <button onClick={()=>{setAdminRole(null);try{sessionStorage.removeItem(ADMIN_SESSION_KEY);}catch{}}} title="Sair (logout)" style={{width:34,height:34,borderRadius:8,background:`${B.red}1a`,border:`1px solid ${B.red}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
             <ILogout s={16} c={B.red}/>
           </button>
         </div>

@@ -3449,13 +3449,15 @@ export default function App() {
 
     <div style={{maxWidth:820,margin:"0 auto",padding:"20px 14px"}}>
       {/* Tabs */}
-      <div style={{display:"flex",gap:3,marginBottom:20,background:B.gray900,padding:4,borderRadius:12,border:`1px solid ${B.gray700}`,width:"fit-content",flexWrap:"wrap"}}>
+      <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
+      <div style={{display:"flex",gap:3,background:B.gray900,padding:4,borderRadius:12,border:`1px solid ${B.gray700}`,flexWrap:"wrap",justifyContent:"center"}}>
         {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
         {allowedTabs.includes("clients")&&tabBtn("clients","Clientes / OS",<IUser s={13}/>,B.blue)}
         {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
         {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos",<ICar s={13}/>,B.blue)}
         {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
         {allowedTabs.includes("finance")&&tabBtn("finance","Financeiro",<IChart s={13}/>,B.green)}
+      </div>
       </div>
 
       {/* ══ MECHANICS ══ */}

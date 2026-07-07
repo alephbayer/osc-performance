@@ -427,8 +427,14 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.setDrawColor(225, 225, 225);
     doc.rect(marginX, y, contentW, 8, "FD");
     doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
-    const towLabel = `Reboque #${ti+1}${tow.origin?` (${tow.origin}${tow.destination?` → ${tow.destination}`:""})` : ""}`;
-    doc.text(towLabel, marginX + 3, y + 5.5);
+    const origin = tow.origin || "";
+    const dest   = tow.destination || "";
+    const route  = origin && dest ? ` (${origin} -> ${dest})` : origin ? ` (${origin})` : dest ? ` (-> ${dest})` : "";
+    const towLabel = `Reboque #${ti+1}${route}`;
+    // Split if too long
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+    const towLines = doc.splitTextToSize(towLabel, cDescW);
+    towLines.forEach((line, li) => doc.text(line, marginX + 3, y + 5.5 + li * 4));
     doc.setFont("helvetica","bold"); doc.setTextColor(...black);
     doc.text(fmtBRL(Number(tow.value||0)), cTotal, y + 5.5, { align: "right" });
     y += 9;

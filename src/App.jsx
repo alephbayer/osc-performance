@@ -214,35 +214,36 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   // ── Header band ──────────────────────────────────────────────────────────────
   doc.setFillColor(...black);
-  doc.rect(0, 0, pageW, 36, "F");
+  doc.rect(0, 0, pageW, 38, "F");
   doc.setFillColor(...orange);
-  doc.rect(0, 34, pageW, 2, "F");
+  doc.rect(0, 36, pageW, 2, "F");
 
-  // Logo on the left
+  // Logo on the left — black rect behind ensures transparency blends correctly
+  doc.setFillColor(...black);
+  doc.rect(marginX, 2, 32, 32, "F");
   try {
-    doc.addImage(LOGO_B64, "PNG", marginX, 3, 30, 30);
+    doc.addImage(LOGO_B64, "PNG", marginX, 2, 32, 32);
   } catch(e) {
-    // Fallback: just text if image fails
     doc.setTextColor(...white);
     doc.setFont("helvetica","bold"); doc.setFontSize(18);
     doc.text("OSC", marginX, 22);
   }
 
-  // Company info on the right side of header
-  const infoX = marginX + 34;
+  // Company info to the right of logo
+  const infoX = marginX + 36;
   doc.setTextColor(...white);
   doc.setFont("helvetica","bold"); doc.setFontSize(13);
-  doc.text(company?.name || "OSC Performance", infoX, 12);
+  doc.text(company?.name || "OSC Performance", infoX, 13);
   doc.setFont("helvetica","normal"); doc.setFontSize(8);
   doc.setTextColor(210,210,210);
-  let hY = 19;
+  let hY = 20;
   if (company?.address) { doc.text(company.address, infoX, hY); hY += 5; }
   const contact = [company?.phone&&`Tel: ${company.phone}`, company?.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ");
   if (contact) doc.text(contact, infoX, hY);
 
   // Emission date (far right)
   doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(180,180,180);
-  doc.text(`Emitido em ${fmtD()}`, pageW - marginX, 28, { align: "right" });
+  doc.text(`Emitido em ${fmtD()}`, pageW - marginX, 30, { align: "right" });
 
   y = 44;
 

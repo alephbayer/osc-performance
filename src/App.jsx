@@ -106,10 +106,10 @@ function productivityByEmployee(employees, vehicles, tasks, defaultRate, monthKe
 // ─── Cost helpers ─────────────────────────────────────────────────────────────
 const taskCost=(t,defaultRate)=>{
   const rate  = t.ratePerHour!=null ? Number(t.ratePerHour) : Number(defaultRate||0);
-  const labor = Number(t.hours||0)*rate;
+  const laborGross = Number(t.hours||0)*rate;
+  const discount = Math.min(Number(t.discount||0), laborGross); // per-task R$ discount on labor
+  const labor = Math.max(0, laborGross - discount);
   const mats  = Array.isArray(t.materials) ? t.materials : [];
-  // For non-stock materials: sale price = cost × (1 + markup/100). Default markup = 50%.
-  // For stock materials: use cost directly (already priced at sale price).
   const mat = mats.reduce((s,m)=>{
     const qty = Number(m.qty||1);
     const cost = Number(m.cost||0);
@@ -122,7 +122,7 @@ const taskCost=(t,defaultRate)=>{
     }
   },0);
   const freight = mats.reduce((s,m)=>s+Number(m.freight||0),0);
-  return {labor,mat,freight,total:labor+mat+freight};
+  return {laborGross,discount,labor,mat,freight,total:labor+mat+freight};
 };
 
 // ─── Image upload (Supabase Storage) ─────────────────────────────────────────
@@ -388,8 +388,17 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
     if (t.hours > 0) doc.text(`${t.hours}h`, cQty,  y + 5, { align: "right" });
     doc.text(t.hours > 0 ? fmtBRL(rate) : "—",   cUnit, y + 5, { align: "right" });
-    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...black);
-    doc.text(fmtBRL(c.labor), cTotal, y + 5, { align: "right" });
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    if (c.discount > 0) {
+      // Show original crossed out, then discounted below
+      doc.setTextColor(180, 60, 60);
+      doc.text(`-${fmtBRL(c.discount)}`, cTotal, y + 4, { align: "right" });
+      doc.setTextColor(60, 140, 60);
+      doc.text(fmtBRL(c.labor), cTotal, y + 9, { align: "right" });
+    } else {
+      doc.setTextColor(...black);
+      doc.text(fmtBRL(c.labor), cTotal, y + 5, { align: "right" });
+    }
 
     let matY = y + 5 + labelLines.length * 5;
     matTextLines.forEach(({ lines, mat, qty, freight }) => {
@@ -444,8 +453,11 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   checkPageBreak(50);
 
   // ── Totals box ───────────────────────────────────────────────────────────────
-  const grandTotal = partsTotal + freightTotal + laborTotal + fuelCostVal + towTotal;
-  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelCostVal > 0 ? 1 : 0) + (towTotal > 0 ? 1 : 0);
+  const osDiscountPct = Number(vehicle.osDiscountPct || 0);
+  const laborSumForDiscount = ts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+  const osDiscountAmt = laborSumForDiscount * osDiscountPct / 100;
+  const grandTotal = partsTotal + freightTotal + laborTotal + fuelCostVal + towTotal - osDiscountAmt;
+  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelCostVal > 0 ? 1 : 0) + (towTotal > 0 ? 1 : 0) + (osDiscountAmt > 0 ? 1 : 0);
   const boxH_inner = 26 + extraLines * 8;
   const boxW = 85, boxX = pageW - marginX - boxW;
   doc.setDrawColor(220,220,220);
@@ -456,17 +468,19 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   doc.text("Total de Pecas/Materiais",  boxX + 5, y + 9);
   doc.text("Total de Mao de Obra",      boxX + 5, y + 17);
   let nextY = 25;
-  if (freightTotal > 0) { doc.text("Total de Frete",  boxX + 5, y + nextY); nextY += 8; }
-  if (fuelCostVal  > 0) { doc.text("Combustivel",     boxX + 5, y + nextY); nextY += 8; }
-  if (towTotal     > 0) { doc.text("Reboque",         boxX + 5, y + nextY); nextY += 8; }
+  if (freightTotal  > 0) { doc.text("Total de Frete",                    boxX + 5, y + nextY); nextY += 8; }
+  if (fuelCostVal   > 0) { doc.text("Combustivel",                       boxX + 5, y + nextY); nextY += 8; }
+  if (towTotal      > 0) { doc.text("Reboque",                           boxX + 5, y + nextY); nextY += 8; }
+  if (osDiscountAmt > 0) { doc.setTextColor(180, 60, 60); doc.text(`Desconto (${osDiscountPct}% m.o.)`, boxX + 5, y + nextY); doc.setTextColor(...black); nextY += 8; }
 
   doc.setFont("helvetica","bold"); doc.setTextColor(...black);
   doc.text(fmtBRL(partsTotal),  boxX + boxW - 5, y + 9,  { align: "right" });
   doc.text(fmtBRL(laborTotal),  boxX + boxW - 5, y + 17, { align: "right" });
   let nextY2 = 25;
-  if (freightTotal > 0) { doc.text(fmtBRL(freightTotal), boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
-  if (fuelCostVal  > 0) { doc.text(fmtBRL(fuelCostVal),  boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
-  if (towTotal     > 0) { doc.text(fmtBRL(towTotal),     boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
+  if (freightTotal  > 0) { doc.text(fmtBRL(freightTotal),            boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
+  if (fuelCostVal   > 0) { doc.text(fmtBRL(fuelCostVal),             boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
+  if (towTotal      > 0) { doc.text(fmtBRL(towTotal),                boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
+  if (osDiscountAmt > 0) { doc.setTextColor(180, 60, 60); doc.text(`-${fmtBRL(osDiscountAmt)}`, boxX + boxW - 5, y + nextY2, { align: "right" }); doc.setTextColor(...black); nextY2 += 8; }
 
   doc.setDrawColor(...orange); doc.setLineWidth(0.4);
   doc.line(boxX + 5, y + nextY2 - 2, boxX + boxW - 5, y + nextY2 - 2);
@@ -1102,6 +1116,15 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               {task.outsourced?"✓ 3º":"3º"}
             </button>
           </div>
+          {/* Per-task discount */}
+          {c.laborGross>0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>
+            <span style={{fontSize:10,color:B.red,fontWeight:600,flexShrink:0}}>Desconto R$</span>
+            <InlineEdit value={task.discount?fmtR2(task.discount):""} onSave={v=>onUpdate(task.id,{discount:Math.max(0,parseFloat(v.replace(",","."))||0)})} placeholder="0" type="number"/>
+            {task.discount>0&&<>
+              <span style={{fontSize:10,color:B.gray500,textDecoration:"line-through",flexShrink:0}}>{fmtBRL(c.laborGross)}</span>
+              <span style={{fontSize:10,color:B.green,fontWeight:700,flexShrink:0}}>→ {fmtBRL(c.labor)}</span>
+            </>}
+          </div>}
           {signer&&task.done&&<div style={{marginTop:2}}>
             <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
           </div>}
@@ -1328,7 +1351,20 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             </span>
             {vehicle.fuelCost>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(vehicle.fuelCost)}</span>}
           </div>
-          {/* Tows */}
+          {/* OS-level % discount on labor */}
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${B.gray700}`}}>
+            <span style={{fontSize:13}}>🏷️</span>
+            <span style={{fontSize:12,color:B.red,fontWeight:600}}>Desconto geral (% sobre mão de obra):</span>
+            <span style={{display:"flex",alignItems:"center",gap:3}}>
+              <InlineEdit value={vehicle.osDiscountPct?fmtR2(vehicle.osDiscountPct):""} onSave={v=>{const val=Math.max(0,Math.min(100,parseFloat(v.replace(",","."))||0));onUpdateVehicle(vehicle.id,{osDiscountPct:val});}} placeholder="0" type="number"/>
+              <span style={{fontSize:11,color:B.gray400}}>%</span>
+            </span>
+            {vehicle.osDiscountPct>0&&(()=>{
+              const laborSum=vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+              const discAmt=laborSum*Number(vehicle.osDiscountPct)/100;
+              return <span style={{fontSize:11,color:B.red,fontWeight:700}}>= -{fmtBRL(discAmt)} s/ mão de obra</span>;
+            })()}
+          </div>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
               <span style={{fontSize:13}}>🚛</span>
@@ -1357,10 +1393,13 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         </div>}
         {(()=>{
           const towTotal=(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
-          const grandTotal=total+Number(vehicle.fuelCost||0)+towTotal;
+          const laborSum=vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+          const osDiscountAmt=laborSum*Number(vehicle.osDiscountPct||0)/100;
+          const grandTotal=total+Number(vehicle.fuelCost||0)+towTotal-osDiscountAmt;
           if(!managerMode||grandTotal<=0) return null;
           const breakdown=[];
           if(total>0) breakdown.push(`Serviços: ${fmtBRL(total)}`);
+          if(osDiscountAmt>0) breakdown.push(`Desconto: -${fmtBRL(osDiscountAmt)}`);
           if(vehicle.fuelCost>0) breakdown.push(`Combustível: ${fmtBRL(vehicle.fuelCost)}`);
           if(towTotal>0) breakdown.push(`Reboque: ${fmtBRL(towTotal)}`);
           return (<div style={{marginTop:8,padding:"8px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8}}>

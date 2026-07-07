@@ -452,6 +452,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
     y += rowH + 1;
     }); // groupTasks.forEach
+    // Breathing space after each category group
+    y += 3;
   }); // catOrder.forEach
 
   // Fuel cost row

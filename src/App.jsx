@@ -403,12 +403,15 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     let matY = y + 5 + labelLines.length * 5;
     matTextLines.forEach(({ lines, mat, qty, freight }) => {
       const matCost = Number(mat.cost || 0);
-      const matTotal = matCost * qty + freight;
+      // Use sale price (with markup) for non-stock materials, cost for stock items
+      const markup = mat.markup != null ? Number(mat.markup) : 50;
+      const unitPrice = mat.fromStock ? matCost : matCost * (1 + markup / 100);
+      const matTotal = unitPrice * qty + freight;
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
       lines.forEach((line, li) => doc.text(line, marginX + 7, matY + li * 4.5));
-      doc.text(String(qty), cQty, matY, { align: "right" });
-      doc.text(fmtBRL(matCost), cUnit, matY, { align: "right" });
-      doc.setTextColor(180, 100, 0);
+      doc.text(`${qty}x`, cQty, matY, { align: "right" });
+      doc.text(fmtBRL(unitPrice), cUnit, matY, { align: "right" });
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(180, 100, 0);
       doc.text(fmtBRL(matTotal), cTotal, matY, { align: "right" });
       matY += lines.length * 4.5;
     });

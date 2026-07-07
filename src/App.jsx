@@ -299,13 +299,12 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...black);
   doc.text(vehicleModelLines[0], rx, y + 13);
 
-  // Plate + mechanic on same row, right column
+  // Plate + color + mechanic on same row, right column
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-  const plateText = `Placa: ${vehicle.plate}`;
+  const plateText = `Placa: ${vehicle.plate}${vehicle.color ? `  · Cor: ${vehicle.color}` : ""}`;
   doc.text(plateText, rx, y + 20);
   if (employee?.name) {
-    const plateW = doc.getTextWidth(plateText);
-    doc.text(`  · Mec: ${employee.name}`, rx + plateW, y + 20);
+    doc.text(`Mec: ${employee.name}`, rx, y + 26);
   }
 
   y += boxH + 8;
@@ -897,6 +896,7 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose}) {
 function CreateVehicleModal({clients,onConfirm,onClose}) {
   const [model,setModel]=useState("");
   const [plate,setPlate]=useState("");
+  const [color,setColor]=useState("");
   const [clientMode,setClientMode]=useState("none"); // "none" | "existing" | "new"
   const [selectedClientId,setSelectedClientId]=useState("");
   const [clientSearch,setClientSearch]=useState("");
@@ -917,7 +917,7 @@ function CreateVehicleModal({clients,onConfirm,onClose}) {
   const confirm=()=>{
     if(!canSave) return;
     onConfirm({
-      model,plate,
+      model,plate,color,
       clientId:clientMode==="existing"?selectedClientId:null,
       newClient:clientMode==="new"?{name:newName,phone:newPhone,email:newEmail}:null,
     });
@@ -940,10 +940,15 @@ function CreateVehicleModal({clients,onConfirm,onClose}) {
           <input value={model} onChange={e=>setModel(e.target.value)} placeholder="Ex: Honda Civic 2022" autoFocus
             style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
         </div>
-        <div style={{marginBottom:18}}>
+        <div style={{marginBottom:14}}>
           <FieldLabel>Placa</FieldLabel>
           <input value={plate} onChange={e=>setPlate(e.target.value.toUpperCase())} placeholder="Ex: ABC-1234"
             style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:1}}/>
+        </div>
+        <div style={{marginBottom:18}}>
+          <FieldLabel>Cor (opcional)</FieldLabel>
+          <input value={color} onChange={e=>setColor(e.target.value)} placeholder="Ex: Preto, Branco Perolado, Azul Metálico…"
+            style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
         </div>
 
         {/* Client section */}
@@ -1322,6 +1327,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             {mechs.length>0&&<span style={{color:B.orange}}>🔧 {mechs.map(m=>m.name).join(", ")}</span>}
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10}}>{sc.label}</span>
             {(()=>{const p=PRIORITY[vehicle.priority||"medium"];return <span style={{background:p.bg,border:`1px solid ${p.border}`,borderRadius:5,padding:"0px 6px",color:p.color,fontWeight:700,fontSize:10}}>▲ {p.label}</span>;})()}
+            {vehicle.color&&<span style={{color:B.gray300}}>🎨 {vehicle.color}</span>}
             {photos.length>0&&<span style={{color:B.purple}}>📷 {photos.length}</span>}
           </div>
           {vts.length>0&&<ProgressBar value={done} max={vts.length}/>}
@@ -1549,7 +1555,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   const [showF,setSF]=useState(false);
   const [showPicker,setShowPicker]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
-  const [model,setMod]=useState(""); const [plate,setPlate]=useState("");
+  const [model,setMod]=useState(""); const [plate,setPlate]=useState(""); const [vColor,setVColor]=useState("");
   const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id) && v.status!=="ready")]
     .sort((a,b)=>{
     const pri={high:0,medium:1,low:2};
@@ -1559,7 +1565,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   });
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
-  const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase());setMod("");setPlate("");setSF(false);};;
+  const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase(),vColor.trim());setMod("");setPlate("");setVColor("");setSF(false);};;
   return (<><div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,marginBottom:20,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,.35)"}}>
     <div style={{padding:"12px 16px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
       <div style={{width:42,height:42,borderRadius:10,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={20} c={B.orange}/></div>
@@ -1588,8 +1594,10 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
       {showF?<div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:4}}>
         <input value={model} onChange={e=>setMod(e.target.value)} placeholder="Modelo (ex: Honda Civic 2020)"
           style={{flex:"1 1 160px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-        <input value={plate} onChange={e=>setPlate(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addV()} placeholder="Placa"
+        <input value={plate} onChange={e=>setPlate(e.target.value)} placeholder="Placa"
           style={{flex:"0 1 110px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",fontFamily:"monospace",letterSpacing:1}}/>
+        <input value={vColor} onChange={e=>setVColor(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addV()} placeholder="Cor (ex: Preto)"
+          style={{flex:"0 1 120px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
         <button onClick={addV} style={{padding:"7px 14px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700}}>Salvar</button>
         <button onClick={()=>setSF(false)} style={{padding:"7px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer"}}>✕</button>
       </div>:<button onClick={()=>setShowPicker(true)} style={{marginTop:4,padding:"7px 12px",borderRadius:8,background:"transparent",border:`1px dashed ${B.orange}66`,color:B.orange,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontWeight:600,fontSize:13}}
@@ -2375,6 +2383,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
           <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehicle.model}</div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
             <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
+            {vehicle.color&&<span style={{color:B.gray300}}>🎨 {vehicle.color}</span>}
             {vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>}
             {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
             {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}>📋 {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
@@ -3077,9 +3086,10 @@ export default function App() {
   };
 
   // ── Vehicles
-  const addVeh=async(eid,model,plate)=>{
+  const addVeh=async(eid,model,plate,color="")=>{
     try{
-      const row=await db.addVehicle({employeeId:eid,clientId:null,model,plate,photo:null,photos:[]});
+      const row=await db.addVehicle({employeeId:eid,clientId:null,model,plate,color,photo:null,photos:[]});
+      row.mechanicIds=[eid];
       setVeh(p=>[...p,row]); toast_("Veículo adicionado ✓");
     }catch(e){errToast(e);}
   };
@@ -3094,7 +3104,7 @@ export default function App() {
         setCli(p=>[...p,row]);
         finalClientId=row.id;
       }
-      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),photo:null,photos:[]});
+      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),color:(data.color||"").trim(),photo:null,photos:[]});
       // Hydrate mechanicIds for UI consistency
       vRow.mechanicIds=[];
       setVeh(p=>[...p,vRow]);

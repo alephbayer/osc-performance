@@ -328,6 +328,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.text("DESC.",  cDisc,  y + 5.5, { align: "right" });
     doc.text("TOTAL",  cTotal, y + 5.5, { align: "right" });
     y += 8;
+    // Breathing space below header
+    y += 3;
   };
 
   const checkPageBreak = (needed = 10) => {

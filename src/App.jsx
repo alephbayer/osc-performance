@@ -311,19 +311,21 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   y += boxH + 8;
 
   // ── Table ────────────────────────────────────────────────────────────────────
-  // Columns: desc (stretchy) | qty | unit | total
-  const cQty   = marginX + contentW - 78;
-  const cUnit  = marginX + contentW - 48;
-  const cTotal = marginX + contentW - 4;   // 4mm internal right padding
+  // Columns: desc (stretchy) | qty | unit | desc | total
+  const cQty   = marginX + contentW - 100;
+  const cUnit  = marginX + contentW - 70;
+  const cDisc  = marginX + contentW - 38;
+  const cTotal = marginX + contentW - 4;
   const cDescW = cQty - marginX - 8;
 
   const drawTableHeader = () => {
     doc.setFillColor(...orange);
     doc.rect(marginX, y, contentW, 8, "F");
-    doc.setTextColor(...white); doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    doc.setTextColor(...white); doc.setFont("helvetica","bold"); doc.setFontSize(8);
     doc.text("SERVIÇO / MATERIAL", marginX + 3, y + 5.5);
     doc.text("QTD/H",  cQty,   y + 5.5, { align: "right" });
     doc.text("UNIT.",  cUnit,  y + 5.5, { align: "right" });
+    doc.text("DESC.",  cDisc,  y + 5.5, { align: "right" });
     doc.text("TOTAL",  cTotal, y + 5.5, { align: "right" });
     y += 8;
   };
@@ -385,32 +387,40 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.setTextColor(...labelColor);
     labelLines.forEach((line, li) => doc.text(line, marginX + 3, y + 5 + li * 5));
 
-    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
-    if (t.hours > 0) doc.text(`${t.hours}h`, cQty,  y + 5, { align: "right" });
-    doc.text(t.hours > 0 ? fmtBRL(rate) : "—",   cUnit, y + 5, { align: "right" });
-    doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+    if (t.hours > 0) doc.text(`${t.hours}h`, cQty, y + 5, { align: "right" });
+    doc.text(t.hours > 0 ? fmtBRL(rate) : "—", cUnit, y + 5, { align: "right" });
+    // DESC column — per-task discount
     if (c.discount > 0) {
-      // Show original crossed out, then discounted below
-      doc.setTextColor(180, 60, 60);
-      doc.text(`-${fmtBRL(c.discount)}`, cTotal, y + 4, { align: "right" });
-      doc.setTextColor(60, 140, 60);
-      doc.text(fmtBRL(c.labor), cTotal, y + 9, { align: "right" });
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(180, 60, 60);
+      doc.text(`-${fmtBRL(c.discount)}`, cDisc, y + 5, { align: "right" });
     } else {
-      doc.setTextColor(...black);
-      doc.text(fmtBRL(c.labor), cTotal, y + 5, { align: "right" });
+      doc.setTextColor(...gray);
+      doc.text("—", cDisc, y + 5, { align: "right" });
     }
+    // TOTAL column
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...black);
+    doc.text(fmtBRL(c.labor), cTotal, y + 5, { align: "right" });
 
     let matY = y + 5 + labelLines.length * 5;
     matTextLines.forEach(({ lines, mat, qty, freight }) => {
       const matCost = Number(mat.cost || 0);
-      // Use sale price (with markup) for non-stock materials, cost for stock items
       const markup = mat.markup != null ? Number(mat.markup) : 50;
       const unitPrice = mat.fromStock ? matCost : matCost * (1 + markup / 100);
-      const matTotal = unitPrice * qty + freight;
+      const matSubtotal = unitPrice * qty;
+      const matTotal = matSubtotal + freight;
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
       lines.forEach((line, li) => doc.text(line, marginX + 7, matY + li * 4.5));
       doc.text(`${qty}x`, cQty, matY, { align: "right" });
       doc.text(fmtBRL(unitPrice), cUnit, matY, { align: "right" });
+      // DESC: show freight if any, else dash
+      if (freight > 0) {
+        doc.setTextColor(100, 120, 160);
+        doc.text(`+${fmtBRL(freight)}`, cDisc, matY, { align: "right" });
+      } else {
+        doc.setTextColor(...gray);
+        doc.text("—", cDisc, matY, { align: "right" });
+      }
       doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(180, 100, 0);
       doc.text(fmtBRL(matTotal), cTotal, matY, { align: "right" });
       matY += lines.length * 4.5;
@@ -425,8 +435,9 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.setFillColor(254, 249, 236);
     doc.setDrawColor(225, 225, 225);
     doc.rect(marginX, y, contentW, 8, "FD");
-    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
     doc.text("Combustivel", marginX + 3, y + 5.5);
+    doc.text("—", cDisc, y + 5.5, { align: "right" });
     doc.setFont("helvetica","bold"); doc.setTextColor(...black);
     doc.text(fmtBRL(fuelCostVal), cTotal, y + 5.5, { align: "right" });
     y += 9;
@@ -438,15 +449,14 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.setFillColor(236, 246, 254);
     doc.setDrawColor(225, 225, 225);
     doc.rect(marginX, y, contentW, 8, "FD");
-    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
     const origin = tow.origin || "";
     const dest   = tow.destination || "";
     const route  = origin && dest ? ` (${origin} -> ${dest})` : origin ? ` (${origin})` : dest ? ` (-> ${dest})` : "";
     const towLabel = `Reboque #${ti+1}${route}`;
-    // Split if too long
-    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
     const towLines = doc.splitTextToSize(towLabel, cDescW);
     towLines.forEach((line, li) => doc.text(line, marginX + 3, y + 5.5 + li * 4));
+    doc.text("—", cDisc, y + 5.5, { align: "right" });
     doc.setFont("helvetica","bold"); doc.setTextColor(...black);
     doc.text(fmtBRL(Number(tow.value||0)), cTotal, y + 5.5, { align: "right" });
     y += 9;

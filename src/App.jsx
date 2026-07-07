@@ -346,7 +346,29 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   const tows = Array.isArray(vehicle.tows) ? vehicle.tows : [];
   const towTotal = tows.reduce((s,t)=>s+Number(t.value||0),0);
 
-  ts.forEach((t, idx) => {
+  // Group tasks by category in PDF
+  const catOrder=[];
+  const catSeen=new Set();
+  ts.forEach(t=>{
+    const key=t.category||"__none__";
+    if(!catSeen.has(key)){catSeen.add(key);catOrder.push(t.category||null);}
+  });
+
+  catOrder.forEach(cat=>{
+    const groupTasks=ts.filter(t=>(t.category||null)===cat);
+    // Category header row
+    if(cat){
+      checkPageBreak(10);
+      const hexStr=CAT_MAP[cat]||"#6b7280";
+      const rgb=[parseInt(hexStr.slice(1,3),16),parseInt(hexStr.slice(3,5),16),parseInt(hexStr.slice(5,7),16)];
+      doc.setFillColor(Math.round(rgb[0]*.15+240*.85),Math.round(rgb[1]*.15+240*.85),Math.round(rgb[2]*.15+240*.85));
+      doc.setDrawColor(...rgb); doc.setLineWidth(0.5);
+      doc.rect(marginX, y, contentW, 6, "FD"); doc.setLineWidth(0.2);
+      doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...rgb);
+      doc.text(`> ${cat.toUpperCase()}`, marginX + 3, y + 4.2);
+      y += 7;
+    }
+    groupTasks.forEach((t, idx) => {
     const c = taskCost(t, defaultRate);
     laborTotal += c.labor;
     partsTotal += c.mat;
@@ -427,7 +449,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     });
 
     y += rowH + 1;
-  });
+    }); // groupTasks.forEach
+  }); // catOrder.forEach
 
   // Fuel cost row
   if (fuelCostVal > 0) {
@@ -564,6 +587,22 @@ const IBank  =({s=18,c="currentColor"})=><Svg d="M3 21h18M3 10h18M5 6l7-3 7 3M4 
 const ISearch=({s=18,c="currentColor"})=><Svg d="M11 19a8 8 0 100-16 8 8 0 000 16z" d2="M21 21l-4.35-4.35" s={s} c={c}/>;
 
 // Priority config
+const CATEGORIES=[
+  {id:"Suspensão",  color:"#f59e0b"},
+  {id:"Motor",      color:"#ef4444"},
+  {id:"Powertrain", color:"#f97316"},
+  {id:"Interior",   color:"#8b5cf6"},
+  {id:"Exterior",   color:"#06b6d4"},
+  {id:"Pintura",    color:"#ec4899"},
+  {id:"Acabamento", color:"#14b8a6"},
+  {id:"Elétrica",   color:"#eab308"},
+  {id:"Eletrônica", color:"#6366f1"},
+  {id:"Direção",    color:"#10b981"},
+  {id:"Adaptação",  color:"#64748b"},
+  {id:"Chassi",     color:"#78716c"},
+];
+const CAT_MAP=Object.fromEntries(CATEGORIES.map(c=>[c.id,c.color]));
+
 const PRIORITY={
   high:  {label:"Alta",    color:"#ef4444", bg:"#ef444418", border:"#ef444444", next:"medium"},
   medium:{label:"Média",   color:"#f59e0b", bg:"#f59e0b18", border:"#f59e0b44", next:"low"},
@@ -694,6 +733,41 @@ function FieldLabel({children}) {
 }
 function Field({label,children,flex}) {
   return <div style={{flex:flex||1,display:"flex",flexDirection:"column"}}><FieldLabel>{label}</FieldLabel>{children}</div>;
+}
+
+// ─── Category components ──────────────────────────────────────────────────────
+function CategoryPill({category,size=10}) {
+  if(!category) return null;
+  const color=CAT_MAP[category]||B.gray500;
+  return <span style={{fontSize:size,fontWeight:700,color,background:color+"22",border:`1px solid ${color}44`,borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>{category}</span>;
+}
+
+function CategorySelect({value,onChange}) {
+  const [open,setOpen]=useState(false);
+  const ref=useRef(null);
+  useEffect(()=>{
+    const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[]);
+  const color=value?CAT_MAP[value]||B.gray500:B.gray500;
+  return (<div ref={ref} style={{position:"relative",flexShrink:0}}>
+    <button onClick={()=>setOpen(o=>!o)} style={{background:value?color+"22":"none",border:`1px solid ${value?color+"44":B.gray600}`,borderRadius:5,padding:"1px 7px",cursor:"pointer",color:value?color:B.gray500,fontSize:9,fontWeight:700,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}>
+      {value||"Categoria"}{open?<IChevU s={8}/>:<IChevD s={8}/>}
+    </button>
+    {open&&<div style={{position:"absolute",top:"100%",left:0,zIndex:50,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:8,padding:4,minWidth:140,boxShadow:"0 8px 24px rgba(0,0,0,.5)",maxHeight:220,overflowY:"auto",marginTop:3}}>
+      {value&&<button onClick={()=>{onChange(null);setOpen(false);}} style={{width:"100%",textAlign:"left",padding:"4px 8px",borderRadius:5,background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:10,marginBottom:2}}>
+        ✕ Sem categoria
+      </button>}
+      {CATEGORIES.map(c=>(
+        <button key={c.id} onClick={()=>{onChange(c.id);setOpen(false);}}
+          style={{width:"100%",textAlign:"left",padding:"5px 8px",borderRadius:5,background:value===c.id?c.color+"22":"none",border:"none",cursor:"pointer",color:c.color,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+          <span style={{width:8,height:8,borderRadius:99,background:c.color,flexShrink:0}}/>
+          {c.id}
+        </button>
+      ))}
+    </div>}
+  </div>);
 }
 
 function TransferModal({title,subtitle,items,onPick,onClose}) {
@@ -1059,7 +1133,10 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[]}) {
         {task.done&&<ICheck/>}
       </button>
       <div style={{flex:1,minWidth:0}}>
-        <TaskLabel task={task} onUpdate={onUpdate}/>
+        <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+          <TaskLabel task={task} onUpdate={onUpdate}/>
+          <CategoryPill category={task.category}/>
+        </div>
         {signer&&task.done&&<div style={{marginTop:2}}>
           <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
         </div>}
@@ -1128,6 +1205,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               style={{background:task.outsourced?"#a78bfa22":"none",border:`1px solid ${task.outsourced?"#a78bfa44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.outsourced?"#a78bfa":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
               {task.outsourced?"✓ 3º":"3º"}
             </button>
+            <CategorySelect value={task.category} onChange={cat=>onUpdate(task.id,{category:cat})}/>
           </div>
           {/* Per-task discount */}
           {c.laborGross>0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>
@@ -1335,10 +1413,33 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           <span style={{fontSize:12.5,fontWeight:700,color:B.amber}}>Veículo pausado — aguardando cliente. Não trabalhe neste carro no momento.</span>
         </div>}
         {vts.length===0&&!aiS.length&&<p style={{fontSize:12.5,color:B.gray400,margin:"0 0 10px"}}>Nenhuma tarefa ainda.</p>}
-        {vts.map(t=>managerMode
-          ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}/>
-          :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask}/>
-        )}
+        {(()=>{
+          // Group tasks by category; uncategorized → null group rendered last
+          const groups=[];
+          const seen=new Set();
+          // First pass: preserve order of first appearance per category
+          const catOrder=[];
+          vts.forEach(t=>{
+            const cat=t.category||null;
+            const key=cat||"__none__";
+            if(!seen.has(key)){seen.add(key);catOrder.push(cat);}
+          });
+          return catOrder.map(cat=>{
+            const groupTasks=vts.filter(t=>(t.category||null)===cat);
+            const catColor=cat?CAT_MAP[cat]||B.gray500:null;
+            return (<div key={cat||"__none__"} style={{marginBottom:4}}>
+              {cat&&<div style={{display:"flex",alignItems:"center",gap:6,margin:"8px 0 4px",padding:"3px 8px",background:catColor+"15",borderLeft:`3px solid ${catColor}`,borderRadius:"0 4px 4px 0"}}>
+                <span style={{width:7,height:7,borderRadius:99,background:catColor,flexShrink:0}}/>
+                <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat}</span>
+                <span style={{fontSize:10,color:catColor+"99",marginLeft:"auto"}}>{groupTasks.length} tarefa{groupTasks.length!==1?"s":""}</span>
+              </div>}
+              {groupTasks.map(t=>managerMode
+                ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}/>
+                :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask}/>
+              )}
+            </div>);
+          });
+        })()}
         {aiS.length>0&&<div style={{marginTop:10,marginBottom:4}}>
           <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>💡 Sugestões IA</div>
           {aiS.map((sg,i)=>(<button key={i} onClick={()=>{onAddTask(vehicle.id,sg);setAiS(p=>p.filter((_,j)=>j!==i));}}

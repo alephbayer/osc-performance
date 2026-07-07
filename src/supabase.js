@@ -73,6 +73,7 @@ const mapVehicleIn = (v) => ({
   totalPausedMs: Number(v.total_paused_ms || 0),
   priority: v.priority || "medium",
   fuelCost: Number(v.fuel_cost || 0),
+  tows: Array.isArray(v.tows) ? v.tows : (v.tows ? JSON.parse(v.tows) : []),
   mechanicIds: [],    // hydrated separately after load
   currentClientId: v.client_id,      // convenience alias
 });
@@ -277,6 +278,7 @@ export const db = {
     if ("status"      in patch) dbPatch.status       = patch.status;
     if ("priority"    in patch) dbPatch.priority     = patch.priority;
     if ("fuelCost"    in patch) dbPatch.fuel_cost    = patch.fuelCost;
+    if ("tows"        in patch) dbPatch.tows         = patch.tows;
     if ("pausedAt"      in patch) dbPatch.paused_at      = patch.pausedAt;
     if ("totalPausedMs" in patch) dbPatch.total_paused_ms= patch.totalPausedMs;
     const { error } = await supabase.from("vehicles").update(dbPatch).eq("id", id);
@@ -338,6 +340,7 @@ export const db = {
       os_number: null,
       priority: "medium",
       fuel_cost: 0,
+      tows: [],
     }).eq("id", vehicleId);
     if (vErr) throw vErr;
   },

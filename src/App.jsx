@@ -1328,6 +1328,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10}}>{sc.label}</span>
             {(()=>{const p=PRIORITY[vehicle.priority||"medium"];return <span style={{background:p.bg,border:`1px solid ${p.border}`,borderRadius:5,padding:"0px 6px",color:p.color,fontWeight:700,fontSize:10}}>▲ {p.label}</span>;})()}
             {vehicle.color&&<span style={{color:B.gray300}}>🎨 {vehicle.color}</span>}
+            {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600}}>📝 Obs.</span>}
             {photos.length>0&&<span style={{color:B.purple}}>📷 {photos.length}</span>}
           </div>
           {vts.length>0&&<ProgressBar value={done} max={vts.length}/>}
@@ -1422,6 +1423,19 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           <span style={{fontSize:14}}>⏸</span>
           <span style={{fontSize:12.5,fontWeight:700,color:B.amber}}>Veículo pausado — aguardando cliente. Não trabalhe neste carro no momento.</span>
         </div>}
+
+        {/* Notes — visible and editable by both mechanic and manager */}
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>📝 Observações</div>
+          <textarea
+            defaultValue={vehicle.notes||""}
+            key={vehicle.id}
+            onBlur={e=>{if(e.target.value!==(vehicle.notes||""))onUpdateVehicle(vehicle.id,{notes:e.target.value});}}
+            placeholder="Observações sobre o veículo ou a OS... (visível para mecânicos e gestores)"
+            rows={3}
+            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12.5,outline:"none",resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.5}}
+          />
+        </div>
         {vts.length===0&&!aiS.length&&<p style={{fontSize:12.5,color:B.gray400,margin:"0 0 10px"}}>Nenhuma tarefa ainda.</p>}
         {(()=>{
           // Group tasks by category; uncategorized → null group rendered last

@@ -1424,6 +1424,27 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           <span style={{fontSize:12.5,fontWeight:700,color:B.amber}}>Veículo pausado — aguardando cliente. Não trabalhe neste carro no momento.</span>
         </div>}
 
+        {/* Mechanic chips with add/remove — manager only */}
+        {managerMode&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>🔧 Mecânicos</div>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+            {mechs.map(m=>(
+              <div key={m.id} style={{display:"flex",alignItems:"center",gap:4,background:`${B.orange}18`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"3px 8px"}}>
+                <IWrench s={10} c={B.orange}/>
+                <span style={{fontSize:11,color:B.orange,fontWeight:600}}>{m.name}</span>
+                {onRemoveMechanic&&mechs.length>1&&<button onClick={()=>onRemoveMechanic(vehicle.id,m.id)}
+                  style={{background:"none",border:"none",cursor:"pointer",color:`${B.orange}88`,padding:0,display:"flex",marginLeft:2,lineHeight:1}}
+                  title={`Remover ${m.name} deste veículo`}
+                  onMouseEnter={e=>e.currentTarget.style.color=B.red}
+                  onMouseLeave={e=>e.currentTarget.style.color=`${B.orange}88`}>
+                  <IX s={10}/>
+                </button>}
+              </div>
+            ))}
+            {mechs.length===0&&<span style={{fontSize:11,color:B.gray500}}>Nenhum mecânico atribuído</span>}
+          </div>
+        </div>}
+
         {/* Notes — visible and editable by both mechanic and manager */}
         <div style={{marginBottom:10}}>
           <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>📝 Observações</div>

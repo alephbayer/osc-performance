@@ -3578,7 +3578,7 @@ export default function App() {
     const matQty=1; // initial qty when adding from stock picker — user can edit afterwards
     const newQty=Math.max(0,item.qty-matQty);
     const mats = currentMats || tasks.find(t=>t.id===taskId)?.materials || [];
-    const newMats = [...mats,{name:item.name,cost:item.costPrice,qty:matQty,fromStock:true,stockItemId:item.id}];
+    const newMats = [...mats,{name:item.name,cost:item.salePrice,qty:matQty,fromStock:true,stockItemId:item.id}];
     setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
     try{

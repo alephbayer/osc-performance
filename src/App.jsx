@@ -2671,7 +2671,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 <button disabled={pdfLoading===h.id} onClick={async()=>{
                   setPdfLoading(h.id);
                   try{
-                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model};
+                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model,fuelCost:h.fuel_cost||0,tows:h.tows||[],osDiscountPct:h.os_discount_pct||0};
                     const hEmployee=employees.find(e=>(h.mechanic_ids||[]).includes(e.id))||null;
                     await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks);
                   }catch(err){alert("Erro ao gerar PDF: "+err.message);}
@@ -2685,6 +2685,13 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 {h.delivered_at&&<span>✅ Entrega: {new Date(h.delivered_at).toLocaleDateString("pt-BR")}</span>}
                 {totalMs&&<span>⏱ {fmtMs(totalMs)} total{workMs&&workMs!==totalMs?` · ${fmtMs(workMs)} em serviço`:""}</span>}
               </div>
+              {/* Extras: fuel, tows, discount */}
+              {(Number(h.fuel_cost||0)>0||(h.tows||[]).length>0||Number(h.os_discount_pct||0)>0)&&
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
+                  {Number(h.fuel_cost||0)>0&&<span style={{fontSize:10,color:B.amber,background:`${B.amber}15`,border:`1px solid ${B.amber}33`,borderRadius:5,padding:"1px 7px"}}>⛽ {fmtBRL(h.fuel_cost)}</span>}
+                  {(h.tows||[]).map((t,i)=>Number(t.value||0)>0&&<span key={i} style={{fontSize:10,color:"#60a5fa",background:"#60a5fa15",border:"1px solid #60a5fa33",borderRadius:5,padding:"1px 7px"}}>🚛 {t.origin&&t.destination?`${t.origin}→${t.destination} · `:""}{fmtBRL(t.value)}</span>)}
+                  {Number(h.os_discount_pct||0)>0&&<span style={{fontSize:10,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:5,padding:"1px 7px"}}>🏷️ -{h.os_discount_pct}% m.o.</span>}
+                </div>}
               {hTasks.length>0&&<div style={{display:"flex",flexDirection:"column",gap:3}}>
                 {hTasks.map((t,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 6px",background:t.done?B.greenBg:`${B.amber}11`,borderRadius:5}}>
                   <span style={{fontSize:10}}>{t.done?"✅":"⏳"}</span>
@@ -3317,7 +3324,11 @@ export default function App() {
 
     // Snapshot current tasks for history
     const vTasks=tasks.filter(t=>t.vehicleId===vid);
-    const totalValue=vTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+    const tasksValue=vTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+    const towTotal=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
+    const laborSum=vTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+    const osDiscountAmt=laborSum*Number(v.osDiscountPct||0)/100;
+    const totalValue=tasksValue+Number(v.fuelCost||0)+towTotal-osDiscountAmt;
 
     const historyRecord={
       osNumber: v.osNumber,
@@ -3327,6 +3338,9 @@ export default function App() {
       deliveredAt,
       totalPausedMs,
       tasksSnapshot: vTasks,
+      fuelCost: v.fuelCost||0,
+      tows: v.tows||[],
+      osDiscountPct: v.osDiscountPct||0,
       totalValue,
     };
 
@@ -3346,6 +3360,9 @@ export default function App() {
       enteredAt:null,
       osNumber:null,
       priority:"medium",
+      fuelCost:0,
+      tows:[],
+      osDiscountPct:0,
     }:x));
     setTsk(p=>p.filter(t=>t.vehicleId!==vid));
     setOsHistory(p=>[newOsEntry,...p]);

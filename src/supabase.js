@@ -336,6 +336,9 @@ export const db = {
       delivered_at: historyRecord.deliveredAt,
       total_paused_ms: historyRecord.totalPausedMs || 0,
       tasks_snapshot: historyRecord.tasksSnapshot,
+      fuel_cost: historyRecord.fuelCost || 0,
+      tows: historyRecord.tows || [],
+      os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
     });
     if (hErr) throw hErr;

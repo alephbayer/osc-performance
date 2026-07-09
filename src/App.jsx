@@ -362,11 +362,13 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
       checkPageBreak(10);
       const hexStr=CAT_MAP[cat]||"#6b7280";
       const rgb=[parseInt(hexStr.slice(1,3),16),parseInt(hexStr.slice(3,5),16),parseInt(hexStr.slice(5,7),16)];
+      const catTotal=groupTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
       doc.setFillColor(Math.round(rgb[0]*.15+240*.85),Math.round(rgb[1]*.15+240*.85),Math.round(rgb[2]*.15+240*.85));
       doc.setDrawColor(...rgb); doc.setLineWidth(0.5);
       doc.rect(marginX, y, contentW, 6, "FD"); doc.setLineWidth(0.2);
       doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...rgb);
       doc.text(`> ${cat.toUpperCase()}`, marginX + 3, y + 4.2);
+      if(catTotal>0) doc.text(fmtBRL(catTotal), cTotal, y + 4.2, { align: "right" });
       y += 7;
     }
     groupTasks.forEach((t, idx) => {

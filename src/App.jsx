@@ -2270,7 +2270,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
 }
 
 // ─── Clients Monitor Tab ──────────────────────────────────────────────────────
-function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete}) {
+function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete,osHistory=[],payments=[]}) {
   const [search,setSearch]=useState("");
   const [open,setOpen]=useState(null); // id of expanded client
   const [confirmDel,setConfirmDel]=useState(null);
@@ -2304,6 +2304,12 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
         const totalTasks=tasks.filter(t=>cliVs.find(v=>v.id===t.vehicleId)).length;
         const doneTasks =tasks.filter(t=>cliVs.find(v=>v.id===t.vehicleId)&&t.done).length;
         const totalValue=cliVs.reduce((s,v)=>s+tasks.filter(t=>t.vehicleId===v.id).reduce((ss,t)=>ss+taskCost(t,defaultRate).total,0),0);
+        // Open balance: sum across all archived OSs of this client
+        const cliHistory=osHistory.filter(h=>h.client_id===cli.id);
+        const totalOwed=cliHistory.reduce((s,h)=>{
+          const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0);
+          return s+Math.max(0,Number(h.total_value||0)-paid);
+        },0);
         const isOpen=open===cli.id;
 
         return (<div key={cli.id} style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
@@ -2322,6 +2328,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
             <div style={{textAlign:"right",flexShrink:0,marginRight:6}}>
               <div style={{fontSize:11,color:B.gray400}}>{cliVs.length} veículo{cliVs.length!==1?"s":" "}· {doneTasks}/{totalTasks} tarefas</div>
               {totalValue>0&&<div style={{fontSize:13,fontWeight:800,color:B.amber}}>{fmtBRL(totalValue)}</div>}
+              {totalOwed>0&&<div style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px",marginTop:2}}>⚠ {fmtBRL(totalOwed)} em aberto</div>}
             </div>
             <div style={{color:B.gray400,flexShrink:0}}>{isOpen?<IChevU s={15}/>:<IChevD s={15}/>}</div>
           </div>
@@ -2397,7 +2404,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
       onCancel={()=>setConfirmDel(null)}/>}
   </div>);
 }
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,company,onCreateVehicle}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment}) {
   const [search,setSearch]=useState("");
   const [now,setNow]=useState(Date.now());
   const [showCreate,setShowCreate]=useState(false);
@@ -2445,12 +2452,80 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
         <div style={{fontSize:13}}>Clique em <b style={{color:B.orange}}>+ Novo veículo</b> para cadastrar o primeiro.</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} company={company}/>)}
+      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment}/>)}
     </div>}
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,company}) {
+// ─── OS History Payment Panel ─────────────────────────────────────────────────
+function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
+  const [showForm,setShowForm]=useState(false);
+  const [amount,setAmount]=useState("");
+  const [method,setMethod]=useState("Dinheiro");
+  const [note,setNote]=useState("");
+
+  const hPayments=payments.filter(p=>p.osHistoryId===h.id);
+  const totalValue=Number(h.total_value||0);
+  const paid=hPayments.reduce((s,p)=>s+Number(p.amount),0);
+  const owed=Math.max(0,totalValue-paid);
+  const overpaid=paid>totalValue?paid-totalValue:0;
+
+  const save=()=>{
+    const val=parseFloat(amount.replace(",","."))||0;
+    if(val<=0) return;
+    onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:val,method,paidAt:new Date().toISOString(),note});
+    setAmount(""); setNote(""); setShowForm(false);
+  };
+
+  return (<div style={{marginTop:8,borderTop:`1px solid ${B.gray600}`,paddingTop:8}}>
+    {/* Balance summary */}
+    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:hPayments.length||showForm?6:0}}>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",flex:1}}>
+        <span style={{fontSize:11,color:B.gray400}}>Total: <b style={{color:B.amber}}>{fmtBRL(totalValue)}</b></span>
+        <span style={{fontSize:11,color:B.gray400}}>Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></span>
+        {owed>0&&<span style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px"}}>⚠ {fmtBRL(owed)} em aberto</span>}
+        {owed===0&&paid>0&&<span style={{fontSize:11,fontWeight:700,color:B.green}}>✅ Quitado</span>}
+        {overpaid>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>+{fmtBRL(overpaid)} crédito</span>}
+      </div>
+      {!showForm&&<button onClick={()=>setShowForm(true)}
+        style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.green,fontSize:11,fontWeight:700,flexShrink:0,display:"flex",alignItems:"center",gap:4}}>
+        <IPlus s={10} c={B.green}/>Pagamento
+      </button>}
+    </div>
+
+    {/* Existing payments */}
+    {hPayments.length>0&&<div style={{display:"flex",flexDirection:"column",gap:3,marginBottom:showForm?6:0}}>
+      {hPayments.map(p=>(
+        <div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 8px",background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5}}>
+          <span style={{fontSize:10}}>💰</span>
+          <span style={{fontSize:11,color:B.green,fontWeight:700,flexShrink:0}}>{fmtBRL(p.amount)}</span>
+          <span style={{fontSize:10,color:B.gray400,flexShrink:0}}>{p.method}</span>
+          {p.note&&<span style={{fontSize:10,color:B.gray400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.note}</span>}
+          <span style={{fontSize:10,color:B.gray500,flexShrink:0,marginLeft:"auto"}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
+          {onDeletePayment&&<button onClick={()=>onDeletePayment(p.id)}
+            style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
+            onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={11}/></button>}
+        </div>
+      ))}
+    </div>}
+
+    {/* Add payment form */}
+    {showForm&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"8px 10px",background:B.gray900,borderRadius:8,border:`1px solid ${B.gray700}`}}>
+      <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Valor R$" type="number"
+        style={{flex:"0 1 100px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+      <select value={method} onChange={e=>setMethod(e.target.value)}
+        style={{flex:"0 1 110px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
+        {["Dinheiro","Pix","Cartão Débito","Cartão Crédito","Transferência","Outro"].map(m=><option key={m}>{m}</option>)}
+      </select>
+      <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
+        style={{flex:"1 1 120px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+      <button onClick={save} style={{padding:"5px 12px",borderRadius:6,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
+      <button onClick={()=>{setShowForm(false);setAmount("");setNote("");}} style={{padding:"5px 8px",borderRadius:6,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
+    </div>}
+  </div>);
+}
+
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,company,payments=[],onAddPayment,onDeletePayment}) {
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
   const [showOpenOS,setShowOpenOS]=useState(false);
@@ -2498,6 +2573,14 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             {vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>}
             {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
             {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}>📋 {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
+          {(()=>{
+            const totalOwed=sortedHistory.reduce((s,h)=>{
+              const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0);
+              return s+Math.max(0,Number(h.total_value||0)-paid);
+            },0);
+            if(totalOwed<=0) return null;
+            return <span style={{fontSize:10,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px",flexShrink:0}}>⚠ {fmtBRL(totalOwed)} em aberto</span>;
+          })()}
           </div>
           {vts.length>0&&<ProgressBar value={done.length} max={vts.length}/>}
         </div>
@@ -2699,6 +2782,8 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                   {taskCost(t,defaultRate).total>0&&<span style={{fontSize:10,color:t.done?B.green:B.amber,fontWeight:700}}>{fmtBRL(taskCost(t,defaultRate).total)}</span>}
                 </div>)}
               </div>}
+              {/* Financial panel */}
+              <OsHistoryPaymentPanel h={h} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment}/>
             </div>);
           })}
         </div>}
@@ -3365,15 +3450,20 @@ export default function App() {
       osDiscountPct:0,
     }:x));
     setTsk(p=>p.filter(t=>t.vehicleId!==vid));
+    // Will update payments osHistoryId after we get the real ID from the server
     setOsHistory(p=>[newOsEntry,...p]);
 
     try{
       await db.archiveAndResetVehicle(vid,historyRecord);
+      // Reload to get real os_history id and updated payments
+      const d=await db.loadAll();
+      setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]);
+      setPay(d.payments||[]);
       toast_("Veículo entregue e OS arquivada ✓");
     }catch(e){
       errToast(e);
       const d=await db.loadAll();
-      setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]);
+      setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]); setPay(d.payments||[]);
     }
   };
 
@@ -3707,13 +3797,14 @@ export default function App() {
           📋 <b style={{color:"#0891b2"}}>Clientes</b>: cadastro completo de clientes com contato e histórico de todos os veículos que já passaram pela oficina.
         </div>
         <ClientsMonitorTab clients={clients} vehicles={vehicles} tasks={tasks} employees={employees} defaultRate={defaultRate}
-          onUpdateName={updCliN} onUpdatePhone={updCliP} onUpdateEmail={updCliE} onDelete={delCli}/>
+          onUpdateName={updCliN} onUpdatePhone={updCliP} onUpdateEmail={updCliE} onDelete={delCli}
+          osHistory={osHistory} payments={payments}/>
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <div style={{marginBottom:14,padding:"9px 13px",background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:9,fontSize:12,color:B.gray200}}>
           🚗 <b style={{color:B.blue}}>Veículos</b>: visão geral de todos os veículos, tempo na oficina e histórico de serviços realizados.
         </div>
-        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} company={company} onCreateVehicle={createVehicleFromTab}/>
+        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <div style={{marginBottom:14,padding:"9px 13px",background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:9,fontSize:12,color:B.gray200}}>

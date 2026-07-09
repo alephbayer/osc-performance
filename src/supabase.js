@@ -155,6 +155,7 @@ const mapPurchaseIn = (p) => ({
 const mapPaymentIn = (p) => ({
   id: p.id,
   vehicleId: p.vehicle_id,
+  osHistoryId: p.os_history_id || null,
   amount: Number(p.amount),
   method: p.method,
   paidAt: p.paid_at,
@@ -327,7 +328,7 @@ export const db = {
   // Archive current OS to history and reset vehicle for next OS
   async archiveAndResetVehicle(vehicleId, historyRecord) {
     // 1) Save OS snapshot to os_history
-    const { error: hErr } = await supabase.from("os_history").insert({
+    const { data: hData, error: hErr } = await supabase.from("os_history").insert({
       vehicle_id: vehicleId,
       os_number: historyRecord.osNumber,
       client_id: historyRecord.clientId,
@@ -340,10 +341,18 @@ export const db = {
       tows: historyRecord.tows || [],
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
-    });
+    }).select("id").single();
     if (hErr) throw hErr;
 
-    // 2) Delete all current tasks for this vehicle
+    const osHistoryId = hData.id;
+
+    // 2) Migrate existing vehicle payments to this OS history
+    await supabase.from("payments")
+      .update({ os_history_id: osHistoryId })
+      .eq("vehicle_id", vehicleId)
+      .is("os_history_id", null);
+
+    // 3) Delete all current tasks for this vehicle
     await supabase.from("tasks").delete().eq("vehicle_id", vehicleId);
 
     // 3) Reset vehicle: clear timers, os_number, status — keep model/plate/client/mechanics
@@ -442,13 +451,26 @@ export const db = {
   // Payments
   async addPayment(p) {
     const { data, error } = await supabase.from("payments").insert({
-      vehicle_id: p.vehicleId, amount: p.amount, method: p.method, paid_at: p.paidAt, note: p.note || "",
+      vehicle_id: p.vehicleId,
+      os_history_id: p.osHistoryId || null,
+      amount: p.amount,
+      method: p.method,
+      paid_at: p.paidAt,
+      note: p.note || "",
     }).select().single();
     if (error) throw error;
     return mapPaymentIn(data);
   },
   async deletePayment(id) {
     const { error } = await supabase.from("payments").delete().eq("id", id);
+    if (error) throw error;
+  },
+  // Migrate existing vehicle payments to a specific OS history record
+  async migratePaymentsToHistory(vehicleId, osHistoryId) {
+    const { error } = await supabase.from("payments")
+      .update({ os_history_id: osHistoryId })
+      .eq("vehicle_id", vehicleId)
+      .is("os_history_id", null);
     if (error) throw error;
   },
 };

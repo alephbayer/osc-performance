@@ -910,7 +910,7 @@ function CreateVehicleModal({clients,onConfirm,onClose}) {
     (c.phone||"").includes(clientSearch)
   );
 
-  const canSave=model.trim()&&plate.trim()&&
+  const canSave=model.trim()&&
     (clientMode==="none"||
      (clientMode==="existing"&&selectedClientId)||
      (clientMode==="new"&&newName.trim()));
@@ -2270,10 +2270,14 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
 }
 
 // ─── Clients Monitor Tab ──────────────────────────────────────────────────────
-function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete,osHistory=[],payments=[]}) {
+function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete,osHistory=[],payments=[],onAddClient}) {
   const [search,setSearch]=useState("");
-  const [open,setOpen]=useState(null); // id of expanded client
+  const [open,setOpen]=useState(null);
   const [confirmDel,setConfirmDel]=useState(null);
+  const [showAdd,setShowAdd]=useState(false);
+  const [newName,setNewName]=useState("");
+  const [newPhone,setNewPhone]=useState("");
+  const [newEmail,setNewEmail]=useState("");
 
   const filtered=clients.filter(c=>
     !search ||
@@ -2281,6 +2285,12 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
     (c.phone||"").includes(search) ||
     (c.email||"").toLowerCase().includes(search.toLowerCase())
   ).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
+
+  const saveClient=()=>{
+    if(!newName.trim()) return;
+    onAddClient&&onAddClient(newName.trim(),newPhone.trim(),newEmail.trim());
+    setNewName(""); setNewPhone(""); setNewEmail(""); setShowAdd(false);
+  };
 
   return (<div>
     <div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center"}}>
@@ -2290,8 +2300,30 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
         <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray400}}><ISearch s={14}/></span>
         {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={13}/></button>}
       </div>
-      <div style={{fontSize:11,color:B.gray400,marginLeft:"auto"}}>{filtered.length} cliente{filtered.length!==1?"s":""}</div>
+      <button onClick={()=>setShowAdd(p=>!p)} style={{padding:"8px 14px",borderRadius:8,background:showAdd?B.blue:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:showAdd?B.white:B.blue,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+        <IPlus s={13} c={showAdd?B.white:B.blue}/>Novo cliente
+      </button>
+      <div style={{fontSize:11,color:B.gray400}}>{filtered.length} cliente{filtered.length!==1?"s":""}</div>
     </div>
+
+    {/* Add client form */}
+    {showAdd&&<div style={{marginBottom:16,padding:"14px 16px",background:B.gray800,border:`1px solid ${B.blue}44`,borderRadius:10}}>
+      <div style={{fontWeight:700,fontSize:12,color:B.blue,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>Novo cliente</div>
+      <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+        <input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&saveClient()} placeholder="Nome completo *" autoFocus
+          style={{flex:"1 1 160px",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
+        <input value={newPhone} onChange={e=>setNewPhone(e.target.value)} onKeyDown={e=>e.key==="Enter"&&saveClient()} placeholder="WhatsApp (opcional)"
+          style={{flex:"1 1 160px",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
+        <input value={newEmail} onChange={e=>setNewEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&saveClient()} placeholder="E-mail (opcional)"
+          style={{flex:"1 1 180px",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
+        <button onClick={saveClient} disabled={!newName.trim()} style={{padding:"8px 18px",borderRadius:8,background:newName.trim()?B.blue:B.gray700,border:"none",color:B.white,cursor:newName.trim()?"pointer":"not-allowed",fontWeight:800,fontSize:13}}>
+          Salvar
+        </button>
+        <button onClick={()=>{setShowAdd(false);setNewName("");setNewPhone("");setNewEmail("");}} style={{padding:"8px 12px",borderRadius:8,background:B.gray700,border:"none",color:B.gray300,cursor:"pointer",fontSize:13}}>
+          Cancelar
+        </button>
+      </div>
+    </div>}
 
     {filtered.length===0?
       <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
@@ -3798,7 +3830,7 @@ export default function App() {
         </div>
         <ClientsMonitorTab clients={clients} vehicles={vehicles} tasks={tasks} employees={employees} defaultRate={defaultRate}
           onUpdateName={updCliN} onUpdatePhone={updCliP} onUpdateEmail={updCliE} onDelete={delCli}
-          osHistory={osHistory} payments={payments}/>
+          osHistory={osHistory} payments={payments} onAddClient={addCli}/>
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <div style={{marginBottom:14,padding:"9px 13px",background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:9,fontSize:12,color:B.gray200}}>

@@ -2539,6 +2539,29 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
       {/* ── Active OS ── */}
       {hasActiveOS&&<>
+        {/* Vehicle data — inline editable */}
+        <div style={{marginBottom:14,padding:"8px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8}}>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>🚗 Dados do veículo</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <div style={{flex:"2 1 150px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Modelo</div>
+              <InlineEdit value={vehicle.model} onSave={v=>v.trim()&&onUpdateVehicle(vehicle.id,{model:v.trim()})} placeholder="Modelo"/>
+            </div>
+            <div style={{flex:"1 1 90px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Placa</div>
+              <InlineEdit value={vehicle.plate} onSave={v=>v.trim()&&onUpdateVehicle(vehicle.id,{plate:v.trim().toUpperCase()})} placeholder="Placa"/>
+            </div>
+            <div style={{flex:"1 1 60px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Ano</div>
+              <InlineEdit value={vehicle.year?String(vehicle.year):""} onSave={v=>onUpdateVehicle(vehicle.id,{year:parseInt(v)||null})} placeholder="----" type="number"/>
+            </div>
+            <div style={{flex:"1 1 100px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Cor</div>
+              <InlineEdit value={vehicle.color||""} onSave={v=>onUpdateVehicle(vehicle.id,{color:v})} placeholder="—"/>
+            </div>
+          </div>
+        </div>
+
         {/* Entry time */}
         {(editEntry||vehicle.enteredAt)&&<div style={{marginBottom:14,padding:"10px 14px",background:B.gray900,borderRadius:10,border:`1px solid ${B.gray700}`}}>
           <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>📅 Data/hora de entrada na oficina</div>

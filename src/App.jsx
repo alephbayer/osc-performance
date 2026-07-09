@@ -591,20 +591,21 @@ const ISearch=({s=18,c="currentColor"})=><Svg d="M11 19a8 8 0 100-16 8 8 0 000 1
 
 // Priority config
 const CATEGORIES=[
-  {id:"Acabamento", color:"#14b8a6"},
-  {id:"Adaptação",  color:"#64748b"},
+  {id:"Acabamento",    color:"#14b8a6"},
+  {id:"Adaptação",     color:"#64748b"},
+  {id:"Alimentação",   color:"#f97316"},
   {id:"Arrefecimento", color:"#06b6d4"},
-  {id:"Chassi",    color:"#78716c"},
-  {id:"Direção",   color:"#10b981"},
-  {id:"Elétrica",  color:"#eab308"},
-  {id:"Eletrônica",color:"#6366f1"},
-  {id:"Exterior",  color:"#0ea5e9"},
-  {id:"Freio",     color:"#dc2626"},
-  {id:"Interior",  color:"#8b5cf6"},
-  {id:"Motor",     color:"#ef4444"},
-  {id:"Pintura",   color:"#ec4899"},
-  {id:"Powertrain",color:"#f97316"},
-  {id:"Suspensão", color:"#f59e0b"},
+  {id:"Chassi",        color:"#78716c"},
+  {id:"Direção",       color:"#10b981"},
+  {id:"Elétrica",      color:"#eab308"},
+  {id:"Eletrônica",    color:"#6366f1"},
+  {id:"Exterior",      color:"#0ea5e9"},
+  {id:"Freio",         color:"#dc2626"},
+  {id:"Interior",      color:"#8b5cf6"},
+  {id:"Motor",         color:"#ef4444"},
+  {id:"Pintura",       color:"#ec4899"},
+  {id:"Powertrain",    color:"#f97316"},
+  {id:"Suspensão",     color:"#f59e0b"},
 ];
 const CAT_MAP=Object.fromEntries(CATEGORIES.map(c=>[c.id,c.color]));
 

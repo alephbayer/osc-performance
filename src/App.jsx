@@ -3359,17 +3359,15 @@ export default function App() {
   };
 
   // Create vehicle from Vehicles tab — optionally link to existing or new client
-  const createVehicleFromTab=async({model,plate,clientId,newClient})=>{
+  const createVehicleFromTab=async({model,plate,color,year,clientId,newClient})=>{
     try{
       let finalClientId=clientId||null;
-      // If user typed a new client, create it first
       if(newClient?.name?.trim()){
         const row=await db.addClient(newClient.name.trim(),newClient.phone?.trim()||"",newClient.email?.trim()||"");
         setCli(p=>[...p,row]);
         finalClientId=row.id;
       }
-      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),color:(data.color||"").trim(),year:data.year||null,photo:null,photos:[]});
-      // Hydrate mechanicIds for UI consistency
+      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),color:(color||"").trim(),year:year||null,photo:null,photos:[]});
       vRow.mechanicIds=[];
       setVeh(p=>[...p,vRow]);
       toast_("Veículo cadastrado ✓");

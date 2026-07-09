@@ -1502,11 +1502,13 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           return catOrder.map(cat=>{
             const groupTasks=vts.filter(t=>(t.category||null)===cat);
             const catColor=cat?CAT_MAP[cat]||B.gray500:null;
+            const catTotal=managerMode?groupTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
             return (<div key={cat||"__none__"} style={{marginBottom:4}}>
               {cat&&<div style={{display:"flex",alignItems:"center",gap:6,margin:"8px 0 4px",padding:"3px 8px",background:catColor+"15",borderLeft:`3px solid ${catColor}`,borderRadius:"0 4px 4px 0"}}>
                 <span style={{width:7,height:7,borderRadius:99,background:catColor,flexShrink:0}}/>
                 <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat}</span>
-                <span style={{fontSize:10,color:catColor+"99",marginLeft:"auto"}}>{groupTasks.length} tarefa{groupTasks.length!==1?"s":""}</span>
+                <span style={{fontSize:10,color:catColor+"99"}}>{groupTasks.length} tarefa{groupTasks.length!==1?"s":""}</span>
+                {managerMode&&catTotal>0&&<span style={{fontSize:10,fontWeight:800,color:catColor,marginLeft:"auto"}}>{fmtBRL(catTotal)}</span>}
               </div>}
               {groupTasks.map(t=>managerMode
                 ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}/>

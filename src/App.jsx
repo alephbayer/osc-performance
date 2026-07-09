@@ -3326,6 +3326,11 @@ export default function App() {
     try{ const row=await db.addClient(cN.trim(),cP.trim(),cE.trim()); setCli(p=>[...p,row]); setCN("");setCP("");setCE("");toast_("Cliente cadastrado ✓"); }
     catch(e){errToast(e);}
   };
+  const addCliDirect=async(name,phone="",email="")=>{
+    if(!name.trim())return;
+    try{ const row=await db.addClient(name.trim(),phone.trim(),email.trim()); setCli(p=>[...p,row]); toast_("Cliente cadastrado ✓"); }
+    catch(e){errToast(e);}
+  };
   const delCli=async id=>{
     setVeh(p=>p.map(v=>v.clientId===id?{...v,clientId:null}:v));
     setCli(p=>p.filter(c=>c.id!==id));
@@ -3830,7 +3835,7 @@ export default function App() {
         </div>
         <ClientsMonitorTab clients={clients} vehicles={vehicles} tasks={tasks} employees={employees} defaultRate={defaultRate}
           onUpdateName={updCliN} onUpdatePhone={updCliP} onUpdateEmail={updCliE} onDelete={delCli}
-          osHistory={osHistory} payments={payments} onAddClient={addCli}/>
+          osHistory={osHistory} payments={payments} onAddClient={addCliDirect}/>
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <div style={{marginBottom:14,padding:"9px 13px",background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:9,fontSize:12,color:B.gray200}}>

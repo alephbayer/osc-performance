@@ -3497,7 +3497,7 @@ export default function App() {
       <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
       <div style={{display:"flex",gap:3,background:B.gray900,padding:4,borderRadius:12,border:`1px solid ${B.gray700}`,flexWrap:"wrap",justifyContent:"center"}}>
         {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
-        {allowedTabs.includes("clients")&&tabBtn("clients","Clientes / OS",<IUser s={13}/>,B.blue)}
+        {allowedTabs.includes("clients")&&tabBtn("clients","Ordens de Serviço",<IFileText s={13}/>,B.blue)}
         {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
         {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos",<ICar s={13}/>,B.blue)}
         {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
@@ -3534,38 +3534,37 @@ export default function App() {
 
       {/* ══ CLIENTS ══ */}
       {tab==="clients"&&allowedTabs.includes("clients")&&<>
-        <div style={{marginBottom:14,padding:"9px 13px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:9,fontSize:12,color:B.gray200}}>
-          💰 <b style={{color:B.amber}}>Visão do gestor</b>: precificação completa, fotos da OS e link do cliente. Preço/h atual: <b style={{color:B.amber}}>{fmtBRL(defaultRate)}/h</b>
+        <div style={{marginBottom:14,padding:"9px 13px",background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:9,fontSize:12,color:B.gray200}}>
+          🔧 <b style={{color:B.blue}}>Ordens de Serviço</b> em andamento. Preço/h atual: <b style={{color:B.amber}}>{fmtBRL(defaultRate)}/h</b>
         </div>
-        <div style={{background:B.gray800,borderRadius:12,padding:18,marginBottom:20,border:`1px solid ${B.gray700}`}}>
-          <div style={{fontWeight:700,fontSize:11,color:B.blue,marginBottom:12,textTransform:"uppercase",letterSpacing:.6,display:"flex",alignItems:"center",gap:6}}><IUser s={12} c={B.blue}/>Cadastrar Cliente</div>
-          <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-            <input value={cN} onChange={e=>setCN(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCli()} placeholder="Nome do cliente"
-              style={{flex:"1 1 130px",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-            <input value={cP} onChange={e=>setCP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCli()} placeholder="WhatsApp (5511999998888)"
-              style={{flex:"1 1 180px",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-            <input value={cE} onChange={e=>setCE(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCli()} placeholder="E-mail (opcional)"
-              style={{flex:"1 1 180px",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-            <button onClick={addCli} style={{padding:"8px 18px",borderRadius:8,background:B.blue,color:B.white,border:"none",cursor:"pointer",fontWeight:800,fontSize:13,display:"flex",alignItems:"center",gap:5}}
-              onMouseEnter={e=>e.currentTarget.style.background=B.blueD} onMouseLeave={e=>e.currentTarget.style.background=B.blue}>
-              <IPlus s={13} c={B.white}/>Adicionar
-            </button>
-          </div>
-        </div>
-        {/* Only show clients that have at least one vehicle with an active OS */}
         {(()=>{
-          const activeClients=clients.filter(cli=>{
-            const cliVs=vehicles.filter(v=>v.clientId===cli.id);
-            return cliVs.some(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));
-          });
-          if(activeClients.length===0) return <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>👤</div><div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum cliente com OS ativa</div><div style={{fontSize:13}}>Clientes aparecem aqui quando seus veículos tiverem uma OS em andamento.</div></div>;
-          return activeClients.map(cli=><ClientCard key={cli.id} client={cli} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} company={company}
-            onUpdatePhone={updCliP} onUpdateName={updCliN} onUpdateEmail={updCliE} onDelete={delCli} onSendWA={sendCliWA}
-            onTransferMechanic={xferMech} onTransferOwner={xferOwn}
-            onToggleTask={toggleT} onDeleteTask={delTask} onAddTask={addTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
-            onConsumeStock={consumeStock} onReturnStock={returnStock}
-            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment}
-            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}/>);
+          // Vehicles with active OS: has enteredAt or has tasks
+          const activeVehicles=[...vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id))]
+            .sort((a,b)=>{
+              // Sort by priority then by enteredAt (oldest first)
+              const pri={high:0,medium:1,low:2};
+              const pA=pri[a.priority||"medium"], pB=pri[b.priority||"medium"];
+              if(pA!==pB) return pA-pB;
+              if(a.enteredAt&&b.enteredAt) return new Date(a.enteredAt)-new Date(b.enteredAt);
+              if(a.enteredAt) return -1;
+              if(b.enteredAt) return 1;
+              return 0;
+            });
+          if(activeVehicles.length===0) return (
+            <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
+              <div style={{fontSize:44,marginBottom:12}}>🔧</div>
+              <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhuma OS em andamento</div>
+              <div style={{fontSize:13}}>Os veículos aparecem aqui quando têm uma OS aberta.</div>
+            </div>
+          );
+          return (<div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {activeVehicles.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
+              onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
+              onTransferMechanic={xferMech} onTransferOwner={xferOwn}
+              onConsumeStock={consumeStock} onReturnStock={returnStock}
+              payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} company={company}
+              onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}/>)}
+          </div>);
         })()}
       </>}
 

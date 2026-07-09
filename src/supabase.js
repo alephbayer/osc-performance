@@ -63,6 +63,7 @@ const mapVehicleIn = (v) => ({
   model: v.model,
   plate: v.plate,
   color: v.color || '',
+  year: v.year || null,
   photo: v.photo,
   photos: v.photos || [],
   enteredAt: v.entered_at || null,
@@ -86,6 +87,7 @@ const mapVehicleOut = (v) => ({
   model: v.model,
   plate: v.plate,
   color: v.color || '',
+  year: v.year || null,
   photo: v.photo,
   photos: v.photos,
   entered_at: v.enteredAt || null,
@@ -278,6 +280,7 @@ export const db = {
     if ("model"         in patch) dbPatch.model          = patch.model;
     if ("plate"         in patch) dbPatch.plate          = patch.plate;
     if ("color"         in patch) dbPatch.color          = patch.color;
+    if ("year"          in patch) dbPatch.year           = patch.year;
     if ("photo"         in patch) dbPatch.photo          = patch.photo;
     if ("photos"        in patch) dbPatch.photos         = patch.photos;
     if ("enteredAt"   in patch) dbPatch.entered_at   = patch.enteredAt;

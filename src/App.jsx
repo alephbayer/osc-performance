@@ -301,7 +301,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   // Plate + color + mechanic on same row, right column
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-  const plateText = `Placa: ${vehicle.plate}${vehicle.color ? `  · Cor: ${vehicle.color}` : ""}`;
+  const plateText = `Placa: ${vehicle.plate}${vehicle.year ? `  · Ano: ${vehicle.year}` : ""}${vehicle.color ? `  · Cor: ${vehicle.color}` : ""}`;
   doc.text(plateText, rx, y + 20);
   if (employee?.name) {
     doc.text(`Mec: ${employee.name}`, rx, y + 26);
@@ -897,6 +897,7 @@ function CreateVehicleModal({clients,onConfirm,onClose}) {
   const [model,setModel]=useState("");
   const [plate,setPlate]=useState("");
   const [color,setColor]=useState("");
+  const [year,setYear]=useState("");
   const [clientMode,setClientMode]=useState("none"); // "none" | "existing" | "new"
   const [selectedClientId,setSelectedClientId]=useState("");
   const [clientSearch,setClientSearch]=useState("");
@@ -917,7 +918,7 @@ function CreateVehicleModal({clients,onConfirm,onClose}) {
   const confirm=()=>{
     if(!canSave) return;
     onConfirm({
-      model,plate,color,
+      model,plate,color,year:year?parseInt(year):null,
       clientId:clientMode==="existing"?selectedClientId:null,
       newClient:clientMode==="new"?{name:newName,phone:newPhone,email:newEmail}:null,
     });
@@ -948,6 +949,11 @@ function CreateVehicleModal({clients,onConfirm,onClose}) {
         <div style={{marginBottom:18}}>
           <FieldLabel>Cor (opcional)</FieldLabel>
           <input value={color} onChange={e=>setColor(e.target.value)} placeholder="Ex: Preto, Branco Perolado, Azul Metálico…"
+            style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{marginBottom:18}}>
+          <FieldLabel>Ano (opcional)</FieldLabel>
+          <input value={year} onChange={e=>setYear(e.target.value)} placeholder="Ex: 2021" maxLength={4} type="number"
             style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
         </div>
 
@@ -1327,7 +1333,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             {mechs.length>0&&<span style={{color:B.orange}}>🔧 {mechs.map(m=>m.name).join(", ")}</span>}
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10}}>{sc.label}</span>
             {(()=>{const p=PRIORITY[vehicle.priority||"medium"];return <span style={{background:p.bg,border:`1px solid ${p.border}`,borderRadius:5,padding:"0px 6px",color:p.color,fontWeight:700,fontSize:10}}>▲ {p.label}</span>;})()}
-            {vehicle.color&&<span style={{color:B.gray300}}>🎨 {vehicle.color}</span>}
+            {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300}}>🎨{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
             {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600}}>📝 Obs.</span>}
             {photos.length>0&&<span style={{color:B.purple}}>📷 {photos.length}</span>}
           </div>
@@ -1457,7 +1463,28 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12.5,outline:"none",resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.5}}
           />
         </div>
-        {vts.length===0&&!aiS.length&&<p style={{fontSize:12.5,color:B.gray400,margin:"0 0 10px"}}>Nenhuma tarefa ainda.</p>}
+        {/* Vehicle data — inline editable (manager only) */}
+        {managerMode&&<div style={{marginBottom:10,padding:"8px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8}}>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>🚗 Dados do veículo</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <div style={{flex:"2 1 150px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Modelo</div>
+              <InlineEdit value={vehicle.model} onSave={v=>v.trim()&&onUpdateVehicle(vehicle.id,{model:v.trim()})} placeholder="Modelo"/>
+            </div>
+            <div style={{flex:"1 1 90px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Placa</div>
+              <InlineEdit value={vehicle.plate} onSave={v=>v.trim()&&onUpdateVehicle(vehicle.id,{plate:v.trim().toUpperCase()})} placeholder="Placa"/>
+            </div>
+            <div style={{flex:"1 1 60px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Ano</div>
+              <InlineEdit value={vehicle.year?String(vehicle.year):""} onSave={v=>onUpdateVehicle(vehicle.id,{year:parseInt(v)||null})} placeholder="----" type="number"/>
+            </div>
+            <div style={{flex:"1 1 100px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Cor</div>
+              <InlineEdit value={vehicle.color||""} onSave={v=>onUpdateVehicle(vehicle.id,{color:v})} placeholder="—"/>
+            </div>
+          </div>
+        </div>}
         {(()=>{
           // Group tasks by category; uncategorized → null group rendered last
           const groups=[];
@@ -2194,6 +2221,54 @@ function PurchaseForm({stockId,onConfirm,onCancel}) {
   </div>);
 }
 
+// ─── OS Grouped View — vehicles grouped by mechanic ──────────────────────────
+function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaultRate,company,
+  addTask,toggleT,delTask,updTask,updVeh,delVeh,xferMech,xferOwn,consumeStock,returnStock,
+  payments,addPayment,deletePayment,addVehicleMechanic,removeVehicleMechanic,setVehicleStatus,deliverVehicle,adminRole}) {
+  const [collapsed,setCollapsed]=useState({});
+  const toggle=key=>setCollapsed(p=>({...p,[key]:!p[key]}));
+  return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    {groups.map(({emp,vehicles:gVs})=>{
+      const key=emp?.id||"__none__";
+      const sorted=sortVehicles(gVs);
+      const isCollapsed=!!collapsed[key];
+      const doneTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)&&t.done).length;
+      const totalTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)).length;
+      return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
+        {/* Section header */}
+        <div onClick={()=>toggle(key)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",background:B.gray900,userSelect:"none"}}>
+          <div style={{width:36,height:36,borderRadius:9,background:emp?`${B.orange}22`:B.gray700,border:`1px solid ${emp?B.orange+"44":B.gray600}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <IWrench s={17} c={emp?B.orange:B.gray500}/>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:800,fontSize:14,color:emp?B.white:B.gray400}}>{emp?emp.name:"Sem mecânico atribuído"}</div>
+            <div style={{fontSize:11,color:B.gray400,marginTop:1}}>{gVs.length} veículo{gVs.length!==1?"s":""} · {doneTasks}/{totalTasks} tarefas</div>
+          </div>
+          {/* Priority summary badges */}
+          <div style={{display:"flex",gap:4,flexShrink:0}}>
+            {["high","medium","low"].map(p=>{
+              const count=gVs.filter(v=>(v.priority||"medium")===p).length;
+              if(!count) return null;
+              const cfg=PRIORITY[p];
+              return <span key={p} style={{fontSize:10,fontWeight:700,color:cfg.color,background:cfg.bg,border:`1px solid ${cfg.border}`,borderRadius:5,padding:"1px 6px"}}>{count}</span>;
+            })}
+          </div>
+          <div style={{color:B.gray400,flexShrink:0}}>{isCollapsed?<IChevD s={15}/>:<IChevU s={15}/>}</div>
+        </div>
+        {/* Vehicles */}
+        {!isCollapsed&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
+          {sorted.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
+            onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
+            onTransferMechanic={xferMech} onTransferOwner={xferOwn}
+            onConsumeStock={consumeStock} onReturnStock={returnStock}
+            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} company={company}
+            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}/>)}
+        </div>}
+      </div>);
+    })}
+  </div>);
+}
+
 // ─── Clients Monitor Tab ──────────────────────────────────────────────────────
 function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete}) {
   const [search,setSearch]=useState("");
@@ -2418,7 +2493,8 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
           <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehicle.model}</div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
             <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
-            {vehicle.color&&<span style={{color:B.gray300}}>🎨 {vehicle.color}</span>}
+            {vehicle.year&&<span style={{color:B.gray400}}>{vehicle.year}</span>}
+            {(vehicle.color||vehicle.year)&&vehicle.color&&<span style={{color:B.gray300}}>🎨 {vehicle.color}</span>}
             {vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>}
             {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
             {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}>📋 {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
@@ -3139,7 +3215,7 @@ export default function App() {
         setCli(p=>[...p,row]);
         finalClientId=row.id;
       }
-      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),color:(data.color||"").trim(),photo:null,photos:[]});
+      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),color:(data.color||"").trim(),year:data.year||null,photo:null,photos:[]});
       // Hydrate mechanicIds for UI consistency
       vRow.mechanicIds=[];
       setVeh(p=>[...p,vRow]);
@@ -3538,18 +3614,7 @@ export default function App() {
           🔧 <b style={{color:B.blue}}>Ordens de Serviço</b> em andamento. Preço/h atual: <b style={{color:B.amber}}>{fmtBRL(defaultRate)}/h</b>
         </div>
         {(()=>{
-          // Vehicles with active OS: has enteredAt or has tasks
-          const activeVehicles=[...vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id))]
-            .sort((a,b)=>{
-              // Sort by priority then by enteredAt (oldest first)
-              const pri={high:0,medium:1,low:2};
-              const pA=pri[a.priority||"medium"], pB=pri[b.priority||"medium"];
-              if(pA!==pB) return pA-pB;
-              if(a.enteredAt&&b.enteredAt) return new Date(a.enteredAt)-new Date(b.enteredAt);
-              if(a.enteredAt) return -1;
-              if(b.enteredAt) return 1;
-              return 0;
-            });
+          const activeVehicles=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));
           if(activeVehicles.length===0) return (
             <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
               <div style={{fontSize:44,marginBottom:12}}>🔧</div>
@@ -3557,14 +3622,33 @@ export default function App() {
               <div style={{fontSize:13}}>Os veículos aparecem aqui quando têm uma OS aberta.</div>
             </div>
           );
-          return (<div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {activeVehicles.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
-              onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
-              onTransferMechanic={xferMech} onTransferOwner={xferOwn}
-              onConsumeStock={consumeStock} onReturnStock={returnStock}
-              payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} company={company}
-              onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}/>)}
-          </div>);
+          // Group by mechanics — a vehicle may belong to multiple mechanics
+          // Build groups: one per employee, plus "Sem mecânico"
+          const groups=[];
+          const assignedVehicleIds=new Set();
+          employees.forEach(emp=>{
+            const empVs=activeVehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id));
+            if(empVs.length>0){
+              groups.push({emp,vehicles:empVs});
+              empVs.forEach(v=>assignedVehicleIds.add(v.id));
+            }
+          });
+          const unassigned=activeVehicles.filter(v=>!assignedVehicleIds.has(v.id));
+          if(unassigned.length>0) groups.push({emp:null,vehicles:unassigned});
+          const sortVehicles=vs=>[...vs].sort((a,b)=>{
+            const pri={high:0,medium:1,low:2};
+            const pA=pri[a.priority||"medium"],pB=pri[b.priority||"medium"];
+            if(pA!==pB) return pA-pB;
+            if(a.enteredAt&&b.enteredAt) return new Date(a.enteredAt)-new Date(b.enteredAt);
+            return 0;
+          });
+          return <OsGroupedView groups={groups} sortVehicles={sortVehicles}
+            tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} company={company}
+            addTask={addTask} toggleT={toggleT} delTask={delTask} updTask={updTask} updVeh={updVeh} delVeh={delVeh}
+            xferMech={xferMech} xferOwn={xferOwn} consumeStock={consumeStock} returnStock={returnStock}
+            payments={payments} addPayment={addPayment} deletePayment={deletePayment}
+            addVehicleMechanic={addVehicleMechanic} removeVehicleMechanic={removeVehicleMechanic}
+            setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} adminRole={adminRole}/>;
         })()}
       </>}
 

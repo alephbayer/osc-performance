@@ -42,8 +42,14 @@ const samePhone=(a,b)=>cleanPhone(a)===cleanPhone(b)&&cleanPhone(a).length>0;
 const LOGIN_KEY="osc_mech_session";
 
 // ─── Financial helpers ────────────────────────────────────────────────────────
-function vehicleTotal(vehicleId,tasks,defaultRate) {
-  return tasks.filter(t=>t.vehicleId===vehicleId).reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
+  const vts = tasks.filter(t=>t.vehicleId===vehicleId);
+  const tasksTotal = vts.reduce((s,t)=>s+taskCost(t,defaultRate).total, 0);
+  if (!vehicle) return tasksTotal; // fallback if vehicle not passed
+  const towTotal   = (vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0), 0);
+  const laborSum   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor, 0);
+  const osDiscount = laborSum * Number(vehicle.osDiscountPct||0) / 100;
+  return tasksTotal + Number(vehicle.fuelCost||0) + towTotal - osDiscount;
 }
 function vehiclePaid(vehicleId,payments) {
   return payments.filter(p=>p.vehicleId===vehicleId).reduce((s,p)=>s+Number(p.amount),0);
@@ -64,6 +70,16 @@ function financeSummary(tasks,defaultRate,vehicles,clients,from,to) {
   doneTasks.forEach(t=>{
     const c=taskCost(t,defaultRate);
     revenue+=c.total; cost+=c.mat; laborRevenue+=c.labor; matRevenue+=c.mat;
+  });
+  // Add vehicle-level extras (fuel, tows, OS discount) for vehicles with done tasks
+  vehicles.forEach(v=>{
+    const vDoneTasks=doneTasks.filter(t=>t.vehicleId===v.id);
+    if(vDoneTasks.length===0) return;
+    const fuelCost=Number(v.fuelCost||0);
+    const towTotal=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
+    const laborSum=vDoneTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+    const osDiscount=laborSum*Number(v.osDiscountPct||0)/100;
+    revenue+=fuelCost+towTotal-osDiscount;
   });
   const profit = revenue-cost;
   return { revenue, cost, profit, laborRevenue, matRevenue, doneCount: doneTasks.length };
@@ -1735,7 +1751,7 @@ function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,o
   const cliV=vehicles.filter(v=>v.clientId===client.id);
   const totT=tasks.filter(t=>cliV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>cliV.find(v=>v.id===t.vehicleId)&&t.done).length;
-  const grand=cliV.reduce((s,v)=>s+tasks.filter(t=>t.vehicleId===v.id).reduce((ss,t)=>ss+taskCost(t,defaultRate).total,0),0);
+  const grand=cliV.reduce((s,v)=>s+vehicleTotal(v.id,tasks,defaultRate,v),0);
   return (<><div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,marginBottom:20,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,.35)"}}>
     <div style={{padding:"12px 16px",background:B.gray900,borderBottom:`2px solid ${B.blue}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
       <div style={{width:42,height:42,borderRadius:10,background:B.blueBg,border:`1px solid ${B.blue}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IUser s={22} c={B.blue}/></div>
@@ -1794,7 +1810,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const [note,setNote]=useState("");
   const [confirmDelPay,setConfirmDelPay]=useState(null);
 
-  const total=vehicleTotal(vehicle.id,tasks,defaultRate);
+  const total=vehicleTotal(vehicle.id,tasks,defaultRate,vehicle);
   const vPayments=payments.filter(p=>p.vehicleId===vehicle.id).sort((a,b)=>a.paidAt<b.paidAt?1:-1);
   const paid=vPayments.reduce((s,p)=>s+p.amount,0);
   const balance=total-paid;
@@ -2383,7 +2399,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
         const cliVs=vehicles.filter(v=>v.clientId===cli.id);
         const totalTasks=tasks.filter(t=>cliVs.find(v=>v.id===t.vehicleId)).length;
         const doneTasks =tasks.filter(t=>cliVs.find(v=>v.id===t.vehicleId)&&t.done).length;
-        const totalValue=cliVs.reduce((s,v)=>s+tasks.filter(t=>t.vehicleId===v.id).reduce((ss,t)=>ss+taskCost(t,defaultRate).total,0),0);
+        const totalValue=cliVs.reduce((s,v)=>s+vehicleTotal(v.id,tasks,defaultRate,v),0);
         // Open balance: sum across all archived OSs of this client
         const cliHistory=osHistory.filter(h=>h.client_id===cli.id);
         const totalOwed=cliHistory.reduce((s,h)=>{
@@ -2438,7 +2454,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
               {cliVs.map(v=>{
                 const vts=tasks.filter(t=>t.vehicleId===v.id);
                 const vDone=vts.filter(t=>t.done);
-                const vTotal=vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+                const vTotal=vehicleTotal(v.id,tasks,defaultRate,v);
                 const emp=employees.find(e=>e.id===v.employeeId);
                 return (<div key={v.id} style={{background:B.gray700,borderRadius:9,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                   {v.photo?<img src={v.photo} alt="" style={{width:38,height:38,borderRadius:7,objectFit:"cover",flexShrink:0}}/>
@@ -2887,7 +2903,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate}) {
     const cost=vts.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
     const cli=clients.find(c=>c.id===v.clientId);
     const mech=employees.find(e=>e.id===v.employeeId);
-    const total=vehicleTotal(v.id,tasks,defaultRate);
+    const total=vehicleTotal(v.id,tasks,defaultRate,v);
     const paid=vehiclePaid(v.id,payments);
     return {v,cli,mech,revenue,cost,profit:revenue-cost,total,paid,balance:total-paid};
   }).filter(Boolean);

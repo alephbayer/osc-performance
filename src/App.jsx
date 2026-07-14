@@ -3564,7 +3564,7 @@ export default function App() {
       onToggleTask={async id=>{ const t=tasks.find(x=>x.id===id); const nowDone=!t.done; const completedAt=nowDone?new Date().toISOString():null; const completedByEmployeeId=nowDone?liveEmp.id:null; setTsk(p=>p.map(t=>t.id===id?{...t,done:nowDone,completedAt,completedByEmployeeId}:t)); try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});}catch(e){errToast(e);} }}
       onDeleteTask={async id=>{setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);}catch(e){errToast(e);}}}
       onUpdateTask={async(id,patch)=>{setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);}catch(e){errToast(e);}}}
-      onUpdateVehicle={updVeh}
+      onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);}catch(e){errToast(e);}}}
       onLogout={doLogout}/>;
   }
 

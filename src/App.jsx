@@ -730,22 +730,22 @@ function PhotoGallery({photos=[],onAdd,onRemove,onUpdate,readOnly=false,maxH=140
         return (<div key={i} style={{width:maxH,flexShrink:0}}>
           <div style={{position:"relative",width:maxH,height:maxH,borderRadius:8,overflow:"hidden",border:`1px solid ${editIdx===i?B.purple:B.gray600}`,cursor:"pointer"}} onClick={()=>{setLB(p);setEditIdx(null);}}>
             <img src={p.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-            {!readOnly&&<>
-              <button onClick={e=>{e.stopPropagation();setEditIdx(editIdx===i?null:i);}} style={{position:"absolute",top:4,left:4,background:"rgba(0,0,0,.7)",border:"none",borderRadius:99,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}} title="Editar referência">
-                <IEdit s={11} c={B.white}/>
-              </button>
-              <button onClick={e=>{e.stopPropagation();onRemove(i);}} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.7)",border:"none",borderRadius:99,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-                <IX s={12} c={B.white}/>
-              </button>
-            </>}
+            {!readOnly&&<button onClick={e=>{e.stopPropagation();onRemove(i);}} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.7)",border:"none",borderRadius:99,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+              <IX s={12} c={B.white}/>
+            </button>}
             {/* Badges */}
             {(p.caption||linkedTask)&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.65)",padding:"3px 5px"}}>
               {linkedTask&&<div style={{fontSize:9,color:B.purple,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>🔗 {linkedTask.label}</div>}
               {p.caption&&<div style={{fontSize:9,color:B.gray200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.caption}</div>}
             </div>}
           </div>
+          {/* Edit button outside photo */}
+          <button onClick={e=>{e.stopPropagation();setEditIdx(editIdx===i?null:i);}}
+            style={{width:"100%",marginTop:3,padding:"3px 0",borderRadius:5,border:`1px solid ${editIdx===i?B.purple:B.gray600}`,background:editIdx===i?`${B.purple}22`:"none",cursor:"pointer",color:editIdx===i?B.purple:B.gray500,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+            <IEdit s={10}/>{editIdx===i?"Fechar":"Referência"}
+          </button>
           {/* Edit panel */}
-          {editIdx===i&&!readOnly&&<div style={{marginTop:4,padding:"7px 8px",background:B.gray800,border:`1px solid ${B.purple}44`,borderRadius:7}} onClick={e=>e.stopPropagation()}>
+          {editIdx===i&&<div style={{marginTop:4,padding:"7px 8px",background:B.gray800,border:`1px solid ${B.purple}44`,borderRadius:7}} onClick={e=>e.stopPropagation()}>
             <select value={p.taskId||""} onChange={e=>updatePhoto(i,{taskId:e.target.value||null})}
               style={{width:"100%",padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,marginBottom:4,outline:"none"}}>
               <option value="">— Sem tarefa vinculada —</option>

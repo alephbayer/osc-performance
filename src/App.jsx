@@ -580,6 +580,44 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   y += boxH_inner + 13;
 
+  // ── Payment methods ───────────────────────────────────────────────────────────
+  checkPageBreak(50);
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+  doc.line(marginX, y, pageW - marginX, y);
+  y += 5;
+
+  doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...black);
+  doc.text("FORMAS DE PAGAMENTO", marginX, y);
+  y += 5;
+
+  const payMethods = [
+    { label: "Dinheiro",        detail: "À vista",                                                   color: [22, 163, 74]   },
+    { label: "PIX",             detail: "CNPJ: 23.783.927/0001-40 · Beneficiário: OSC Old School Customs", color: [99, 102, 241] },
+    { label: "TED / DOC",       detail: "Itaú · Ag 6541 · CC 98991-6 · Beneficiário: OSC Enterprise Custom", color: [14, 165, 233] },
+    { label: "Cartão",          detail: "Até 2× sem juros",                                           color: [245, 158, 11]  },
+    { label: "Cartão Parcelado",detail: "Até 18× com juros e taxas",                                  color: [239, 68, 68]   },
+  ];
+
+  const pmColW = contentW / payMethods.length;
+  payMethods.forEach((pm, i) => {
+    const x = marginX + i * pmColW;
+    const rgb = pm.color;
+    // Background pill
+    doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+    doc.roundedRect(x + 1, y, pmColW - 2, 6, 1, 1, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(255,255,255);
+    doc.text(pm.label, x + pmColW / 2, y + 4, { align: "center" });
+  });
+  y += 8;
+
+  payMethods.forEach((pm, i) => {
+    const x = marginX + i * pmColW;
+    doc.setFont("helvetica","normal"); doc.setFontSize(6); doc.setTextColor(...gray);
+    const lines = doc.splitTextToSize(pm.detail, pmColW - 4);
+    lines.forEach((l, li) => doc.text(l, x + 2, y + li * 3.5));
+  });
+  y += 14;
+
   // ── Footer ───────────────────────────────────────────────────────────────────
   if (y + 14 > 282) { doc.addPage(); y = 16; }
   doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...gray);

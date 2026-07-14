@@ -91,15 +91,29 @@ function productivityByEmployee(employees, vehicles, tasks, defaultRate, monthKe
   const [y, m] = monthKeyStr.split("-").map(Number);
   const capacityHours = workingDaysInMonth(y, m) * 8;
   return employees.map(emp => {
-    const empVehicleIds = vehicles.filter(v => v.employeeId === emp.id).map(v => v.id);
-    const monthTasks = tasks.filter(t =>
-      t.done && empVehicleIds.includes(t.vehicleId) && monthKey(t.completedAt) === monthKeyStr
+    // Tasks credited to this employee:
+    // 1. Tasks they personally signed (completedByEmployeeId) — primary source
+    // 2. Fallback: tasks on vehicles where they are assigned AND no one signed
+    const signedTasks = tasks.filter(t =>
+      t.done &&
+      t.completedByEmployeeId === emp.id &&
+      monthKey(t.completedAt) === monthKeyStr
     );
+    const empVehicleIds = vehicles
+      .filter(v => (v.mechanicIds||[v.employeeId]).includes(emp.id))
+      .map(v => v.id);
+    const unsignedFallbackTasks = tasks.filter(t =>
+      t.done &&
+      !t.completedByEmployeeId &&
+      empVehicleIds.includes(t.vehicleId) &&
+      monthKey(t.completedAt) === monthKeyStr
+    );
+    const monthTasks = [...signedTasks, ...unsignedFallbackTasks];
     const hoursWorked = monthTasks.reduce((s, t) => s + Number(t.hours || 0), 0);
     const profit = monthTasks.reduce((s, t) => { const c = taskCost(t, defaultRate); return s + (c.total - c.mat); }, 0);
     const ratePerHour = hoursWorked > 0 ? profit / hoursWorked : 0;
     const occupancy = capacityHours > 0 ? Math.min(999, (hoursWorked / capacityHours) * 100) : 0;
-    return { employee: emp, hoursWorked, profit, ratePerHour, capacityHours, occupancy, taskCount: monthTasks.length };
+    return { employee: emp, hoursWorked, profit, ratePerHour, capacityHours, occupancy, taskCount: monthTasks.length, signedCount: signedTasks.length };
   });
 }
 
@@ -2930,7 +2944,7 @@ function ProductivityPanel({employees,vehicles,tasks,defaultRate}) {
             <div style={{width:38,height:38,borderRadius:9,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={18} c={B.orange}/></div>
             <div style={{flex:"1 1 140px",minWidth:0}}>
               <div style={{fontWeight:700,fontSize:13.5,color:B.white}}>{r.employee.name}</div>
-              <div style={{fontSize:11,color:B.gray400}}>{r.taskCount} tarefa{r.taskCount!==1?"s":""} concluída{r.taskCount!==1?"s":""} no mês</div>
+              <div style={{fontSize:11,color:B.gray400}}>{r.taskCount} tarefa{r.taskCount!==1?"s":""} concluída{r.taskCount!==1?"s":""} no mês {r.signedCount>0?`(${r.signedCount} assinada${r.signedCount!==1?"s":""})`:""}</div>
             </div>
             <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
               <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.gray400}}>Horas trabalhadas</div><div style={{fontSize:13,fontWeight:700,color:B.white}}>{r.hoursWorked.toFixed(1)}h</div></div>

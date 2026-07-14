@@ -578,45 +578,62 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   doc.text("TOTAL GERAL", boxX + 5, y + nextY2 + 7);
   doc.text(fmtBRL(grandTotal), boxX + boxW - 5, y + nextY2 + 7, { align: "right" });
 
-  y += boxH_inner + 13;
+  y += boxH_inner + 10;
 
   // ── Payment methods ───────────────────────────────────────────────────────────
-  checkPageBreak(50);
+  // Plain page break — no table header after payments section
+  if (y + 60 > 282) { doc.addPage(); y = 16; }
+
   doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
   doc.line(marginX, y, pageW - marginX, y);
-  y += 5;
+  y += 6;
 
-  doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...black);
+  doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...black);
   doc.text("FORMAS DE PAGAMENTO", marginX, y);
-  y += 5;
+  y += 7;
 
   const payMethods = [
-    { label: "Dinheiro",        detail: "À vista",                                                   color: [22, 163, 74]   },
-    { label: "PIX",             detail: "CNPJ: 23.783.927/0001-40 · Beneficiário: OSC Old School Customs", color: [99, 102, 241] },
-    { label: "TED / DOC",       detail: "Itaú · Ag 6541 · CC 98991-6 · Beneficiário: OSC Enterprise Custom", color: [14, 165, 233] },
-    { label: "Cartão",          detail: "Até 2× sem juros",                                           color: [245, 158, 11]  },
-    { label: "Cartão Parcelado",detail: "Até 18× com juros e taxas",                                  color: [239, 68, 68]   },
+    {
+      icon: "●", label: "Dinheiro / À vista",
+      lines: [], color: [22, 163, 74],
+    },
+    {
+      icon: "●", label: "PIX",
+      lines: ["Chave (CNPJ): 23.783.927/0001-40", "Beneficiário: OSC Old School Customs"],
+      color: [99, 102, 241],
+    },
+    {
+      icon: "●", label: "TED / DOC — Itaú",
+      lines: ["Ag: 6541 · CC: 98991-6", "Beneficiário: OSC Enterprise Custom"],
+      color: [14, 165, 233],
+    },
+    {
+      icon: "●", label: "Cartão — até 2× sem juros",
+      lines: [], color: [245, 158, 11],
+    },
+    {
+      icon: "●", label: "Cartão Parcelado — até 18× com juros e taxas",
+      lines: [], color: [239, 68, 68],
+    },
   ];
 
-  const pmColW = contentW / payMethods.length;
-  payMethods.forEach((pm, i) => {
-    const x = marginX + i * pmColW;
-    const rgb = pm.color;
-    // Background pill
-    doc.setFillColor(rgb[0], rgb[1], rgb[2]);
-    doc.roundedRect(x + 1, y, pmColW - 2, 6, 1, 1, "F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(255,255,255);
-    doc.text(pm.label, x + pmColW / 2, y + 4, { align: "center" });
+  payMethods.forEach(pm => {
+    // Label line
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...pm.color);
+    doc.text(pm.icon, marginX, y);
+    doc.setTextColor(...black);
+    doc.text(pm.label, marginX + 5, y);
+    y += 4.5;
+    // Detail lines
+    pm.lines.forEach(l => {
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...gray);
+      doc.text(l, marginX + 5, y);
+      y += 3.8;
+    });
+    y += 1; // small gap between items
   });
-  y += 8;
 
-  payMethods.forEach((pm, i) => {
-    const x = marginX + i * pmColW;
-    doc.setFont("helvetica","normal"); doc.setFontSize(6); doc.setTextColor(...gray);
-    const lines = doc.splitTextToSize(pm.detail, pmColW - 4);
-    lines.forEach((l, li) => doc.text(l, x + 2, y + li * 3.5));
-  });
-  y += 14;
+  y += 4;
 
   // ── Footer ───────────────────────────────────────────────────────────────────
   if (y + 14 > 282) { doc.addPage(); y = 16; }

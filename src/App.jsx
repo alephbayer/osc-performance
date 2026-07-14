@@ -1342,7 +1342,11 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const mechs = (vehicle.mechanicIds||[]).map(id=>employees.find(e=>e.id===id)).filter(Boolean);
   const mech  = mechs[0] || null;  // first mechanic for PDF compat
   const cli   = clients.find(c=>c.id===vehicle.clientId);
-  const total = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
+  const tasksTotal = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
+  const towTotal   = managerMode?(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0):0;
+  const laborSum   = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
+  const osDiscount = managerMode?laborSum*Number(vehicle.osDiscountPct||0)/100:0;
+  const total      = managerMode?tasksTotal+Number(vehicle.fuelCost||0)+towTotal-osDiscount:0;
   const photos= vehicle.photos||[];
   const pubLink=getPublicLink(vehicle.id);
   const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo"}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"⏸ Aguardando cliente"}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"✓ Pronto"}};

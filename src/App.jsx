@@ -3258,7 +3258,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients}) {
               </div>
               <div>
                 <div style={{fontWeight:800,fontSize:14,color:B.white}}>{m.name}</div>
-                {m.phone&&<div style={{fontSize:11,color:B.wa,marginTop:2,display:"flex",alignItems:"center",gap:4}}><IPhone s={10} c={B.wa}/>{m.phone}</div>}
               </div>
             </div>)}
           </div>

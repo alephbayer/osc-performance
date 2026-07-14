@@ -3351,12 +3351,14 @@ function AdminLoginScreen({onLogin}) {
         <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Acesso administrativo</div>
       </div>
       <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
+        <form onSubmit={e=>{e.preventDefault();tryLogin();}} autoComplete="on">
         <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:B.gray200,fontWeight:600,marginBottom:10}}><ILock s={14} c={B.orange}/>Senha de acesso</label>
-        <input value={pwd} onChange={e=>{setPwd(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&tryLogin()}
-          type="password" placeholder="••••••••" autoFocus
+        <input value={pwd} onChange={e=>{setPwd(e.target.value);setErr("");}}
+          type="password" name="password" id="osc-password" placeholder="••••••••" autoFocus autoComplete="current-password"
           style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`1px solid ${err?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:15,outline:"none",boxSizing:"border-box"}}/>
         {err&&<div style={{color:B.red,fontSize:12,marginTop:8}}>{err}</div>}
-        <button onClick={tryLogin} style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:10,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Entrar</button>
+        <button type="submit" style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:10,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Entrar</button>
+        </form>
         <div style={{marginTop:14,fontSize:11.5,color:B.gray500,textAlign:"center",lineHeight:1.5}}>O nível de acesso é definido automaticamente pela senha usada.</div>
       </div>
     </div>

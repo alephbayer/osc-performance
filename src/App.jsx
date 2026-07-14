@@ -3387,7 +3387,7 @@ function MechanicLoginScreen({employees,onLogin}) {
 }
 
 // ─── Mechanic Portal (filtered view for logged-in mechanic) ──────────────────
-function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onLogout}) {
+function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onUpdateVehicle,onLogout}) {
   const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id) && v.status!=="ready")]
     .sort((a,b)=>{
     const pri={high:0,medium:1,low:2};
@@ -3415,7 +3415,7 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
       {empV.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>🔧</div><div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum veículo atribuído a você ainda</div></div>
         :empV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={0} managerMode={false}
           onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask}
-          onDeleteVehicle={()=>{}} onTransferMechanic={()=>{}} onTransferOwner={()=>{}} onUpdateVehicle={()=>{}}
+          onDeleteVehicle={()=>{}} onTransferMechanic={()=>{}} onTransferOwner={()=>{}} onUpdateVehicle={onUpdateVehicle}
           onConsumeStock={()=>{}} onReturnStock={()=>{}} hideManagerButtons/>)}
     </div>
   </div>);
@@ -3564,6 +3564,7 @@ export default function App() {
       onToggleTask={async id=>{ const t=tasks.find(x=>x.id===id); const nowDone=!t.done; const completedAt=nowDone?new Date().toISOString():null; const completedByEmployeeId=nowDone?liveEmp.id:null; setTsk(p=>p.map(t=>t.id===id?{...t,done:nowDone,completedAt,completedByEmployeeId}:t)); try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});}catch(e){errToast(e);} }}
       onDeleteTask={async id=>{setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);}catch(e){errToast(e);}}}
       onUpdateTask={async(id,patch)=>{setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);}catch(e){errToast(e);}}}
+      onUpdateVehicle={updVeh}
       onLogout={doLogout}/>;
   }
 

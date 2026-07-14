@@ -407,9 +407,18 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
       return { lines: doc.splitTextToSize(txt, cDescW - 6), mat: m, qty, freight };
     });
 
+    // Description lines (italic, optional)
+    const descText = t.description || "";
+    let descLines = [];
+    if (descText) {
+      doc.setFont("helvetica","italic"); doc.setFontSize(7.5);
+      descLines = doc.splitTextToSize(descText, cDescW - 4);
+    }
+
     const labelH  = labelLines.length * 5;
+    const descH   = descLines.length > 0 ? descLines.length * 4 + 1 : 0;
     const matsH   = matTextLines.reduce((s, ml) => s + ml.lines.length * 4.5, 0);
-    const rowH    = Math.max(9, labelH + (mats.length > 0 ? matsH + 3 : 0) + 4);
+    const rowH    = Math.max(9, labelH + descH + (mats.length > 0 ? matsH + 3 : 0) + 4);
 
     checkPageBreak(rowH + 2);
 
@@ -426,6 +435,12 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.setTextColor(...labelColor);
     labelLines.forEach((line, li) => doc.text(line, marginX + 3, y + 5 + li * 5));
 
+    // Description — italic gray below label
+    if (descLines.length > 0) {
+      doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...gray);
+      descLines.forEach((line, li) => doc.text(line, marginX + 4, y + 5 + labelH + li * 4));
+    }
+
     doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
     if (t.hours > 0) doc.text(`${t.hours}h`, cQty, y + 5, { align: "right" });
     doc.text(t.hours > 0 ? fmtBRL(rate) : "—", cUnit, y + 5, { align: "right" });
@@ -441,7 +456,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...black);
     doc.text(fmtBRL(c.labor), cTotal, y + 5, { align: "right" });
 
-    let matY = y + 5 + labelLines.length * 5;
+    let matY = y + 5 + labelH + descH;
     matTextLines.forEach(({ lines, mat, qty, freight }) => {
       const matCost = Number(mat.cost || 0);
       const markup = mat.markup != null ? Number(mat.markup) : 50;
@@ -1171,6 +1186,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[]}) {
           <TaskLabel task={task} onUpdate={onUpdate}/>
           <CategoryPill category={task.category}/>
         </div>
+        {task.description&&<div style={{fontSize:11,color:B.gray400,fontStyle:"italic",marginTop:2}}>{task.description}</div>}
         {signer&&task.done&&<div style={{marginTop:2}}>
           <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
         </div>}
@@ -1240,6 +1256,13 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               {task.outsourced?"✓ 3º":"3º"}
             </button>
             <CategorySelect value={task.category} onChange={cat=>onUpdate(task.id,{category:cat})}/>
+          </div>
+          {/* Description — optional */}
+          <div style={{marginTop:3}}>
+            <InlineEdit
+              value={task.description||""}
+              onSave={v=>onUpdate(task.id,{description:v.trim()})}
+              placeholder="+ Descrição (opcional)"/>
           </div>
           {/* Per-task discount */}
           {c.laborGross>0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>

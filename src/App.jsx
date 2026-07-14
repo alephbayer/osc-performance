@@ -3167,59 +3167,191 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients}) {
   if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
     <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
   </div>);
-  const ts=tasks.filter(t=>t.vehicleId===v.id),done=ts.filter(t=>t.done).length;
-  const mech=employees.find(e=>e.id===v.employeeId),cli=clients.find(c=>c.id===v.clientId);
+
+  const ts=tasks.filter(t=>t.vehicleId===v.id);
+  const done=ts.filter(t=>t.done).length;
   const pct=ts.length?Math.round(done/ts.length*100):0;
-  const photos=v.photos||[];
+  const mechs=(v.mechanicIds||[v.employeeId]).filter(Boolean).map(id=>employees.find(e=>e.id===id)).filter(Boolean);
+  const cli=clients.find(c=>c.id===v.clientId);
+  const rawPhotos=v.photos||[];
+  const photos=rawPhotos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
   const [lb,setLB]=useState(null);
+
+  const statusCfg={
+    active:{label:"Em serviço",     icon:"🔧", color:B.orange, bg:`${B.orange}18`},
+    paused:{label:"Aguardando peça",icon:"⏸",  color:B.amber,  bg:`${B.amber}18`},
+    ready: {label:"Pronto!",        icon:"✅", color:B.green,  bg:B.greenBg},
+  };
+  const sc=statusCfg[v.status||"active"];
+
+  // Group tasks by category, done tasks last within each group
+  const catOrder=[];
+  const catSeen=new Set();
+  ts.forEach(t=>{const k=t.category||"__none__";if(!catSeen.has(k)){catSeen.add(k);catOrder.push(t.category||null);}});
+
+  const S={
+    card:{background:B.gray800,borderRadius:16,overflow:"hidden",marginBottom:20,border:`1px solid ${B.gray700}`},
+    pad:{padding:"16px 20px"},
+    label:{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.5,marginBottom:4},
+    chip:{background:B.gray700,borderRadius:8,padding:"8px 14px"},
+  };
+
   return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Header */}
-    <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"14px 20px",display:"flex",alignItems:"center",gap:12}}>
+    <div style={{background:B.gray900,borderBottom:`2px solid ${B.orange}`,padding:"12px 20px",display:"flex",alignItems:"center",gap:12}}>
       <div style={{width:36,height:36,borderRadius:8,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center"}}><IWrench s={18} c={B.white}/></div>
-      <div><div style={{fontWeight:900,fontSize:15,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div><div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Acompanhamento de serviço</div></div>
+      <div>
+        <div style={{fontWeight:900,fontSize:15,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
+        <div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Acompanhamento de serviço</div>
+      </div>
+      <div style={{marginLeft:"auto",background:sc.bg,border:`1px solid ${sc.color}44`,borderRadius:8,padding:"5px 12px"}}>
+        <span style={{fontWeight:800,fontSize:12,color:sc.color}}>{sc.icon} {sc.label}</span>
+      </div>
     </div>
-    <div style={{maxWidth:600,margin:"0 auto",padding:"24px 16px"}}>
-      {/* Car identity card */}
-      <div style={{background:B.gray800,borderRadius:16,overflow:"hidden",marginBottom:20,border:`1px solid ${B.gray700}`}}>
+
+    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px"}}>
+
+      {/* ── Vehicle info ── */}
+      <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:200,objectFit:"cover"}}/>}
-        <div style={{padding:"16px 20px"}}>
-          <div style={{fontWeight:900,fontSize:20,color:B.white}}>{v.model}</div>
-          <div style={{fontSize:13,color:B.gray400,fontFamily:"monospace",letterSpacing:1,marginBottom:8}}>{v.plate}</div>
-          {cli&&<div style={{fontSize:13,color:B.gray200}}>👤 {cli.name}</div>}
-          {mech&&<div style={{fontSize:13,color:B.gray200}}>🔧 Mecânico: {mech.name}</div>}
-        </div>
-      </div>
-      {/* Progress */}
-      <div style={{background:B.gray800,borderRadius:14,padding:"16px 20px",marginBottom:20,border:`1px solid ${B.gray700}`}}>
-        <div style={{fontWeight:700,fontSize:13,color:B.white,marginBottom:10}}>📋 Progresso do serviço</div>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-          <div style={{flex:1,height:10,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:pct===100?B.green:B.orange,borderRadius:99,transition:"width .5s"}}/></div>
-          <span style={{fontSize:16,fontWeight:900,color:pct===100?B.green:B.orange,minWidth:44}}>{pct}%</span>
-        </div>
-        {pct===100&&<div style={{background:B.greenBg,border:`1px solid ${B.green}55`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,fontWeight:700,color:B.green,textAlign:"center"}}>🎉 Seu veículo está pronto para retirada!</div>}
-        {ts.map(t=><div key={t.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 0",borderBottom:`1px solid ${B.gray700}`}}>
-          <span style={{fontSize:16,flexShrink:0}}>{t.done?"✅":"⬜"}</span>
-          <div>
-            <div style={{fontSize:13.5,color:t.done?B.gray400:B.gray200,textDecoration:t.done?"line-through":"none"}}>{t.label}</div>
-            {(t.materials||[]).map((m,i)=><div key={i} style={{fontSize:11,color:B.gray400,marginTop:2}}>🔩 {m.name}</div>)}
+        <div style={S.pad}>
+          <div style={{fontWeight:900,fontSize:24,color:B.white,marginBottom:2}}>{v.model}</div>
+
+          {/* Data chips */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+            <div style={S.chip}>
+              <div style={S.label}>Placa</div>
+              <div style={{fontSize:15,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:1.5}}>{v.plate}</div>
+            </div>
+            {v.year&&<div style={S.chip}>
+              <div style={S.label}>Ano</div>
+              <div style={{fontSize:15,fontWeight:700,color:B.gray200}}>{v.year}</div>
+            </div>}
+            {v.color&&<div style={S.chip}>
+              <div style={S.label}>Cor</div>
+              <div style={{fontSize:15,fontWeight:700,color:B.gray200}}>🎨 {v.color}</div>
+            </div>}
+            {v.osNumber&&<div style={{...S.chip,background:`${B.orange}18`,border:`1px solid ${B.orange}33`}}>
+              <div style={S.label}>Ordem de Serviço</div>
+              <div style={{fontSize:15,fontWeight:800,color:B.orange}}>{fmtOS(v.osNumber)}</div>
+            </div>}
+            {v.enteredAt&&<div style={S.chip}>
+              <div style={S.label}>Na oficina desde</div>
+              <div style={{fontSize:13,fontWeight:700,color:B.gray200}}>{new Date(v.enteredAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}</div>
+            </div>}
+            {cli&&<div style={S.chip}>
+              <div style={S.label}>Cliente</div>
+              <div style={{fontSize:13,fontWeight:700,color:B.blue}}>👤 {cli.name}</div>
+            </div>}
           </div>
-        </div>)}
+        </div>
       </div>
-      {/* Photos */}
-      {photos.length>0&&<div style={{background:B.gray800,borderRadius:14,padding:"16px 20px",border:`1px solid ${B.gray700}`}}>
-        <div style={{fontWeight:700,fontSize:13,color:B.white,marginBottom:10}}>📷 Fotos do serviço</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-          {photos.map((src,i)=><div key={i} style={{width:120,height:120,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray600}`}} onClick={()=>setLB(src)}>
-            <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-          </div>)}
+
+      {/* ── Mechanics ── */}
+      {mechs.length>0&&<div style={S.card}>
+        <div style={{...S.pad,paddingBottom:16}}>
+          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}}>🔧 Mecânico{mechs.length>1?"s":""} responsáve{mechs.length>1?"is":"l"}</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            {mechs.map(m=><div key={m.id} style={{display:"flex",alignItems:"center",gap:10,background:`${B.orange}15`,border:`1px solid ${B.orange}33`,borderRadius:12,padding:"10px 16px",flex:"1 1 180px"}}>
+              <div style={{width:38,height:38,borderRadius:10,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <IWrench s={18} c={B.white}/>
+              </div>
+              <div>
+                <div style={{fontWeight:800,fontSize:14,color:B.white}}>{m.name}</div>
+                {m.phone&&<div style={{fontSize:11,color:B.wa,marginTop:2,display:"flex",alignItems:"center",gap:4}}><IPhone s={10} c={B.wa}/>{m.phone}</div>}
+              </div>
+            </div>)}
+          </div>
         </div>
       </div>}
-      <div style={{marginTop:20,textAlign:"center",fontSize:12,color:B.gray500}}>
+
+      {/* ── Progress ── */}
+      {ts.length>0&&<div style={S.card}>
+        <div style={S.pad}>
+          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}}>📋 Progresso do serviço</div>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:pct===100?14:6}}>
+            <div style={{flex:1,height:12,borderRadius:99,background:B.gray700,overflow:"hidden"}}>
+              <div style={{width:`${pct}%`,height:"100%",background:pct===100?B.green:B.orange,borderRadius:99,transition:"width .5s"}}/>
+            </div>
+            <span style={{fontSize:18,fontWeight:900,color:pct===100?B.green:B.orange,minWidth:50,textAlign:"right"}}>{pct}%</span>
+          </div>
+          {pct===100&&<div style={{background:B.greenBg,border:`1px solid ${B.green}55`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,fontWeight:700,color:B.green,textAlign:"center"}}>
+            🎉 Seu veículo está pronto para retirada!
+          </div>}
+
+          {/* Tasks grouped by category */}
+          <div style={{marginTop:8}}>
+            {catOrder.map(cat=>{
+              const groupTasks=ts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+              const catColor=cat?CAT_MAP[cat]||B.gray500:null;
+              // Photos linked to tasks in this category
+              const catPhotos=photos.filter(p=>groupTasks.find(t=>t.id===p.taskId));
+              return (<div key={cat||"__none__"} style={{marginBottom:12}}>
+                {cat&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:catColor+"18",borderLeft:`3px solid ${catColor}`,borderRadius:"0 6px 6px 0",marginBottom:6}}>
+                  <span style={{width:7,height:7,borderRadius:99,background:catColor,flexShrink:0,display:"inline-block"}}/>
+                  <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat}</span>
+                  <span style={{fontSize:10,color:catColor+"88",marginLeft:"auto"}}>{groupTasks.filter(t=>t.done).length}/{groupTasks.length}</span>
+                </div>}
+                {groupTasks.map(t=>{
+                  const tPhotos=photos.filter(p=>p.taskId===t.id);
+                  const signer=t.completedByEmployeeId?employees.find(e=>e.id===t.completedByEmployeeId):null;
+                  return (<div key={t.id} style={{padding:"10px 12px",marginBottom:4,background:t.done?`${B.green}08`:B.gray900,borderRadius:10,border:`1px solid ${t.done?B.green+"22":B.gray700}`}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                      <span style={{fontSize:18,flexShrink:0,marginTop:1}}>{t.done?"✅":"⬜"}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:14,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</div>
+                        {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
+                        {(t.materials||[]).filter(m=>m.name).map((m,i)=><div key={i} style={{fontSize:11,color:B.gray500,marginTop:2}}>🔩 {m.name}{m.qty>1?` ×${m.qty}`:""}</div>)}
+                        {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
+                        {/* Photos linked to this task */}
+                        {tPhotos.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                          {tPhotos.map((p,pi)=><div key={pi} style={{width:72,height:72,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray600}`,flexShrink:0}} onClick={()=>setLB(p)}>
+                            <img src={p.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                          </div>)}
+                        </div>}
+                      </div>
+                    </div>
+                  </div>);
+                })}
+              </div>);
+            })}
+          </div>
+        </div>
+      </div>}
+
+      {/* ── Photos without task link ── */}
+      {photos.filter(p=>!p.taskId).length>0&&<div style={S.card}>
+        <div style={S.pad}>
+          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}}>📷 Fotos do serviço</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+            {photos.filter(p=>!p.taskId).map((p,i)=>(
+              <div key={i} style={{width:140,flexShrink:0}}>
+                <div style={{width:140,height:140,borderRadius:10,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray600}`,position:"relative"}} onClick={()=>setLB(p)}>
+                  <img src={p.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  {p.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.7)",padding:"4px 6px"}}>
+                    <div style={{fontSize:9,color:B.gray200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.caption}</div>
+                  </div>}
+                </div>
+                {p.caption&&<div style={{fontSize:10,color:B.gray400,marginTop:3,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.caption}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>}
+
+      <div style={{textAlign:"center",fontSize:12,color:B.gray500,marginTop:8,paddingBottom:24}}>
         Atualizado em {fmtD()} · OSC Performance
       </div>
     </div>
-    {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
-      <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"95vh",objectFit:"contain",borderRadius:8}}/>
+
+    {/* Lightbox */}
+    {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
+      <img src={lb.url||lb} alt="" style={{maxWidth:"95vw",maxHeight:"82vh",objectFit:"contain",borderRadius:8}}/>
+      {(lb.caption||(lb.taskId&&ts.find(t=>t.id===lb.taskId)))&&<div style={{textAlign:"center",padding:"0 20px"}}>
+        {ts.find(t=>t.id===lb.taskId)&&<div style={{color:"#c4b5fd",fontWeight:700,fontSize:13,marginBottom:2}}>🔗 {ts.find(t=>t.id===lb.taskId).label}</div>}
+        {lb.caption&&<div style={{color:B.gray200,fontSize:13}}>{lb.caption}</div>}
+      </div>}
+      <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
   </div>);
 }

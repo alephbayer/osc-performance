@@ -3235,10 +3235,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients}) {
               <div style={S.label}>Ordem de Serviço</div>
               <div style={{fontSize:15,fontWeight:800,color:B.orange}}>{fmtOS(v.osNumber)}</div>
             </div>}
-            {v.enteredAt&&<div style={S.chip}>
-              <div style={S.label}>Na oficina desde</div>
-              <div style={{fontSize:13,fontWeight:700,color:B.gray200}}>{new Date(v.enteredAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}</div>
-            </div>}
             {cli&&<div style={S.chip}>
               <div style={S.label}>Cliente</div>
               <div style={{fontSize:13,fontWeight:700,color:B.blue}}>👤 {cli.name}</div>
@@ -3246,23 +3242,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients}) {
           </div>
         </div>
       </div>
-
-      {/* ── Mechanics ── */}
-      {mechs.length>0&&<div style={S.card}>
-        <div style={{...S.pad,paddingBottom:16}}>
-          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}}>🔧 Mecânico{mechs.length>1?"s":""} responsáve{mechs.length>1?"is":"l"}</div>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            {mechs.map(m=><div key={m.id} style={{display:"flex",alignItems:"center",gap:10,background:`${B.orange}15`,border:`1px solid ${B.orange}33`,borderRadius:12,padding:"10px 16px",flex:"1 1 180px"}}>
-              <div style={{width:38,height:38,borderRadius:10,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <IWrench s={18} c={B.white}/>
-              </div>
-              <div>
-                <div style={{fontWeight:800,fontSize:14,color:B.white}}>{m.name}</div>
-              </div>
-            </div>)}
-          </div>
-        </div>
-      </div>}
 
       {/* ── Progress ── */}
       {ts.length>0&&<div style={S.card}>

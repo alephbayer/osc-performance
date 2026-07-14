@@ -1742,21 +1742,21 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
   const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase(),vColor.trim());setMod("");setPlate("");setVColor("");setSF(false);};;
   return (<><div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,marginBottom:20,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,.35)"}}>
-    <div style={{padding:"12px 16px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+    <div onClick={()=>setOpen(o=>!o)} style={{padding:"12px 16px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer",userSelect:"none"}}>
       <div style={{width:42,height:42,borderRadius:10,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={20} c={B.orange}/></div>
       <div style={{flex:1,minWidth:120}}>
-        <InlineEdit value={employee.name} onSave={v=>onUpdateName(employee.id,v)} placeholder="Nome"/>
+        <div style={{fontWeight:700,fontSize:14,color:B.white}}>{employee.name}</div>
         <div style={{fontSize:12,color:B.gray400,marginTop:2}}>{empV.length} veículo{empV.length!==1?"s":""} · {donT}/{totT} tarefas {totT>0&&donT===totT?<span style={{color:B.green,fontWeight:700}}>✓</span>:""}</div>
-        <div style={{display:"flex",alignItems:"center",gap:5,marginTop:3}}><IPhone s={12} c={employee.phone?B.wa:B.gray500}/><InlineEdit value={employee.phone} onSave={v=>onUpdatePhone(employee.id,v)} placeholder="+ WhatsApp"/></div>
+        {employee.phone&&<div style={{fontSize:11,color:B.wa,marginTop:2,display:"flex",alignItems:"center",gap:4}}><IPhone s={11} c={B.wa}/>{employee.phone}</div>}
       </div>
-      <div style={{display:"flex",gap:5,flexShrink:0}}>
+      <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
         <button onClick={()=>onSendWA(employee)} style={{padding:"7px 11px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:4,background:employee.phone?B.wa:B.gray700,color:employee.phone?B.white:B.gray500}}>
           <IPhone s={13} c={employee.phone?B.white:B.gray500}/>{employee.phone?"WA":"Sem WA"}
         </button>
         <button onClick={()=>setConfirmDel(true)} style={{background:`${B.white}10`,border:"none",borderRadius:8,padding:7,cursor:"pointer",color:B.gray400,display:"flex"}}
           onMouseEnter={e=>{e.currentTarget.style.background="#ef444430";e.currentTarget.style.color=B.red;}}
           onMouseLeave={e=>{e.currentTarget.style.background=`${B.white}10`;e.currentTarget.style.color=B.gray400;}}><ITrash s={14}/></button>
-        <button onClick={()=>setOpen(o=>!o)} style={{background:`${B.white}10`,border:"none",borderRadius:8,padding:7,cursor:"pointer",color:B.gray400,display:"flex"}}>{open?<IChevU s={14} c={B.gray400}/>:<IChevD s={14} c={B.gray400}/>}</button>
+        <div style={{padding:7,color:B.gray400,display:"flex"}}>{open?<IChevU s={14} c={B.gray400}/>:<IChevD s={14} c={B.gray400}/>}</div>
       </div>
     </div>
     {open&&<div style={{padding:"12px 16px"}}>

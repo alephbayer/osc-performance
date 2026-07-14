@@ -1539,7 +1539,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             if(!seen.has(key)){seen.add(key);catOrder.push(cat);}
           });
           return catOrder.map(cat=>{
-            const groupTasks=vts.filter(t=>(t.category||null)===cat);
+            const groupTasks=vts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
             const catColor=cat?CAT_MAP[cat]||B.gray500:null;
             const catTotal=managerMode?groupTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
             return (<div key={cat||"__none__"} style={{marginBottom:4}}>

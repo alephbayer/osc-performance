@@ -711,23 +711,61 @@ function UploadBtn({onFile,label="Adicionar foto",accept="image/*",style={},fold
 }
 
 // ─── PhotoGallery ─────────────────────────────────────────────────────────────
-function PhotoGallery({photos=[],onAdd,onRemove,readOnly=false,maxH=140}) {
-  const [lightbox,setLB]=useState(null);
+function PhotoGallery({photos=[],onAdd,onRemove,onUpdate,readOnly=false,maxH=140,tasks=[]}) {
+  const [lightbox,setLB]=useState(null); // {url, caption}
+  const [editIdx,setEditIdx]=useState(null); // index of photo being edited
+
+  // Normalize: support both string urls and {url, taskId, caption} objects
+  const normalized = photos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
+
+  const updatePhoto=(i,patch)=>{
+    const updated=normalized.map((p,j)=>j===i?{...p,...patch}:p);
+    onUpdate&&onUpdate(updated);
+  };
+
   return (<>
     <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:8}}>
-      {photos.map((src,i)=>(
-        <div key={i} style={{position:"relative",width:maxH,height:maxH,borderRadius:8,overflow:"hidden",border:`1px solid ${B.gray600}`,flexShrink:0,cursor:"pointer"}} onClick={()=>setLB(src)}>
-          <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-          {!readOnly&&<button onClick={e=>{e.stopPropagation();onRemove(i);}} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.7)",border:"none",borderRadius:99,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-            <IX s={12} c={B.white}/>
-          </button>}
-        </div>
-      ))}
+      {normalized.map((p,i)=>{
+        const linkedTask=tasks.find(t=>t.id===p.taskId);
+        return (<div key={i} style={{width:maxH,flexShrink:0}}>
+          <div style={{position:"relative",width:maxH,height:maxH,borderRadius:8,overflow:"hidden",border:`1px solid ${editIdx===i?B.purple:B.gray600}`,cursor:"pointer"}} onClick={()=>{setLB(p);setEditIdx(null);}}>
+            <img src={p.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            {!readOnly&&<>
+              <button onClick={e=>{e.stopPropagation();setEditIdx(editIdx===i?null:i);}} style={{position:"absolute",top:4,left:4,background:"rgba(0,0,0,.7)",border:"none",borderRadius:99,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}} title="Editar referência">
+                <IEdit s={11} c={B.white}/>
+              </button>
+              <button onClick={e=>{e.stopPropagation();onRemove(i);}} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.7)",border:"none",borderRadius:99,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                <IX s={12} c={B.white}/>
+              </button>
+            </>}
+            {/* Badges */}
+            {(p.caption||linkedTask)&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.65)",padding:"3px 5px"}}>
+              {linkedTask&&<div style={{fontSize:9,color:B.purple,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>🔗 {linkedTask.label}</div>}
+              {p.caption&&<div style={{fontSize:9,color:B.gray200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.caption}</div>}
+            </div>}
+          </div>
+          {/* Edit panel */}
+          {editIdx===i&&!readOnly&&<div style={{marginTop:4,padding:"7px 8px",background:B.gray800,border:`1px solid ${B.purple}44`,borderRadius:7}} onClick={e=>e.stopPropagation()}>
+            <select value={p.taskId||""} onChange={e=>updatePhoto(i,{taskId:e.target.value||null})}
+              style={{width:"100%",padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,marginBottom:4,outline:"none"}}>
+              <option value="">— Sem tarefa vinculada —</option>
+              {tasks.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+            <input value={p.caption||""} onChange={e=>updatePhoto(i,{caption:e.target.value})}
+              placeholder="Legenda (opcional)"
+              style={{width:"100%",padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none",boxSizing:"border-box"}}/>
+          </div>}
+        </div>);
+      })}
       {!readOnly&&<UploadBtn onFile={onAdd} folder="os-photos" label="+ Foto" style={{width:maxH,height:maxH,justifyContent:"center",flexDirection:"column",gap:6,borderRadius:8,fontSize:11}}/>}
     </div>
     {lightbox&&(
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
-        <img src={lightbox} alt="" style={{maxWidth:"95vw",maxHeight:"95vh",objectFit:"contain",borderRadius:8}}/>
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
+        <img src={lightbox.url} alt="" style={{maxWidth:"95vw",maxHeight:"85vh",objectFit:"contain",borderRadius:8}}/>
+        {(lightbox.caption||tasks.find(t=>t.id===lightbox.taskId))&&<div style={{textAlign:"center",color:B.gray200,fontSize:13}}>
+          {tasks.find(t=>t.id===lightbox.taskId)&&<div style={{color:B.purple,fontWeight:700,marginBottom:2}}>🔗 {tasks.find(t=>t.id===lightbox.taskId).label}</div>}
+          {lightbox.caption&&<div>{lightbox.caption}</div>}
+        </div>}
         <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
       </div>
     )}
@@ -1473,7 +1511,18 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       {/* Photos panel */}
       {showPhotos&&<div style={{padding:"12px 14px",background:B.black,borderBottom:`1px solid ${B.gray700}`}}>
         <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>📷 Fotos da OS — visíveis ao cliente</div>
-        <PhotoGallery photos={photos} onAdd={src=>onUpdateVehicle(vehicle.id,{photos:[...photos,src]})} onRemove={i=>onUpdateVehicle(vehicle.id,{photos:photos.filter((_,j)=>j!==i)})}/>
+        <PhotoGallery
+          photos={photos}
+          tasks={vts}
+          onAdd={url=>{
+            const norm=photos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
+            onUpdateVehicle(vehicle.id,{photos:[...norm,{url,taskId:null,caption:""}]});
+          }}
+          onRemove={i=>{
+            const norm=photos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
+            onUpdateVehicle(vehicle.id,{photos:norm.filter((_,j)=>j!==i)});
+          }}
+          onUpdate={updated=>onUpdateVehicle(vehicle.id,{photos:updated})}/>
         <div style={{marginTop:10,borderTop:`1px solid ${B.gray700}`,paddingTop:10}}>
           <div style={{fontSize:11,color:B.orange,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>🚗 Foto de identificação do veículo</div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>

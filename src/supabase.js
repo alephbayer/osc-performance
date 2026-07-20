@@ -291,6 +291,7 @@ export const db = {
     if ("status"      in patch) dbPatch.status       = patch.status;
     if ("priority"    in patch) dbPatch.priority     = patch.priority;
     if ("fuelCost"       in patch) dbPatch.fuel_cost       = patch.fuelCost;
+    if ("fuels"          in patch) dbPatch.fuels          = patch.fuels;
     if ("osDiscountPct"  in patch) dbPatch.os_discount_pct = patch.osDiscountPct;
     if ("tows"           in patch) dbPatch.tows            = patch.tows;
     if ("notes"          in patch) dbPatch.notes           = patch.notes;
@@ -340,6 +341,7 @@ export const db = {
       total_paused_ms: historyRecord.totalPausedMs || 0,
       tasks_snapshot: historyRecord.tasksSnapshot,
       fuel_cost: historyRecord.fuelCost || 0,
+      fuels: historyRecord.fuels || [],
       tows: historyRecord.tows || [],
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
@@ -366,6 +368,7 @@ export const db = {
       os_number: null,
       priority: "medium",
       fuel_cost: 0,
+      fuels: [],
       os_discount_pct: 0,
       tows: [],
       notes: '',

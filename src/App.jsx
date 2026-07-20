@@ -47,9 +47,10 @@ function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
   const tasksTotal = vts.reduce((s,t)=>s+taskCost(t,defaultRate).total, 0);
   if (!vehicle) return tasksTotal; // fallback if vehicle not passed
   const towTotal   = (vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0), 0);
+  const fuelTotal  = (vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0), 0);
   const laborSum   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor, 0);
   const osDiscount = laborSum * Number(vehicle.osDiscountPct||0) / 100;
-  return tasksTotal + Number(vehicle.fuelCost||0) + towTotal - osDiscount;
+  return tasksTotal + Number(vehicle.fuelCost||0) + fuelTotal + towTotal - osDiscount;
 }
 function vehiclePaid(vehicleId,payments) {
   return payments.filter(p=>p.vehicleId===vehicleId).reduce((s,p)=>s+Number(p.amount),0);
@@ -377,6 +378,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   let laborTotal = 0, partsTotal = 0, freightTotal = 0;
   const ts = tasksOverride || tasks.filter(t => t.vehicleId === vehicle.id);
   const fuelCostVal = Number(vehicle.fuelCost || 0);
+  const fuels = Array.isArray(vehicle.fuels) ? vehicle.fuels : [];
+  const fuelTotal = fuels.reduce((s,f)=>s+Number(f.value||0),0);
   const tows = Array.isArray(vehicle.tows) ? vehicle.tows : [];
   const towTotal = tows.reduce((s,t)=>s+Number(t.value||0),0);
 
@@ -510,19 +513,21 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     y += 3;
   }); // catOrder.forEach
 
-  // Fuel cost row
-  if (fuelCostVal > 0) {
+  // Legacy single fuelCost + new fuels array
+  const allFuels = [...(fuelCostVal>0?[{type:"Combustivel",date:"",value:fuelCostVal}]:[]), ...fuels.filter(f=>f.value>0)];
+  allFuels.forEach(fuel=>{
     checkPageBreak(10);
     doc.setFillColor(254, 249, 236);
     doc.setDrawColor(225, 225, 225);
     doc.rect(marginX, y, contentW, 8, "FD");
     doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-    doc.text("Combustivel", marginX + 3, y + 5.5);
+    const fuelLabel = [fuel.type||"Combustivel", fuel.date||""].filter(Boolean).join(" · ");
+    doc.text(fuelLabel, marginX + 3, y + 5.5);
     doc.text("—", cDisc, y + 5.5, { align: "right" });
     doc.setFont("helvetica","bold"); doc.setTextColor(...black);
-    doc.text(fmtBRL(fuelCostVal), cTotal, y + 5.5, { align: "right" });
+    doc.text(fmtBRL(Number(fuel.value||0)), cTotal, y + 5.5, { align: "right" });
     y += 9;
-  }
+  });
 
   tows.forEach((tow,ti)=>{
     if(!tow.value) return;
@@ -550,8 +555,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   const osDiscountPct = Number(vehicle.osDiscountPct || 0);
   const laborSumForDiscount = ts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
   const osDiscountAmt = laborSumForDiscount * osDiscountPct / 100;
-  const grandTotal = partsTotal + freightTotal + laborTotal + fuelCostVal + towTotal - osDiscountAmt;
-  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelCostVal > 0 ? 1 : 0) + (towTotal > 0 ? 1 : 0) + (osDiscountAmt > 0 ? 1 : 0);
+  const grandTotal = partsTotal + freightTotal + laborTotal + fuelCostVal + fuelTotal + towTotal - osDiscountAmt;
+  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelCostVal+fuelTotal > 0 ? 1 : 0) + (towTotal > 0 ? 1 : 0) + (osDiscountAmt > 0 ? 1 : 0);
   const boxH_inner = 26 + extraLines * 8;
   const boxW = 85, boxX = pageW - marginX - boxW;
   doc.setDrawColor(220,220,220);
@@ -563,7 +568,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   doc.text("Total de Mao de Obra",      boxX + 5, y + 17);
   let nextY = 25;
   if (freightTotal  > 0) { doc.text("Total de Frete",                    boxX + 5, y + nextY); nextY += 8; }
-  if (fuelCostVal   > 0) { doc.text("Combustivel",                       boxX + 5, y + nextY); nextY += 8; }
+  if (fuelCostVal+fuelTotal > 0) { doc.text("Combustivel",     boxX + 5, y + nextY); nextY += 8; }
   if (towTotal      > 0) { doc.text("Reboque",                           boxX + 5, y + nextY); nextY += 8; }
   if (osDiscountAmt > 0) { doc.setTextColor(180, 60, 60); doc.text(`Desconto (${osDiscountPct}% m.o.)`, boxX + 5, y + nextY); doc.setTextColor(...black); nextY += 8; }
 
@@ -572,7 +577,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   doc.text(fmtBRL(laborTotal),  boxX + boxW - 5, y + 17, { align: "right" });
   let nextY2 = 25;
   if (freightTotal  > 0) { doc.text(fmtBRL(freightTotal),            boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
-  if (fuelCostVal   > 0) { doc.text(fmtBRL(fuelCostVal),             boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
+  if (fuelCostVal+fuelTotal > 0) { doc.text(fmtBRL(fuelCostVal+fuelTotal), boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
   if (towTotal      > 0) { doc.text(fmtBRL(towTotal),                boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
   if (osDiscountAmt > 0) { doc.setTextColor(180, 60, 60); doc.text(`-${fmtBRL(osDiscountAmt)}`, boxX + boxW - 5, y + nextY2, { align: "right" }); doc.setTextColor(...black); nextY2 += 8; }
 
@@ -1769,15 +1774,39 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           </button>
         </div>
         {managerMode&&<div style={{marginTop:10,padding:"10px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,display:"flex",flexDirection:"column",gap:8}}>
-          {/* Fuel */}
-          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <span style={{fontSize:13}}>⛽</span>
-            <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Combustível:</span>
-            <span style={{display:"flex",alignItems:"center",gap:3}}>
-              <span style={{fontSize:11,color:B.amber}}>R$</span>
-              <InlineEdit value={vehicle.fuelCost?fmtR2(vehicle.fuelCost):""} onSave={v=>{const val=parseFloat(v.replace(",","."))||0;onUpdateVehicle(vehicle.id,{fuelCost:val});}} placeholder="0" type="number"/>
-            </span>
-            {vehicle.fuelCost>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(vehicle.fuelCost)}</span>}
+          {/* Fuels array */}
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+              <span style={{fontSize:13}}>⛽</span>
+              <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Combustível</span>
+              <button onClick={()=>{const fuels=[...(vehicle.fuels||[]),{date:"",type:"",value:0}];onUpdateVehicle(vehicle.id,{fuels});}}
+                style={{marginLeft:"auto",background:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                <IPlus s={11} c={B.amber}/>Adicionar combustível
+              </button>
+            </div>
+            {(vehicle.fuels||[]).map((fuel,fi)=>(
+              <div key={fi} style={{display:"flex",flexDirection:"column",gap:5,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:7,padding:"8px 10px",marginBottom:5}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,color:B.amber,fontWeight:700,flexShrink:0}}>#{fi+1}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:4,flex:"1 1 120px"}}>
+                    <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Combustível:</span>
+                    <InlineEdit value={fuel.type||""} onSave={v=>{const fuels=[...(vehicle.fuels||[])];fuels[fi]={...fuels[fi],type:v};onUpdateVehicle(vehicle.id,{fuels});}} placeholder="Ex: Gasolina, Etanol…"/>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:4,flex:"1 1 100px"}}>
+                    <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Data:</span>
+                    <InlineEdit value={fuel.date||""} onSave={v=>{const fuels=[...(vehicle.fuels||[])];fuels[fi]={...fuels[fi],date:v};onUpdateVehicle(vehicle.id,{fuels});}} placeholder="DD/MM/AAAA"/>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                    <span style={{fontSize:10,color:B.gray500}}>R$</span>
+                    <InlineEdit value={fuel.value?fmtR2(fuel.value):""} onSave={v=>{const fuels=[...(vehicle.fuels||[])];fuels[fi]={...fuels[fi],value:parseFloat(v.replace(",","."))||0};onUpdateVehicle(vehicle.id,{fuels});}} placeholder="0" type="number"/>
+                  </div>
+                  {fuel.value>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(fuel.value)}</span>}
+                  <button onClick={()=>{const fuels=(vehicle.fuels||[]).filter((_,i)=>i!==fi);onUpdateVehicle(vehicle.id,{fuels});}}
+                    style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex",marginLeft:"auto"}}
+                    onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={12}/></button>
+                </div>
+              </div>
+            ))}
           </div>
           {/* OS-level % discount on labor */}
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${B.gray700}`}}>
@@ -1821,14 +1850,15 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         </div>}
         {(()=>{
           const towTotal=(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
+          const fuelTotal=(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0);
           const laborSum=vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
           const osDiscountAmt=laborSum*Number(vehicle.osDiscountPct||0)/100;
-          const grandTotal=total+Number(vehicle.fuelCost||0)+towTotal-osDiscountAmt;
+          const grandTotal=total+Number(vehicle.fuelCost||0)+fuelTotal+towTotal-osDiscountAmt;
           if(!managerMode||grandTotal<=0) return null;
           const breakdown=[];
           if(total>0) breakdown.push(`Serviços: ${fmtBRL(total)}`);
           if(osDiscountAmt>0) breakdown.push(`Desconto: -${fmtBRL(osDiscountAmt)}`);
-          if(vehicle.fuelCost>0) breakdown.push(`Combustível: ${fmtBRL(vehicle.fuelCost)}`);
+          if(fuelTotal>0) breakdown.push(`Combustível: ${fmtBRL(fuelTotal)}`);
           if(towTotal>0) breakdown.push(`Reboque: ${fmtBRL(towTotal)}`);
           return (<div style={{marginTop:8,padding:"8px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -3331,12 +3361,17 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
           {/* Tasks grouped by category */}
           {/* Fuel and tows */}
-          {(Number(v.fuelCost||0)>0||(v.tows||[]).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
-            {Number(v.fuelCost||0)>0&&<div style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
-              <span style={{fontSize:16}}>⛽</span>
-              <span style={{fontSize:13,color:B.gray300}}>Combustível</span>
-              <span style={{fontSize:13,fontWeight:700,color:B.amber,marginLeft:"auto"}}>{fmtBRL(v.fuelCost)}</span>
-            </div>}
+          {(Number(v.fuelCost||0)>0||(v.fuels||[]).length>0||(v.tows||[]).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
+            {[...(Number(v.fuelCost||0)>0?[{type:"Combustível",date:"",value:v.fuelCost}]:[]),...(v.fuels||[]).filter(f=>Number(f.value||0)>0)].map((f,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
+                <span style={{fontSize:16}}>⛽</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <span style={{fontSize:13,color:B.gray300}}>{f.type||"Combustível"}</span>
+                  {f.date&&<span style={{fontSize:11,color:B.gray500,marginLeft:6}}>{f.date}</span>}
+                </div>
+                <span style={{fontSize:13,fontWeight:700,color:B.amber,flexShrink:0}}>{fmtBRL(f.value)}</span>
+              </div>
+            ))}
             {(v.tows||[]).filter(t=>Number(t.value||0)>0).map((t,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
                 <span style={{fontSize:16}}>🚛</span>
@@ -3916,9 +3951,10 @@ export default function App() {
     const vTasks=tasks.filter(t=>t.vehicleId===vid);
     const tasksValue=vTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
     const towTotal=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
+    const fuelTotal=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0);
     const laborSum=vTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
     const osDiscountAmt=laborSum*Number(v.osDiscountPct||0)/100;
-    const totalValue=tasksValue+Number(v.fuelCost||0)+towTotal-osDiscountAmt;
+    const totalValue=tasksValue+Number(v.fuelCost||0)+fuelTotal+towTotal-osDiscountAmt;
 
     const historyRecord={
       osNumber: v.osNumber,
@@ -3929,6 +3965,7 @@ export default function App() {
       totalPausedMs,
       tasksSnapshot: vTasks,
       fuelCost: v.fuelCost||0,
+      fuels: v.fuels||[],
       tows: v.tows||[],
       osDiscountPct: v.osDiscountPct||0,
       totalValue,
@@ -3951,6 +3988,7 @@ export default function App() {
       osNumber:null,
       priority:"medium",
       fuelCost:0,
+      fuels:[],
       tows:[],
       osDiscountPct:0,
     }:x));

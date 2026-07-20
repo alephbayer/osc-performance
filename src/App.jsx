@@ -416,8 +416,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     const matTextLines = mats.map(m => {
       const qty = m.qty || 1;
       const freight = Number(m.freight || 0);
-      const importedTag = m.imported ? " [Importado]" : "";
-      const txt = `· ${m.name}${importedTag}${m.fromStock?" (estoque)":""}${qty>1?` x${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
+      const importedTag = m.imported ? "[Importado] " : "";
+      const txt = `· ${importedTag}${m.name}${m.fromStock?" (estoque)":""}${qty>1?` x${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
       doc.setFont("helvetica","normal"); doc.setFontSize(8);
       return { lines: doc.splitTextToSize(txt, cDescW - 6), mat: m, qty, freight };
     });
@@ -482,7 +482,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
       const isImported = !!mat.imported;
       // Name line: bold amber for imported, normal gray otherwise
       if (isImported) {
-        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(180, 100, 0);
+        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(37, 99, 235);
       } else {
         doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
       }
@@ -497,7 +497,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
         doc.setTextColor(...gray);
         doc.text("—", cDisc, matY, { align: "right" });
       }
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(180, 100, 0);
+      doc.setFont("helvetica","bold"); doc.setFontSize(8);
+      doc.setTextColor(isImported ? 37 : 180, isImported ? 99 : 100, isImported ? 235 : 0);
       doc.text(fmtBRL(matTotal), cTotal, matY, { align: "right" });
       matY += lines.length * 4.5;
     });

@@ -1243,40 +1243,51 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
     </div>
 
     {/* Line 2: qty + cost options (only when showCost) */}
-    {(showCost||editableQty)&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":B.gray600}`,flexWrap:"wrap"}}>
-      {/* Quantity */}
-      <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-        <span style={{fontSize:10,color:B.gray500}}>Qtd</span>
-        {editableQty
-          ?<InlineEdit value={String(qty)} onSave={v=>onUpdate(idx,{...mat,qty:Math.max(1,parseInt(v)||1)})} placeholder="1" type="number"/>
-          :<span style={{fontSize:12,color:B.gray300,fontWeight:600}}>×{qty}</span>}
+    {(showCost||editableQty)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":B.gray600}`}}>
+      {/* Row A: Quantity + unit price */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 8px"}}>
+          <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Qtd</span>
+          {editableQty
+            ?<InlineEdit value={String(qty)} onSave={v=>onUpdate(idx,{...mat,qty:Math.max(1,parseInt(v)||1)})} placeholder="1" type="number"/>
+            :<span style={{fontSize:12,color:B.gray300,fontWeight:600}}>×{qty}</span>}
+        </div>
+
+        {showCost&&mat.fromStock&&<div style={{display:"flex",alignItems:"center",gap:4,background:B.gray800,borderRadius:6,padding:"4px 8px"}}>
+          <span style={{fontSize:10,color:B.gray500}}>Preço/un</span>
+          <span style={{fontSize:12,color:B.purple,fontWeight:700}}>{fmtBRL(cost)}</span>
+        </div>}
+
+        {showCost&&!mat.fromStock&&<>
+          <div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 8px"}}>
+            <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Custo R$</span>
+            <InlineEdit value={cost?fmtR2(cost):""} onSave={v=>onUpdate(idx,{...mat,cost:parseFloat(v.replace(",","."))||0})} placeholder="0" type="number"/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 8px"}}>
+            <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Markup</span>
+            <InlineEdit value={String(markup)} onSave={v=>onUpdate(idx,{...mat,markup:Math.max(0,parseFloat(v)||0)})} placeholder="50" type="number"/>
+            <span style={{fontSize:10,color:B.gray500}}>%</span>
+          </div>
+          {cost>0&&<div style={{display:"flex",alignItems:"center",gap:4,background:`${B.amber}15`,border:`1px solid ${B.amber}33`,borderRadius:6,padding:"4px 8px"}}>
+            <span style={{fontSize:10,color:B.gray500}}>Venda</span>
+            <span style={{fontSize:12,color:B.amber,fontWeight:700}}>{fmtBRL(salePrice)}/un</span>
+          </div>}
+        </>}
+
+        {showCost&&qty>1&&<div style={{display:"flex",alignItems:"center",gap:4,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 8px"}}>
+          <span style={{fontSize:10,color:B.gray500}}>Total</span>
+          <span style={{fontSize:12,color:B.amber,fontWeight:800}}>{fmtBRL(lineTotal)}</span>
+        </div>}
       </div>
 
-      {/* Cost + markup (non-stock) */}
-      {showCost&&!mat.fromStock&&<>
-        <div style={{display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
-          <span style={{fontSize:10,color:B.gray500}}>Custo R$</span>
-          <InlineEdit value={cost?fmtR2(cost):""} onSave={v=>onUpdate(idx,{...mat,cost:parseFloat(v.replace(",","."))||0})} placeholder="0" type="number"/>
+      {/* Row B: Freight — full width */}
+      {showCost&&<div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 10px"}}>
+        <span style={{fontSize:11}}>🚚</span>
+        <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Frete R$</span>
+        <div style={{flex:1}}>
+          <InlineEdit value={freight?fmtR2(freight):""} onSave={v=>onUpdate(idx,{...mat,freight:parseFloat(v.replace(",","."))||0})} placeholder="0,00" type="number"/>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
-          <span style={{fontSize:10,color:B.gray500}}>Markup</span>
-          <InlineEdit value={String(markup)} onSave={v=>onUpdate(idx,{...mat,markup:Math.max(0,parseFloat(v)||0)})} placeholder="50" type="number"/>
-          <span style={{fontSize:10,color:B.gray500}}>%</span>
-        </div>
-        {cost>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>= {fmtBRL(salePrice)}/un</span>}
-      </>}
-
-      {/* Stock unit price */}
-      {showCost&&mat.fromStock&&<span style={{fontSize:11,color:B.purple,fontWeight:600}}>{fmtBRL(cost)}/un</span>}
-
-      {/* Line total */}
-      {showCost&&qty>1&&<span style={{fontSize:11,color:B.amber,fontWeight:800}}>= {fmtBRL(lineTotal)}</span>}
-
-      {/* Freight */}
-      {showCost&&<div style={{display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
-        <span style={{fontSize:10,color:B.gray500}}>🚚 Frete R$</span>
-        <InlineEdit value={freight?fmtR2(freight):""} onSave={v=>onUpdate(idx,{...mat,freight:parseFloat(v.replace(",","."))||0})} placeholder="0" type="number"/>
-        {freight>0&&<span style={{fontSize:10,color:B.gray400}}>{fmtBRL(freight)}</span>}
+        {freight>0&&<span style={{fontSize:11,color:"#60a5fa",fontWeight:700,flexShrink:0}}>{fmtBRL(freight)}</span>}
       </div>}
     </div>}
   </div>);

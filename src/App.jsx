@@ -3699,6 +3699,95 @@ function AdminLoginScreen({onLogin}) {
   </div>);
 }
 
+// ─── Fuel Quick Modal ─────────────────────────────────────────────────────────
+const FUEL_TYPES=["Gasolina","Gasolina Aditivada","Etanol","Diesel","Diesel S10","GNV"];
+
+function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
+  const activeVehicles=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));
+  const [selectedId,setSelectedId]=useState(activeVehicles.length===1?activeVehicles[0].id:"");
+  const [type,setType]=useState("Gasolina");
+  const [value,setValue]=useState("");
+  const [date,setDate]=useState(new Date().toLocaleDateString("pt-BR"));
+  const [saving,setSaving]=useState(false);
+
+  const save=async()=>{
+    if(!selectedId||!value) return;
+    setSaving(true);
+    await onAddFuel(selectedId,{type,value:parseFloat(value.replace(",","."))||0,date});
+    onClose();
+  };
+
+  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",border:`2px solid #f59e0b55`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+      {/* Header */}
+      <div style={{background:B.gray900,borderBottom:`2px solid #f59e0b`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
+        <span style={{fontSize:24}}>⛽</span>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:15,color:B.white}}>Lançar Combustível</div>
+          <div style={{fontSize:11,color:B.gray400}}>Lançamento rápido por veículo</div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
+      </div>
+
+      <div style={{padding:20,display:"flex",flexDirection:"column",gap:14}}>
+        {/* Vehicle selector */}
+        <div>
+          <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Veículo</label>
+          {activeVehicles.length===0
+            ?<div style={{fontSize:13,color:B.gray500,padding:"10px 12px",background:B.gray900,borderRadius:8}}>Nenhum veículo com OS ativa</div>
+            :<div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflowY:"auto"}}>
+              {activeVehicles.map(v=>(
+                <button key={v.id} onClick={()=>setSelectedId(v.id)}
+                  style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:`2px solid ${selectedId===v.id?"#f59e0b":B.gray600}`,background:selectedId===v.id?"#f59e0b15":B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
+                  <span style={{fontSize:18,flexShrink:0}}>🚗</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
+                    <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
+                  </div>
+                  {selectedId===v.id&&<span style={{color:"#f59e0b",fontWeight:800,flexShrink:0}}>✓</span>}
+                </button>
+              ))}
+            </div>}
+        </div>
+
+        {/* Fuel type */}
+        <div>
+          <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Combustível</label>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {FUEL_TYPES.map(t=>(
+              <button key={t} onClick={()=>setType(t)}
+                style={{padding:"6px 12px",borderRadius:7,border:`1px solid ${type===t?"#f59e0b44":B.gray600}`,background:type===t?"#f59e0b22":"none",color:type===t?"#f59e0b":B.gray300,cursor:"pointer",fontSize:12,fontWeight:type===t?700:400}}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Value + Date */}
+        <div style={{display:"flex",gap:10}}>
+          <div style={{flex:1}}>
+            <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Valor R$</label>
+            <input value={value} onChange={e=>setValue(e.target.value)} placeholder="0,00" type="number"
+              autoFocus
+              style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:16,outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          <div style={{flex:1}}>
+            <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Data</label>
+            <input value={date} onChange={e=>setDate(e.target.value)} placeholder="DD/MM/AAAA"
+              style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:14,outline:"none",boxSizing:"border-box"}}/>
+          </div>
+        </div>
+
+        {/* Save */}
+        <button onClick={save} disabled={!selectedId||!value||saving}
+          style={{width:"100%",padding:"13px 0",borderRadius:10,background:selectedId&&value?"#f59e0b":B.gray700,border:"none",color:selectedId&&value?B.black:B.gray500,fontWeight:800,fontSize:15,cursor:selectedId&&value?"pointer":"not-allowed",marginTop:4}}>
+          {saving?"Salvando…":"⛽ Confirmar abastecimento"}
+        </button>
+      </div>
+    </div>
+  </div>);
+}
+
 export default function App() {
   // Inject responsive styles once
   useEffect(()=>{
@@ -3741,6 +3830,7 @@ export default function App() {
   const [modal,    setMod]=useState(null);
   const [toast,    setTst]=useState(null);
   const [showCfg,  setSCfg]=useState(false);
+  const [fuelModal,setFuelModal]=useState(false);
   const [loading,  setLoading]=useState(true);
   const [loadError,setLE]=useState(null);
   const [mechSession,setMechSession]=useState(()=>{
@@ -4229,6 +4319,9 @@ export default function App() {
             </div>))}
         </div>
         <div className="osc-topbar-actions" style={{display:"flex",gap:5,alignItems:"center",marginLeft:"auto"}}>
+          <button onClick={()=>setFuelModal(true)} title="Lançar combustível" style={{width:34,height:34,borderRadius:8,background:"#f59e0b22",border:"1px solid #f59e0b44",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,fontSize:17}}>
+            ⛽
+          </button>
           <button onClick={()=>{navigator.clipboard?.writeText(getMechanicPortalLink());toast_("Link da área do mecânico copiado ✓");}} title="Copiar link da área do mecânico" style={{width:34,height:34,borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
             <ILock s={16} c={B.orange}/>
           </button>
@@ -4359,6 +4452,13 @@ export default function App() {
 
     {modal&&<ShareModal {...modal} onClose={()=>setMod(null)}/>}
     {showCfg&&<SettingsPanel defaultRate={defaultRate} onSaveRate={saveRate} company={company} onSaveCompany={saveCompany} onClose={()=>setSCfg(false)}/>}
+    {fuelModal&&<FuelQuickModal vehicles={vehicles} tasks={tasks} onClose={()=>setFuelModal(false)} onAddFuel={async(vid,fuel)=>{
+      const v=vehicles.find(x=>x.id===vid);
+      if(!v) return;
+      const fuels=[...(v.fuels||[]),fuel];
+      setVeh(p=>p.map(x=>x.id===vid?{...x,fuels}:x));
+      try{ await db.updateVehicle(vid,{fuels}); toast_(`Combustível lançado ✓`); }catch(e){errToast(e);}
+    }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
   </div>);
 }

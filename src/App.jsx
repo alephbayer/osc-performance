@@ -3232,7 +3232,7 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 }
 
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
-function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients}) {
+function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[]}) {
   const v=vehicles.find(x=>x.id===vehicleId);
   if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
     <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
@@ -3364,6 +3364,71 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients}) {
           </div>
         </div>
       </div>}
+
+      {/* ── Account / Financeiro ── */}
+      {(()=>{
+        // Active OS payments (vehicle_id, no os_history_id)
+        const activePaid = payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((s,p)=>s+Number(p.amount),0);
+        // Past OS payments (os_history linked to this vehicle)
+        const pastOSs = osHistory.filter(h=>h.vehicle_id===v.id);
+        const totalOwedPast = pastOSs.reduce((s,h)=>{
+          const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0);
+          return s+Math.max(0,Number(h.total_value||0)-paid);
+        },0);
+
+        // Current OS: show total if there are done tasks
+        const doneTasks=ts.filter(t=>t.done);
+        const hasActiveAccount = doneTasks.length>0 || activePaid>0;
+        const hasHistory = pastOSs.some(h=>Number(h.total_value||0)>0);
+
+        if(!hasActiveAccount && !hasHistory) return null;
+
+        return (<div style={S.card}>
+          <div style={S.pad}>
+            <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:14}}>💳 Conta</div>
+
+            {/* Active OS */}
+            {hasActiveAccount&&<div style={{marginBottom:totalOwedPast>0?16:0}}>
+              <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OS atual</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {activePaid>0&&<div style={{flex:"1 1 120px",background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px"}}>
+                  <div style={{fontSize:10,color:B.gray400,marginBottom:3}}>Pago até agora</div>
+                  <div style={{fontSize:18,fontWeight:900,color:B.green}}>{fmtBRL(activePaid)}</div>
+                </div>}
+                {activePaid===0&&doneTasks.length>0&&<div style={{flex:"1 1 120px",background:`${B.amber}10`,border:`1px solid ${B.amber}22`,borderRadius:10,padding:"10px 14px"}}>
+                  <div style={{fontSize:10,color:B.gray400,marginBottom:3}}>Pagamento</div>
+                  <div style={{fontSize:13,fontWeight:700,color:B.amber}}>Nenhum pagamento registrado</div>
+                </div>}
+              </div>
+            </div>}
+
+            {/* Past OS with open balance */}
+            {totalOwedPast>0&&<div>
+              <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OS anteriores</div>
+              {pastOSs.filter(h=>Number(h.total_value||0)>0).map(h=>{
+                const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0);
+                const owed=Math.max(0,Number(h.total_value||0)-paid);
+                const settled=owed===0;
+                return (<div key={h.id} style={{background:settled?B.greenBg:B.gray900,border:`1px solid ${settled?B.green+"33":B.gray700}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                    <div>
+                      <div style={{fontSize:11,color:B.gray400,marginBottom:2}}>{h.os_number?`OS ${String(h.os_number).padStart(4,"0")}`:""}{h.delivered_at?` · Entregue em ${new Date(h.delivered_at).toLocaleDateString("pt-BR")}`:""}
+                      </div>
+                      <div style={{fontSize:13,color:B.gray300}}>Total: <b style={{color:B.white}}>{fmtBRL(h.total_value)}</b> · Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></div>
+                    </div>
+                    {settled
+                      ?<span style={{fontSize:12,fontWeight:800,color:B.green}}>✅ Quitado</span>
+                      :<div style={{background:B.red,borderRadius:8,padding:"5px 12px"}}>
+                        <div style={{fontSize:10,color:"#fca5a5",marginBottom:1}}>Em aberto</div>
+                        <div style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(owed)}</div>
+                      </div>}
+                  </div>
+                </div>);
+              })}
+            </div>}
+          </div>
+        </div>);
+      })()}
 
       {/* ── Photos without task link ── */}
       {photos.filter(p=>!p.taskId).length>0&&<div style={S.card}>
@@ -3618,7 +3683,7 @@ export default function App() {
   // If public view (still needs data loaded)
   if(publicVehicleId){
     if(loading) return <LoadingScreen/>;
-    return <PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients}/>;
+    return <PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory}/>;
   }
   if(loading) return <LoadingScreen/>;
   if(loadError) return <ErrorScreen msg={loadError}/>;

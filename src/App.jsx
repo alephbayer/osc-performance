@@ -416,8 +416,9 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     const matTextLines = mats.map(m => {
       const qty = m.qty || 1;
       const freight = Number(m.freight || 0);
+      const brandTag = m.fromStock && m.brand ? ` · ${m.brand}` : "";
       const importedTag = m.imported ? "[Importado] " : "";
-      const txt = `· ${importedTag}${m.name}${m.fromStock?" (estoque)":""}${qty>1?` x${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
+      const txt = `· ${importedTag}${m.name}${brandTag}${m.fromStock?" (estoque)":""}${qty>1?` x${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
       doc.setFont("helvetica","normal"); doc.setFontSize(8);
       return { lines: doc.splitTextToSize(txt, cDescW - 6), mat: m, qty, freight };
     });
@@ -1246,7 +1247,10 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
       {mat.fromStock?<IWarehouse s={13} c={B.purple}/>:isImported?<span style={{fontSize:13}}>✈️</span>:<IBox s={13} c={B.gray400}/>}
       <div style={{flex:1,minWidth:0}}>
         {readOnlyName||mat.fromStock
-          ?<span style={{fontSize:13,color:mat.fromStock?B.purple:isImported?importColor:B.gray200,fontWeight:mat.fromStock||isImported?700:500}}>{mat.name}</span>
+          ?<div style={{flex:1,minWidth:0}}>
+              <span style={{fontSize:13,color:mat.fromStock?B.purple:isImported?importColor:B.gray200,fontWeight:mat.fromStock||isImported?700:500}}>{mat.name}</span>
+              {mat.fromStock&&mat.brand&&<span style={{fontSize:10,color:B.purple+"99",marginLeft:6}}>{mat.brand}</span>}
+            </div>
           :<InlineEdit value={mat.name} onSave={v=>onUpdate(idx,{...mat,name:v})} placeholder="Nome do material"/>}
       </div>
       {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
@@ -4010,7 +4014,7 @@ export default function App() {
     const matQty=1; // initial qty when adding from stock picker — user can edit afterwards
     const newQty=Math.max(0,item.qty-matQty);
     const mats = currentMats || tasks.find(t=>t.id===taskId)?.materials || [];
-    const newMats = [...mats,{name:item.name,cost:item.salePrice,qty:matQty,fromStock:true,stockItemId:item.id}];
+    const newMats = [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:true,stockItemId:item.id}];
     setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
     try{

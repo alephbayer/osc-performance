@@ -3330,6 +3330,24 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           </div>}
 
           {/* Tasks grouped by category */}
+          {/* Fuel and tows */}
+          {(Number(v.fuelCost||0)>0||(v.tows||[]).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
+            {Number(v.fuelCost||0)>0&&<div style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
+              <span style={{fontSize:16}}>⛽</span>
+              <span style={{fontSize:13,color:B.gray300}}>Combustível</span>
+              <span style={{fontSize:13,fontWeight:700,color:B.amber,marginLeft:"auto"}}>{fmtBRL(v.fuelCost)}</span>
+            </div>}
+            {(v.tows||[]).filter(t=>Number(t.value||0)>0).map((t,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
+                <span style={{fontSize:16}}>🚛</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <span style={{fontSize:13,color:B.gray300}}>Reboque</span>
+                  {(t.origin||t.destination)&&<span style={{fontSize:11,color:B.gray500,marginLeft:6}}>{t.origin&&t.destination?`${t.origin} → ${t.destination}`:t.origin||t.destination}</span>}
+                </div>
+                <span style={{fontSize:13,fontWeight:700,color:"#60a5fa",flexShrink:0}}>{fmtBRL(t.value)}</span>
+              </div>
+            ))}
+          </div>}
           <div style={{marginTop:8}}>
             {catOrder.map(cat=>{
               const groupTasks=ts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));

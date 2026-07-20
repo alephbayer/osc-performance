@@ -50,7 +50,7 @@ function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
   const fuelTotal  = (vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0), 0);
   const laborSum   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor, 0);
   const osDiscount = laborSum * Number(vehicle.osDiscountPct||0) / 100;
-  return tasksTotal + Number(vehicle.fuelCost||0) + fuelTotal + towTotal - osDiscount;
+  return tasksTotal + fuelTotal + towTotal - osDiscount;
 }
 function vehiclePaid(vehicleId,payments) {
   return payments.filter(p=>p.vehicleId===vehicleId).reduce((s,p)=>s+Number(p.amount),0);
@@ -555,8 +555,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   const osDiscountPct = Number(vehicle.osDiscountPct || 0);
   const laborSumForDiscount = ts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
   const osDiscountAmt = laborSumForDiscount * osDiscountPct / 100;
-  const grandTotal = partsTotal + freightTotal + laborTotal + fuelCostVal + fuelTotal + towTotal - osDiscountAmt;
-  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelCostVal+fuelTotal > 0 ? 1 : 0) + (towTotal > 0 ? 1 : 0) + (osDiscountAmt > 0 ? 1 : 0);
+  const grandTotal = partsTotal + freightTotal + laborTotal + fuelTotal + towTotal - osDiscountAmt;
+  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelTotal > 0 ? 1 : 0) + (towTotal > 0 ? 1 : 0) + (osDiscountAmt > 0 ? 1 : 0);
   const boxH_inner = 26 + extraLines * 8;
   const boxW = 85, boxX = pageW - marginX - boxW;
   doc.setDrawColor(220,220,220);
@@ -568,7 +568,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   doc.text("Total de Mao de Obra",      boxX + 5, y + 17);
   let nextY = 25;
   if (freightTotal  > 0) { doc.text("Total de Frete",                    boxX + 5, y + nextY); nextY += 8; }
-  if (fuelCostVal+fuelTotal > 0) { doc.text("Combustivel",     boxX + 5, y + nextY); nextY += 8; }
+  if (fuelTotal > 0) { doc.text("Combustivel",     boxX + 5, y + nextY); nextY += 8; }
   if (towTotal      > 0) { doc.text("Reboque",                           boxX + 5, y + nextY); nextY += 8; }
   if (osDiscountAmt > 0) { doc.setTextColor(180, 60, 60); doc.text(`Desconto (${osDiscountPct}% m.o.)`, boxX + 5, y + nextY); doc.setTextColor(...black); nextY += 8; }
 
@@ -577,7 +577,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   doc.text(fmtBRL(laborTotal),  boxX + boxW - 5, y + 17, { align: "right" });
   let nextY2 = 25;
   if (freightTotal  > 0) { doc.text(fmtBRL(freightTotal),            boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
-  if (fuelCostVal+fuelTotal > 0) { doc.text(fmtBRL(fuelCostVal+fuelTotal), boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
+  if (fuelTotal > 0) { doc.text(fmtBRL(fuelTotal), boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
   if (towTotal      > 0) { doc.text(fmtBRL(towTotal),                boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
   if (osDiscountAmt > 0) { doc.setTextColor(180, 60, 60); doc.text(`-${fmtBRL(osDiscountAmt)}`, boxX + boxW - 5, y + nextY2, { align: "right" }); doc.setTextColor(...black); nextY2 += 8; }
 
@@ -1535,7 +1535,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const fuelTotal  = managerMode?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
   const laborSum   = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
   const osDiscount = managerMode?laborSum*Number(vehicle.osDiscountPct||0)/100:0;
-  const total      = managerMode?tasksTotal+Number(vehicle.fuelCost||0)+fuelTotal+towTotal-osDiscount:0;
+  const total      = managerMode?tasksTotal+fuelTotal+towTotal-osDiscount:0;
   const photos= vehicle.photos||[];
   const pubLink=getPublicLink(vehicle.id);
   const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo"}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"⏸ Aguardando cliente"}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"✓ Pronto"}};
@@ -1854,17 +1854,16 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           const fuelTotal=(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0);
           const laborSum=vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
           const osDiscountAmt=laborSum*Number(vehicle.osDiscountPct||0)/100;
-          const grandTotal=total+Number(vehicle.fuelCost||0)+fuelTotal+towTotal-osDiscountAmt;
-          if(!managerMode||grandTotal<=0) return null;
+          if(!managerMode||total<=0) return null;
           const breakdown=[];
-          if(total>0) breakdown.push(`Serviços: ${fmtBRL(total)}`);
+          if(tasksTotal>0) breakdown.push(`Serviços: ${fmtBRL(tasksTotal)}`);
           if(osDiscountAmt>0) breakdown.push(`Desconto: -${fmtBRL(osDiscountAmt)}`);
           if(fuelTotal>0) breakdown.push(`Combustível: ${fmtBRL(fuelTotal)}`);
           if(towTotal>0) breakdown.push(`Reboque: ${fmtBRL(towTotal)}`);
           return (<div style={{marginTop:8,padding:"8px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:12,color:B.gray400}}>Total deste veículo</span>
-              <span style={{fontSize:15,fontWeight:800,color:B.amber}}>{fmtBRL(grandTotal)}</span>
+              <span style={{fontSize:15,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</span>
             </div>
             {breakdown.length>1&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>{breakdown.join(" · ")}</div>}
           </div>);

@@ -1344,16 +1344,20 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[]}) {
   const updMat=(idx,patch)=>onUpdate(task.id,{materials:mats.map((m,i)=>i===idx?patch:m)});
   const rmMat =(idx)=>onUpdate(task.id,{materials:mats.filter((_,i)=>i!==idx)});
 
-  return (<><div style={{padding:"8px 0",borderBottom:`1px solid ${B.gray700}`}}>
+  return (<><div style={{padding:"8px 0",borderBottom:`1px solid ${B.gray700}`,opacity:task.outsourced?.85:1}}>
     <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-      <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:5,flexShrink:0,marginTop:1,cursor:"pointer",border:task.done?"none":`2px solid ${B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+      <button onClick={()=>!task.outsourced&&onToggle(task.id)} style={{width:22,height:22,borderRadius:5,flexShrink:0,marginTop:1,cursor:task.outsourced?"not-allowed":"pointer",border:task.done?"none":`2px solid ${task.outsourced?B.gray600+"66":B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
         {task.done&&<ICheck/>}
       </button>
       <div style={{flex:1,minWidth:0}}>
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
           <TaskLabel task={task} onUpdate={onUpdate}/>
           <CategoryPill category={task.category}/>
+          {task.outsourced&&<span style={{fontSize:10,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
         </div>
+        {task.outsourced&&<div style={{marginTop:5,padding:"5px 10px",background:"#a78bfa10",border:"1px solid #a78bfa33",borderRadius:7,fontSize:11,color:"#c4b5fd"}}>
+          ℹ️ Este serviço é realizado por um terceiro. Não é necessária a sua execução.
+        </div>}
         {task.description&&<div style={{fontSize:11,color:B.gray400,fontStyle:"italic",marginTop:2}}>{task.description}</div>}
         {signer&&task.done&&<div style={{marginTop:2}}>
           <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>

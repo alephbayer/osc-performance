@@ -106,6 +106,7 @@ const mapTaskIn = (t) => ({
   discount: Number(t.discount || 0),
   category: t.category || null,
   description: t.description || '',
+  rateType: t.rate_type || 'hour',
 });
 const mapTaskOut = (t) => ({
   vehicle_id: t.vehicleId,
@@ -380,7 +381,7 @@ export const db = {
   },
   async updateTask(id, patch) {
     const dbPatch = {};
-    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced", discount:"discount", category:"category", description:"description" };
+    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced", discount:"discount", category:"category", description:"description", rateType:"rate_type" };
     Object.keys(patch).forEach((k) => { if (map[k]) dbPatch[map[k]] = patch[k]; });
     const { error } = await supabase.from("tasks").update(dbPatch).eq("id", id);
     if (error) throw error;

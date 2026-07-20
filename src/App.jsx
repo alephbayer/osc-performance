@@ -135,9 +135,12 @@ function productivityByEmployee(employees, vehicles, tasks, defaultRate, monthKe
 
 // ─── Cost helpers ─────────────────────────────────────────────────────────────
 const taskCost=(t,defaultRate)=>{
+  const rateType = t.rateType || "hour";
   const rate  = t.ratePerHour!=null ? Number(t.ratePerHour) : Number(defaultRate||0);
+  // hour mode: labor = hours × rate
+  // qty mode:  labor = hours (qty) × ratePerHour (unit price)
   const laborGross = Number(t.hours||0)*rate;
-  const discount = Math.min(Number(t.discount||0), laborGross); // per-task R$ discount on labor
+  const discount = Math.min(Number(t.discount||0), laborGross);
   const labor = Math.max(0, laborGross - discount);
   const mats  = Array.isArray(t.materials) ? t.materials : [];
   const mat = mats.reduce((s,m)=>{
@@ -152,7 +155,7 @@ const taskCost=(t,defaultRate)=>{
     }
   },0);
   const freight = mats.reduce((s,m)=>s+Number(m.freight||0),0);
-  return {laborGross,discount,labor,mat,freight,total:labor+mat+freight};
+  return {laborGross,discount,labor,mat,freight,total:labor+mat+freight,rateType};
 };
 
 // ─── Image upload (Supabase Storage) ─────────────────────────────────────────
@@ -458,7 +461,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     }
 
     doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-    if (t.hours > 0) doc.text(`${t.hours}h`, cQty, y + 5, { align: "right" });
+    const isQty = t.rateType === "qty";
+    if (t.hours > 0) doc.text(isQty ? `${t.hours}x` : `${t.hours}h`, cQty, y + 5, { align: "right" });
     doc.text(t.hours > 0 ? fmtBRL(rate) : "—", cUnit, y + 5, { align: "right" });
     // DESC column — per-task discount
     if (c.discount > 0) {
@@ -1408,21 +1412,27 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               <IWarehouse s={11} c={B.purple}/>Do estoque
             </button>
           </div>
-          {/* Hours */}
+          {/* Rate type toggle + Hours/Qty + Rate */}
           <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px",minWidth:90}}>
-            <IClock s={12} c={B.gray400}/>
-            <InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder="Horas" type="number"/>
-            <span style={{fontSize:11,color:B.gray400}}>h</span>
+            {task.rateType==="qty"?<IBox s={12} c={B.gray400}/>:<IClock s={12} c={B.gray400}/>}
+            <InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"Qtd":"Horas"} type="number"/>
+            <span style={{fontSize:11,color:B.gray400}}>{task.rateType==="qty"?"un":"h"}</span>
           </div>
           {/* Rate */}
           <div style={{display:"flex",alignItems:"center",gap:5,background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",minWidth:100}}>
-            <span style={{fontSize:10,color:B.amber,fontWeight:700}}>R$/h</span>
-            <InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={`${fmtR2(defaultRate)} (pad)`} type="number"/>
+            <span style={{fontSize:10,color:B.amber,fontWeight:700}}>{task.rateType==="qty"?"R$/un":"R$/h"}</span>
+            <InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={task.rateType==="qty"?"0,00":`${fmtR2(defaultRate)} (pad)`} type="number"/>
           </div>
+          {/* Toggle hour ↔ qty */}
+          <button onClick={()=>onUpdate(task.id,{rateType:task.rateType==="qty"?"hour":"qty",ratePerHour:null,hours:0})}
+            title={task.rateType==="qty"?"Cobrar por hora":"Cobrar por quantidade"}
+            style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
+            {task.rateType==="qty"?"📦 Qtd":"⏱ H"}
+          </button>
         </div>
       </div>
       {(c.labor>0||c.mat>0)&&<div style={{marginTop:5,marginLeft:30,display:"flex",gap:10,flexWrap:"wrap"}}>
-        {c.labor>0&&<span style={{fontSize:11,color:B.gray400}}>⏱ <b style={{color:B.amber}}>{fmtBRL(c.labor)}</b></span>}
+        {c.labor>0&&<span style={{fontSize:11,color:B.gray400}}>{task.rateType==="qty"?"📦":"⏱"} <b style={{color:B.amber}}>{fmtBRL(c.labor)}</b></span>}
         {c.mat>0&&<span style={{fontSize:11,color:B.gray400}}>🔩 <b style={{color:B.amber}}>{fmtBRL(c.mat)}</b></span>}
       </div>}
     </div>

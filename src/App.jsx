@@ -3709,6 +3709,14 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
   const [value,setValue]=useState("");
   const [date,setDate]=useState(new Date().toLocaleDateString("pt-BR"));
   const [saving,setSaving]=useState(false);
+  const [search,setSearch]=useState("");
+
+  const filteredVehicles=activeVehicles.filter(v=>
+    !search||
+    v.model.toLowerCase().includes(search.toLowerCase())||
+    v.plate.toLowerCase().includes(search.toLowerCase())||
+    (v.color||"").toLowerCase().includes(search.toLowerCase())
+  );
 
   const save=async()=>{
     if(!selectedId||!value) return;
@@ -3735,19 +3743,27 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
           <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Veículo</label>
           {activeVehicles.length===0
             ?<div style={{fontSize:13,color:B.gray500,padding:"10px 12px",background:B.gray900,borderRadius:8}}>Nenhum veículo com OS ativa</div>
-            :<div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflowY:"auto"}}>
-              {activeVehicles.map(v=>(
-                <button key={v.id} onClick={()=>setSelectedId(v.id)}
-                  style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:`2px solid ${selectedId===v.id?"#f59e0b":B.gray600}`,background:selectedId===v.id?"#f59e0b15":B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
-                  <span style={{fontSize:18,flexShrink:0}}>🚗</span>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
-                    <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
-                  </div>
-                  {selectedId===v.id&&<span style={{color:"#f59e0b",fontWeight:800,flexShrink:0}}>✓</span>}
-                </button>
-              ))}
-            </div>}
+            :<>
+              {activeVehicles.length>3&&<div style={{position:"relative",marginBottom:8}}>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cor…" autoFocus
+                  style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+                <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+              </div>}
+              <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflowY:"auto"}}>
+                {filteredVehicles.length===0&&<div style={{fontSize:13,color:B.gray500,padding:"8px 12px"}}>Nenhum veículo encontrado</div>}
+                {filteredVehicles.map(v=>(
+                  <button key={v.id} onClick={()=>setSelectedId(v.id)}
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:`2px solid ${selectedId===v.id?"#f59e0b":B.gray600}`,background:selectedId===v.id?"#f59e0b15":B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
+                    <span style={{fontSize:18,flexShrink:0}}>🚗</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
+                      <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
+                    </div>
+                    {selectedId===v.id&&<span style={{color:"#f59e0b",fontWeight:800,flexShrink:0}}>✓</span>}
+                  </button>
+                ))}
+              </div>
+            </>}
         </div>
 
         {/* Fuel type */}

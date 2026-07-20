@@ -1225,25 +1225,33 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
   const salePrice = mat.fromStock ? cost : cost*(1+markup/100);
   const lineTotal = salePrice*qty;
   const freight = Number(mat.freight||0);
-  const color = mat.fromStock ? B.purple : B.gray400;
-  const bg = mat.fromStock ? B.purpleBg : B.gray700;
-  const border = mat.fromStock ? `1px solid ${B.purple}44` : `1px solid ${B.gray600}`;
+  const isImported = !!mat.imported;
+  const importColor = "#f59e0b"; // amber-ish distinct from purple (stock) and orange (brand)
+  const importBg = "#f59e0b18";
+
+  const bg = mat.fromStock ? B.purpleBg : isImported ? importBg : B.gray700;
+  const border = mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : `1px solid ${B.gray600}`;
 
   return (<div style={{background:bg,border,borderRadius:8,padding:"7px 10px",width:"100%",boxSizing:"border-box"}}>
-    {/* Line 1: icon + name + remove */}
+    {/* Line 1: icon + name + imported toggle + remove */}
     <div style={{display:"flex",alignItems:"center",gap:6}}>
-      {mat.fromStock?<IWarehouse s={13} c={B.purple}/>:<IBox s={13} c={B.gray400}/>}
+      {mat.fromStock?<IWarehouse s={13} c={B.purple}/>:isImported?<span style={{fontSize:13}}>✈️</span>:<IBox s={13} c={B.gray400}/>}
       <div style={{flex:1,minWidth:0}}>
         {readOnlyName||mat.fromStock
-          ?<span style={{fontSize:13,color:mat.fromStock?B.purple:B.gray200,fontWeight:mat.fromStock?700:500}}>{mat.name}</span>
+          ?<span style={{fontSize:13,color:mat.fromStock?B.purple:isImported?importColor:B.gray200,fontWeight:mat.fromStock||isImported?700:500}}>{mat.name}</span>
           :<InlineEdit value={mat.name} onSave={v=>onUpdate(idx,{...mat,name:v})} placeholder="Nome do material"/>}
       </div>
+      {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
+        title={isImported?"Remover marcação de importado":"Marcar como importado"}
+        style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
+        ✈ {isImported?"Importado":"Import."}
+      </button>}
       <button onClick={()=>onRemove(idx)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2,display:"flex",flexShrink:0}}
         onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={13}/></button>
     </div>
 
-    {/* Line 2: qty + cost options (only when showCost) */}
-    {(showCost||editableQty)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":B.gray600}`}}>
+    {/* Line 2: qty + cost options */}
+    {(showCost||editableQty)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":isImported?importColor+"22":B.gray600}`}}>
       {/* Row A: Quantity + unit price */}
       <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 8px"}}>

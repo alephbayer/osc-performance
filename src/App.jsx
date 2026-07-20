@@ -3345,13 +3345,24 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 {groupTasks.map(t=>{
                   const tPhotos=photos.filter(p=>p.taskId===t.id);
                   const signer=t.completedByEmployeeId?employees.find(e=>e.id===t.completedByEmployeeId):null;
-                  return (<div key={t.id} style={{padding:"10px 12px",marginBottom:4,background:t.done?`${B.green}08`:B.gray900,borderRadius:10,border:`1px solid ${t.done?B.green+"22":B.gray700}`}}>
+                  return (<div key={t.id} style={{padding:"10px 12px",marginBottom:4,background:t.outsourced?`${"#a78bfa"}08`:t.done?`${B.green}08`:B.gray900,borderRadius:10,border:`1px solid ${t.outsourced?"#a78bfa33":t.done?B.green+"22":B.gray700}`}}>
                     <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
                       <span style={{fontSize:18,flexShrink:0,marginTop:1}}>{t.done?"✅":"⬜"}</span>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:14,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                          <span style={{fontSize:14,color:t.done?B.gray400:t.outsourced?"#c4b5fd":B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
+                          {t.outsourced&&<span style={{fontSize:10,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
+                        </div>
                         {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
-                        {(t.materials||[]).filter(m=>m.name).map((m,i)=><div key={i} style={{fontSize:11,color:B.gray500,marginTop:2}}>🔩 {m.name}{m.brand?<span style={{color:B.gray600}}> · {m.brand}</span>:""}{m.qty>1?` ×${m.qty}`:""}</div>)}
+                        {(t.materials||[]).filter(m=>m.name).map((m,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
+                            <span style={{fontSize:11,color:m.imported?"#60a5fa":B.gray500}}>🔩</span>
+                            <span style={{fontSize:11,color:m.imported?"#60a5fa":B.gray500,fontWeight:m.imported?700:400}}>{m.name}</span>
+                            {m.brand&&<span style={{fontSize:10,color:B.gray600}}>· {m.brand}</span>}
+                            {m.qty>1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
+                            {m.imported&&<span style={{fontSize:9,fontWeight:800,color:"#60a5fa",background:"#60a5fa12",border:"1px solid #60a5fa33",borderRadius:4,padding:"0px 5px",whiteSpace:"nowrap"}}>✈ Importado</span>}
+                          </div>
+                        ))}
                         {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
                         {/* Photos linked to this task */}
                         {tPhotos.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>

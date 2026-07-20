@@ -3462,6 +3462,8 @@ function AdminLoginScreen({onLogin}) {
       </div>
       <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
         <form onSubmit={e=>{e.preventDefault();tryLogin();}} autoComplete="on">
+        {/* Hidden username field — required for Safari iOS to offer password saving */}
+        <input type="text" name="username" autoComplete="username" value="osc-performance" readOnly style={{display:"none"}}/>
         <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:B.gray200,fontWeight:600,marginBottom:10}}><ILock s={14} c={B.orange}/>Senha de acesso</label>
         <input value={pwd} onChange={e=>{setPwd(e.target.value);setErr("");}}
           type="password" name="password" id="osc-password" placeholder="••••••••" autoFocus autoComplete="current-password"

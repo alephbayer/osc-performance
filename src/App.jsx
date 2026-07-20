@@ -3393,7 +3393,17 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {activePaid>0&&<div style={{flex:"1 1 120px",background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px"}}>
                   <div style={{fontSize:10,color:B.gray400,marginBottom:3}}>Pago até agora</div>
-                  <div style={{fontSize:18,fontWeight:900,color:B.green}}>{fmtBRL(activePaid)}</div>
+                  <div style={{fontSize:18,fontWeight:900,color:B.green,marginBottom:8}}>{fmtBRL(activePaid)}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                    {payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).map(p=>(
+                      <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11,color:B.green,fontWeight:700,flexShrink:0}}>💰 {fmtBRL(p.amount)}</span>
+                        <span style={{fontSize:11,color:B.gray300,flexShrink:0}}>{p.method}</span>
+                        <span style={{fontSize:11,color:B.gray500,marginLeft:"auto",flexShrink:0}}>{new Date(p.paidAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>
+                        {p.note&&<span style={{fontSize:11,color:B.gray500,width:"100%"}}>{p.note}</span>}
+                      </div>
+                    ))}
+                  </div>
                 </div>}
                 {activePaid===0&&doneTasks.length>0&&<div style={{flex:"1 1 120px",background:`${B.amber}10`,border:`1px solid ${B.amber}22`,borderRadius:10,padding:"10px 14px"}}>
                   <div style={{fontSize:10,color:B.gray400,marginBottom:3}}>Pagamento</div>
@@ -3423,6 +3433,17 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                         <div style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(owed)}</div>
                       </div>}
                   </div>
+                  {/* Payment list */}
+                  {payments.filter(p=>p.osHistoryId===h.id).length>0&&<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${settled?B.green+"22":B.gray700}`,display:"flex",flexDirection:"column",gap:5}}>
+                    {payments.filter(p=>p.osHistoryId===h.id).map(p=>(
+                      <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:12,color:B.green,fontWeight:700,flexShrink:0}}>💰 {fmtBRL(p.amount)}</span>
+                        <span style={{fontSize:11,color:B.gray300,flexShrink:0}}>{p.method}</span>
+                        <span style={{fontSize:11,color:B.gray500,marginLeft:"auto",flexShrink:0}}>{new Date(p.paidAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>
+                        {p.note&&<span style={{fontSize:11,color:B.gray500,width:"100%"}}>{p.note}</span>}
+                      </div>
+                    ))}
+                  </div>}
                 </div>);
               })}
             </div>}

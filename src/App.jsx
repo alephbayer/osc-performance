@@ -380,13 +380,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   const tows = Array.isArray(vehicle.tows) ? vehicle.tows : [];
   const towTotal = tows.reduce((s,t)=>s+Number(t.value||0),0);
 
-  // Group tasks by category in PDF
-  const catOrder=[];
-  const catSeen=new Set();
-  ts.forEach(t=>{
-    const key=t.category||"__none__";
-    if(!catSeen.has(key)){catSeen.add(key);catOrder.push(t.category||null);}
-  });
+  // Group tasks by category: alphabetical, uncategorized last
+  const catOrder=buildCatOrder(ts);
 
   catOrder.forEach(cat=>{
     const groupTasks=ts.filter(t=>(t.category||null)===cat);
@@ -400,7 +395,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
       doc.setDrawColor(...rgb); doc.setLineWidth(0.5);
       doc.rect(marginX, y, contentW, 6, "FD"); doc.setLineWidth(0.2);
       doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...rgb);
-      doc.text(`> ${cat.toUpperCase()}`, marginX + 3, y + 4.2);
+      doc.text(`> ${(cat||"Sem categoria").toUpperCase()}`, marginX + 3, y + 4.2);
       if(catTotal>0) doc.text(fmtBRL(catTotal), cTotal, y + 4.2, { align: "right" });
       y += 7;
     }
@@ -714,6 +709,20 @@ const CATEGORIES=[
   {id:"Suspensão",     color:"#f59e0b"},
 ];
 const CAT_MAP=Object.fromEntries(CATEGORIES.map(c=>[c.id,c.color]));
+
+// Build category order: alphabetical, null (uncategorized) always last
+function buildCatOrder(tasks) {
+  const seen=new Set();
+  const cats=[];
+  tasks.forEach(t=>{
+    const k=t.category||null;
+    const key=k||"__none__";
+    if(!seen.has(key)){seen.add(key);cats.push(k);}
+  });
+  const named=cats.filter(c=>c!==null).sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  const hasNone=cats.includes(null);
+  return hasNone?[...named,null]:named;
+}
 
 const PRIORITY={
   high:  {label:"Alta",    color:"#ef4444", bg:"#ef444418", border:"#ef444444", next:"medium"},
@@ -1662,27 +1671,19 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           </div>
         </div>}
         {(()=>{
-          // Group tasks by category; uncategorized → null group rendered last
-          const groups=[];
-          const seen=new Set();
-          // First pass: preserve order of first appearance per category
-          const catOrder=[];
-          vts.forEach(t=>{
-            const cat=t.category||null;
-            const key=cat||"__none__";
-            if(!seen.has(key)){seen.add(key);catOrder.push(cat);}
-          });
+          // Group tasks by category: alphabetical, uncategorized last
+          const catOrder=buildCatOrder(vts);
           return catOrder.map(cat=>{
             const groupTasks=vts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
             const catColor=cat?CAT_MAP[cat]||B.gray500:null;
             const catTotal=managerMode?groupTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
             return (<div key={cat||"__none__"} style={{marginBottom:4}}>
-              {cat&&<div style={{display:"flex",alignItems:"center",gap:6,margin:"8px 0 4px",padding:"3px 8px",background:catColor+"15",borderLeft:`3px solid ${catColor}`,borderRadius:"0 4px 4px 0"}}>
-                <span style={{width:7,height:7,borderRadius:99,background:catColor,flexShrink:0}}/>
-                <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat}</span>
-                <span style={{fontSize:10,color:catColor+"99"}}>{groupTasks.length} tarefa{groupTasks.length!==1?"s":""}</span>
-                {managerMode&&catTotal>0&&<span style={{fontSize:10,fontWeight:800,color:catColor,marginLeft:"auto"}}>{fmtBRL(catTotal)}</span>}
-              </div>}
+              <div style={{display:"flex",alignItems:"center",gap:6,margin:"8px 0 4px",padding:"3px 8px",background:catColor?(catColor+"15"):B.gray700+"80",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 4px 4px 0"}}>
+                <span style={{width:7,height:7,borderRadius:99,background:catColor||B.gray500,flexShrink:0}}/>
+                <span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
+                <span style={{fontSize:10,color:(catColor||B.gray500)+"99"}}>{groupTasks.length} tarefa{groupTasks.length!==1?"s":""}</span>
+                {managerMode&&catTotal>0&&<span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,marginLeft:"auto"}}>{fmtBRL(catTotal)}</span>}
+              </div>
               {groupTasks.map(t=>managerMode
                 ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}/>
                 :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask}/>
@@ -3194,10 +3195,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients}) {
   };
   const sc=statusCfg[v.status||"active"];
 
-  // Group tasks by category, done tasks last within each group
-  const catOrder=[];
-  const catSeen=new Set();
-  ts.forEach(t=>{const k=t.category||"__none__";if(!catSeen.has(k)){catSeen.add(k);catOrder.push(t.category||null);}});
+  // Group tasks by category: alphabetical, uncategorized last
+  const catOrder=buildCatOrder(ts);
 
   const S={
     card:{background:B.gray800,borderRadius:16,overflow:"hidden",marginBottom:20,border:`1px solid ${B.gray700}`},
@@ -3275,11 +3274,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients}) {
               // Photos linked to tasks in this category
               const catPhotos=photos.filter(p=>groupTasks.find(t=>t.id===p.taskId));
               return (<div key={cat||"__none__"} style={{marginBottom:12}}>
-                {cat&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:catColor+"18",borderLeft:`3px solid ${catColor}`,borderRadius:"0 6px 6px 0",marginBottom:6}}>
-                  <span style={{width:7,height:7,borderRadius:99,background:catColor,flexShrink:0,display:"inline-block"}}/>
-                  <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat}</span>
-                  <span style={{fontSize:10,color:catColor+"88",marginLeft:"auto"}}>{groupTasks.filter(t=>t.done).length}/{groupTasks.length}</span>
-                </div>}
+                <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:(catColor||B.gray500)+"18",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 6px 6px 0",marginBottom:6}}>
+                  <span style={{width:7,height:7,borderRadius:99,background:catColor||B.gray500,flexShrink:0,display:"inline-block"}}/>
+                  <span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
+                  <span style={{fontSize:10,color:(catColor||B.gray500)+"88",marginLeft:"auto"}}>{groupTasks.filter(t=>t.done).length}/{groupTasks.length}</span>
+                </div>
                 {groupTasks.map(t=>{
                   const tPhotos=photos.filter(p=>p.taskId===t.id);
                   const signer=t.completedByEmployeeId?employees.find(e=>e.id===t.completedByEmployeeId):null;

@@ -416,7 +416,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     const matTextLines = mats.map(m => {
       const qty = m.qty || 1;
       const freight = Number(m.freight || 0);
-      const txt = `· ${m.name}${m.fromStock?" (estoque)":""}${qty>1?` ×${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
+      const importedTag = m.imported ? " ✈ [Importado]" : "";
+      const txt = `· ${m.name}${importedTag}${m.fromStock?" (estoque)":""}${qty>1?` x${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
       doc.setFont("helvetica","normal"); doc.setFontSize(8);
       return { lines: doc.splitTextToSize(txt, cDescW - 6), mat: m, qty, freight };
     });
@@ -478,7 +479,16 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
       const unitPrice = mat.fromStock ? matCost : matCost * (1 + markup / 100);
       const matSubtotal = unitPrice * qty;
       const matTotal = matSubtotal + freight;
-      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+      const isImported = !!mat.imported;
+      // Background tint for imported items
+      if (isImported) {
+        doc.setFillColor(254, 243, 199); // amber-50 tint
+        doc.setDrawColor(245, 158, 11);  doc.setLineWidth(0.2);
+        doc.rect(marginX + 4, matY - 3, contentW - 4, lines.length * 4.5 + 1, "FD");
+        doc.setLineWidth(0.2);
+      }
+      const matTextColor = isImported ? [180, 100, 0] : gray;
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...matTextColor);
       lines.forEach((line, li) => doc.text(line, marginX + 7, matY + li * 4.5));
       doc.text(`${qty}x`, cQty, matY, { align: "right" });
       doc.text(fmtBRL(unitPrice), cUnit, matY, { align: "right" });
@@ -487,10 +497,11 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
         doc.setTextColor(100, 120, 160);
         doc.text(`+${fmtBRL(freight)}`, cDisc, matY, { align: "right" });
       } else {
-        doc.setTextColor(...gray);
+        doc.setTextColor(isImported ? 180 : gray[0], isImported ? 100 : gray[1], isImported ? 0 : gray[2]);
         doc.text("—", cDisc, matY, { align: "right" });
       }
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(180, 100, 0);
+      doc.setFont("helvetica","bold"); doc.setFontSize(8);
+      doc.setTextColor(isImported ? 160 : 180, isImported ? 80 : 100, 0);
       doc.text(fmtBRL(matTotal), cTotal, matY, { align: "right" });
       matY += lines.length * 4.5;
     });

@@ -1458,6 +1458,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const [aiS, setAiS] = useState([]);
   const [xfM, setXfM] = useState(false);
   const [xfO, setXfO] = useState(false);
+  const [collapsedCats, setCollapsedCats] = useState({});
   const [showPhotos,setSP]=useState(false);
   const [cpLink,setCPL]=useState(false);
   const [showAccount,setSA]=useState(false);
@@ -1674,17 +1675,25 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           // Group tasks by category: alphabetical, uncategorized last
           const catOrder=buildCatOrder(vts);
           return catOrder.map(cat=>{
+            const key=cat||"__none__";
             const groupTasks=vts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
             const catColor=cat?CAT_MAP[cat]||B.gray500:null;
             const catTotal=managerMode?groupTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
-            return (<div key={cat||"__none__"} style={{marginBottom:4}}>
-              <div style={{display:"flex",alignItems:"center",gap:6,margin:"8px 0 4px",padding:"3px 8px",background:catColor?(catColor+"15"):B.gray700+"80",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 4px 4px 0"}}>
+            const allDone=groupTasks.length>0&&groupTasks.every(t=>t.done);
+            // Default: collapsed if all done, open otherwise. User toggle overrides.
+            const isCollapsed=collapsedCats[key]!==undefined ? collapsedCats[key] : allDone;
+            const doneCount=groupTasks.filter(t=>t.done).length;
+            const toggleCat=()=>setCollapsedCats(p=>({...p,[key]:!isCollapsed}));
+            return (<div key={key} style={{marginBottom:4}}>
+              <div onClick={toggleCat} style={{display:"flex",alignItems:"center",gap:6,margin:"8px 0 4px",padding:"4px 8px",background:catColor?(catColor+(isCollapsed?"22":"15")):B.gray700+"80",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 4px 4px 0",cursor:"pointer",userSelect:"none",opacity:allDone?.75:1}}>
                 <span style={{width:7,height:7,borderRadius:99,background:catColor||B.gray500,flexShrink:0}}/>
                 <span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
-                <span style={{fontSize:10,color:(catColor||B.gray500)+"99"}}>{groupTasks.length} tarefa{groupTasks.length!==1?"s":""}</span>
-                {managerMode&&catTotal>0&&<span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,marginLeft:"auto"}}>{fmtBRL(catTotal)}</span>}
+                <span style={{fontSize:10,color:(catColor||B.gray500)+"99"}}>{doneCount}/{groupTasks.length}</span>
+                {allDone&&<span style={{fontSize:9,color:B.green,fontWeight:700}}>✓ concluída</span>}
+                {managerMode&&catTotal>0&&<span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,marginLeft:"auto",marginRight:4}}>{fmtBRL(catTotal)}</span>}
+                <span style={{color:(catColor||B.gray500),fontSize:9,flexShrink:0}}>{isCollapsed?"▶":"▼"}</span>
               </div>
-              {groupTasks.map(t=>managerMode
+              {!isCollapsed&&groupTasks.map(t=>managerMode
                 ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}/>
                 :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask}/>
               )}

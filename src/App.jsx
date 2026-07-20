@@ -739,14 +739,14 @@ function Toast({msg,onDone}) {
 }
 function InlineEdit({value,onSave,placeholder,type="text"}) {
   const [e,sE]=useState(false); const [v,sV]=useState(value||"");
-  if(!e) return (<button onClick={()=>{sV(value||"");sE(true);}} style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:4}}>
-    <span style={{color:value?B.white:B.gray400,fontSize:13}}>{value||placeholder}</span><IEdit s={10} c={B.gray500}/></button>);
-  return (<div style={{display:"flex",gap:5,alignItems:"center"}}>
+  if(!e) return (<button onClick={()=>{sV(value||"");sE(true);}} style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"flex-start",gap:4,width:"100%",textAlign:"left"}}>
+    <span style={{color:value?B.white:B.gray400,fontSize:13,textAlign:"left",wordBreak:"break-word",flex:1}}>{value||placeholder}</span><IEdit s={10} c={B.gray500} style={{flexShrink:0,marginTop:2}}/></button>);
+  return (<div style={{display:"flex",gap:5,alignItems:"center",width:"100%"}}>
     <input autoFocus value={v} onChange={ev=>sV(ev.target.value)} type={type}
       onKeyDown={ev=>{if(ev.key==="Enter"){onSave(v);sE(false);}if(ev.key==="Escape")sE(false);}}
-      style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:12,outline:"none",width:type==="number"?80:170}}/>
-    <button onClick={()=>{onSave(v);sE(false);}} style={{padding:"3px 8px",borderRadius:5,background:B.green,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:11}}>OK</button>
-    <button onClick={()=>sE(false)} style={{padding:"3px 6px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11}}>✕</button>
+      style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:12,outline:"none",width:type==="number"?80:"100%",flex:type==="number"?undefined:1}}/>
+    <button onClick={()=>{onSave(v);sE(false);}} style={{padding:"3px 8px",borderRadius:5,background:B.green,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:11,flexShrink:0}}>OK</button>
+    <button onClick={()=>sE(false)} style={{padding:"3px 6px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>
   </div>);
 }
 function UploadBtn({onFile,label="Adicionar foto",accept="image/*",style={},folder="misc"}) {
@@ -1375,7 +1375,8 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
             <InlineEdit
               value={task.description||""}
               onSave={v=>onUpdate(task.id,{description:v.trim()})}
-              placeholder="+ Descrição (opcional)"/>
+              placeholder="+ Descrição (opcional)"
+              textStyle={{textAlign:"left",whiteSpace:"pre-wrap"}}/>
           </div>
           {/* Per-task discount */}
           {c.laborGross>0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>
@@ -1394,47 +1395,46 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2,display:"flex",flexShrink:0,marginTop:1}}
           onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}><ITrash s={14}/></button>
       </div>
+
+      {/* ── Row 2: Materials ── */}
       <div style={{marginLeft:30,marginTop:7}}>
-        {/* materials list */}
         <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:mats.length?6:0}}>
           {mats.map((m,idx)=><MaterialChip key={idx} mat={m} idx={idx} onUpdate={updMat} onRemove={rmMat} showCost editableQty/>)}
         </div>
-        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-          {/* add material row */}
-          <div style={{display:"flex",alignItems:"center",gap:5,flex:"1 1 160px",flexWrap:"wrap"}}>
-            <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px",flex:1}}>
-              <IBox s={12} c={B.gray400}/>
-              <input value={newMat} onChange={e=>setNewMat(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addMat()} placeholder="+ Adicionar material"
-                style={{background:"none",border:"none",outline:"none",color:B.white,fontSize:12,flex:1,minWidth:60}}/>
-              {newMat.trim()&&<button onClick={addMat} style={{background:"none",border:"none",cursor:"pointer",color:B.green,display:"flex"}}><IPlus s={13} c={B.green}/></button>}
-            </div>
-            <button onClick={()=>setSP(true)} style={{padding:"4px 8px",borderRadius:6,background:B.purpleBg,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
-              <IWarehouse s={11} c={B.purple}/>Do estoque
-            </button>
+        <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+          <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px",flex:"1 1 160px"}}>
+            <IBox s={12} c={B.gray400}/>
+            <input value={newMat} onChange={e=>setNewMat(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addMat()} placeholder="+ Adicionar material"
+              style={{background:"none",border:"none",outline:"none",color:B.white,fontSize:12,flex:1,minWidth:60}}/>
+            {newMat.trim()&&<button onClick={addMat} style={{background:"none",border:"none",cursor:"pointer",color:B.green,display:"flex"}}><IPlus s={13} c={B.green}/></button>}
           </div>
-          {/* Rate type toggle + Hours/Qty + Rate */}
-          <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px",minWidth:90}}>
-            {task.rateType==="qty"?<IBox s={12} c={B.gray400}/>:<IClock s={12} c={B.gray400}/>}
-            <InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"Qtd":"Horas"} type="number"/>
-            <span style={{fontSize:11,color:B.gray400}}>{task.rateType==="qty"?"un":"h"}</span>
-          </div>
-          {/* Rate */}
-          <div style={{display:"flex",alignItems:"center",gap:5,background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",minWidth:100}}>
-            <span style={{fontSize:10,color:B.amber,fontWeight:700}}>{task.rateType==="qty"?"R$/un":"R$/h"}</span>
-            <InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={task.rateType==="qty"?"0,00":`${fmtR2(defaultRate)} (pad)`} type="number"/>
-          </div>
-          {/* Toggle hour ↔ qty */}
-          <button onClick={()=>onUpdate(task.id,{rateType:task.rateType==="qty"?"hour":"qty",ratePerHour:null,hours:0})}
-            title={task.rateType==="qty"?"Cobrar por hora":"Cobrar por quantidade"}
-            style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
-            {task.rateType==="qty"?"📦 Qtd":"⏱ H"}
+          <button onClick={()=>setSP(true)} style={{padding:"4px 8px",borderRadius:6,background:B.purpleBg,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+            <IWarehouse s={11} c={B.purple}/>Do estoque
           </button>
         </div>
       </div>
-      {(c.labor>0||c.mat>0)&&<div style={{marginTop:5,marginLeft:30,display:"flex",gap:10,flexWrap:"wrap"}}>
-        {c.labor>0&&<span style={{fontSize:11,color:B.gray400}}>{task.rateType==="qty"?"📦":"⏱"} <b style={{color:B.amber}}>{fmtBRL(c.labor)}</b></span>}
-        {c.mat>0&&<span style={{fontSize:11,color:B.gray400}}>🔩 <b style={{color:B.amber}}>{fmtBRL(c.mat)}</b></span>}
-      </div>}
+
+      {/* ── Row 3: Hours/Qty + Rate + Toggle ── */}
+      <div style={{marginLeft:30,marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px"}}>
+          {task.rateType==="qty"?<IBox s={12} c={B.gray400}/>:<IClock s={12} c={B.gray400}/>}
+          <InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"Qtd":"Horas"} type="number"/>
+          <span style={{fontSize:11,color:B.gray400}}>{task.rateType==="qty"?"un":"h"}</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:5,background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px"}}>
+          <span style={{fontSize:10,color:B.amber,fontWeight:700}}>{task.rateType==="qty"?"R$/un":"R$/h"}</span>
+          <InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={task.rateType==="qty"?"0,00":`${fmtR2(defaultRate)} (pad)`} type="number"/>
+        </div>
+        <button onClick={()=>onUpdate(task.id,{rateType:task.rateType==="qty"?"hour":"qty",ratePerHour:null,hours:0})}
+          title={task.rateType==="qty"?"Cobrar por hora":"Cobrar por quantidade"}
+          style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
+          {task.rateType==="qty"?"📦 Qtd":"⏱ H"}
+        </button>
+        {(c.labor>0||c.mat>0)&&<>
+          {c.labor>0&&<span style={{fontSize:11,color:B.gray400,marginLeft:4}}>{task.rateType==="qty"?"📦":"⏱"} <b style={{color:B.amber}}>{fmtBRL(c.labor)}</b></span>}
+          {c.mat>0&&<span style={{fontSize:11,color:B.gray400}}>🔩 <b style={{color:B.amber}}>{fmtBRL(c.mat)}</b></span>}
+        </>}
+      </div>
     </div>
     {showSP&&<StockPickerModal stock={stock} onPick={pickStock} onClose={()=>setSP(false)}/>}
     {confirmDel&&<ConfirmModal title="Excluir tarefa?" message={<>Excluir <b style={{color:B.white}}>{task.label}</b>? Esta ação não pode ser desfeita.</>} confirmLabel="Excluir tarefa" onConfirm={()=>{onDelete(task.id);setConfirmDel(false);}} onCancel={()=>setConfirmDel(false)}/>}

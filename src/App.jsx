@@ -1225,41 +1225,60 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
   const salePrice = mat.fromStock ? cost : cost*(1+markup/100);
   const lineTotal = salePrice*qty;
   const freight = Number(mat.freight||0);
-  return (<div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",background:mat.fromStock?B.purpleBg:B.gray700,border:mat.fromStock?`1px solid ${B.purple}44`:"none",borderRadius:6,padding:"5px 9px",width:"100%",boxSizing:"border-box"}}>
-    {mat.fromStock?<IWarehouse s={12} c={B.purple}/>:<IBox s={12} c={B.gray400}/>}
-    {readOnlyName||mat.fromStock
-      ?<span style={{fontSize:12,color:mat.fromStock?B.purple:B.gray200,fontWeight:mat.fromStock?600:400,flex:1,minWidth:0}}>{mat.name}</span>
-      :<span style={{flex:1,minWidth:0}}><InlineEdit value={mat.name} onSave={v=>onUpdate(idx,{...mat,name:v})} placeholder="Nome do material"/></span>}
-    {/* Quantity */}
-    {editableQty
-      ?<span style={{display:"flex",alignItems:"center",gap:3,marginLeft:4,paddingLeft:6,borderLeft:`1px solid ${mat.fromStock?B.purple+"44":B.gray600}`}}>
-          <span style={{fontSize:10,color:B.gray400}}>×</span>
-          <InlineEdit value={String(qty)} onSave={v=>onUpdate(idx,{...mat,qty:Math.max(1,parseInt(v)||1)})} placeholder="1" type="number"/>
-        </span>
-      :<span style={{fontSize:11,color:B.gray400,marginLeft:4}}>×{qty}</span>}
-    {/* Cost + Markup for non-stock materials */}
-    {showCost&&!mat.fromStock&&<>
-      <span style={{display:"flex",alignItems:"center",gap:3,marginLeft:4,paddingLeft:6,borderLeft:`1px solid ${B.gray600}`}}>
-        <span style={{fontSize:9,color:B.gray500}}>custo R$</span>
-        <InlineEdit value={cost?fmtR2(cost):""} onSave={v=>onUpdate(idx,{...mat,cost:parseFloat(v.replace(",","."))||0})} placeholder="0" type="number"/>
-      </span>
-      <span style={{display:"flex",alignItems:"center",gap:3,marginLeft:2,paddingLeft:6,borderLeft:`1px solid ${B.gray600}`}}>
-        <span style={{fontSize:9,color:B.gray500}}>mk</span>
-        <InlineEdit value={String(markup)} onSave={v=>onUpdate(idx,{...mat,markup:Math.max(0,parseFloat(v)||0)})} placeholder="50" type="number"/>
-        <span style={{fontSize:9,color:B.gray500}}>%</span>
-      </span>
-      {cost>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700,marginLeft:2}}>={fmtBRL(salePrice)}</span>}
-    </>}
-    {showCost&&mat.fromStock&&<span style={{fontSize:11,color:B.purple,marginLeft:4,paddingLeft:6,borderLeft:`1px solid ${B.purple}44`}}>{fmtBRL(cost)}/un</span>}
-    {showCost&&qty>1&&<span style={{fontSize:11,color:B.amber,fontWeight:700,marginLeft:4,paddingLeft:6,borderLeft:`1px solid ${B.amber}44`}}>{fmtBRL(lineTotal)}</span>}
-    {/* Freight per material */}
-    {showCost&&<span style={{display:"flex",alignItems:"center",gap:3,marginLeft:4,paddingLeft:6,borderLeft:`1px solid ${B.gray600}`,flexShrink:0}} title="Frete">
-      <span style={{fontSize:9,color:B.gray500}}>🚚</span>
-      <InlineEdit value={freight?fmtR2(freight):""} onSave={v=>onUpdate(idx,{...mat,freight:parseFloat(v.replace(",","."))||0})} placeholder="0" type="number"/>
-    </span>}
-    {showCost&&freight>0&&<span style={{fontSize:10,color:B.gray400,marginLeft:2}}>=frete</span>}
-    <button onClick={()=>onRemove(idx)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:1,display:"flex",marginLeft:2}}
-      onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={11}/></button>
+  const color = mat.fromStock ? B.purple : B.gray400;
+  const bg = mat.fromStock ? B.purpleBg : B.gray700;
+  const border = mat.fromStock ? `1px solid ${B.purple}44` : `1px solid ${B.gray600}`;
+
+  return (<div style={{background:bg,border,borderRadius:8,padding:"7px 10px",width:"100%",boxSizing:"border-box"}}>
+    {/* Line 1: icon + name + remove */}
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      {mat.fromStock?<IWarehouse s={13} c={B.purple}/>:<IBox s={13} c={B.gray400}/>}
+      <div style={{flex:1,minWidth:0}}>
+        {readOnlyName||mat.fromStock
+          ?<span style={{fontSize:13,color:mat.fromStock?B.purple:B.gray200,fontWeight:mat.fromStock?700:500}}>{mat.name}</span>
+          :<InlineEdit value={mat.name} onSave={v=>onUpdate(idx,{...mat,name:v})} placeholder="Nome do material"/>}
+      </div>
+      <button onClick={()=>onRemove(idx)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2,display:"flex",flexShrink:0}}
+        onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={13}/></button>
+    </div>
+
+    {/* Line 2: qty + cost options (only when showCost) */}
+    {(showCost||editableQty)&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":B.gray600}`,flexWrap:"wrap"}}>
+      {/* Quantity */}
+      <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+        <span style={{fontSize:10,color:B.gray500}}>Qtd</span>
+        {editableQty
+          ?<InlineEdit value={String(qty)} onSave={v=>onUpdate(idx,{...mat,qty:Math.max(1,parseInt(v)||1)})} placeholder="1" type="number"/>
+          :<span style={{fontSize:12,color:B.gray300,fontWeight:600}}>×{qty}</span>}
+      </div>
+
+      {/* Cost + markup (non-stock) */}
+      {showCost&&!mat.fromStock&&<>
+        <div style={{display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
+          <span style={{fontSize:10,color:B.gray500}}>Custo R$</span>
+          <InlineEdit value={cost?fmtR2(cost):""} onSave={v=>onUpdate(idx,{...mat,cost:parseFloat(v.replace(",","."))||0})} placeholder="0" type="number"/>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
+          <span style={{fontSize:10,color:B.gray500}}>Markup</span>
+          <InlineEdit value={String(markup)} onSave={v=>onUpdate(idx,{...mat,markup:Math.max(0,parseFloat(v)||0)})} placeholder="50" type="number"/>
+          <span style={{fontSize:10,color:B.gray500}}>%</span>
+        </div>
+        {cost>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>= {fmtBRL(salePrice)}/un</span>}
+      </>}
+
+      {/* Stock unit price */}
+      {showCost&&mat.fromStock&&<span style={{fontSize:11,color:B.purple,fontWeight:600}}>{fmtBRL(cost)}/un</span>}
+
+      {/* Line total */}
+      {showCost&&qty>1&&<span style={{fontSize:11,color:B.amber,fontWeight:800}}>= {fmtBRL(lineTotal)}</span>}
+
+      {/* Freight */}
+      {showCost&&<div style={{display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
+        <span style={{fontSize:10,color:B.gray500}}>🚚 Frete R$</span>
+        <InlineEdit value={freight?fmtR2(freight):""} onSave={v=>onUpdate(idx,{...mat,freight:parseFloat(v.replace(",","."))||0})} placeholder="0" type="number"/>
+        {freight>0&&<span style={{fontSize:10,color:B.gray400}}>{fmtBRL(freight)}</span>}
+      </div>}
+    </div>}
   </div>);
 }
 

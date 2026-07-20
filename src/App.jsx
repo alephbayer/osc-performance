@@ -3361,8 +3361,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
           {/* Tasks grouped by category */}
           {/* Fuel and tows */}
-          {(Number(v.fuelCost||0)>0||(v.fuels||[]).length>0||(v.tows||[]).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
-            {[...(Number(v.fuelCost||0)>0?[{type:"Combustível",date:"",value:v.fuelCost}]:[]),...(v.fuels||[]).filter(f=>Number(f.value||0)>0)].map((f,i)=>(
+          {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
+            {(v.fuels||[]).filter(f=>Number(f.value||0)>0).map((f,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
                 <span style={{fontSize:16}}>⛽</span>
                 <div style={{flex:1,minWidth:0}}>

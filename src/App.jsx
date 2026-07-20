@@ -3351,7 +3351,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:14,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</div>
                         {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
-                        {(t.materials||[]).filter(m=>m.name).map((m,i)=><div key={i} style={{fontSize:11,color:B.gray500,marginTop:2}}>🔩 {m.name}{m.qty>1?` ×${m.qty}`:""}</div>)}
+                        {(t.materials||[]).filter(m=>m.name).map((m,i)=><div key={i} style={{fontSize:11,color:B.gray500,marginTop:2}}>🔩 {m.name}{m.brand?<span style={{color:B.gray600}}> · {m.brand}</span>:""}{m.qty>1?` ×${m.qty}`:""}</div>)}
                         {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
                         {/* Photos linked to this task */}
                         {tPhotos.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>

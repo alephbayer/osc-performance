@@ -75,6 +75,7 @@ const mapVehicleIn = (v) => ({
   totalPausedMs: Number(v.total_paused_ms || 0),
   priority: v.priority || "medium",
   fuelCost: Number(v.fuel_cost || 0),
+  fuels: Array.isArray(v.fuels) ? v.fuels : (v.fuels ? JSON.parse(v.fuels) : []),
   osDiscountPct: Number(v.os_discount_pct || 0),
   tows: Array.isArray(v.tows) ? v.tows : (v.tows ? JSON.parse(v.tows) : []),
   notes: v.notes || '',

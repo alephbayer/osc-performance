@@ -1429,14 +1429,18 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           {task.done&&<ICheck/>}
         </button>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-            <TaskLabel task={task} onUpdate={onUpdate}/>
-            {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
+          {/* Line 0: controls (category, outsourced, etc) */}
+          <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}}>
+            <CategorySelect value={task.category} onChange={cat=>onUpdate(task.id,{category:cat})}/>
             <button onClick={()=>onUpdate(task.id,{outsourced:!task.outsourced})} title={task.outsourced?"Marcar como interno":"Marcar como terceirizado"}
               style={{background:task.outsourced?"#a78bfa22":"none",border:`1px solid ${task.outsourced?"#a78bfa44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.outsourced?"#a78bfa":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
               {task.outsourced?"✓ 3º":"3º"}
             </button>
-            <CategorySelect value={task.category} onChange={cat=>onUpdate(task.id,{category:cat})}/>
+            {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
+          </div>
+          {/* Line 1: task label — alone */}
+          <div>
+            <TaskLabel task={task} onUpdate={onUpdate}/>
           </div>
           {/* Description — optional */}
           <div style={{marginTop:3}}>
@@ -1567,7 +1571,6 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
             {mechs.length>0&&<span style={{color:B.orange}}>🔧 {mechs.map(m=>m.name).join(", ")}</span>}
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10}}>{sc.label}</span>
-            {(()=>{const p=PRIORITY[vehicle.priority||"medium"];return <span style={{background:p.bg,border:`1px solid ${p.border}`,borderRadius:5,padding:"0px 6px",color:p.color,fontWeight:700,fontSize:10}}>▲ {p.label}</span>;})()}
             {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300}}>🎨{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
             {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600}}>📝 Obs.</span>}
             {photos.length>0&&<span style={{color:B.purple}}>📷 {photos.length}</span>}
@@ -1589,13 +1592,32 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 
       {/* Button bar — 4 per row, always visible */}
       <div style={{padding:"6px 10px",background:B.gray800,borderBottom:`1px solid ${B.gray700}66`,display:"flex",flexWrap:"wrap",gap:4}} onClick={e=>e.stopPropagation()}>
-        {/* Priority button — always visible when managerMode */}
+        {/* Sort order buttons — always visible when managerMode */}
         {managerMode&&(()=>{
-          const p=PRIORITY[vehicle.priority||"medium"];
-          const cycle=()=>onUpdateVehicle(vehicle.id,{priority:p.next});
-          return (<button onClick={cycle} title="Clique para alternar prioridade" style={{background:p.bg,border:`1px solid ${p.border}`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:p.color,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-            ▲ {p.label}
-          </button>);
+          const allActive=vehicles.filter(v2=>v2.enteredAt||tasks.some(t=>t.vehicleId===v2.id));
+          const sorted=[...allActive].sort((a,b)=>Number(a.sortOrder||0)-Number(b.sortOrder||0));
+          const idx=sorted.findIndex(v2=>v2.id===vehicle.id);
+          const moveUp=()=>{
+            if(idx<=0) return;
+            const prev=sorted[idx-1];
+            const curOrder=Number(vehicle.sortOrder||idx);
+            const prevOrder=Number(prev.sortOrder||(idx-1));
+            onUpdateVehicle(vehicle.id,{sortOrder:prevOrder});
+            onUpdateVehicle(prev.id,{sortOrder:curOrder});
+          };
+          const moveDown=()=>{
+            if(idx>=sorted.length-1) return;
+            const next=sorted[idx+1];
+            const curOrder=Number(vehicle.sortOrder||idx);
+            const nextOrder=Number(next.sortOrder||(idx+1));
+            onUpdateVehicle(vehicle.id,{sortOrder:nextOrder});
+            onUpdateVehicle(next.id,{sortOrder:curOrder});
+          };
+          return (<div style={{display:"flex",alignItems:"center",gap:2,background:B.gray700,borderRadius:6,padding:"2px",flex:"0 0 auto"}}>
+            <button onClick={moveUp} disabled={idx<=0} title="Mover para cima" style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:idx>0?"pointer":"not-allowed",color:idx>0?B.gray200:B.gray600,fontSize:13,fontWeight:800,lineHeight:1}}>▲</button>
+            <span style={{fontSize:10,color:B.gray400,fontWeight:700,minWidth:16,textAlign:"center"}}>{idx+1}</span>
+            <button onClick={moveDown} disabled={idx>=sorted.length-1} title="Mover para baixo" style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:idx<sorted.length-1?"pointer":"not-allowed",color:idx<sorted.length-1?B.gray200:B.gray600,fontSize:13,fontWeight:800,lineHeight:1}}>▼</button>
+          </div>);
         })()}
         {/* Row 1 */}
         {managerMode&&<button onClick={doPDF} disabled={pdfLoading} style={{background:pdfLoading?B.gray700:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:pdfLoading?"wait":"pointer",color:pdfLoading?B.gray400:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
@@ -1892,9 +1914,8 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   const [model,setMod]=useState(""); const [plate,setPlate]=useState(""); const [vColor,setVColor]=useState("");
   const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id) && v.status!=="ready")]
     .sort((a,b)=>{
-    const pri={high:0,medium:1,low:2};
-    const pA=pri[a.priority||"medium"], pB=pri[b.priority||"medium"];
-    if(pA!==pB) return pA-pB;
+    const orderDiff=Number(a.sortOrder||0)-Number(b.sortOrder||0);
+    if(orderDiff!==0) return orderDiff;
     return (a.status==="paused"?1:0)-(b.status==="paused"?1:0);
   });
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
@@ -2516,15 +2537,8 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
             <div style={{fontWeight:800,fontSize:14,color:emp?B.white:B.gray400}}>{emp?emp.name:"Sem mecânico atribuído"}</div>
             <div style={{fontSize:11,color:B.gray400,marginTop:1}}>{gVs.length} veículo{gVs.length!==1?"s":""} · {doneTasks}/{totalTasks} tarefas</div>
           </div>
-          {/* Priority summary badges */}
-          <div style={{display:"flex",gap:4,flexShrink:0}}>
-            {["high","medium","low"].map(p=>{
-              const count=gVs.filter(v=>(v.priority||"medium")===p).length;
-              if(!count) return null;
-              const cfg=PRIORITY[p];
-              return <span key={p} style={{fontSize:10,fontWeight:700,color:cfg.color,background:cfg.bg,border:`1px solid ${cfg.border}`,borderRadius:5,padding:"1px 6px"}}>{count}</span>;
-            })}
-          </div>
+          {/* Order number */}
+          <div style={{fontSize:11,color:B.gray400,fontWeight:700,flexShrink:0}}>{gVs.length} veículo{gVs.length!==1?"s":""}</div>
           <div style={{color:B.gray400,flexShrink:0}}>{isCollapsed?<IChevD s={15}/>:<IChevU s={15}/>}</div>
         </div>
         {/* Vehicles */}
@@ -3612,9 +3626,8 @@ function MechanicLoginScreen({employees,onLogin}) {
 function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onUpdateVehicle,onLogout}) {
   const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id) && v.status!=="ready")]
     .sort((a,b)=>{
-    const pri={high:0,medium:1,low:2};
-    const pA=pri[a.priority||"medium"], pB=pri[b.priority||"medium"];
-    if(pA!==pB) return pA-pB;
+    const orderDiff=Number(a.sortOrder||0)-Number(b.sortOrder||0);
+    if(orderDiff!==0) return orderDiff;
     return (a.status==="paused"?1:0)-(b.status==="paused"?1:0);
   });
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
@@ -4418,13 +4431,7 @@ export default function App() {
           });
           const unassigned=activeVehicles.filter(v=>!assignedVehicleIds.has(v.id));
           if(unassigned.length>0) groups.push({emp:null,vehicles:unassigned});
-          const sortVehicles=vs=>[...vs].sort((a,b)=>{
-            const pri={high:0,medium:1,low:2};
-            const pA=pri[a.priority||"medium"],pB=pri[b.priority||"medium"];
-            if(pA!==pB) return pA-pB;
-            if(a.enteredAt&&b.enteredAt) return new Date(a.enteredAt)-new Date(b.enteredAt);
-            return 0;
-          });
+          const sortVehicles=vs=>[...vs].sort((a,b)=>Number(a.sortOrder||0)-Number(b.sortOrder||0));
           return <OsGroupedView groups={groups} sortVehicles={sortVehicles}
             tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} company={company}
             addTask={addTask} toggleT={toggleT} delTask={delTask} updTask={updTask} updVeh={updVeh} delVeh={delVeh}

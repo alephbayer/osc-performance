@@ -74,6 +74,7 @@ const mapVehicleIn = (v) => ({
   pausedAt: v.paused_at || null,
   totalPausedMs: Number(v.total_paused_ms || 0),
   priority: v.priority || "medium",
+  sortOrder: Number(v.sort_order || 0),
   fuelCost: Number(v.fuel_cost || 0),
   fuels: Array.isArray(v.fuels) ? v.fuels : (v.fuels ? JSON.parse(v.fuels) : []),
   osDiscountPct: Number(v.os_discount_pct || 0),
@@ -291,6 +292,7 @@ export const db = {
     if ("deliveredAt" in patch) dbPatch.delivered_at = patch.deliveredAt;
     if ("status"      in patch) dbPatch.status       = patch.status;
     if ("priority"    in patch) dbPatch.priority     = patch.priority;
+    if ("sortOrder"   in patch) dbPatch.sort_order   = patch.sortOrder;
     if ("fuelCost"       in patch) dbPatch.fuel_cost       = patch.fuelCost;
     if ("fuels"          in patch) dbPatch.fuels          = patch.fuels;
     if ("osDiscountPct"  in patch) dbPatch.os_discount_pct = patch.osDiscountPct;
@@ -368,6 +370,7 @@ export const db = {
       status: "active",
       os_number: null,
       priority: "medium",
+      sort_order: 0,
       fuel_cost: 0,
       fuels: [],
       os_discount_pct: 0,

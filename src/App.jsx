@@ -3798,6 +3798,103 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
   </div>);
 }
 
+// ─── Quick Task Modal ─────────────────────────────────────────────────────────
+function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
+  const activeVehicles=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));
+  const [selectedId,setSelectedId]=useState(activeVehicles.length===1?activeVehicles[0].id:"");
+  const [label,setLabel]=useState("");
+  const [category,setCategory]=useState("");
+  const [search,setSearch]=useState("");
+  const [saving,setSaving]=useState(false);
+  const inputRef=useRef(null);
+
+  const filtered=activeVehicles.filter(v=>
+    !search||
+    v.model.toLowerCase().includes(search.toLowerCase())||
+    v.plate.toLowerCase().includes(search.toLowerCase())||
+    (v.color||"").toLowerCase().includes(search.toLowerCase())
+  );
+
+  const save=async()=>{
+    if(!selectedId||!label.trim()) return;
+    setSaving(true);
+    await onAddTask(selectedId,label.trim(),category||null);
+    setLabel(""); setCategory(""); setSaving(false);
+    inputRef.current?.focus();
+  };
+
+  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",border:`2px solid ${B.green}55`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+      {/* Header */}
+      <div style={{background:B.gray900,borderBottom:`2px solid ${B.green}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:36,height:36,borderRadius:9,background:`${B.green}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>✚</div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:15,color:B.white}}>Tarefa rápida</div>
+          <div style={{fontSize:11,color:B.gray400}}>Adicione sem precisar abrir o veículo</div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
+      </div>
+
+      <div style={{padding:20,display:"flex",flexDirection:"column",gap:14}}>
+        {/* Vehicle selector */}
+        <div>
+          <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Veículo</label>
+          {activeVehicles.length>3&&<div style={{position:"relative",marginBottom:8}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar modelo, placa ou cor…"
+              style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+          </div>}
+          <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:180,overflowY:"auto"}}>
+            {filtered.length===0&&<div style={{fontSize:13,color:B.gray500,padding:"8px 12px"}}>Nenhum veículo encontrado</div>}
+            {filtered.map(v=>(
+              <button key={v.id} onClick={()=>setSelectedId(v.id)}
+                style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${selectedId===v.id?B.green:B.gray600}`,background:selectedId===v.id?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
+                <span style={{fontSize:16,flexShrink:0}}>🚗</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
+                  <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
+                </div>
+                {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Category */}
+        <div>
+          <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Categoria (opcional)</label>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            {CATEGORIES.map(c=>(
+              <button key={c.id} onClick={()=>setCategory(category===c.id?"":c.id)}
+                style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${category===c.id?c.color+"66":B.gray600}`,background:category===c.id?c.color+"22":"none",color:category===c.id?c.color:B.gray400,cursor:"pointer",fontSize:11,fontWeight:category===c.id?700:400}}>
+                {c.id}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Task label */}
+        <div>
+          <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Descrição da tarefa</label>
+          <div style={{display:"flex",gap:8}}>
+            <input ref={inputRef} value={label} onChange={e=>setLabel(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&save()}
+              placeholder="Ex: Verificar freio traseiro…" autoFocus
+              style={{flex:1,padding:"10px 12px",borderRadius:8,border:`1px solid ${label.trim()?B.green:B.gray600}`,background:B.gray900,color:B.white,fontSize:14,outline:"none"}}/>
+          </div>
+        </div>
+
+        {/* Save */}
+        <button onClick={save} disabled={!selectedId||!label.trim()||saving}
+          style={{width:"100%",padding:"13px 0",borderRadius:10,background:selectedId&&label.trim()?B.green:B.gray700,border:"none",color:selectedId&&label.trim()?B.white:B.gray500,fontWeight:800,fontSize:15,cursor:selectedId&&label.trim()?"pointer":"not-allowed"}}>
+          {saving?"Salvando…":"✚ Adicionar tarefa"}
+        </button>
+        <div style={{fontSize:11,color:B.gray500,textAlign:"center",marginTop:-8}}>Pressione Enter para salvar e adicionar outra</div>
+      </div>
+    </div>
+  </div>);
+}
+
 export default function App() {
   // Inject responsive styles once
   useEffect(()=>{
@@ -3841,6 +3938,7 @@ export default function App() {
   const [toast,    setTst]=useState(null);
   const [showCfg,  setSCfg]=useState(false);
   const [fuelModal,setFuelModal]=useState(false);
+  const [quickTaskModal,setQuickTaskModal]=useState(false);
   const [loading,  setLoading]=useState(true);
   const [loadError,setLE]=useState(null);
   const [mechSession,setMechSession]=useState(()=>{
@@ -4332,6 +4430,9 @@ export default function App() {
           <button onClick={()=>setFuelModal(true)} title="Lançar combustível" style={{width:34,height:34,borderRadius:8,background:"#f59e0b22",border:"1px solid #f59e0b44",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,fontSize:17}}>
             ⛽
           </button>
+          <button onClick={()=>setQuickTaskModal(true)} title="Adicionar tarefa rápida" style={{width:34,height:34,borderRadius:8,background:`${B.green}22`,border:`1px solid ${B.green}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,fontSize:17}}>
+            ✚
+          </button>
           <button onClick={()=>{navigator.clipboard?.writeText(getMechanicPortalLink());toast_("Link da área do mecânico copiado ✓");}} title="Copiar link da área do mecânico" style={{width:34,height:34,borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
             <ILock s={16} c={B.orange}/>
           </button>
@@ -4462,6 +4563,13 @@ export default function App() {
       const fuels=[...(v.fuels||[]),fuel];
       setVeh(p=>p.map(x=>x.id===vid?{...x,fuels}:x));
       try{ await db.updateVehicle(vid,{fuels}); toast_(`Combustível lançado ✓`); }catch(e){errToast(e);}
+    }}/>}
+    {quickTaskModal&&<QuickTaskModal vehicles={vehicles} tasks={tasks} employees={employees} onClose={()=>setQuickTaskModal(false)} onAddTask={async(vid,label,category)=>{
+      try{
+        const row=await db.addTask({vehicleId:vid,label,done:false,materials:[],hours:0,ratePerHour:null,category:category||null});
+        setTsk(p=>[...p,row]);
+        toast_(`Tarefa "${label}" adicionada ✓`);
+      }catch(e){errToast(e);}
     }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
   </div>);

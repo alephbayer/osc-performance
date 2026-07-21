@@ -1592,33 +1592,14 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 
       {/* Button bar — 4 per row, always visible */}
       <div style={{padding:"6px 10px",background:B.gray800,borderBottom:`1px solid ${B.gray700}66`,display:"flex",flexWrap:"wrap",gap:4}} onClick={e=>e.stopPropagation()}>
-        {/* Sort order buttons — always visible when managerMode */}
-        {managerMode&&(()=>{
-          const allActive=vehicles.filter(v2=>v2.enteredAt||tasks.some(t=>t.vehicleId===v2.id));
-          const sorted=[...allActive].sort((a,b)=>Number(a.sortOrder||0)-Number(b.sortOrder||0));
-          const idx=sorted.findIndex(v2=>v2.id===vehicle.id);
-          const moveUp=()=>{
-            if(idx<=0) return;
-            const prev=sorted[idx-1];
-            const curOrder=Number(vehicle.sortOrder||idx);
-            const prevOrder=Number(prev.sortOrder||(idx-1));
-            onUpdateVehicle(vehicle.id,{sortOrder:prevOrder});
-            onUpdateVehicle(prev.id,{sortOrder:curOrder});
-          };
-          const moveDown=()=>{
-            if(idx>=sorted.length-1) return;
-            const next=sorted[idx+1];
-            const curOrder=Number(vehicle.sortOrder||idx);
-            const nextOrder=Number(next.sortOrder||(idx+1));
-            onUpdateVehicle(vehicle.id,{sortOrder:nextOrder});
-            onUpdateVehicle(next.id,{sortOrder:curOrder});
-          };
-          return (<div style={{display:"flex",alignItems:"center",gap:2,background:B.gray700,borderRadius:6,padding:"2px",flex:"0 0 auto"}}>
-            <button onClick={moveUp} disabled={idx<=0} title="Mover para cima" style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:idx>0?"pointer":"not-allowed",color:idx>0?B.gray200:B.gray600,fontSize:13,fontWeight:800,lineHeight:1}}>▲</button>
-            <span style={{fontSize:10,color:B.gray400,fontWeight:700,minWidth:16,textAlign:"center"}}>{idx+1}</span>
-            <button onClick={moveDown} disabled={idx>=sorted.length-1} title="Mover para baixo" style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:idx<sorted.length-1?"pointer":"not-allowed",color:idx<sorted.length-1?B.gray200:B.gray600,fontSize:13,fontWeight:800,lineHeight:1}}>▼</button>
-          </div>);
-        })()}
+        {/* Sort order buttons */}
+        {managerMode&&<div style={{display:"flex",alignItems:"center",gap:2,background:B.gray700,borderRadius:6,padding:"2px",flex:"0 0 auto"}}>
+          <button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{sortOrder:Math.max(0,Number(vehicle.sortOrder||0)-1)})} title="Mover para cima"
+            style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",color:B.gray200,fontSize:13,fontWeight:800,lineHeight:1}}>▲</button>
+          <span style={{fontSize:10,color:B.gray400,fontWeight:700,minWidth:20,textAlign:"center"}}>{Number(vehicle.sortOrder||0)+1}</span>
+          <button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{sortOrder:Number(vehicle.sortOrder||0)+1})} title="Mover para baixo"
+            style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",color:B.gray200,fontSize:13,fontWeight:800,lineHeight:1}}>▼</button>
+        </div>}
         {/* Row 1 */}
         {managerMode&&<button onClick={doPDF} disabled={pdfLoading} style={{background:pdfLoading?B.gray700:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:pdfLoading?"wait":"pointer",color:pdfLoading?B.gray400:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           <IFileText s={12} c={pdfLoading?B.gray400:B.amber}/>{pdfLoading?"Gerando…":"PDF"}

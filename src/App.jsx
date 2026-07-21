@@ -1359,9 +1359,10 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[]}) {
         {task.done&&<ICheck/>}
       </button>
       <div style={{flex:1,minWidth:0}}>
+        {/* Controls above */}
+        {task.category&&<div style={{marginBottom:3}}><CategoryPill category={task.category}/></div>}
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
           <TaskLabel task={task} onUpdate={onUpdate}/>
-          <CategoryPill category={task.category}/>
           {task.outsourced&&<span style={{fontSize:10,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
         </div>
         {task.outsourced&&<div style={{marginTop:5,padding:"5px 10px",background:"#a78bfa10",border:"1px solid #a78bfa33",borderRadius:7,fontSize:11,color:"#c4b5fd"}}>
@@ -1463,7 +1464,6 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
             <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
           </div>}
         </div>
-        {c.total>0&&<span style={{fontSize:12,fontWeight:800,color:B.amber,flexShrink:0}}>{fmtBRL(c.total)}</span>}
         <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2,display:"flex",flexShrink:0,marginTop:1}}
           onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}><ITrash s={14}/></button>
       </div>
@@ -1502,10 +1502,10 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
           {task.rateType==="qty"?"📦 Qtd":"⏱ H"}
         </button>
-        {(c.labor>0||c.mat>0)&&<>
-          {c.labor>0&&<span style={{fontSize:11,color:B.gray400,marginLeft:4}}>{task.rateType==="qty"?"📦":"⏱"} <b style={{color:B.amber}}>{fmtBRL(c.labor)}</b></span>}
-          {c.mat>0&&<span style={{fontSize:11,color:B.gray400}}>🔩 <b style={{color:B.amber}}>{fmtBRL(c.mat)}</b></span>}
-        </>}
+        {/* Total at the end */}
+        {c.total>0&&<div style={{marginLeft:"auto",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 10px",flexShrink:0}}>
+          <span style={{fontSize:13,fontWeight:800,color:B.amber}}>{fmtBRL(c.total)}</span>
+        </div>}
       </div>
     </div>
     {showSP&&<StockPickerModal stock={stock} onPick={pickStock} onClose={()=>setSP(false)}/>}

@@ -3076,12 +3076,14 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       {showOpenOS&&<OpenOSModal vehicle={vehicle} employees={employees} onConfirm={(empId,entryStr)=>{onOpenOS(vehicle.id,empId,entryStr);setShowOpenOS(false);}} onClose={()=>setShowOpenOS(false)}/>}
 
       {/* ── OS History ── */}
-      {sortedHistory.length>0&&<div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:showHistory?10:0}}>
-          <button onClick={()=>setShowHistory(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,flex:1}}>
-            <div style={{fontSize:10,color:B.purple,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>📋 Histórico de OSs ({sortedHistory.length})</div>
-          <div style={{color:B.gray400,marginLeft:"auto"}}>{showHistory?<IChevU s={13}/>:<IChevD s={13}/>}</div>
-          </button>
+      <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:sortedHistory.length>0&&showHistory?10:0}}>
+          {sortedHistory.length>0
+            ?<button onClick={()=>setShowHistory(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,flex:1}}>
+                <div style={{fontSize:10,color:B.purple,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>📋 Histórico de OSs ({sortedHistory.length})</div>
+                <div style={{color:B.gray400,marginLeft:"auto"}}>{showHistory?<IChevU s={13}/>:<IChevD s={13}/>}</div>
+              </button>
+            :<div style={{flex:1,fontSize:10,color:B.gray500,fontWeight:600,textTransform:"uppercase",letterSpacing:.5}}>📋 Primeira OS deste veículo</div>}
           <button onClick={()=>{
             const url=`${window.location.origin}${window.location.pathname}?vh=${vehicle.id}`;
             navigator.clipboard?.writeText(url);
@@ -3090,7 +3092,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             🔗 Link histórico
           </button>
         </div>
-        {showHistory&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {sortedHistory.length>0&&showHistory&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
           {sortedHistory.map(h=>{
             const hTasks=Array.isArray(h.tasks_snapshot)?h.tasks_snapshot:(h.tasksSnapshot||[]);
             const hMechs=(h.mechanic_ids||h.mechanicIds||[]).map(id=>employees.find(e=>e.id===id)?.name).filter(Boolean);
@@ -3147,7 +3149,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             </div>);
           })}
         </div>}
-      </div>}
+      </div>
     </div>}
   </div>);
 }

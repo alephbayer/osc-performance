@@ -3493,52 +3493,73 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
       {/* ── Account / Financeiro ── */}
       {(()=>{
-        // Active OS payments (vehicle_id, no os_history_id)
         const activePaid = payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((s,p)=>s+Number(p.amount),0);
-        // Past OS payments (os_history linked to this vehicle)
         const pastOSs = osHistory.filter(h=>h.vehicle_id===v.id);
         const totalOwedPast = pastOSs.reduce((s,h)=>{
           const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0);
           return s+Math.max(0,Number(h.total_value||0)-paid);
         },0);
-
-        // Current OS: show total if there are done tasks
-        const doneTasks=ts.filter(t=>t.done);
-        const hasActiveAccount = doneTasks.length>0 || activePaid>0;
-        const hasHistory = pastOSs.some(h=>Number(h.total_value||0)>0);
-
-        if(!hasActiveAccount && !hasHistory) return null;
-
+        const laborTotal=ts.reduce((s,t)=>s+taskCost(t,0).labor,0);
+        const partsTotal=ts.reduce((s,t)=>s+taskCost(t,0).mat,0);
+        const fuelTotal=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)+Number(v.fuelCost||0);
+        const towTotal=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
+        const osDiscount=laborTotal*Number(v.osDiscountPct||0)/100;
+        const activeTotal=laborTotal+partsTotal+fuelTotal+towTotal-osDiscount;
+        const activeBalance=Math.max(0,activeTotal-activePaid);
+        const hasActive=ts.length>0||activePaid>0;
+        const hasHistory=pastOSs.some(h=>Number(h.total_value||0)>0);
+        if(!hasActive&&!hasHistory) return null;
         return (<div style={S.card}>
           <div style={S.pad}>
             <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:14}}>💳 Conta</div>
-
-            {/* Active OS */}
-            {hasActiveAccount&&<div style={{marginBottom:totalOwedPast>0?16:0}}>
-              <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OS atual</div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {activePaid>0&&<div style={{flex:"1 1 120px",background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px"}}>
-                  <div style={{fontSize:10,color:B.gray400,marginBottom:3}}>Pago até agora</div>
-                  <div style={{fontSize:18,fontWeight:900,color:B.green,marginBottom:8}}>{fmtBRL(activePaid)}</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                    {payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).map(p=>(
-                      <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11,color:B.green,fontWeight:700,flexShrink:0}}>💰 {fmtBRL(p.amount)}</span>
-                        <span style={{fontSize:11,color:B.gray300,flexShrink:0}}>{p.method}</span>
-                        <span style={{fontSize:11,color:B.gray500,marginLeft:"auto",flexShrink:0}}>{new Date(p.paidAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>
-                        {p.note&&<span style={{fontSize:11,color:B.gray500,width:"100%"}}>{p.note}</span>}
-                      </div>
-                    ))}
+            {hasActive&&<div style={{marginBottom:totalOwedPast>0?16:0}}>
+              <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>OS atual</div>
+              {activeTotal>0&&<div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"12px 14px",marginBottom:10}}>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {laborTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
+                    <span style={{color:B.gray400}}>Mão de obra</span>
+                    <span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(laborTotal)}</span>
+                  </div>}
+                  {partsTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
+                    <span style={{color:B.gray400}}>Peças e materiais</span>
+                    <span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(partsTotal)}</span>
+                  </div>}
+                  {fuelTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
+                    <span style={{color:B.gray400}}>⛽ Combustível</span>
+                    <span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(fuelTotal)}</span>
+                  </div>}
+                  {towTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
+                    <span style={{color:B.gray400}}>🚛 Reboque</span>
+                    <span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(towTotal)}</span>
+                  </div>}
+                  {osDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
+                    <span style={{color:B.red}}>Desconto</span>
+                    <span style={{color:B.red,fontWeight:600}}>-{fmtBRL(osDiscount)}</span>
+                  </div>}
+                  <div style={{borderTop:`1px solid ${B.gray700}`,paddingTop:8,marginTop:2,display:"flex",justifyContent:"space-between"}}>
+                    <span style={{fontSize:14,fontWeight:800,color:B.white}}>Total</span>
+                    <span style={{fontSize:16,fontWeight:900,color:B.amber}}>{fmtBRL(activeTotal)}</span>
                   </div>
-                </div>}
-                {activePaid===0&&doneTasks.length>0&&<div style={{flex:"1 1 120px",background:`${B.amber}10`,border:`1px solid ${B.amber}22`,borderRadius:10,padding:"10px 14px"}}>
-                  <div style={{fontSize:10,color:B.gray400,marginBottom:3}}>Pagamento</div>
-                  <div style={{fontSize:13,fontWeight:700,color:B.amber}}>Nenhum pagamento registrado</div>
-                </div>}
-              </div>
+                </div>
+              </div>}
+              {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+                <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
+                <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                  {payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).map(p=>(
+                    <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <span style={{fontSize:12,color:B.green,fontWeight:700}}>💰 {fmtBRL(p.amount)}</span>
+                      <span style={{fontSize:11,color:B.gray300}}>{p.method}</span>
+                      <span style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
+                      {p.note&&<span style={{fontSize:11,color:B.gray500,width:"100%"}}>{p.note}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>}
+              {activeTotal>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:activeBalance>0?`${B.red}15`:`${B.green}15`,border:`1px solid ${activeBalance>0?B.red+"33":B.green+"33"}`,borderRadius:10,padding:"10px 14px"}}>
+                <span style={{fontSize:13,fontWeight:700,color:activeBalance>0?B.red:B.green}}>{activeBalance>0?"⚠ Saldo em aberto":"✅ Quitado"}</span>
+                {activeBalance>0&&<span style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(activeBalance)}</span>}
+              </div>}
             </div>}
-
-            {/* Past OS with open balance */}
             {totalOwedPast>0&&<div>
               <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OS anteriores</div>
               {pastOSs.filter(h=>Number(h.total_value||0)>0).map(h=>{
@@ -3548,18 +3569,15 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 return (<div key={h.id} style={{background:settled?B.greenBg:B.gray900,border:`1px solid ${settled?B.green+"33":B.gray700}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
                     <div>
-                      <div style={{fontSize:11,color:B.gray400,marginBottom:2}}>{h.os_number?`OS ${String(h.os_number).padStart(4,"0")}`:""}{h.delivered_at?` · Entregue em ${new Date(h.delivered_at).toLocaleDateString("pt-BR")}`:""}
-                      </div>
+                      <div style={{fontSize:11,color:B.gray400,marginBottom:2}}>{h.os_number?`OS ${String(h.os_number).padStart(4,"0")}`:""}{h.delivered_at?` · Entregue em ${new Date(h.delivered_at).toLocaleDateString("pt-BR")}`:""}</div>
                       <div style={{fontSize:13,color:B.gray300}}>Total: <b style={{color:B.white}}>{fmtBRL(h.total_value)}</b> · Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></div>
                     </div>
-                    {settled
-                      ?<span style={{fontSize:12,fontWeight:800,color:B.green}}>✅ Quitado</span>
+                    {settled?<span style={{fontSize:12,fontWeight:800,color:B.green}}>✅ Quitado</span>
                       :<div style={{background:B.red,borderRadius:8,padding:"5px 12px"}}>
                         <div style={{fontSize:10,color:"#fca5a5",marginBottom:1}}>Em aberto</div>
                         <div style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(owed)}</div>
                       </div>}
                   </div>
-                  {/* Payment list */}
                   {payments.filter(p=>p.osHistoryId===h.id).length>0&&<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${settled?B.green+"22":B.gray700}`,display:"flex",flexDirection:"column",gap:5}}>
                     {payments.filter(p=>p.osHistoryId===h.id).map(p=>(
                       <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>

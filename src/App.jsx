@@ -3077,10 +3077,19 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
       {/* ── OS History ── */}
       {sortedHistory.length>0&&<div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
-        <button onClick={()=>setShowHistory(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:showHistory?10:0,width:"100%"}}>
-          <div style={{fontSize:10,color:B.purple,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>📋 Histórico de OSs ({sortedHistory.length})</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:showHistory?10:0}}>
+          <button onClick={()=>setShowHistory(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,flex:1}}>
+            <div style={{fontSize:10,color:B.purple,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>📋 Histórico de OSs ({sortedHistory.length})</div>
           <div style={{color:B.gray400,marginLeft:"auto"}}>{showHistory?<IChevU s={13}/>:<IChevD s={13}/>}</div>
-        </button>
+          </button>
+          <button onClick={()=>{
+            const url=`${window.location.origin}${window.location.pathname}?vh=${vehicle.id}`;
+            navigator.clipboard?.writeText(url);
+            toast_("Link do histórico copiado ✓");
+          }} title="Copiar link do histórico para o cliente" style={{background:`${B.purple}18`,border:`1px solid ${B.purple}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.purple,fontSize:11,fontWeight:700,flexShrink:0,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+            🔗 Link histórico
+          </button>
+        </div>
         {showHistory&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
           {sortedHistory.map(h=>{
             const hTasks=Array.isArray(h.tasks_snapshot)?h.tasks_snapshot:(h.tasksSnapshot||[]);
@@ -3745,6 +3754,137 @@ function AdminLoginScreen({onLogin}) {
   </div>);
 }
 
+// ─── Public Vehicle History View ─────────────────────────────────────────────
+function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=[]}) {
+  const v=vehicles.find(x=>x.id===vehicleId);
+  const [lb,setLB]=useState(null);
+  if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
+    <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
+  </div>);
+
+  const sortedHistory=[...osHistory.filter(h=>h.vehicle_id===v.id)].sort((a,b)=>new Date(b.delivered_at||b.entered_at||0)-new Date(a.delivered_at||a.entered_at||0));
+  const activeTasks=tasks.filter(t=>t.vehicleId===v.id);
+  const hasActive=!!v.enteredAt||activeTasks.length>0;
+
+  const S={
+    card:{background:B.gray800,borderRadius:16,overflow:"hidden",marginBottom:16,border:`1px solid ${B.gray700}`},
+    pad:{padding:"16px 20px"},
+  };
+
+  const renderTaskList=(ts,photos=[])=>{
+    const catOrder=buildCatOrder(ts);
+    return catOrder.map(cat=>{
+      const group=ts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+      const catColor=cat?CAT_MAP[cat]||B.gray500:null;
+      return (<div key={cat||"__none__"} style={{marginBottom:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",background:(catColor||B.gray500)+"18",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 5px 5px 0",marginBottom:5}}>
+          <span style={{width:6,height:6,borderRadius:99,background:catColor||B.gray500,flexShrink:0,display:"inline-block"}}/>
+          <span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
+          <span style={{fontSize:10,color:(catColor||B.gray500)+"88",marginLeft:"auto"}}>{group.filter(t=>t.done).length}/{group.length}</span>
+        </div>
+        {group.map((t,i)=>{
+          const tPhotos=(photos||[]).filter(p=>p.taskId===t.id);
+          return (<div key={i} style={{padding:"8px 10px",marginBottom:3,background:t.done?`${B.green}08`:B.gray900,borderRadius:8,border:`1px solid ${t.done?B.green+"22":B.gray700}`}}>
+            <div style={{display:"flex",gap:7,alignItems:"flex-start"}}>
+              <span style={{fontSize:15,flexShrink:0}}>{t.done?"✅":"⬜"}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</div>
+                {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
+                {(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,color:B.gray500,marginTop:1}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</div>)}
+                {tPhotos.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
+                  {tPhotos.map((p,pi)=><div key={pi} onClick={()=>setLB(p.url||p)} style={{width:60,height:60,borderRadius:6,overflow:"hidden",cursor:"pointer",flexShrink:0}}>
+                    <img src={p.url||p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  </div>)}
+                </div>}
+              </div>
+            </div>
+          </div>);
+        })}
+      </div>);
+    });
+  };
+
+  return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+    {/* Header */}
+    <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",display:"flex",alignItems:"center",gap:12}}>
+      <div style={{width:36,height:36,borderRadius:8,background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📋</div>
+      <div>
+        <div style={{fontWeight:900,fontSize:15,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
+        <div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Histórico de serviços</div>
+      </div>
+    </div>
+
+    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px"}}>
+      {/* Vehicle info */}
+      <div style={S.card}>
+        {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:180,objectFit:"cover"}}/>}
+        <div style={S.pad}>
+          <div style={{fontWeight:900,fontSize:22,color:B.white,marginBottom:8}}>{v.model}</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <div style={{background:B.gray700,borderRadius:7,padding:"6px 12px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Placa</div>
+              <div style={{fontSize:14,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:1}}>{v.plate}</div>
+            </div>
+            {v.year&&<div style={{background:B.gray700,borderRadius:7,padding:"6px 12px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Ano</div>
+              <div style={{fontSize:14,fontWeight:700,color:B.gray200}}>{v.year}</div>
+            </div>}
+            {v.color&&<div style={{background:B.gray700,borderRadius:7,padding:"6px 12px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Cor</div>
+              <div style={{fontSize:14,fontWeight:700,color:B.gray200}}>🎨 {v.color}</div>
+            </div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Active OS */}
+      {hasActive&&<div style={S.card}>
+        <div style={S.pad}>
+          <div style={{fontWeight:800,fontSize:13,color:B.orange,marginBottom:10}}>🔧 OS em andamento</div>
+          {renderTaskList(activeTasks,(v.photos||[]).map(p=>typeof p==="string"?{url:p,taskId:null}:p))}
+          {activeTasks.length===0&&<div style={{fontSize:13,color:B.gray500}}>Nenhuma tarefa registrada ainda.</div>}
+        </div>
+      </div>}
+
+      {/* History */}
+      {sortedHistory.length===0&&!hasActive&&<div style={{textAlign:"center",padding:"48px 0",color:B.gray400}}>
+        <div style={{fontSize:44,marginBottom:12}}>📋</div>
+        <div style={{fontSize:15,color:B.gray200,fontWeight:700}}>Nenhum histórico ainda</div>
+      </div>}
+
+      {sortedHistory.map((h,hi)=>{
+        const hTasks=Array.isArray(h.tasks_snapshot)?h.tasks_snapshot:(h.tasksSnapshot||[]);
+        const entryDate=h.entered_at?new Date(h.entered_at).toLocaleDateString("pt-BR"):null;
+        const delivDate=h.delivered_at?new Date(h.delivered_at).toLocaleDateString("pt-BR"):null;
+        const mechs=(h.mechanic_ids||h.mechanicIds||[]).map(id=>employees.find(e=>e.id===id)?.name).filter(Boolean);
+        return (<div key={hi} style={S.card}>
+          <div style={S.pad}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+              {h.os_number&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:6,padding:"2px 10px",fontWeight:800,fontSize:13}}>{fmtOS(h.os_number)}</span>}
+              <div style={{fontSize:11,color:B.gray400}}>
+                {entryDate&&<span>📅 {entryDate}</span>}
+                {delivDate&&<span style={{marginLeft:10}}>✅ Entregue {delivDate}</span>}
+              </div>
+              {mechs.length>0&&<div style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>🔧 {mechs.join(", ")}</div>}
+            </div>
+            {renderTaskList(hTasks)}
+            {hTasks.length===0&&<div style={{fontSize:13,color:B.gray500}}>Nenhuma tarefa registrada.</div>}
+          </div>
+        </div>);
+      })}
+
+      <div style={{textAlign:"center",fontSize:12,color:B.gray500,marginTop:8,paddingBottom:24}}>
+        OSC Performance · Histórico gerado em {fmtD()}
+      </div>
+    </div>
+
+    {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
+      <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
+      <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
+    </div>}
+  </div>);
+}
+
 // ─── Fuel Quick Modal ─────────────────────────────────────────────────────────
 const FUEL_TYPES=["Gasolina","Gasolina Aditivada","Etanol","Diesel","Diesel S10","GNV"];
 
@@ -3972,6 +4112,7 @@ export default function App() {
   // Check for public vehicle link
   const params=new URLSearchParams(window.location.search);
   const publicVehicleId=params.get("v");
+  const publicHistoryId=params.get("vh");
   const isMechanicPortal=params.get("portal")==="mecanico";
 
   const [employees,setEmp]=useState([]);
@@ -4025,6 +4166,10 @@ export default function App() {
   if(publicVehicleId){
     if(loading) return <LoadingScreen/>;
     return <PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory}/>;
+  }
+  if(publicHistoryId){
+    if(loading) return <LoadingScreen/>;
+    return <PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/>;
   }
   if(loading) return <LoadingScreen/>;
   if(loadError) return <ErrorScreen msg={loadError}/>;

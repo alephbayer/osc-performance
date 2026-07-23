@@ -3324,7 +3324,7 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 }
 
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
-function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[]}) {
+function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0}) {
   const v=vehicles.find(x=>x.id===vehicleId);
   if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
     <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
@@ -3499,12 +3499,13 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0);
           return s+Math.max(0,Number(h.total_value||0)-paid);
         },0);
-        const laborTotal=ts.reduce((s,t)=>s+taskCost(t,0).labor,0);
-        const partsTotal=ts.reduce((s,t)=>s+taskCost(t,0).mat,0);
+        const laborTotal=ts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+        const partsTotal=ts.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+        const freightTotal=ts.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
         const fuelTotal=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)+Number(v.fuelCost||0);
         const towTotal=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
         const osDiscount=laborTotal*Number(v.osDiscountPct||0)/100;
-        const activeTotal=laborTotal+partsTotal+fuelTotal+towTotal-osDiscount;
+        const activeTotal=laborTotal+partsTotal+freightTotal+fuelTotal+towTotal-osDiscount;
         const activeBalance=Math.max(0,activeTotal-activePaid);
         const hasActive=ts.length>0||activePaid>0;
         const hasHistory=pastOSs.some(h=>Number(h.total_value||0)>0);
@@ -3516,14 +3517,35 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>OS atual</div>
               {activeTotal>0&&<div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"12px 14px",marginBottom:10}}>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {laborTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
-                    <span style={{color:B.gray400}}>Mão de obra</span>
-                    <span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(laborTotal)}</span>
-                  </div>}
-                  {partsTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
-                    <span style={{color:B.gray400}}>Peças e materiais</span>
-                    <span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(partsTotal)}</span>
-                  </div>}
+                  {/* Per-category breakdown */}
+                  {buildCatOrder(ts).map(cat=>{
+                    const catTs=ts.filter(t=>(t.category||null)===cat);
+                    const catLabor=catTs.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+                    const catParts=catTs.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+                    const catFreight=catTs.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
+                    const catTotal=catLabor+catParts+catFreight;
+                    if(catTotal===0) return null;
+                    const catColor=cat?CAT_MAP[cat]||B.gray500:B.gray500;
+                    return (<div key={cat||"__none__"} style={{paddingBottom:6,marginBottom:6,borderBottom:`1px solid ${B.gray700}`}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                        <span style={{fontSize:11,fontWeight:700,color:catColor,textTransform:"uppercase",letterSpacing:.5}}>{cat||"Sem categoria"}</span>
+                        <span style={{fontSize:12,fontWeight:700,color:B.white}}>{fmtBRL(catTotal)}</span>
+                      </div>
+                      {catLabor>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:11,paddingLeft:8}}>
+                        <span style={{color:B.gray500}}>Mão de obra</span>
+                        <span style={{color:B.gray300}}>{fmtBRL(catLabor)}</span>
+                      </div>}
+                      {catParts>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:11,paddingLeft:8}}>
+                        <span style={{color:B.gray500}}>Peças</span>
+                        <span style={{color:B.gray300}}>{fmtBRL(catParts)}</span>
+                      </div>}
+                      {catFreight>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:11,paddingLeft:8}}>
+                        <span style={{color:B.gray500}}>Frete</span>
+                        <span style={{color:B.gray300}}>{fmtBRL(catFreight)}</span>
+                      </div>}
+                    </div>);
+                  })}
+                  {/* Extras */}
                   {fuelTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
                     <span style={{color:B.gray400}}>⛽ Combustível</span>
                     <span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(fuelTotal)}</span>
@@ -3536,7 +3558,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     <span style={{color:B.red}}>Desconto</span>
                     <span style={{color:B.red,fontWeight:600}}>-{fmtBRL(osDiscount)}</span>
                   </div>}
-                  <div style={{borderTop:`1px solid ${B.gray700}`,paddingTop:8,marginTop:2,display:"flex",justifyContent:"space-between"}}>
+                  <div style={{borderTop:`1px solid ${B.gray600}`,paddingTop:8,marginTop:2,display:"flex",justifyContent:"space-between"}}>
                     <span style={{fontSize:14,fontWeight:800,color:B.white}}>Total</span>
                     <span style={{fontSize:16,fontWeight:900,color:B.amber}}>{fmtBRL(activeTotal)}</span>
                   </div>
@@ -4185,7 +4207,7 @@ export default function App() {
   // If public view (still needs data loaded)
   if(publicVehicleId){
     if(loading) return <LoadingScreen/>;
-    return <PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory}/>;
+    return <PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate}/>;
   }
   if(publicHistoryId){
     if(loading) return <LoadingScreen/>;

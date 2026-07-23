@@ -3949,6 +3949,8 @@ export default function App() {
   });
 
   const [eN,setEN]=useState(""); const [eP,setEP]=useState("");
+  const [mechSearch,setMechSearch]=useState("");
+  const [osSearch,setOsSearch]=useState("");
   const [cN,setCN]=useState(""); const [cP,setCP]=useState(""); const [cE,setCE]=useState("");
 
   const toast_=useCallback(m=>{setTst(null);setTimeout(()=>setTst(m),10);},[]);
@@ -4478,12 +4480,28 @@ export default function App() {
           </div>
         </div>
         {employees.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>🔧</div><div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum mecânico</div></div>
-          :employees.map(emp=><EmployeeCard key={emp.id} employee={emp} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate}
-            onAddVehicle={addVeh} onDeleteVehicle={delVeh} onTransferMechanic={xferMech} onTransferOwner={xferOwn}
-            onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh}
-            onConsumeStock={consumeStock} onReturnStock={returnStock}
-            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}
-            onDelete={delEmp} onSendWA={sendMechWA} onUpdatePhone={updEmpP} onUpdateName={updEmpN}/>)}
+          :<>
+            {employees.length>2&&<div style={{position:"relative",marginBottom:14}}>
+              <input value={mechSearch} onChange={e=>setMechSearch(e.target.value)} placeholder="Buscar mecânico ou veículo…"
+                style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+              <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+              {mechSearch&&<button onClick={()=>setMechSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
+            </div>}
+            {employees
+              .filter(emp=>!mechSearch||
+                emp.name.toLowerCase().includes(mechSearch.toLowerCase())||
+                vehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id)).some(v=>
+                  v.model.toLowerCase().includes(mechSearch.toLowerCase())||
+                  v.plate.toLowerCase().includes(mechSearch.toLowerCase())
+                )
+              )
+              .map(emp=><EmployeeCard key={emp.id} employee={emp} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate}
+                onAddVehicle={addVeh} onDeleteVehicle={delVeh} onTransferMechanic={xferMech} onTransferOwner={xferOwn}
+                onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh}
+                onConsumeStock={consumeStock} onReturnStock={returnStock}
+                onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}
+                onDelete={delEmp} onSendWA={sendMechWA} onUpdatePhone={updEmpP} onUpdateName={updEmpN}/>)}
+          </>}
       </>}
 
       {/* ══ CLIENTS ══ */}
@@ -4492,8 +4510,17 @@ export default function App() {
           🔧 <b style={{color:B.blue}}>Ordens de Serviço</b> em andamento. Preço/h atual: <b style={{color:B.amber}}>{fmtBRL(defaultRate)}/h</b>
         </div>
         {(()=>{
-          const activeVehicles=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));
-          if(activeVehicles.length===0) return (
+          const allActive=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));
+          const activeVehicles=osSearch
+            ? allActive.filter(v=>
+                v.model.toLowerCase().includes(osSearch.toLowerCase())||
+                v.plate.toLowerCase().includes(osSearch.toLowerCase())||
+                (v.color||"").toLowerCase().includes(osSearch.toLowerCase())||
+                employees.filter(e=>(v.mechanicIds||[]).includes(e.id)).some(e=>e.name.toLowerCase().includes(osSearch.toLowerCase()))||
+                tasks.filter(t=>t.vehicleId===v.id).some(t=>t.label.toLowerCase().includes(osSearch.toLowerCase()))
+              )
+            : allActive;
+          if(allActive.length===0) return (
             <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
               <div style={{fontSize:44,marginBottom:12}}>🔧</div>
               <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhuma OS em andamento</div>
@@ -4514,13 +4541,20 @@ export default function App() {
           const unassigned=activeVehicles.filter(v=>!assignedVehicleIds.has(v.id));
           if(unassigned.length>0) groups.push({emp:null,vehicles:unassigned});
           const sortVehicles=vs=>[...vs].sort((a,b)=>Number(a.sortOrder||0)-Number(b.sortOrder||0));
-          return <OsGroupedView groups={groups} sortVehicles={sortVehicles}
+          return <><div style={{position:"relative",marginBottom:14}}>
+            <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder="Buscar veículo, mecânico ou tarefa…"
+              style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+            {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
+          </div>
+          {activeVehicles.length===0&&osSearch&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray400,fontSize:13}}>Nenhum resultado para "<b style={{color:B.white}}>{osSearch}</b>"</div>}
+          {activeVehicles.length>0&&<OsGroupedView groups={groups} sortVehicles={sortVehicles}
             tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} company={company}
             addTask={addTask} toggleT={toggleT} delTask={delTask} updTask={updTask} updVeh={updVeh} delVeh={delVeh}
             xferMech={xferMech} xferOwn={xferOwn} consumeStock={consumeStock} returnStock={returnStock}
             payments={payments} addPayment={addPayment} deletePayment={deletePayment}
             addVehicleMechanic={addVehicleMechanic} removeVehicleMechanic={removeVehicleMechanic}
-            setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} adminRole={adminRole}/>;
+            setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} adminRole={adminRole}/>}</>;
         })()}
       </>}
 

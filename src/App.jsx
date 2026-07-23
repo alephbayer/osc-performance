@@ -3788,7 +3788,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
             <div style={{display:"flex",gap:7,alignItems:"flex-start"}}>
               <span style={{fontSize:15,flexShrink:0}}>{t.done?"✅":"⬜"}</span>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</div>
+                <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600}}>{t.label}</div>
                 {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
                 {(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,color:B.gray500,marginTop:1}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</div>)}
                 {tPhotos.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>

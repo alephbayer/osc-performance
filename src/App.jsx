@@ -249,7 +249,7 @@ function loadJsPDF() {
   return _jsPDFPromise;
 }
 
-async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride) {
+async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride, payments=[]) {
   const jsPDFCtor = await loadJsPDF();
   const doc = new jsPDFCtor({ unit: "mm", format: "a4" });
   const pageW = 210, marginX = 14, contentW = pageW - marginX * 2;
@@ -647,6 +647,58 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   });
 
   y += 4;
+
+  // ── Payments received ─────────────────────────────────────────────────────────
+  const vehiclePayments = payments.filter(p =>
+    p.vehicleId === vehicle.id || p.osHistoryId === vehicle.id
+  );
+  if (vehiclePayments.length > 0) {
+    if (y + 30 > 282) { doc.addPage(); y = 16; }
+    doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+    doc.line(marginX, y, pageW - marginX, y);
+    y += 6;
+
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...black);
+    doc.text("PAGAMENTOS RECEBIDOS", marginX, y);
+    y += 6;
+
+    const totalPaid = vehiclePayments.reduce((s,p)=>s+Number(p.amount),0);
+    const balance = grandTotal - totalPaid;
+
+    vehiclePayments.forEach(p => {
+      if (y + 7 > 282) { doc.addPage(); y = 16; }
+      const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString("pt-BR") : "";
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+      doc.text(`${p.method}${dateStr ? `   ${dateStr}` : ""}${p.note ? `   ${p.note}` : ""}`, marginX + 3, y);
+      doc.setFont("helvetica","bold"); doc.setTextColor(22, 163, 74);
+      doc.text(fmtBRL(p.amount), pageW - marginX, y, { align: "right" });
+      y += 5;
+    });
+
+    y += 2;
+    // Total paid + balance
+    const balBoxW = 85; const balBoxX = pageW - marginX - balBoxW;
+    const balBoxH = balance > 0 ? 22 : 14;
+    if (y + balBoxH > 282) { doc.addPage(); y = 16; }
+    doc.setFillColor(245,245,245); doc.setDrawColor(220,220,220);
+    doc.roundedRect(balBoxX, y, balBoxW, balBoxH, 2, 2, "FD");
+
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+    doc.text("Total pago", balBoxX + 5, y + 7);
+    doc.setFont("helvetica","bold"); doc.setTextColor(22, 163, 74);
+    doc.text(fmtBRL(totalPaid), balBoxX + balBoxW - 5, y + 7, { align: "right" });
+
+    if (balance > 0) {
+      doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
+      doc.text("Saldo em aberto", balBoxX + 5, y + 15);
+      doc.setFont("helvetica","bold"); doc.setTextColor(220, 38, 38);
+      doc.text(fmtBRL(balance), balBoxX + balBoxW - 5, y + 15, { align: "right" });
+    } else {
+      doc.setFont("helvetica","bold"); doc.setTextColor(22, 163, 74);
+      doc.text("✓ Quitado", balBoxX + 5, y + 7 + 8);
+    }
+    y += balBoxH + 8;
+  }
 
   // ── Footer ───────────────────────────────────────────────────────────────────
   if (y + 14 > 282) { doc.addPage(); y = 16; }
@@ -1550,7 +1602,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const copyLink=()=>{navigator.clipboard?.writeText(pubLink);setCPL(true);setTimeout(()=>setCPL(false),2000);};
   const doPDF=async()=>{
     setPdfLoading(true);
-    try{ await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate); }
+    try{ await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate,undefined,payments); }
     catch(err){ alert("Erro ao gerar PDF: "+err.message); }
     setPdfLoading(false);
   };
@@ -3055,7 +3107,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                   try{
                     const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model,fuelCost:h.fuel_cost||0,tows:h.tows||[],osDiscountPct:h.os_discount_pct||0};
                     const hEmployee=employees.find(e=>(h.mechanic_ids||[]).includes(e.id))||null;
-                    await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks);
+                    await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks,payments.filter(p=>p.osHistoryId===h.id));
                   }catch(err){alert("Erro ao gerar PDF: "+err.message);}
                   setPdfLoading(null);
                 }} style={{background:pdfLoading===h.id?B.gray600:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"3px 9px",cursor:pdfLoading===h.id?"wait":"pointer",color:pdfLoading===h.id?B.gray400:B.amber,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>

@@ -3526,23 +3526,25 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     const catTotal=catLabor+catParts+catFreight;
                     if(catTotal===0) return null;
                     const catColor=cat?CAT_MAP[cat]||B.gray500:B.gray500;
-                    return (<div key={cat||"__none__"} style={{paddingBottom:6,marginBottom:6,borderBottom:`1px solid ${B.gray700}`}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                        <span style={{fontSize:11,fontWeight:700,color:catColor,textTransform:"uppercase",letterSpacing:.5}}>{cat||"Sem categoria"}</span>
-                        <span style={{fontSize:12,fontWeight:700,color:B.white}}>{fmtBRL(catTotal)}</span>
+                    return (<div key={cat||"__none__"} style={{paddingBottom:8,marginBottom:8,borderBottom:`1px solid ${B.gray700}`}}>
+                      {/* Category header */}
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <span style={{fontSize:11,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.5}}>{cat||"Sem categoria"}</span>
+                        <span style={{fontSize:12,fontWeight:800,color:B.white}}>{fmtBRL(catTotal)}</span>
                       </div>
-                      {catLabor>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:11,paddingLeft:8}}>
-                        <span style={{color:B.gray500}}>Mão de obra</span>
-                        <span style={{color:B.gray300}}>{fmtBRL(catLabor)}</span>
-                      </div>}
-                      {catParts>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:11,paddingLeft:8}}>
-                        <span style={{color:B.gray500}}>Peças</span>
-                        <span style={{color:B.gray300}}>{fmtBRL(catParts)}</span>
-                      </div>}
-                      {catFreight>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:11,paddingLeft:8}}>
-                        <span style={{color:B.gray500}}>Frete</span>
-                        <span style={{color:B.gray300}}>{fmtBRL(catFreight)}</span>
-                      </div>}
+                      {/* Each task */}
+                      {catTs.map((t,ti)=>{
+                        const tc=taskCost(t,defaultRate);
+                        if(tc.total===0) return null;
+                        return (<div key={ti} style={{marginBottom:5,paddingLeft:8,borderLeft:`2px solid ${catColor}33`}}>
+                          <div style={{fontSize:12,color:B.gray200,fontWeight:600,marginBottom:2}}>{t.label}</div>
+                          <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                            {tc.labor>0&&<span style={{fontSize:11,color:B.gray500}}>M.O. <b style={{color:B.gray300}}>{fmtBRL(tc.labor)}</b></span>}
+                            {tc.mat>0&&<span style={{fontSize:11,color:B.gray500}}>Peças <b style={{color:B.gray300}}>{fmtBRL(tc.mat)}</b></span>}
+                            {tc.freight>0&&<span style={{fontSize:11,color:B.gray500}}>Frete <b style={{color:B.gray300}}>{fmtBRL(tc.freight)}</b></span>}
+                          </div>
+                        </div>);
+                      })}
                     </div>);
                   })}
                   {/* Extras */}

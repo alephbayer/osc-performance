@@ -5773,7 +5773,7 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments"], envVar:"VITE_OWNER_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales"], envVar:"VITE_OWNER_PASSWORD" },
   admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments"],           envVar:"VITE_ADMIN_PASSWORD" },
   supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
@@ -5837,7 +5837,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.18";
+const APP_VERSION = "2026.08.03.20";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7100,6 +7100,203 @@ function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay}){
   );
 }
 
+// ─── Sales Tab ────────────────────────────────────────────────────────────────
+function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale}){
+  const [view,setView]=useState("sell"); // sell | shelf | history
+  const [cart,setCart]=useState([]); // {id,name,price,qty,from_stock,stock_item_id}
+  const [method,setMethod]=useState("pix");
+  const [saleNote,setSaleNote]=useState("");
+  const [showShelfForm,setShowShelfForm]=useState(false);
+  const [editItem,setEditItem]=useState(null);
+  const [sfName,setSfName]=useState("");
+  const [sfPrice,setSfPrice]=useState("");
+  const [sfCat,setSfCat]=useState("outros");
+  const [sfStockId,setSfStockId]=useState("");
+  const [histFrom,setHistFrom]=useState("");
+  const [histTo,setHistTo]=useState("");
+  const [confirmDel,setConfirmDel]=useState(null);
+
+  const cats=["peças","acessórios","serviços","produtos","outros"];
+  const METHODS=["pix","dinheiro","crédito","débito","transferência"];
+  const cartTotal=cart.reduce((s,i)=>s+i.price*i.qty,0);
+
+  function addToCart(item,fromStock=false){
+    setCart(c=>{
+      const ex=c.find(x=>x.id===item.id&&x.from_stock===fromStock);
+      if(ex) return c.map(x=>x.id===item.id&&x.from_stock===fromStock?{...x,qty:x.qty+1}:x);
+      return [...c,{id:item.id,name:item.name,price:Number(item.price),qty:1,from_stock:fromStock,stock_item_id:fromStock?item.id:item.stock_item_id}];
+    });
+  }
+  function removeFromCart(id,fromStock){setCart(c=>c.filter(x=>!(x.id===id&&x.from_stock===fromStock)));}
+  function changeQty(id,fromStock,delta){setCart(c=>c.map(x=>x.id===id&&x.from_stock===fromStock?{...x,qty:Math.max(1,x.qty+delta)}:x));}
+
+  async function finalizeSale(){
+    if(!cart.length) return;
+    const sale={total:cartTotal,method,note:saleNote,division:"performance",sold_at:new Date().toISOString()};
+    const items=cart.map(i=>({shelf_item_id:i.from_stock?null:i.id,name:i.name,price:i.price,qty:i.qty,from_stock:i.from_stock}));
+    await onAddSale(sale,items);
+    setCart([]);setSaleNote("");
+  }
+
+  function openShelfForm(item=null){
+    setEditItem(item);
+    setSfName(item?.name||"");setSfPrice(item?.price||"");setSfCat(item?.category||"outros");setSfStockId(item?.stock_item_id||"");
+    setShowShelfForm(true);
+  }
+  async function saveShelfItem(){
+    if(!sfName.trim()||!sfPrice) return;
+    const data={name:sfName.trim(),price:Number(sfPrice),category:sfCat,stock_item_id:sfStockId||null};
+    if(editItem) await onUpdateShelfItem(editItem.id,data);
+    else await onAddShelfItem(data);
+    setShowShelfForm(false);
+  }
+
+  const filteredSales=sales.filter(s=>{
+    if(histFrom&&new Date(s.sold_at)<new Date(histFrom)) return false;
+    if(histTo&&new Date(s.sold_at)>new Date(histTo+"T23:59:59")) return false;
+    return true;
+  });
+
+  const ViewBtn=({id,label})=><button onClick={()=>setView(id)} style={{flex:1,padding:"7px 0",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,background:view===id?"#06b6d4":B.gray700,color:view===id?B.white:B.gray400,transition:"all .2s"}}>{label}</button>;
+
+  return(<div>
+    {/* View switcher */}
+    <div style={{display:"flex",gap:6,marginBottom:20}}>
+      <ViewBtn id="sell" label="🛒 Vender"/>
+      <ViewBtn id="shelf" label="🏪 Prateleira"/>
+      <ViewBtn id="history" label="📋 Histórico"/>
+    </div>
+
+    {/* ── SELL ── */}
+    {view==="sell"&&<>
+      <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10}}>Prateleira</div>
+      {shelfItems.length===0&&<div style={{color:B.gray600,fontSize:13,marginBottom:16}}>Nenhum item na prateleira. Adicione na aba Prateleira.</div>}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
+        {shelfItems.map(item=>(
+          <button key={item.id} onClick={()=>addToCart(item)} style={{background:B.gray800,border:`1px solid ${"#06b6d4"}33`,borderRadius:12,padding:"12px",textAlign:"left",cursor:"pointer",transition:"all .15s"}}>
+            <div style={{fontWeight:700,fontSize:13,color:B.white,marginBottom:2}}>{item.name}</div>
+            <div style={{fontSize:11,color:"#06b6d4",fontWeight:700}}>{fmtBRL(Number(item.price))}</div>
+            <div style={{fontSize:10,color:B.gray600,marginTop:2}}>{item.category}</div>
+          </button>
+        ))}
+      </div>
+
+      <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10}}>Do estoque</div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+        {stock.map(s=>(
+          <button key={s.id} onClick={()=>addToCart({id:s.id,name:s.name,price:s.price||0,stock_item_id:s.id},true)} style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.gray200,fontSize:12,cursor:"pointer"}}>
+            {s.name} — {fmtBRL(Number(s.price||0))} <span style={{color:B.gray500}}>({s.qty})</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Cart */}
+      {cart.length>0&&<>
+        <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${"#06b6d4"}44`,marginBottom:16}}>
+          <div style={{fontSize:11,fontWeight:800,color:"#06b6d4",textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Carrinho</div>
+          {cart.map(item=>(
+            <div key={item.id+item.from_stock} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:B.white}}>{item.name}</div>
+                <div style={{fontSize:11,color:B.gray400}}>{fmtBRL(item.price)} × {item.qty} = {fmtBRL(item.price*item.qty)}</div>
+              </div>
+              <button onClick={()=>changeQty(item.id,item.from_stock,-1)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+              <span style={{fontSize:13,fontWeight:700,color:B.white,minWidth:18,textAlign:"center"}}>{item.qty}</span>
+              <button onClick={()=>changeQty(item.id,item.from_stock,1)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+              <button onClick={()=>removeFromCart(item.id,item.from_stock)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.red}44`,background:`${B.red}18`,color:B.red,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+          ))}
+          <div style={{borderTop:`1px solid ${B.gray700}`,paddingTop:12,marginTop:4}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <span style={{fontWeight:700,color:B.white}}>Total</span>
+              <span style={{fontSize:20,fontWeight:900,color:"#06b6d4"}}>{fmtBRL(cartTotal)}</span>
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+              {METHODS.map(m=><button key={m} onClick={()=>setMethod(m)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${method===m?"#06b6d4":B.gray600}`,background:method===m?"#06b6d418":B.gray700,color:method===m?"#06b6d4":B.gray300,fontWeight:700,fontSize:11,cursor:"pointer",textTransform:"capitalize"}}>{m}</button>)}
+            </div>
+            <input value={saleNote} onChange={e=>setSaleNote(e.target.value)} placeholder="Observação (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
+            <button onClick={finalizeSale} style={{width:"100%",padding:"12px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>✓ Finalizar venda — {fmtBRL(cartTotal)}</button>
+          </div>
+        </div>
+      </>}
+    </>}
+
+    {/* ── SHELF ── */}
+    {view==="shelf"&&<>
+      <button onClick={()=>openShelfForm()} style={{width:"100%",padding:"10px",borderRadius:10,background:"#06b6d418",border:`1px solid ${"#06b6d4"}44`,color:"#06b6d4",fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:16}}>+ Novo item na prateleira</button>
+      {shelfItems.map(item=>(
+        <div key={item.id} style={{background:B.gray800,borderRadius:12,padding:"12px 14px",border:`1px solid ${B.gray700}`,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:14,color:B.white}}>{item.name}</div>
+            <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{item.category} · {fmtBRL(Number(item.price))}</div>
+          </div>
+          <button onClick={()=>openShelfForm(item)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:13}}>✏️</button>
+          <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}>🗑</button>
+        </div>
+      ))}
+      {showShelfForm&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:200,display:"flex",alignItems:"flex-end"}} onClick={()=>setShowShelfForm(false)}>
+        <div style={{width:"100%",background:B.gray900,borderRadius:"20px 20px 0 0",padding:"20px 16px 40px",border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:16}}>{editItem?"Editar item":"Novo item"}</div>
+          <input value={sfName} onChange={e=>setSfName(e.target.value)} placeholder="Nome do item" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+          <input type="number" value={sfPrice} onChange={e=>setSfPrice(e.target.value)} placeholder="Preço (R$)" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+            {cats.map(c=><button key={c} onClick={()=>setSfCat(c)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${sfCat===c?"#06b6d4":B.gray600}`,background:sfCat===c?"#06b6d418":B.gray700,color:sfCat===c?"#06b6d4":B.gray300,fontWeight:700,fontSize:11,cursor:"pointer"}}>{c}</button>)}
+          </div>
+          <select value={sfStockId} onChange={e=>setSfStockId(e.target.value)} style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:sfStockId?B.white:B.gray400,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}>
+            <option value="">Vincular ao estoque (opcional)</option>
+            {stock.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <button onClick={saveShelfItem} style={{width:"100%",padding:"11px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Salvar</button>
+        </div>
+      </div>}
+      {confirmDel&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setConfirmDel(null)}>
+        <div style={{background:B.gray900,borderRadius:16,padding:24,margin:20,border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontWeight:700,color:B.white,marginBottom:16}}>Remover item da prateleira?</div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setConfirmDel(null)} style={{flex:1,padding:"9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontWeight:700}}>Cancelar</button>
+            <button onClick={async()=>{await onDeleteShelfItem(confirmDel);setConfirmDel(null);}} style={{flex:1,padding:"9px",borderRadius:8,background:`${B.red}22`,border:`1px solid ${B.red}55`,color:B.red,cursor:"pointer",fontWeight:700}}>Remover</button>
+          </div>
+        </div>
+      </div>}
+    </>}
+
+    {/* ── HISTORY ── */}
+    {view==="history"&&<>
+      <div style={{marginBottom:16}}>
+        <div style={{fontSize:11,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Período</div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <input type="date" value={histFrom} onChange={e=>setHistFrom(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+          <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
+          <input type="date" value={histTo} onChange={e=>setHistTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+          {(histFrom||histTo)&&<button onClick={()=>{setHistFrom("");setHistTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>}
+        </div>
+      </div>
+      <div style={{background:`${"#06b6d4"}18`,border:`1px solid ${"#06b6d4"}33`,borderRadius:12,padding:"12px 16px",marginBottom:16,textAlign:"center"}}>
+        <div style={{fontSize:10,color:"#06b6d4",fontWeight:800,textTransform:"uppercase",letterSpacing:.8}}>Total do período</div>
+        <div style={{fontSize:24,fontWeight:900,color:B.white}}>{fmtBRL(filteredSales.reduce((s,sale)=>s+Number(sale.total),0))}</div>
+        <div style={{fontSize:11,color:B.gray400}}>{filteredSales.length} venda{filteredSales.length!==1?"s":""}</div>
+      </div>
+      {filteredSales.length===0&&<div style={{color:B.gray600,fontSize:13,textAlign:"center",padding:20}}>Nenhuma venda no período</div>}
+      {filteredSales.map(sale=>(
+        <div key={sale.id} style={{background:B.gray800,borderRadius:12,padding:"12px 14px",border:`1px solid ${B.gray700}`,marginBottom:8}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <div style={{fontWeight:700,fontSize:14,color:B.white}}>{fmtBRL(Number(sale.total))}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:11,color:B.gray400,textTransform:"capitalize"}}>{sale.method}</span>
+              <button onClick={()=>onDeleteSale(sale.id)} style={{width:26,height:26,borderRadius:6,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:B.gray500}}>{new Date(sale.sold_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+          {sale.note&&<div style={{fontSize:11,color:B.gray400,marginTop:4}}>{sale.note}</div>}
+          {(sale.sale_items||[]).map((item,i)=>(
+            <div key={i} style={{fontSize:11,color:B.gray400,marginTop:4}}>• {item.name} × {item.qty} — {fmtBRL(item.price*item.qty)}{item.from_stock?" (estoque)":""}</div>
+          ))}
+        </div>
+      ))}
+    </>}
+  </div>);
+}
+
 export default function App() {
   // Inject responsive styles once
   useEffect(()=>{
@@ -7145,6 +7342,8 @@ export default function App() {
   const [expenses,setExpenses]=useState([]);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
+  const [shelfItems,setShelfItems]=useState([]);
+  const [sales,setSales]=useState([]);
   const [company,setCompany]=useState({name:"OSC Performance",address:"",phone:"",document:""});
   const [tab,      setTab]=useState("mechanics");
   const [navSection,setNavSection]=useState("home");
@@ -7262,6 +7461,8 @@ export default function App() {
       db.loadExpenses().then(setExpenses).catch(()=>{});
       db.loadPurchaseOrders().then(setPurchaseOrders).catch(()=>{});
       db.loadInvestments().then(setInvestments).catch(()=>{});
+      db.getShelfItems().then(setShelfItems).catch(()=>{});
+      db.getSales().then(setSales).catch(()=>{});
     }).catch(e=>{ setLE(e.message); setLoading(false); });
   },[]);
 
@@ -7935,7 +8136,7 @@ export default function App() {
 
   // Tab grouping by nav section
   const OFICINA_TABS=["mechanics","clients","finishing","vehicles","clientsMonitor"];
-  const GESTAO_TABS=["finance","purchases","investments","stock"];
+  const GESTAO_TABS=["finance","purchases","investments","stock","sales"];
 
   const goSection=(section,tab)=>{
     setNavSection(section);
@@ -8205,6 +8406,7 @@ export default function App() {
               {allowedTabs.includes("purchases")&&tabBtn("purchases","Pedidos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
               {allowedTabs.includes("investments")&&tabBtn("investments","Investimentos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,B.green)}
               {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
+              {allowedTabs.includes("sales")&&tabBtn("sales","Vendas",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,"#06b6d4")}
             </>}
           </div>
         </div>
@@ -8418,6 +8620,39 @@ export default function App() {
           onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));}catch(e){errToast(e);}}}
         />
       </>}
+
+      {tab==="sales"&&allowedTabs.includes("sales")&&<>
+        <TabHeader color="#06b6d4" title="🛍️ Vendas" subtitle="Venda avulsa de itens da prateleira ou do estoque"/>
+        <SalesTab
+          shelfItems={shelfItems} sales={sales} stock={stock}
+          onAddShelfItem={async item=>{try{const r=await db.addShelfItem(item);setShelfItems(p=>[...p,r]);toast_("Item adicionado ✓");}catch(e){errToast(e);}}}
+          onUpdateShelfItem={async(id,patch)=>{try{const r=await db.updateShelfItem(id,patch);setShelfItems(p=>p.map(i=>i.id===id?r:i));toast_("Item atualizado ✓");}catch(e){errToast(e);}}}
+          onDeleteShelfItem={async id=>{try{await db.deleteShelfItem(id);setShelfItems(p=>p.filter(i=>i.id!==id));toast_("Item removido ✓");}catch(e){errToast(e);}}}
+          onAddSale={async(sale,items)=>{
+            try{
+              const r=await db.addSale(sale,items);
+              setSales(p=>[r,...p]);
+              // Register in finance as payment
+              const pay=await db.addPayment({vehicleId:null,amount:sale.total,method:sale.method,note:sale.note||"Venda avulsa",paidAt:sale.sold_at||new Date().toISOString(),division:"performance"});
+              setPay(p=>[...p,pay]);
+              // Deduct stock quantity for stock items
+              for(const item of items){
+                if(item.from_stock&&item.stock_item_id){
+                  const stockItem=stock.find(s=>s.id===item.stock_item_id);
+                  if(stockItem){
+                    const newQty=Math.max(0,(stockItem.qty||0)-item.qty);
+                    await db.updateStock(item.stock_item_id,{qty:newQty});
+                    setStk(p=>p.map(s=>s.id===item.stock_item_id?{...s,qty:newQty}:s));
+                  }
+                }
+              }
+              toast_(`Venda de ${fmtBRL(sale.total)} registrada ✓`);
+            }catch(e){errToast(e);}
+          }}
+          onDeleteSale={async id=>{try{await db.deleteSale(id);setSales(p=>p.filter(s=>s.id!==id));toast_("Venda removida ✓");}catch(e){errToast(e);}}}
+        />
+      </>}
+
       </>} {/* end oficina/gestao */}
       <div style={{height:"80px",flexShrink:0}}/>
       </ErrorBoundary>

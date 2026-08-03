@@ -831,6 +831,46 @@ export const db = {
     if (error) throw error;
   },
 
+  // ── Sales / Shelf ──────────────────────────────────────────────────────────
+  async getShelfItems() {
+    const { data, error } = await supabase.from("shelf_items").select("*").eq("active", true).order("name");
+    if (error) throw error;
+    return data || [];
+  },
+  async addShelfItem(item) {
+    const { data, error } = await supabase.from("shelf_items").insert([item]).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateShelfItem(id, patch) {
+    const { data, error } = await supabase.from("shelf_items").update(patch).eq("id", id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteShelfItem(id) {
+    const { error } = await supabase.from("shelf_items").update({ active: false }).eq("id", id);
+    if (error) throw error;
+  },
+  async getSales() {
+    const { data, error } = await supabase.from("sales").select("*, sale_items(*)").order("sold_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+  async addSale(sale, items) {
+    const { data: saleRow, error: saleErr } = await supabase.from("sales").insert([sale]).select().single();
+    if (saleErr) throw saleErr;
+    if (items?.length) {
+      const rows = items.map(i => ({ ...i, sale_id: saleRow.id }));
+      const { error: itemErr } = await supabase.from("sale_items").insert(rows);
+      if (itemErr) throw itemErr;
+    }
+    return { ...saleRow, sale_items: items?.map(i => ({ ...i, sale_id: saleRow.id })) || [] };
+  },
+  async deleteSale(id) {
+    const { error } = await supabase.from("sales").delete().eq("id", id);
+    if (error) throw error;
+  },
+
   // ── Internal mappers exposed for Realtime ──
   _mapTask: mapTaskIn,
   _mapVehicle: mapVehicleIn,

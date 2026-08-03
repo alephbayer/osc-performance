@@ -5837,7 +5837,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.5";
+const APP_VERSION = "2026.08.03.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8137,7 +8137,7 @@ export default function App() {
     ...(navItems.find(n=>n.id==="mais")   ?[{id:"mais",   label:"Mais",    emoji:"⋯"}]:[]),
   ];
 
-  return (<div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
+  return (<div key={theme} style={{height:"100dvh",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
 
     {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
     <style>{`@media(max-width:640px){.osc-sidebar{display:none!important}.osc-liquid-nav{display:flex!important}}@media(min-width:641px){.osc-sidebar{display:flex!important}.osc-liquid-nav{display:none!important}}`}</style>

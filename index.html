@@ -22,14 +22,31 @@
     </style>
 
     <script>
-      // Fix iOS PWA viewport height — window.innerHeight is the only reliable value
-      function fixVh() {
-        document.documentElement.style.setProperty('--real-vh', window.innerHeight + 'px');
+      // iOS PWA: lock height to initial value — ignore resize from autofill/keyboard popups
+      var _iosLockedHeight = null;
+      function lockHeight() {
+        if (_iosLockedHeight) return; // already locked
+        _iosLockedHeight = window.innerHeight;
         var root = document.getElementById('root');
-        if (root) root.style.height = window.innerHeight + 'px';
+        if (root) root.style.height = _iosLockedHeight + 'px';
+        document.documentElement.style.height = _iosLockedHeight + 'px';
+        document.body.style.height = _iosLockedHeight + 'px';
       }
-      fixVh();
-      window.addEventListener('resize', fixVh);
+      // Lock on first load
+      lockHeight();
+      // Re-lock after a short delay in case iOS hasn't settled yet
+      setTimeout(lockHeight, 300);
+      // On resize: only update if height GREW (means orientation change, not keyboard/autofill)
+      window.addEventListener('resize', function() {
+        var h = window.innerHeight;
+        if (!_iosLockedHeight || h > _iosLockedHeight) {
+          _iosLockedHeight = h;
+          var root = document.getElementById('root');
+          if (root) root.style.height = h + 'px';
+          document.documentElement.style.height = h + 'px';
+          document.body.style.height = h + 'px';
+        }
+      });
     </script>
     <!-- PWA -->
     <meta name="application-name" content="OSC Performance" />
@@ -86,7 +103,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.08.03.17";
+        const CURRENT = "2026.08.03.18";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OSC Performance — Gestão de Oficina</title>
     <style>
       /* Prevent iOS auto-zoom on input focus */
@@ -25,7 +25,7 @@
     <meta name="application-name" content="OSC Performance" />
     <meta name="apple-mobile-web-app-title" content="OSC Performance" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#0a0a0a" id="theme-color-meta" />
 
@@ -76,7 +76,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.08.02.34";
+        const CURRENT = "2026.08.02.35";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

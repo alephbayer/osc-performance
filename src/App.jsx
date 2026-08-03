@@ -5835,7 +5835,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.02.34";
+const APP_VERSION = "2026.08.02.35";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6989,7 +6989,7 @@ class ErrorBoundary extends React.Component {
 function LiquidNav({active,setActive,navItems,scrollY}){
   const scrolled=scrollY>40;
   return(
-    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:B.black,paddingBottom:"env(safe-area-inset-bottom)"}}>
+    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:"calc(16px + env(safe-area-inset-bottom))",left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent"}}>
       <div style={{padding:scrolled?"6px 0":"9px 0",display:"flex",justifyContent:"center",width:"100%",transition:"padding .3s"}}>
         <div style={{
           display:"flex",borderRadius:99,

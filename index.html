@@ -14,11 +14,14 @@
         height: 100%; overflow: hidden;
       }
       #root {
-        /* 100dvh = full screen including safe areas on iOS with viewport-fit=cover */
         height: 100dvh;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        /* Fill bottom safe area with app background */
+        padding-bottom: env(safe-area-inset-bottom);
+        box-sizing: border-box;
+        background: #0a0a0a;
       }
       ::-webkit-scrollbar { display: none; }
     </style>
@@ -78,7 +81,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.08.02.30";
+        const CURRENT = "2026.08.02.31";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

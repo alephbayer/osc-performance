@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.27";
+const APP_VERSION = "2026.08.03.28";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7129,10 +7129,11 @@ function DashAlert({color,label,sub,icon,onClick}){
 }
 
 // ─── Quick Action Sheet ───────────────────────────────────────────────────────
-function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay}){
+function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS}){
   const Ico=({d,c})=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}</svg>;
   const GROUPS=[
     {label:"Oficina",color:B.orange,actions:[
+      {icon:<Ico d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M12 18v-6","M9 15h6"]} c={B.orange}/>, color:B.orange, label:"Nova OS",        onClick:()=>{onClose();onNovaOS();}},
       {icon:<Ico d={["M9 11l3 3L22 4","M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"]} c={B.green}/>,  color:B.green,  label:"Nova tarefa",     onClick:()=>{onClose();onTask();}},
       {icon:<Ico d={["M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z","M3.27 6.96 12 12.01 20.73 6.96","M12 22.08V12"]} c={B.purple}/>, color:B.purple, label:"Lançar material",onClick:()=>{onClose();onMat();}},
     ]},
@@ -7362,6 +7363,204 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
   </div>);
 }
 
+// ─── Nova OS Modal ────────────────────────────────────────────────────────────
+function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen}){
+  const [step,setStep]=useState(1); // 1=busca, 2=dados, 3=empresa
+  const [search,setSearch]=useState("");
+  const [selectedClient,setSelectedClient]=useState(null);
+  const [selectedVehicle,setSelectedVehicle]=useState(null);
+  const [isNew,setIsNew]=useState(false);
+  // New client/vehicle fields
+  const [clientName,setClientName]=useState("");
+  const [clientPhone,setClientPhone]=useState("");
+  const [vModel,setVModel]=useState("");
+  const [vPlate,setVPlate]=useState("");
+  const [vYear,setVYear]=useState("");
+  const [vColor,setVColor]=useState("");
+  const [division,setDivision]=useState(null); // performance | finishing
+  const [mechId,setMechId]=useState("");
+  const [loading,setLoading]=useState(false);
+
+  // Search results
+  const q=search.toLowerCase().trim();
+  const matchedClients=q?clients.filter(c=>
+    c.name?.toLowerCase().includes(q)||c.phone?.includes(q)
+  ).slice(0,5):[];
+  const matchedVehicles=q?vehicles.filter(v=>
+    v.plate?.toLowerCase().includes(q)||v.model?.toLowerCase().includes(q)
+  ).slice(0,5):[];
+
+  function selectExistingVehicle(v){
+    setSelectedVehicle(v);
+    const c=clients.find(c=>c.id===v.clientId);
+    setSelectedClient(c||null);
+    setIsNew(false);
+    setStep(3);
+  }
+  function selectExistingClient(c){
+    setSelectedClient(c);
+    setSelectedVehicle(null);
+    setIsNew(false);
+    setStep(2);
+  }
+  function goNew(){
+    setIsNew(true);
+    setSelectedClient(null);
+    setSelectedVehicle(null);
+    setStep(2);
+  }
+
+  async function confirm(){
+    if(!division) return;
+    setLoading(true);
+    try{
+      await onCreateAndOpen({
+        isNew,
+        client:isNew?{name:clientName.trim(),phone:clientPhone.trim()}:selectedClient,
+        vehicle:isNew?{model:vModel.trim(),plate:vPlate.trim().toUpperCase(),year:vYear,color:vColor}:selectedVehicle,
+        existingVehicleId:selectedVehicle?.id,
+        division,
+        mechanicId:mechId||null,
+      });
+      onClose();
+    }catch(e){console.error(e);}finally{setLoading(false);}
+  }
+
+  const canConfirm=division&&(
+    isNew?(clientName.trim()&&vModel.trim()&&vPlate.trim()):
+    selectedVehicle
+  );
+
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={onClose}>
+      <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.6)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}/>
+      <div style={{position:"relative",background:"rgba(14,14,18,0.97)",backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",border:"1px solid rgba(255,255,255,.10)",borderRadius:"24px 24px 0 0",padding:"8px 16px 40px",maxHeight:"90vh",overflowY:"auto",WebkitOverflowScrolling:"touch"}} onClick={e=>e.stopPropagation()}>
+        <div style={{width:36,height:4,borderRadius:99,background:"rgba(255,255,255,.2)",margin:"10px auto 18px"}}/>
+
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+          {step>1&&<button onClick={()=>setStep(s=>s-1)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>←</button>}
+          <div style={{flex:1}}>
+            <div style={{fontWeight:900,fontSize:16,color:B.white}}>Nova OS</div>
+            <div style={{fontSize:11,color:B.gray500}}>Passo {step} de 3</div>
+          </div>
+          <div style={{display:"flex",gap:4}}>
+            {[1,2,3].map(i=><div key={i} style={{width:i===step?20:6,height:6,borderRadius:99,background:i===step?B.orange:B.gray700,transition:"all .2s"}}/>)}
+          </div>
+        </div>
+
+        {/* Step 1 — Search */}
+        {step===1&&<>
+          <input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, telefone ou placa..." style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:14,outline:"none",marginBottom:12,boxSizing:"border-box"}}/>
+
+          {q&&matchedVehicles.length>0&&<>
+            <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Veículos</div>
+            {matchedVehicles.map(v=>{
+              const c=clients.find(c=>c.id===v.clientId);
+              return <div key={v.id} onClick={()=>selectExistingVehicle(v)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${B.gray700}`,cursor:"pointer"}}>
+                <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🚗</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:B.white,fontSize:13}}>{v.model} <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
+                  {c&&<div style={{fontSize:11,color:B.gray400}}>{c.name}</div>}
+                </div>
+                <span style={{color:B.gray600,fontSize:16}}>›</span>
+              </div>;
+            })}
+          </>}
+
+          {q&&matchedClients.length>0&&<>
+            <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:8,marginTop:4}}>Clientes</div>
+            {matchedClients.map(c=><div key={c.id} onClick={()=>selectExistingClient(c)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${B.gray700}`,cursor:"pointer"}}>
+              <div style={{width:36,height:36,borderRadius:9,background:`${B.green}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>👤</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,color:B.white,fontSize:13}}>{c.name}</div>
+                {c.phone&&<div style={{fontSize:11,color:B.gray400}}>{c.phone}</div>}
+              </div>
+              <span style={{color:B.gray600,fontSize:16}}>›</span>
+            </div>)}
+          </>}
+
+          <div onClick={goNew} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",background:`${B.orange}12`,borderRadius:12,marginTop:8,border:`1px solid ${B.orange}33`,cursor:"pointer"}}>
+            <div style={{width:36,height:36,borderRadius:9,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>+</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,color:B.orange,fontSize:13}}>Novo cliente e veículo</div>
+              <div style={{fontSize:11,color:B.gray400}}>Cadastrar do zero</div>
+            </div>
+          </div>
+        </>}
+
+        {/* Step 2 — Data (new or pick vehicle for existing client) */}
+        {step===2&&<>
+          {isNew&&<>
+            <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Cliente</div>
+            <input value={clientName} onChange={e=>setClientName(e.target.value)} placeholder="Nome do cliente *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+            <input value={clientPhone} onChange={e=>setClientPhone(e.target.value)} placeholder="Telefone (WhatsApp)" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
+            <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Veículo</div>
+            <input value={vModel} onChange={e=>setVModel(e.target.value)} placeholder="Modelo *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+            <div style={{display:"flex",gap:8,marginBottom:8}}>
+              <input value={vPlate} onChange={e=>setVPlate(e.target.value.toUpperCase())} placeholder="Placa *" style={{flex:1,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
+              <input value={vYear} onChange={e=>setVYear(e.target.value)} placeholder="Ano" style={{width:80,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <input value={vColor} onChange={e=>setVColor(e.target.value)} placeholder="Cor" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
+          </>}
+
+          {!isNew&&selectedClient&&<>
+            <div style={{background:B.gray800,borderRadius:12,padding:"12px 14px",marginBottom:16,border:`1px solid ${B.gray700}`}}>
+              <div style={{fontWeight:700,color:B.white}}>{selectedClient.name}</div>
+              {selectedClient.phone&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>{selectedClient.phone}</div>}
+            </div>
+            <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Selecionar veículo</div>
+            {vehicles.filter(v=>v.clientId===selectedClient.id).map(v=>(
+              <div key={v.id} onClick={()=>{setSelectedVehicle(v);setStep(3);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:selectedVehicle?.id===v.id?`${B.orange}18`:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${selectedVehicle?.id===v.id?B.orange+"55":B.gray700}`,cursor:"pointer"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:B.white,fontSize:13}}>{v.model}</div>
+                  <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}</div>
+                </div>
+                {selectedVehicle?.id===v.id&&<span style={{color:B.orange}}>✓</span>}
+              </div>
+            ))}
+            <div onClick={()=>{setIsNew(true);}} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:`${B.orange}10`,borderRadius:12,marginTop:4,border:`1px solid ${B.orange}33`,cursor:"pointer"}}>
+              <span style={{color:B.orange,fontWeight:700,fontSize:13}}>+ Novo veículo para este cliente</span>
+            </div>
+          </>}
+
+          <button onClick={()=>setStep(3)} disabled={isNew&&(!clientName.trim()||!vModel.trim()||!vPlate.trim())} style={{width:"100%",padding:"12px",borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",marginTop:8,opacity:(isNew&&(!clientName.trim()||!vModel.trim()||!vPlate.trim()))?0.4:1}}>
+            Continuar →
+          </button>
+        </>}
+
+        {/* Step 3 — Division + mechanic */}
+        {step===3&&<>
+          <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Empresa</div>
+          <div style={{display:"flex",gap:8,marginBottom:20}}>
+            <button onClick={()=>setDivision("performance")} style={{flex:1,padding:"16px 8px",borderRadius:14,border:`2px solid ${division==="performance"?B.orange:"rgba(255,255,255,.1)"}`,background:division==="performance"?`${B.orange}18`:"transparent",cursor:"pointer",transition:"all .2s"}}>
+              <div style={{fontSize:22,marginBottom:4}}>⚙️</div>
+              <div style={{fontWeight:800,fontSize:13,color:division==="performance"?B.orange:B.gray300}}>OSC Performance</div>
+            </button>
+            <button onClick={()=>setDivision("finishing")} style={{flex:1,padding:"16px 8px",borderRadius:14,border:`2px solid ${division==="finishing"?FD.primary:"rgba(255,255,255,.1)"}`,background:division==="finishing"?`${FD.primary}18`:"transparent",cursor:"pointer",transition:"all .2s"}}>
+              <div style={{fontSize:22,marginBottom:4}}>🎨</div>
+              <div style={{fontWeight:800,fontSize:13,color:division==="finishing"?FD.primary:B.gray300}}>OSC Finishing</div>
+            </button>
+          </div>
+
+          <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Mecânico responsável <span style={{color:B.gray700,fontWeight:400}}>(opcional)</span></div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
+            {employees.filter(e=>!e.division||e.division===(division==="finishing"?"finishing":"performance")||e.division==="ambos").map(e=>(
+              <button key={e.id} onClick={()=>setMechId(id=>id===e.id?"":e.id)} style={{padding:"7px 14px",borderRadius:9,border:`1px solid ${mechId===e.id?B.orange+"66":B.gray600}`,background:mechId===e.id?`${B.orange}18`:B.gray800,color:mechId===e.id?B.orange:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>
+                {e.name}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={confirm} disabled={!canConfirm||loading} style={{width:"100%",padding:"13px",borderRadius:12,background:canConfirm?B.orange:"rgba(255,255,255,.1)",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:canConfirm?"pointer":"default",opacity:loading?0.6:1}}>
+            {loading?"Abrindo OS...":"✓ Abrir OS agora"}
+          </button>
+        </>}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // Inject responsive styles once
   useEffect(()=>{
@@ -7414,6 +7613,7 @@ export default function App() {
   const [navSection,setNavSection]=useState("home");
   const [scrollY,setScrollY]=useState(0);
   const [showQuickSheet,setShowQuickSheet]=useState(false);
+  const [showNovaOS,setShowNovaOS]=useState(false);
   const mainScrollRef=useRef(null);
   const [theme,setTheme]=useState(getTheme);
   const [themePref,setThemePref]=useState(getThemePref);
@@ -8759,7 +8959,34 @@ export default function App() {
     {showQuickSheet&&<QuickActionSheet onClose={()=>setShowQuickSheet(false)} adminRole={adminRole}
       onFuel={()=>setFuelModal(true)}
       onTask={()=>setQuickTaskModal(true)} onMat={()=>setQuickMatModal(true)}
-      onPay={()=>setQuickPayModal(true)}/>}
+      onPay={()=>setQuickPayModal(true)}
+      onNovaOS={()=>setShowNovaOS(true)}/>}
+    {showNovaOS&&<NovaOSModal
+      onClose={()=>setShowNovaOS(false)}
+      clients={clients} vehicles={vehicles} employees={employees}
+      onCreateAndOpen={async({isNew,client,vehicle,existingVehicleId,division,mechanicId})=>{
+        let clientId=client?.id;
+        let vehicleId=existingVehicleId;
+        // Create client if new
+        if(isNew||!clientId){
+          const newCli=await db.addClient({name:client.name,phone:client.phone||""});
+          setCli(p=>[...p,newCli]);
+          clientId=newCli.id;
+        }
+        // Create vehicle if new
+        if(!vehicleId){
+          const newVeh=await db.addVehicle({model:vehicle.model,plate:vehicle.plate,year:vehicle.year||"",color:vehicle.color||"",clientId});
+          setVeh(p=>[...p,newVeh]);
+          vehicleId=newVeh.id;
+        }
+        // Open OS
+        if(division==="finishing") await openNewOSFinishing(vehicleId,mechanicId||null,null);
+        else await openNewOS(vehicleId,mechanicId||null,null);
+        // Navigate to the right tab
+        setNavSection("oficina");
+        setTab(division==="finishing"?"finishing":"clients");
+      }}
+    />}
     <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} theme={theme} setActive={(s)=>{
       setNavSection(s);
       if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("mechanics");

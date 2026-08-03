@@ -4239,7 +4239,7 @@ function InvFormPanel({cat,form,setForm,editId,onSubmit,onCancel}) {
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {/* Category toggle */}
       <div style={{display:"flex",gap:6}}>
-        {[{k:"pesado",l:"🔧 Pesado"},{k:"leve",l:"⚡ Leve"}].map(c=>(
+        {[{k:"pesado",l:"🔧 Pesado"},{k:"leve",l:"⚡ Leve"},{k:"materiais",l:"📦 Materiais"}].map(c=>(
           <button key={c.k} type="button" onClick={()=>setForm(p=>({...p,category:c.k}))}
             style={{flex:1,padding:"8px 0",borderRadius:8,border:`1px solid ${(form.category||cat)===c.k?(c.k==="pesado"?B.red:B.blue):B.gray600}`,background:(form.category||cat)===c.k?(c.k==="pesado"?`${B.red}18`:`${B.blue}18`):"none",color:(form.category||cat)===c.k?(c.k==="pesado"?B.red:B.blue):B.gray500,fontWeight:700,fontSize:12,cursor:"pointer"}}>
             {c.l}
@@ -4366,13 +4366,15 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
     </div>
   </div>);
 }
-function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete}) {
+function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToStock}) {
   const [search,setSearch]=useState("");
   const [catFilter,setCatFilter]=useState("all");
   const [divFilter,setDivFilter]=useState("all");
   const [adding,setAdding]=useState(null);
   const [form,setForm]=useState({name:"",link:"",value:"",quantity:"1",objective:"",division:"performance",priority:"3"});
   const [editId,setEditId]=useState(null);
+  const [stockModal,setStockModal]=useState(null); // inv being received as materiais
+  const [stockForm,setStockForm]=useState({name:"",qty:"1",price:"",unit:"un",category:"materiais"});
 
   const filtered=investments.filter(inv=>{
     if(catFilter!=="all"&&inv.category!==catFilter) return false;
@@ -4382,6 +4384,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete}) {
   });
   const pesados=filtered.filter(i=>i.category==="pesado").sort((a,b)=>a.priority-b.priority);
   const leves=filtered.filter(i=>i.category==="leve").sort((a,b)=>a.priority-b.priority);
+  const materiais=filtered.filter(i=>i.category==="materiais").sort((a,b)=>a.priority-b.priority);
 
   const resetForm=()=>setForm({name:"",link:"",value:"",quantity:"1",objective:"",division:"performance",priority:"3",category:"pesado"});
   const submit=async()=>{
@@ -4397,6 +4400,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete}) {
 
   const [openPesado,setOpenPesado]=useState(false);
   const [openLeve,setOpenLeve]=useState(false);
+  const [openMateriais,setOpenMateriais]=useState(false);
 
   const statusGroups=[
     {key:"pending",  label:"⏳ Pendentes",  color:"#f59e0b"},
@@ -4416,7 +4420,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete}) {
     </button>
   );
 
-  const renderCat=(items,color,open)=>(<>
+  const renderCat=(items,color,open,isMateriais=false)=>(<>
     {statusGroups.map(sg=>{
       const group=items.filter(i=>i.status===sg.key).sort((a,b)=>a.priority-b.priority);
       if(group.length===0) return null;
@@ -4424,7 +4428,17 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete}) {
         <div style={{fontSize:10,fontWeight:800,color:sg.color,textTransform:"uppercase",letterSpacing:.5,padding:"4px 4px 6px",display:"flex",alignItems:"center",gap:5}}>
           {sg.label} <span style={{color:B.gray600,fontWeight:400}}>({group.length})</span>
         </div>
-        {group.filter(inv=>editId!==inv.id).map(inv=><InvCard key={inv.id} inv={inv} adminRole={adminRole} onUpdate={(id,patch)=>patch?onUpdate(id,patch):onDelete(id)} onStartEdit={startEdit}/>)}
+        {group.filter(inv=>editId!==inv.id).map(inv=><InvCard key={inv.id} inv={inv} adminRole={adminRole}
+          onUpdate={(id,patch)=>{
+            if(patch&&patch.status==="received"&&isMateriais){
+              // Show stock export modal instead of direct receive
+              setStockModal(inv);
+              setStockForm({name:inv.name,qty:String(inv.quantity||1),price:String(inv.value||""),unit:"un",category:"materiais"});
+              return;
+            }
+            patch?onUpdate(id,patch):onDelete(id);
+          }}
+          onStartEdit={startEdit}/>)}
       </div>);
     })}
     {items.length===0&&<div style={{textAlign:"center",padding:"20px 0",color:B.gray500,fontSize:13}}>Nenhum item ainda</div>}
@@ -4434,7 +4448,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete}) {
     {/* Filters */}
     <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10,alignItems:"center"}}>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
-        {[{k:"all",l:"Todos"},{k:"pesado",l:"🔧 Pesados"},{k:"leve",l:"⚡ Leves"}].map(f=>(
+        {[{k:"all",l:"Todos"},{k:"pesado",l:"🔧 Pesados"},{k:"leve",l:"⚡ Leves"},{k:"materiais",l:"📦 Materiais"}].map(f=>(
           <button key={f.k} onClick={()=>setCatFilter(f.k)} style={{padding:"5px 14px",borderRadius:99,border:`1px solid ${catFilter===f.k?B.orange:B.gray700}`,background:catFilter===f.k?`${B.orange}22`:"none",color:catFilter===f.k?B.orange:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>{f.l}</button>
         ))}
       </div>
@@ -4475,6 +4489,57 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete}) {
       {openLeve&&<div style={{border:`1px solid ${B.blue}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
         {renderCat(leves,B.blue,openLeve)}
       </div>}
+    </div>}
+
+    {/* Materiais Sortidos */}
+    {(catFilter==="all"||catFilter==="materiais")&&<div style={{marginBottom:8}}>
+      {sectionHeader(materiais,B.amber,"📦","Materiais Sortidos",openMateriais,setOpenMateriais)}
+      {openMateriais&&<div style={{border:`1px solid ${B.amber}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
+        {renderCat(materiais,B.amber,openMateriais,true)}
+      </div>}
+    </div>}
+
+    {/* Stock export modal for materiais */}
+    {stockModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setStockModal(null)}>
+      <div style={{background:B.gray900,borderRadius:16,padding:24,width:"100%",maxWidth:420,border:`1px solid ${B.amber}44`}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:4}}>📦 {stockModal.name} recebido!</div>
+        <div style={{fontSize:12,color:B.gray400,marginBottom:18}}>O que deseja fazer com estes materiais?</div>
+
+        <div style={{background:B.gray800,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${B.gray700}`}}>
+          <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.8,marginBottom:12}}>Exportar para o estoque</div>
+          <input value={stockForm.name} onChange={e=>setStockForm(f=>({...f,name:e.target.value}))} placeholder="Nome no estoque" style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+          <div style={{display:"flex",gap:8,marginBottom:8}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:B.gray500,marginBottom:4}}>Quantidade</div>
+              <input type="number" value={stockForm.qty} onChange={e=>setStockForm(f=>({...f,qty:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:B.gray500,marginBottom:4}}>Preço unit. (R$)</div>
+              <input type="number" value={stockForm.price} onChange={e=>setStockForm(f=>({...f,price:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:B.gray500,marginBottom:4}}>Unidade</div>
+              <select value={stockForm.unit} onChange={e=>setStockForm(f=>({...f,unit:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}>
+                {["un","kg","L","m","cx","pc","par"].map(u=><option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+          </div>
+          <button onClick={async()=>{
+            await onUpdate(stockModal.id,{status:"received"});
+            if(onAddToStock) await onAddToStock({name:stockForm.name||stockModal.name,qty:parseInt(stockForm.qty)||1,price:parseFloat(stockForm.price)||0,unit:stockForm.unit,category:"materiais"});
+            setStockModal(null);
+          }} style={{width:"100%",padding:"10px",borderRadius:10,background:`${B.amber}22`,border:`1px solid ${B.amber}55`,color:B.amber,fontWeight:800,fontSize:13,cursor:"pointer"}}>
+            📦 Receber e enviar para o estoque
+          </button>
+        </div>
+
+        <button onClick={async()=>{await onUpdate(stockModal.id,{status:"received"});setStockModal(null);}} style={{width:"100%",padding:"10px",borderRadius:10,background:`${B.green}18`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:8}}>
+          ✅ Receber e usar agora (sem estoque)
+        </button>
+        <button onClick={()=>setStockModal(null)} style={{width:"100%",padding:"9px",borderRadius:10,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>
+          Cancelar
+        </button>
+      </div>
     </div>}
   </div>);
 }
@@ -5837,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.21";
+const APP_VERSION = "2026.08.03.22";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8618,6 +8683,7 @@ export default function App() {
             }
           }catch(e){errToast(e);}}}
           onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));}catch(e){errToast(e);}}}
+          onAddToStock={async item=>{try{const r=await db.addStock(item);setStk(p=>[...p,r]);toast_(`"${item.name}" adicionado ao estoque ✓`);}catch(e){errToast(e);}}}
         />
       </>}
 

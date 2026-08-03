@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.36";
+const APP_VERSION = "2026.08.03.37";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7308,8 +7308,8 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
           <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}>🗑</button>
         </div>
       ))}
-      {showShelfForm&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:250,display:"flex",alignItems:"flex-end"}} onClick={()=>setShowShelfForm(false)}>
-        <div style={{width:"100%",background:B.gray900,borderRadius:"20px 20px 0 0",padding:"20px 16px 40px",border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
+      {showShelfForm&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:"flex-end"}} onClick={()=>setShowShelfForm(false)}>
+        <div style={{width:"100%",background:B.gray900,borderRadius:"20px 20px 0 0",padding:"20px 16px",paddingBottom:"calc(40px + env(safe-area-inset-bottom))",border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
           <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:16}}>{editItem?"Editar item":"Novo item"}</div>
           <input value={sfName} onChange={e=>setSfName(e.target.value)} placeholder="Nome do item" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
           <input type="number" value={sfPrice} onChange={e=>setSfPrice(e.target.value)} placeholder="Preço (R$)" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
@@ -7323,7 +7323,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
           <button onClick={saveShelfItem} style={{width:"100%",padding:"11px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Salvar</button>
         </div>
       </div>}
-      {confirmDel&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:250,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setConfirmDel(null)}>
+      {confirmDel&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setConfirmDel(null)}>
         <div style={{background:B.gray900,borderRadius:16,padding:24,margin:20,border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
           <div style={{fontWeight:700,color:B.white,marginBottom:16}}>Remover item da prateleira?</div>
           <div style={{display:"flex",gap:8}}>

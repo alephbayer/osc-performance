@@ -11,17 +11,32 @@
       html, body {
         margin: 0; padding: 0;
         background: #0a0a0a;
+      }
+      /* PWA app mode: lock scroll to inner containers */
+      body.osc-app {
         height: 100%; overflow: hidden;
       }
-      #root {
+      body.osc-app #root {
         height: 100%;
         display: flex;
         flex-direction: column;
+      }
+      /* Public link mode: normal scroll */
+      body.osc-public {
+        min-height: 100%;
+        overflow: auto;
       }
       ::-webkit-scrollbar { display: none; }
     </style>
 
     <script>
+      // Set body class based on URL — public links get normal scroll
+      (function() {
+        var params = new URLSearchParams(window.location.search);
+        var isPublic = params.has('vh') || params.get('portal') === 'cliente' || params.get('portal') === 'mecanico';
+        document.body.classList.add(isPublic ? 'osc-public' : 'osc-app');
+      })();
+
       // iOS PWA: set height from window.innerHeight, ignore shrinks from keyboard/autofill
       var _iosH = null;
       function applyHeight(h) {
@@ -32,6 +47,7 @@
         document.body.style.height = h + 'px';
       }
       function snapHeight() {
+        if (!document.body.classList.contains('osc-app')) return;
         // Take the max between current and stored — iOS sometimes starts low after reload
         var h = window.innerHeight;
         var stored = parseInt(sessionStorage.getItem('_iosH') || '0');
@@ -106,7 +122,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.08.03.33";
+        const CURRENT = "2026.08.03.34";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

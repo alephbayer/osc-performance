@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; background:#0a0a0a; color:#fff; font-family:monospace; }
+  #root { height:100%; display:flex; flex-direction:column; }
+  .info { padding:16px; font-size:13px; line-height:2; }
+  .val { color:#ff6b00; font-weight:bold; }
+  .bar { position:fixed; bottom:0; left:0; right:0; height:60px; background:#ff6b00; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#000; }
+</style>
+</head>
+<body id="b">
+<div id="root">
+  <div class="info" id="out">Carregando...</div>
+  <div class="bar">BARRA DE TESTE</div>
+</div>
+<script>
+function update() {
+  const sab = getComputedStyle(document.documentElement).getPropertyValue('--sab') || '?';
+  const sat = getComputedStyle(document.documentElement).getPropertyValue('--sat') || '?';
+  document.documentElement.style.setProperty('--sab', 'env(safe-area-inset-bottom)');
+  document.documentElement.style.setProperty('--sat', 'env(safe-area-inset-top)');
+  
+  document.getElementById('out').innerHTML = `
+    <b>Viewport</b><br>
+    window.innerHeight: <span class="val">${window.innerHeight}px</span><br>
+    window.innerWidth: <span class="val">${window.innerWidth}px</span><br>
+    screen.height: <span class="val">${screen.height}px</span><br>
+    <br>
+    <b>document.documentElement</b><br>
+    clientHeight: <span class="val">${document.documentElement.clientHeight}px</span><br>
+    offsetHeight: <span class="val">${document.documentElement.offsetHeight}px</span><br>
+    <br>
+    <b>body</b><br>
+    clientHeight: <span class="val">${document.body.clientHeight}px</span><br>
+    offsetHeight: <span class="val">${document.body.offsetHeight}px</span><br>
+    <br>
+    <b>#root</b><br>
+    clientHeight: <span class="val">${document.getElementById('root').clientHeight}px</span><br>
+    offsetHeight: <span class="val">${document.getElementById('root').offsetHeight}px</span><br>
+    <br>
+    <b>CSS env()</b><br>
+    safe-area-inset-bottom: <span class="val" id="sab">calculando...</span><br>
+    safe-area-inset-top: <span class="val" id="sat">calculando...</span><br>
+    <br>
+    <b>PWA?</b><br>
+    standalone: <span class="val">${window.navigator.standalone ? 'SIM' : 'NÃO'}</span><br>
+    display-mode standalone: <span class="val">${window.matchMedia('(display-mode: standalone)').matches ? 'SIM' : 'NÃO'}</span><br>
+  `;
+  
+  // Measure safe area via a div
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom);width:1px;background:transparent;pointer-events:none;';
+  document.body.appendChild(div);
+  setTimeout(() => {
+    document.getElementById('sab').textContent = div.offsetHeight + 'px';
+    document.body.removeChild(div);
+  }, 100);
+  
+  const divT = document.createElement('div');
+  divT.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top);width:1px;background:transparent;pointer-events:none;';
+  document.body.appendChild(divT);
+  setTimeout(() => {
+    document.getElementById('sat').textContent = divT.offsetHeight + 'px';
+    document.body.removeChild(divT);
+  }, 100);
+}
+update();
+window.addEventListener('resize', update);
+</script>
+</body>
+</html>

@@ -5837,7 +5837,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.13";
+const APP_VERSION = "2026.08.03.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8419,7 +8419,7 @@ export default function App() {
         />
       </>}
       </>} {/* end oficina/gestao */}
-      <div style={{height:"calc(120px + env(safe-area-inset-bottom))",flexShrink:0}}/>
+      <div style={{height:"80px",flexShrink:0}}/>
       </ErrorBoundary>
     </div>{/* end scroll container */}
 

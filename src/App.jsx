@@ -5837,7 +5837,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.3";
+const APP_VERSION = "2026.08.03.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6990,10 +6990,9 @@ class ErrorBoundary extends React.Component {
 // ─── Liquid Glass Bottom Nav ──────────────────────────────────────────────────
 function LiquidNav({active,setActive,navItems,scrollY}){
   const scrolled=scrollY>40;
-  return(<>
-    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,height:"calc(16px + env(safe-area-inset-bottom))",background:B.black,zIndex:199}}/>
-    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:"calc(16px + env(safe-area-inset-bottom))",left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent"}}>
-      <div style={{padding:scrolled?"6px 0":"9px 0",display:"flex",justifyContent:"center",width:"100%",transition:"padding .3s"}}>
+  return(
+    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent",paddingBottom:"calc(16px + env(safe-area-inset-bottom))"}}>
+      <div style={{padding:scrolled?"4px 0":"7px 0",display:"flex",justifyContent:"center",width:"100%",transition:"padding .3s"}}>
         <div style={{
           display:"flex",borderRadius:99,
           background:"rgba(16,16,20,0.55)",
@@ -7024,7 +7023,7 @@ function LiquidNav({active,setActive,navItems,scrollY}){
         </div>
       </div>
     </div>
-  </>);
+  );
 }
 
 // ─── Tab Section Header ───────────────────────────────────────────────────────
@@ -8419,7 +8418,7 @@ export default function App() {
         />
       </>}
       </>} {/* end oficina/gestao */}
-      <div style={{height:"calc(84px + env(safe-area-inset-bottom))",flexShrink:0}}/>
+      <div style={{height:"calc(120px + env(safe-area-inset-bottom))",flexShrink:0}}/>
       </ErrorBoundary>
     </div>{/* end scroll container */}
 

@@ -1,5 +1,4 @@
-// OSC Performance — Service Worker v4
-// Handles push notifications and ensures fresh HTML/version on iOS PWA
+// OSC Performance — Service Worker v5
 
 self.addEventListener("push", (event) => {
   if (!event.data) return;
@@ -28,10 +27,9 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// Don't skipWaiting on install — wait for message from page
+// Skip waiting immediately so new version activates right away
 self.addEventListener("install", () => {
-  // Intentionally NOT calling skipWaiting() here
-  // so the update banner can show before reloading
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => e.waitUntil(clients.claim()));

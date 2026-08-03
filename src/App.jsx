@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.31";
+const APP_VERSION = "2026.08.03.32";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7799,7 +7799,7 @@ export default function App() {
   }
   if(publicHistoryId){
     if(loading) return <LoadingScreen/>;
-    return <div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
+    return <div key={theme} style={{position:"fixed",inset:0,background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
   }
   if(loading) return <LoadingScreen/>;
   if(loadError) return <ErrorScreen msg={loadError}/>;

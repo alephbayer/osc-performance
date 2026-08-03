@@ -4475,11 +4475,11 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     {adding&&<InvFormPanel cat={adding} form={form} setForm={setForm} editId={editId}
       onSubmit={submit} onCancel={()=>{setAdding(null);setEditId(null);resetForm();}}/>}
 
-    {/* Pesados */}
-    {(catFilter==="all"||catFilter==="pesado")&&<div style={{marginBottom:8}}>
-      {sectionHeader(pesados,B.red,"🔧","Investimentos Pesados",openPesado,setOpenPesado)}
-      {openPesado&&<div style={{border:`1px solid ${B.red}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
-        {renderCat(pesados,B.red,openPesado)}
+    {/* Materiais Sortidos */}
+    {(catFilter==="all"||catFilter==="materiais")&&<div style={{marginBottom:8}}>
+      {sectionHeader(materiais,B.amber,"📦","Materiais Sortidos",openMateriais,setOpenMateriais)}
+      {openMateriais&&<div style={{border:`1px solid ${B.amber}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
+        {renderCat(materiais,B.amber,openMateriais,true)}
       </div>}
     </div>}
 
@@ -4491,11 +4491,11 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
       </div>}
     </div>}
 
-    {/* Materiais Sortidos */}
-    {(catFilter==="all"||catFilter==="materiais")&&<div style={{marginBottom:8}}>
-      {sectionHeader(materiais,B.amber,"📦","Materiais Sortidos",openMateriais,setOpenMateriais)}
-      {openMateriais&&<div style={{border:`1px solid ${B.amber}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
-        {renderCat(materiais,B.amber,openMateriais,true)}
+    {/* Pesados */}
+    {(catFilter==="all"||catFilter==="pesado")&&<div style={{marginBottom:8}}>
+      {sectionHeader(pesados,B.red,"🔧","Investimentos Pesados",openPesado,setOpenPesado)}
+      {openPesado&&<div style={{border:`1px solid ${B.red}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
+        {renderCat(pesados,B.red,openPesado)}
       </div>}
     </div>}
 
@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.23";
+const APP_VERSION = "2026.08.03.24";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

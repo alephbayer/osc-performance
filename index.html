@@ -22,30 +22,33 @@
     </style>
 
     <script>
-      // iOS PWA: lock height to initial value — ignore resize from autofill/keyboard popups
-      var _iosLockedHeight = null;
-      function lockHeight() {
-        if (_iosLockedHeight) return; // already locked
-        _iosLockedHeight = window.innerHeight;
+      // iOS PWA: set height from window.innerHeight, ignore shrinks from keyboard/autofill
+      var _iosH = null;
+      function applyHeight(h) {
+        _iosH = h;
         var root = document.getElementById('root');
-        if (root) root.style.height = _iosLockedHeight + 'px';
-        document.documentElement.style.height = _iosLockedHeight + 'px';
-        document.body.style.height = _iosLockedHeight + 'px';
+        if (root) root.style.height = h + 'px';
+        document.documentElement.style.height = h + 'px';
+        document.body.style.height = h + 'px';
       }
-      // Lock on first load
-      lockHeight();
-      // Re-lock after a short delay in case iOS hasn't settled yet
-      setTimeout(lockHeight, 300);
-      // On resize: only update if height GREW (means orientation change, not keyboard/autofill)
+      function snapHeight() {
+        // Take the max between current and stored — iOS sometimes starts low after reload
+        var h = window.innerHeight;
+        var stored = parseInt(sessionStorage.getItem('_iosH') || '0');
+        var best = Math.max(h, stored);
+        if (best > 100) {
+          sessionStorage.setItem('_iosH', best);
+          applyHeight(best);
+        }
+      }
+      // Run immediately and after iOS settles
+      snapHeight();
+      setTimeout(snapHeight, 100);
+      setTimeout(snapHeight, 500);
+      // On resize: only grow, never shrink
       window.addEventListener('resize', function() {
         var h = window.innerHeight;
-        if (!_iosLockedHeight || h > _iosLockedHeight) {
-          _iosLockedHeight = h;
-          var root = document.getElementById('root');
-          if (root) root.style.height = h + 'px';
-          document.documentElement.style.height = h + 'px';
-          document.body.style.height = h + 'px';
-        }
+        if (!_iosH || h > _iosH) applyHeight(h);
       });
     </script>
     <!-- PWA -->
@@ -103,7 +106,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.08.03.20";
+        const CURRENT = "2026.08.03.21";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

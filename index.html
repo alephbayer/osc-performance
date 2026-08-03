@@ -11,23 +11,26 @@
       html, body {
         margin: 0; padding: 0;
         background: #0a0a0a;
-        overflow: hidden;
-      }
-      html { height: 100%; }
-      body {
-        /* -webkit-fill-available is the only reliable height for iOS PWA */
-        height: 100%;
-        min-height: -webkit-fill-available;
+        height: 100%; overflow: hidden;
       }
       #root {
         height: 100%;
-        min-height: -webkit-fill-available;
         display: flex;
         flex-direction: column;
       }
       ::-webkit-scrollbar { display: none; }
     </style>
 
+    <script>
+      // Fix iOS PWA viewport height — window.innerHeight is the only reliable value
+      function fixVh() {
+        document.documentElement.style.setProperty('--real-vh', window.innerHeight + 'px');
+        var root = document.getElementById('root');
+        if (root) root.style.height = window.innerHeight + 'px';
+      }
+      fixVh();
+      window.addEventListener('resize', fixVh);
+    </script>
     <!-- PWA -->
     <meta name="application-name" content="OSC Performance" />
     <meta name="apple-mobile-web-app-title" content="OSC Performance" />
@@ -83,7 +86,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.08.03.16";
+        const CURRENT = "2026.08.03.17";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.25";
+const APP_VERSION = "2026.08.03.26";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8251,13 +8251,17 @@ export default function App() {
       const hasInvest=pendingInvestmentCount>0;
       const hasNotes=pendingNotesCount>0;
       const lowStock=stock.filter(s=>s.qty<=2).length;
-      const pendingMateriais=investments.filter(i=>i.category==="materiais"&&(i.status==="approved"||i.status==="bought")).length;
-      if(!hasPurchases&&!hasInvest&&!hasNotes&&lowStock===0&&pendingMateriais===0) return(
+      const pendingMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="pending").length;
+      const approvedMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="approved").length;
+      const boughtMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="bought").length;
+      if(!hasPurchases&&!hasInvest&&!hasNotes&&lowStock===0&&pendingMateriais===0&&approvedMateriais===0&&boughtMateriais===0) return(
         <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${B.gray700}`,textAlign:"center",color:B.gray600,fontSize:13}}>✅ Nenhum alerta no momento</div>
       );
       return(<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.gray700}`}}>
         {hasPurchases&&<DashAlert color={B.amber} icon={iconCart} label={`${pendingPurchaseCount} pedido${pendingPurchaseCount!==1?"s":""} de peça aguardando compra`} sub="Pedidos de Compras" onClick={()=>goSection("gestao","purchases")}/>}
-        {pendingMateriais>0&&<DashAlert color={B.amber} icon={iconBox} label={`${pendingMateriais} material${pendingMateriais!==1?"is":""} sortido${pendingMateriais!==1?"s":""} para receber`} sub="Investimentos · Materiais Sortidos" onClick={()=>goSection("gestao","investments")}/>}
+        {pendingMateriais>0&&<DashAlert color={B.blue} icon={iconBox} label={`${pendingMateriais} material${pendingMateriais!==1?"is":""} sortido${pendingMateriais!==1?"s":""} para aprovar`} sub="Investimentos · Materiais Sortidos" onClick={()=>goSection("gestao","investments")}/>}
+        {approvedMateriais>0&&<DashAlert color={B.amber} icon={iconBox} label={`${approvedMateriais} material${approvedMateriais!==1?"is":""} sortido${approvedMateriais!==1?"s":""} para comprar`} sub="Investimentos · Materiais Sortidos" onClick={()=>goSection("gestao","investments")}/>}
+        {boughtMateriais>0&&<DashAlert color={B.green} icon={iconBox} label={`${boughtMateriais} material${boughtMateriais!==1?"is":""} sortido${boughtMateriais!==1?"s":""} para receber`} sub="Investimentos · Materiais Sortidos" onClick={()=>goSection("gestao","investments")}/>}
         {hasNotes&&<DashAlert color={B.orange} icon={iconBell} label={`${pendingNotesCount} anotaç${pendingNotesCount!==1?"ões":"ão"} de cliente pendente${pendingNotesCount!==1?"s":""}`} sub="Aba Veículos" onClick={()=>goSection("oficina","vehicles")}/>}
         {lowStock>0&&<DashAlert color={B.red} icon={iconBox} label={`${lowStock} item${lowStock!==1?"s":""} com estoque baixo`} sub="Estoque" onClick={()=>goSection("gestao","stock")}/>}
         {hasInvest&&<DashAlert color={B.blue} icon={iconStar} label={`${pendingInvestmentCount} investimento${pendingInvestmentCount!==1?"s":""} para aprovar`} sub="Investimentos" onClick={()=>goSection("gestao","investments")}/>}

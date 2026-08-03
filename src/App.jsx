@@ -5002,12 +5002,14 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
       ))}
     </div>
     {/* Date filter */}
-    <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap",alignItems:"center"}}>
-      <span style={{fontSize:12,color:B.gray400}}>Período (tarefas concluídas):</span>
-      <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-      <span style={{color:B.gray500,fontSize:12}}>até</span>
-      <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-      {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontSize:12}}>Limpar</button>}
+    <div style={{marginBottom:18}}>
+      <div style={{fontSize:11,fontWeight:700,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Período</div>
+      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+        <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
+        <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+        {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>}
+      </div>
     </div>
 
     {/* Summary cards */}
@@ -5835,7 +5837,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.02.35";
+const APP_VERSION = "2026.08.02.36";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.34";
+const APP_VERSION = "2026.08.03.35";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6228,7 +6228,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
 }
 
 // ─── Fuel Quick Modal ─────────────────────────────────────────────────────────
-const FUEL_TYPES=["Gasolina","Gasolina Aditivada","Etanol","Diesel","Diesel S10","GNV"];
+const FUEL_TYPES=["Gasolina","Gasolina Aditivada","Etanol","Diesel","Diesel S10","GNV","Podium"];
 
 function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
   const activeVehicles=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));

@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.28";
+const APP_VERSION = "2026.08.03.29";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7129,7 +7129,15 @@ function DashAlert({color,label,sub,icon,onClick}){
 }
 
 // ─── Quick Action Sheet ───────────────────────────────────────────────────────
-function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS}){
+function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,theme}){
+  const dk=theme!=="light";
+  const bg=dk?"rgba(16,16,20,0.94)":"rgba(245,245,250,0.97)";
+  const border=dk?"1px solid rgba(255,255,255,.10)":"1px solid rgba(0,0,0,.08)";
+  const shadow=dk?"0 -4px 48px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.10)":"0 -4px 32px rgba(0,0,0,.12)";
+  const labelColor=dk?"rgba(255,255,255,.3)":"rgba(0,0,0,.35)";
+  const btnBorder=dk?"1px solid rgba(255,255,255,.07)":"1px solid rgba(0,0,0,.08)";
+  const btnLabelColor=dk?"rgba(255,255,255,.6)":"rgba(0,0,0,.55)";
+  const handleColor=dk?"rgba(255,255,255,.16)":"rgba(0,0,0,.12)";
   const Ico=({d,c})=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}</svg>;
   const GROUPS=[
     {label:"Oficina",color:B.orange,actions:[
@@ -7145,17 +7153,17 @@ function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS}
   return(
     <div style={{position:"fixed",inset:0,zIndex:300,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={onClose}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}/>
-      <div style={{position:"relative",background:"rgba(16,16,20,0.94)",backdropFilter:"blur(48px) saturate(2)",WebkitBackdropFilter:"blur(48px) saturate(2)",border:"1px solid rgba(255,255,255,.10)",borderRadius:"24px 24px 0 0",padding:"6px 16px",paddingBottom:"calc(32px + env(safe-area-inset-bottom))",boxShadow:"0 -4px 48px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.10)"}} onClick={e=>e.stopPropagation()}>
-        <div style={{width:36,height:4,borderRadius:99,background:"rgba(255,255,255,.16)",margin:"10px auto 18px"}}/>
-        <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",textTransform:"uppercase",letterSpacing:1.2,textAlign:"center",marginBottom:18}}>Ações rápidas</div>
+      <div style={{position:"relative",background:bg,backdropFilter:"blur(48px) saturate(2)",WebkitBackdropFilter:"blur(48px) saturate(2)",border,borderRadius:"24px 24px 0 0",padding:"6px 16px",paddingBottom:"calc(32px + env(safe-area-inset-bottom))",boxShadow:shadow}} onClick={e=>e.stopPropagation()}>
+        <div style={{width:36,height:4,borderRadius:99,background:handleColor,margin:"10px auto 18px"}}/>
+        <div style={{fontSize:11,fontWeight:800,color:labelColor,textTransform:"uppercase",letterSpacing:1.2,textAlign:"center",marginBottom:18}}>Ações rápidas</div>
         {GROUPS.map(g=>(
           <div key={g.label} style={{marginBottom:16}}>
-            <div style={{fontSize:9,fontWeight:800,color:`${g.color}88`,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{g.label}</div>
+            <div style={{fontSize:9,fontWeight:800,color:`${g.color}99`,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{g.label}</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
               {g.actions.map(a=>(
-                <button key={a.label} onClick={a.onClick} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"12px 4px 10px",borderRadius:16,border:"1px solid rgba(255,255,255,.07)",background:`${a.color}10`,cursor:"pointer"}}>
+                <button key={a.label} onClick={a.onClick} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"12px 4px 10px",borderRadius:16,border:btnBorder,background:`${a.color}10`,cursor:"pointer"}}>
                   <div style={{width:40,height:40,borderRadius:12,background:`${a.color}20`,display:"flex",alignItems:"center",justifyContent:"center"}}>{a.icon}</div>
-                  <span style={{fontSize:9.5,fontWeight:700,color:"rgba(255,255,255,.6)",textAlign:"center",lineHeight:1.25}}>{a.label}</span>
+                  <span style={{fontSize:9.5,fontWeight:700,color:btnLabelColor,textAlign:"center",lineHeight:1.25}}>{a.label}</span>
                 </button>
               ))}
             </div>
@@ -7364,7 +7372,17 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
 }
 
 // ─── Nova OS Modal ────────────────────────────────────────────────────────────
-function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen}){
+function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme}){
+  const dk=theme!=="light";
+  const modalBg=dk?"rgba(14,14,18,0.97)":"rgba(248,248,252,0.98)";
+  const inputBg=dk?B.gray800:"#ffffff";
+  const inputBorder=dk?`1px solid ${B.gray600}`:"1px solid #d0d0d8";
+  const rowBg=dk?B.gray800:"#ffffff";
+  const rowBorder=dk?`1px solid ${B.gray700}`:"1px solid #e0e0e8";
+  const handleColor=dk?"rgba(255,255,255,.2)":"rgba(0,0,0,.12)";
+  const textColor=dk?B.white:"#111111";
+  const subColor=dk?B.gray400:"#666666";
+  const subColor2=dk?B.gray500:"#888888";
   const [step,setStep]=useState(1); // 1=busca, 2=dados, 3=empresa
   const [search,setSearch]=useState("");
   const [selectedClient,setSelectedClient]=useState(null);
@@ -7434,15 +7452,15 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen}){
   return(
     <div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={onClose}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.6)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}/>
-      <div style={{position:"relative",background:"rgba(14,14,18,0.97)",backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",border:"1px solid rgba(255,255,255,.10)",borderRadius:"24px 24px 0 0",padding:"8px 16px 40px",maxHeight:"90vh",overflowY:"auto",WebkitOverflowScrolling:"touch"}} onClick={e=>e.stopPropagation()}>
-        <div style={{width:36,height:4,borderRadius:99,background:"rgba(255,255,255,.2)",margin:"10px auto 18px"}}/>
+      <div style={{position:"relative",background:modalBg,backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",border:dk?"1px solid rgba(255,255,255,.10)":"1px solid rgba(0,0,0,.08)",borderRadius:"24px 24px 0 0",padding:"8px 16px 40px",maxHeight:"90vh",overflowY:"auto",WebkitOverflowScrolling:"touch"}} onClick={e=>e.stopPropagation()}>
+        <div style={{width:36,height:4,borderRadius:99,background:handleColor,margin:"10px auto 18px"}}/>
 
         {/* Header */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-          {step>1&&<button onClick={()=>setStep(s=>s-1)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>←</button>}
+          {step>1&&<button onClick={()=>setStep(s=>s-1)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:inputBorder,color:B.gray300,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>←</button>}
           <div style={{flex:1}}>
             <div style={{fontWeight:900,fontSize:16,color:B.white}}>Nova OS</div>
-            <div style={{fontSize:11,color:B.gray500}}>Passo {step} de 3</div>
+            <div style={{fontSize:11,color:subColor2}}>Passo {step} de 3</div>
           </div>
           <div style={{display:"flex",gap:4}}>
             {[1,2,3].map(i=><div key={i} style={{width:i===step?20:6,height:6,borderRadius:99,background:i===step?B.orange:B.gray700,transition:"all .2s"}}/>)}
@@ -7451,32 +7469,32 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen}){
 
         {/* Step 1 — Search */}
         {step===1&&<>
-          <input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, telefone ou placa..." style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:14,outline:"none",marginBottom:12,boxSizing:"border-box"}}/>
+          <input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, telefone ou placa..." style={{width:"100%",padding:"10px 14px",borderRadius:10,border:inputBorder,background:B.gray800,color:textColor,fontSize:14,outline:"none",marginBottom:12,boxSizing:"border-box"}}/>
 
           {q&&matchedVehicles.length>0&&<>
             <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Veículos</div>
             {matchedVehicles.map(v=>{
               const c=clients.find(c=>c.id===v.clientId);
-              return <div key={v.id} onClick={()=>selectExistingVehicle(v)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${B.gray700}`,cursor:"pointer"}}>
+              return <div key={v.id} onClick={()=>selectExistingVehicle(v)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:rowBg,borderRadius:12,marginBottom:6,border:rowBorder,cursor:"pointer"}}>
                 <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🚗</div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,color:B.white,fontSize:13}}>{v.model} <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
-                  {c&&<div style={{fontSize:11,color:B.gray400}}>{c.name}</div>}
+                  <div style={{fontWeight:700,color:textColor,fontSize:13}}>{v.model} <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
+                  {c&&<div style={{fontSize:11,color:subColor}}>{c.name}</div>}
                 </div>
-                <span style={{color:B.gray600,fontSize:16}}>›</span>
+                <span style={{color:subColor2,fontSize:16}}>›</span>
               </div>;
             })}
           </>}
 
           {q&&matchedClients.length>0&&<>
             <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:8,marginTop:4}}>Clientes</div>
-            {matchedClients.map(c=><div key={c.id} onClick={()=>selectExistingClient(c)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${B.gray700}`,cursor:"pointer"}}>
+            {matchedClients.map(c=><div key={c.id} onClick={()=>selectExistingClient(c)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:rowBg,borderRadius:12,marginBottom:6,border:rowBorder,cursor:"pointer"}}>
               <div style={{width:36,height:36,borderRadius:9,background:`${B.green}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>👤</div>
               <div style={{flex:1}}>
-                <div style={{fontWeight:700,color:B.white,fontSize:13}}>{c.name}</div>
-                {c.phone&&<div style={{fontSize:11,color:B.gray400}}>{c.phone}</div>}
+                <div style={{fontWeight:700,color:textColor,fontSize:13}}>{c.name}</div>
+                {c.phone&&<div style={{fontSize:11,color:subColor}}>{c.phone}</div>}
               </div>
-              <span style={{color:B.gray600,fontSize:16}}>›</span>
+              <span style={{color:subColor2,fontSize:16}}>›</span>
             </div>)}
           </>}
 
@@ -7484,7 +7502,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen}){
             <div style={{width:36,height:36,borderRadius:9,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>+</div>
             <div style={{flex:1}}>
               <div style={{fontWeight:700,color:B.orange,fontSize:13}}>Novo cliente e veículo</div>
-              <div style={{fontSize:11,color:B.gray400}}>Cadastrar do zero</div>
+              <div style={{fontSize:11,color:subColor}}>Cadastrar do zero</div>
             </div>
           </div>
         </>}
@@ -7493,28 +7511,28 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen}){
         {step===2&&<>
           {isNew&&<>
             <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Cliente</div>
-            <input value={clientName} onChange={e=>setClientName(e.target.value)} placeholder="Nome do cliente *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
-            <input value={clientPhone} onChange={e=>setClientPhone(e.target.value)} placeholder="Telefone (WhatsApp)" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
+            <input value={clientName} onChange={e=>setClientName(e.target.value)} placeholder="Nome do cliente *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+            <input value={clientPhone} onChange={e=>setClientPhone(e.target.value)} placeholder="Telefone (WhatsApp)" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
             <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Veículo</div>
-            <input value={vModel} onChange={e=>setVModel(e.target.value)} placeholder="Modelo *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+            <input value={vModel} onChange={e=>setVModel(e.target.value)} placeholder="Modelo *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
             <div style={{display:"flex",gap:8,marginBottom:8}}>
-              <input value={vPlate} onChange={e=>setVPlate(e.target.value.toUpperCase())} placeholder="Placa *" style={{flex:1,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
-              <input value={vYear} onChange={e=>setVYear(e.target.value)} placeholder="Ano" style={{width:80,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+              <input value={vPlate} onChange={e=>setVPlate(e.target.value.toUpperCase())} placeholder="Placa *" style={{flex:1,padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
+              <input value={vYear} onChange={e=>setVYear(e.target.value)} placeholder="Ano" style={{width:80,padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
             </div>
-            <input value={vColor} onChange={e=>setVColor(e.target.value)} placeholder="Cor" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
+            <input value={vColor} onChange={e=>setVColor(e.target.value)} placeholder="Cor" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
           </>}
 
           {!isNew&&selectedClient&&<>
-            <div style={{background:B.gray800,borderRadius:12,padding:"12px 14px",marginBottom:16,border:`1px solid ${B.gray700}`}}>
+            <div style={{background:rowBg,borderRadius:12,padding:"12px 14px",marginBottom:16,border:rowBorder}}>
               <div style={{fontWeight:700,color:B.white}}>{selectedClient.name}</div>
-              {selectedClient.phone&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>{selectedClient.phone}</div>}
+              {selectedClient.phone&&<div style={{fontSize:11,color:subColor,marginTop:2}}>{selectedClient.phone}</div>}
             </div>
             <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Selecionar veículo</div>
             {vehicles.filter(v=>v.clientId===selectedClient.id).map(v=>(
               <div key={v.id} onClick={()=>{setSelectedVehicle(v);setStep(3);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:selectedVehicle?.id===v.id?`${B.orange}18`:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${selectedVehicle?.id===v.id?B.orange+"55":B.gray700}`,cursor:"pointer"}}>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,color:B.white,fontSize:13}}>{v.model}</div>
-                  <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}</div>
+                  <div style={{fontWeight:700,color:textColor,fontSize:13}}>{v.model}</div>
+                  <div style={{fontSize:11,color:subColor,fontFamily:"monospace"}}>{v.plate}</div>
                 </div>
                 {selectedVehicle?.id===v.id&&<span style={{color:B.orange}}>✓</span>}
               </div>
@@ -8956,12 +8974,12 @@ export default function App() {
     }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
     {showChangelog&&adminRole&&<ChangelogModal onClose={()=>setShowChangelog(false)}/>}
-    {showQuickSheet&&<QuickActionSheet onClose={()=>setShowQuickSheet(false)} adminRole={adminRole}
+    {showQuickSheet&&<QuickActionSheet onClose={()=>setShowQuickSheet(false)} adminRole={adminRole} theme={theme}
       onFuel={()=>setFuelModal(true)}
       onTask={()=>setQuickTaskModal(true)} onMat={()=>setQuickMatModal(true)}
       onPay={()=>setQuickPayModal(true)}
       onNovaOS={()=>setShowNovaOS(true)}/>}
-    {showNovaOS&&<NovaOSModal
+    {showNovaOS&&<NovaOSModal theme={theme}
       onClose={()=>setShowNovaOS(false)}
       clients={clients} vehicles={vehicles} employees={employees}
       onCreateAndOpen={async({isNew,client,vehicle,existingVehicleId,division,mechanicId})=>{

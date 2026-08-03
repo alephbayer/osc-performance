@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.32";
+const APP_VERSION = "2026.08.03.33";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6146,9 +6146,9 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
     });
   };
 
-  return (<div style={{display:"flex",flexDirection:"column",height:"100%",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+  return (<div style={{minHeight:"100svh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Header */}
-    <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",flexShrink:0,display:"flex",alignItems:"center",gap:12}}>
+    <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",gap:12}}>
       <div style={{width:36,height:36,borderRadius:8,background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📋</div>
       <div>
         <div style={{fontWeight:900,fontSize:15,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
@@ -6156,8 +6156,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       </div>
     </div>
 
-    <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
-    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px",paddingBottom:"calc(20px + env(safe-area-inset-bottom))"}}>
+    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px 40px"}}>
       {/* Vehicle info */}
       <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:180,objectFit:"cover"}}/>}
@@ -6219,7 +6218,6 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       <div style={{textAlign:"center",fontSize:12,color:B.gray500,marginTop:8,paddingBottom:24}}>
         OSC Performance · Histórico gerado em {fmtD()}
       </div>
-    </div>
     </div>
 
     {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
@@ -7799,7 +7797,7 @@ export default function App() {
   }
   if(publicHistoryId){
     if(loading) return <LoadingScreen/>;
-    return <div key={theme} style={{position:"fixed",inset:0,background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
+    return <div key={theme} style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
   }
   if(loading) return <LoadingScreen/>;
   if(loadError) return <ErrorScreen msg={loadError}/>;

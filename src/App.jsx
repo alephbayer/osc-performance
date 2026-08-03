@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.26";
+const APP_VERSION = "2026.08.03.27";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6100,7 +6100,7 @@ function AdminLoginScreen({onLogin}) {
 function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=[]}) {
   const v=vehicles.find(x=>x.id===vehicleId);
   const [lb,setLB]=useState(null);
-  if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
+  if(!v) return (<div style={{background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",minHeight:"60vh"}}>
     <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
   </div>);
 
@@ -6146,9 +6146,9 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
     });
   };
 
-  return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+  return (<div style={{background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Header */}
-    <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",display:"flex",alignItems:"center",gap:12}}>
+    <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",gap:12}}>
       <div style={{width:36,height:36,borderRadius:8,background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📋</div>
       <div>
         <div style={{fontWeight:900,fontSize:15,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
@@ -7579,7 +7579,7 @@ export default function App() {
   }
   if(publicHistoryId){
     if(loading) return <LoadingScreen/>;
-    return <><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
+    return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
   }
   if(loading) return <LoadingScreen/>;
   if(loadError) return <ErrorScreen msg={loadError}/>;

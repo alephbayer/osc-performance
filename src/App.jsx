@@ -5902,7 +5902,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.29";
+const APP_VERSION = "2026.08.03.30";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6146,9 +6146,9 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
     });
   };
 
-  return (<div style={{background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+  return (<div style={{display:"flex",flexDirection:"column",height:"100%",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Header */}
-    <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",gap:12}}>
+    <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",flexShrink:0,display:"flex",alignItems:"center",gap:12}}>
       <div style={{width:36,height:36,borderRadius:8,background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📋</div>
       <div>
         <div style={{fontWeight:900,fontSize:15,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
@@ -6156,7 +6156,8 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       </div>
     </div>
 
-    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px"}}>
+    <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
+    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px",paddingBottom:"calc(20px + env(safe-area-inset-bottom))"}}>
       {/* Vehicle info */}
       <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:180,objectFit:"cover"}}/>}
@@ -6224,6 +6225,8 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
+    </div>{/* end scroll */}
+    </div>{/* end flex */}
   </div>);
 }
 

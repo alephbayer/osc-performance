@@ -6225,8 +6225,8 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
-    </div>{/* end scroll */}
-    </div>{/* end flex */}
+    </div>
+    </div>
   </div>);
 }
 

@@ -5837,7 +5837,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.8";
+const APP_VERSION = "2026.08.03.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6988,17 +6988,17 @@ class ErrorBoundary extends React.Component {
 }
 
 // ─── Liquid Glass Bottom Nav ──────────────────────────────────────────────────
-function LiquidNav({active,setActive,navItems,scrollY}){
+function LiquidNav({active,setActive,navItems,scrollY,theme}){
   const scrolled=scrollY>40;
   return(
     <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent",paddingBottom:"calc(16px + env(safe-area-inset-bottom))"}}>
       <div style={{padding:scrolled?"4px 0":"7px 0",display:"flex",justifyContent:"center",width:"100%",transition:"padding .3s"}}>
         <div style={{
           display:"flex",borderRadius:99,
-          background:"rgba(16,16,20,0.55)",
+          background:theme==="light"?"rgba(240,240,245,0.85)":"rgba(16,16,20,0.55)",
           backdropFilter:"blur(40px) saturate(1.8)",WebkitBackdropFilter:"blur(40px) saturate(1.8)",
-          border:"1px solid rgba(255,255,255,0.10)",
-          boxShadow:"0 6px 28px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.10)",
+          border:theme==="light"?"1px solid rgba(0,0,0,0.10)":"1px solid rgba(255,255,255,0.10)",
+          boxShadow:theme==="light"?"0 6px 28px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.80)":"0 6px 28px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.10)",
           padding:"6px",position:"relative",overflow:"hidden",
           transition:"all .3s cubic-bezier(.4,0,.2,1)",
         }}>
@@ -7011,7 +7011,7 @@ function LiquidNav({active,setActive,navItems,scrollY}){
                 padding:scrolled?`7px 16px`:`9px 22px`,
                 borderRadius:99,border:"none",cursor:"pointer",
                 background:on?"rgba(255,107,0,0.18)":"transparent",
-                color:on?B.orange:"rgba(255,255,255,0.45)",
+                color:on?B.orange:B.gray400,
                 position:"relative",transition:"all .25s cubic-bezier(.4,0,.2,1)",
               }}>
                 {on&&<div style={{position:"absolute",inset:2,borderRadius:99,background:"rgba(255,107,0,0.06)"}}/>}
@@ -8453,7 +8453,7 @@ export default function App() {
       onFuel={()=>setFuelModal(true)}
       onTask={()=>setQuickTaskModal(true)} onMat={()=>setQuickMatModal(true)}
       onPay={()=>setQuickPayModal(true)}/>}
-    <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} setActive={(s)=>{
+    <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} theme={theme} setActive={(s)=>{
       setNavSection(s);
       if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("mechanics");
       if(s==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("purchases")?"purchases":"investments");

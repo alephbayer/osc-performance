@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>OSC Performance — Gestão de Oficina</title>
+    <style>
+      /* Prevent iOS auto-zoom on input focus */
+      input, textarea, select { font-size: 16px !important; }
+
+      html, body {
+        margin: 0; padding: 0;
+        background: #0a0a0a;
+        height: 100%; overflow: hidden;
+      }
+      #root {
+        /* 100dvh = full screen including safe areas on iOS with viewport-fit=cover */
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      ::-webkit-scrollbar { display: none; }
+    </style>
+
+    <!-- PWA -->
+    <meta name="application-name" content="OSC Performance" />
+    <meta name="apple-mobile-web-app-title" content="OSC Performance" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a0a0a" id="theme-color-meta" />
+
+    <!-- Ícones — PNG obrigatório para iOS Safari -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/osc-icon-180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/osc-icon-192.png" />
+    <link rel="icon" type="image/svg+xml" href="/osc-icon.svg" />
+  </head>
+  <body style="margin:0;background:#0a0a0a;" id="osc-body">
+    <div id="root"></div>
+    <script>
+      // Apply saved theme immediately to avoid flash
+      try {
+        const pref = localStorage.getItem("osc_theme") || "auto";
+        const t = pref === "auto"
+          ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+          : pref;
+        const bg = t === "light" ? "#f0f2f5" : "#0a0a0a";
+        document.getElementById("osc-body").style.background = bg;
+        document.getElementById("theme-color-meta").setAttribute("content", bg);
+      } catch(e) {}
+      // Pre-register service worker
+      if("serviceWorker" in navigator){
+        navigator.serviceWorker.register("/sw.js",{scope:"/"}).then(reg=>{
+          // When SW activates after SKIP_WAITING, reload
+          navigator.serviceWorker.addEventListener("controllerchange",()=>{
+            if(!window.__oscReloading){ window.__oscReloading=true; window.location.reload(); }
+          });
+          // Handle SW waiting
+          function onWaiting(worker){
+            if(window.__oscUpdatePending) return;
+            window.__oscUpdatePending=true;
+            const div=document.createElement("div");
+            div.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#ff6b00;color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;font-size:13px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.4);cursor:pointer;font-family:sans-serif;white-space:nowrap";
+            div.textContent="🔄 Nova versão disponível — toque para atualizar";
+            div.onclick=()=>worker.postMessage({type:"SKIP_WAITING"});
+            document.body.appendChild(div);
+          }
+          if(reg.waiting) onWaiting(reg.waiting);
+          reg.addEventListener("updatefound",()=>{
+            const w=reg.installing;
+            w.addEventListener("statechange",()=>{
+              if(w.state==="installed"&&navigator.serviceWorker.controller) onWaiting(w);
+            });
+          });
+        }).catch(()=>{});
+      }
+
+      // Version check — two strategies for reliability
+      (function(){
+        const CURRENT = "2026.08.02.30";
+        const stored = localStorage.getItem("osc_deployed_version");
+
+        function showBanner(){
+          if(window.__oscUpdatePending) return;
+          window.__oscUpdatePending = true;
+          localStorage.setItem("osc_deployed_version", CURRENT);
+          function render(){
+            const div = document.createElement("div");
+            div.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#ff6b00;color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;font-size:13px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.4);cursor:pointer;font-family:sans-serif;white-space:nowrap";
+            div.textContent = "🔄 Nova versão disponível — toque para atualizar";
+            div.onclick = () => window.location.reload();
+            document.body.appendChild(div);
+          }
+          if(document.body) render(); else window.addEventListener("DOMContentLoaded", render);
+        }
+
+        // Strategy 1: HTML-embedded check (works when HTML is fresh)
+        if(stored && stored !== CURRENT) showBanner();
+        else localStorage.setItem("osc_deployed_version", CURRENT);
+
+        // Strategy 2: Poll version.json (works on iOS PWA where HTML is cached)
+        function pollVersion(){
+          fetch("/version.json?t="+Date.now(), {cache:"no-store"})
+            .then(r=>r.json())
+            .then(data=>{
+              const s = localStorage.getItem("osc_deployed_version");
+              if(s && s !== data.version) showBanner();
+              else localStorage.setItem("osc_deployed_version", data.version);
+            }).catch(()=>{});
+        }
+        // Run immediately and every 30s
+        setTimeout(pollVersion, 3000);
+        setInterval(pollVersion, 30000);
+      })();
+    </script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -5837,7 +5837,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.7";
+const APP_VERSION = "2026.08.03.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7011,6 +7011,7 @@ function LiquidNav({active,setActive,navItems,scrollY}){
                 padding:scrolled?`7px 16px`:`9px 22px`,
                 borderRadius:99,border:"none",cursor:"pointer",
                 background:on?"rgba(255,107,0,0.18)":"transparent",
+                color:on?B.orange:"rgba(255,255,255,0.45)",
                 position:"relative",transition:"all .25s cubic-bezier(.4,0,.2,1)",
               }}>
                 {on&&<div style={{position:"absolute",inset:2,borderRadius:99,background:"rgba(255,107,0,0.06)"}}/>}
@@ -7910,7 +7911,7 @@ export default function App() {
   const IGear2=()=><Svg d="M12 15a3 3 0 100-6 3 3 0 000 6z" d2="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" s={17} c={B.amber}/>;
 
   // Nav items by role
-  const mkSvg=(d,c=B.orange)=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={Array.isArray(d)?d[0]:d}/>{Array.isArray(d)&&d.slice(1).map((p,i)=><path key={i} d={p}/>)}</svg>;
+  const mkSvg=(d)=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={Array.isArray(d)?d[0]:d}/>{Array.isArray(d)&&d.slice(1).map((p,i)=><path key={i} d={p}/>)}</svg>;
   const NAV_ITEMS_BY_ROLE={
     owner:[
       {id:"home",    label:"Início",   svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},

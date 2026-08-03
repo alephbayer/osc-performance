@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef, createPortal } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { db, resizeAndUpload, subscribeToChanges } from "./supabase.js";
 
 // ─── Brand ───────────────────────────────────────────────────────────────────
@@ -5902,7 +5903,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.38";
+const APP_VERSION = "2026.08.03.39";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

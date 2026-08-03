@@ -5835,7 +5835,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.02.31";
+const APP_VERSION = "2026.08.02.32";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6988,7 +6988,10 @@ class ErrorBoundary extends React.Component {
 // ─── Liquid Glass Bottom Nav ──────────────────────────────────────────────────
 function LiquidNav({active,setActive,navItems,scrollY}){
   const scrolled=scrollY>40;
-  return(
+  return(<>
+    {/* Filler que cobre a área abaixo da pill até o fundo da tela */}
+    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,height:"calc(16px + env(safe-area-inset-bottom))",background:"#0a0a0a",zIndex:199}}/>
+    {/* A pill em si */}
     <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:"calc(16px + env(safe-area-inset-bottom))",left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent"}}>
       <div style={{padding:scrolled?"6px 0":"9px 0",display:"flex",justifyContent:"center",width:"100%",transition:"padding .3s"}}>
         <div style={{
@@ -7021,7 +7024,7 @@ function LiquidNav({active,setActive,navItems,scrollY}){
         </div>
       </div>
     </div>
-  );
+  </>);
 }
 
 // ─── Tab Section Header ───────────────────────────────────────────────────────

@@ -5835,7 +5835,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.02.33";
+const APP_VERSION = "2026.08.02.34";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7074,9 +7074,9 @@ function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay}){
     ]}]:[]),
   ];
   return(
-    <div style={{position:"fixed",inset:0,zIndex:100,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,zIndex:300,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={onClose}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}/>
-      <div style={{position:"relative",background:"rgba(16,16,20,0.94)",backdropFilter:"blur(48px) saturate(2)",WebkitBackdropFilter:"blur(48px) saturate(2)",border:"1px solid rgba(255,255,255,.10)",borderRadius:"24px 24px 0 0",padding:"6px 16px 48px",boxShadow:"0 -4px 48px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.10)"}} onClick={e=>e.stopPropagation()}>
+      <div style={{position:"relative",background:"rgba(16,16,20,0.94)",backdropFilter:"blur(48px) saturate(2)",WebkitBackdropFilter:"blur(48px) saturate(2)",border:"1px solid rgba(255,255,255,.10)",borderRadius:"24px 24px 0 0",padding:"6px 16px",paddingBottom:"calc(32px + env(safe-area-inset-bottom))",boxShadow:"0 -4px 48px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.10)"}} onClick={e=>e.stopPropagation()}>
         <div style={{width:36,height:4,borderRadius:99,background:"rgba(255,255,255,.16)",margin:"10px auto 18px"}}/>
         <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",textTransform:"uppercase",letterSpacing:1.2,textAlign:"center",marginBottom:18}}>Ações rápidas</div>
         {GROUPS.map(g=>(

@@ -9,21 +9,26 @@
       input, textarea, select { font-size: 16px !important; }
 
       html {
-        height: 100dvh;
+        height: 100%;
         overflow: hidden;
         margin: 0; padding: 0;
       }
       body {
-        height: 100dvh;
+        height: 100%;
         overflow: hidden;
         margin: 0; padding: 0;
         background: #0a0a0a;
       }
       #root {
+        /* Use dvh for initial sizing but lock it via min/max to prevent keyboard resize */
         height: 100dvh;
+        max-height: 100dvh;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        /* Prevent iOS keyboard from resizing the layout */
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
       }
       ::-webkit-scrollbar { display: none; }
     </style>
@@ -83,7 +88,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.08.03.10";
+        const CURRENT = "2026.08.03.11";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

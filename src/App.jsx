@@ -2106,20 +2106,28 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
   const lineTotal = salePrice*qty;
   const freight = Number(mat.freight||0);
   const isImported = !!mat.imported;
-  const importColor = "#f59e0b"; // amber-ish distinct from purple (stock) and orange (brand)
+  const isEstimated = !!mat.estimated;
+  const importColor = "#f59e0b";
   const importBg = "#f59e0b18";
+  const estimatedColor = "#eab308";
+  const estimatedBg = "#eab30815";
 
-  const bg = mat.fromStock ? B.purpleBg : isImported ? importBg : B.gray700;
-  const border = mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : `1px solid ${B.gray600}`;
+  const bg = isEstimated ? estimatedBg : mat.fromStock ? B.purpleBg : isImported ? importBg : B.gray700;
+  const border = isEstimated ? `2px solid ${estimatedColor}66` : mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : `1px solid ${B.gray600}`;
 
   return (<div style={{background:bg,border,borderRadius:8,padding:"7px 10px",width:"100%",boxSizing:"border-box"}}>
-    {/* Line 1: icon + name + imported toggle + remove */}
+    {/* Estimated banner */}
+    {isEstimated&&<div style={{display:"flex",alignItems:"center",gap:5,marginBottom:5,padding:"3px 7px",background:`${estimatedColor}22`,borderRadius:5}}>
+      <span style={{fontSize:10}}>⚠️</span>
+      <span style={{fontSize:10,fontWeight:800,color:estimatedColor,letterSpacing:.3}}>ESTIMADO — quantidade a confirmar</span>
+    </div>}
+    {/* Line 1: icon + name + buttons */}
     <div style={{display:"flex",alignItems:"center",gap:6}}>
-      {mat.fromStock?<IWarehouse s={13} c={B.purple}/>:isImported?<span style={{fontSize:13}}>✈️</span>:<IBox s={13} c={B.gray400}/>}
+      {mat.fromStock?<IWarehouse s={13} c={isEstimated?estimatedColor:B.purple}/>:isImported?<span style={{fontSize:13}}>✈️</span>:<IBox s={13} c={isEstimated?estimatedColor:B.gray400}/>}
       <div style={{flex:1,minWidth:0}}>
         {readOnlyName||mat.fromStock
           ?<div style={{flex:1,minWidth:0}}>
-              <span style={{fontSize:13,color:mat.fromStock?B.purple:isImported?importColor:B.gray200,fontWeight:mat.fromStock||isImported?700:500}}>{mat.name}</span>
+              <span style={{fontSize:13,color:isEstimated?estimatedColor:mat.fromStock?B.purple:isImported?importColor:B.gray200,fontWeight:mat.fromStock||isImported||isEstimated?700:500}}>{mat.name}</span>
               {mat.brand&&<span style={{fontSize:10,color:mat.fromStock?B.purple+"99":B.gray500,marginLeft:6}}>{mat.brand}</span>}
             </div>
           :<div style={{flex:1,minWidth:0}}>
@@ -2129,6 +2137,12 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
                 :<InlineEdit value="" onSave={v=>v.trim()&&onUpdate(idx,{...mat,brand:v.trim()})} placeholder="+ Marca"/>}
             </div>}
       </div>
+      {/* Estimated toggle */}
+      {onUpdate&&<button onClick={()=>onUpdate(idx,{...mat,estimated:!isEstimated})}
+        title={isEstimated?"Confirmar quantidade":"Marcar como estimado"}
+        style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
+        ⚠ {isEstimated?"Estimado":"Estimado?"}
+      </button>}
       {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
         title={isImported?"Remover marcação de importado":"Marcar como importado"}
         style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
@@ -2599,15 +2613,24 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           {vehicle.status==="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
             ▶ Retomar
           </button>}
-          {vehicle.status!=="ready"&&<button onClick={()=>onSetStatus(vehicle.id,"ready")} style={{background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-            ✓ Pronto
-          </button>}
-          {vehicle.status==="ready"&&!vehicle.deliveredAt&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-            ↩ Reabrir
-          </button>}
-          {vehicle.status==="ready"&&!vehicle.deliveredAt&&isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
-            🚗 Entregar
-          </button>}
+          {(()=>{
+            const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id);
+            const hasEstimated=vTasks.some(t=>(t.materials||[]).some(m=>m.estimated));
+            return(<>
+              {vehicle.status!=="ready"&&<button onClick={()=>{
+                if(hasEstimated){alert("⚠️ Existem materiais estimados nesta OS. Confirme ou remova-os antes de marcar como pronto.");return;}
+                onSetStatus(vehicle.id,"ready");
+              }} title={hasEstimated?"Há materiais estimados a confirmar":""} style={{background:hasEstimated?`${B.amber}22`:B.blueBg,border:`1px solid ${hasEstimated?B.amber:B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+                {hasEstimated?"⚠️ Estimados":"✓ Pronto"}
+              </button>}
+              {vehicle.status==="ready"&&!vehicle.deliveredAt&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+                ↩ Reabrir
+              </button>}
+              {vehicle.status==="ready"&&!vehicle.deliveredAt&&isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
+                🚗 Entregar
+              </button>}
+            </>);
+          })()}
           {vehicle.deliveredAt&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
             ✅ Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
           </span>}
@@ -5903,7 +5926,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.39";
+const APP_VERSION = "2026.08.03.41";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6133,7 +6156,10 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600}}>{t.label}</div>
                 {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
-                {(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,color:B.gray500,marginTop:1}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</div>)}
+                {(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{color:m.estimated?"#eab308":B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</span>
+                  {m.estimated&&<span style={{fontSize:9,fontWeight:800,color:"#eab308",background:"#eab30820",border:"1px solid #eab30844",borderRadius:4,padding:"1px 5px",letterSpacing:.3}}>ESTIMADO</span>}
+                </div>)}
                 {tPhotos.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
                   {tPhotos.map((p,pi)=><div key={pi} onClick={()=>setLB(p.url||p)} style={{width:60,height:60,borderRadius:6,overflow:"hidden",cursor:"pointer",flexShrink:0}}>
                     <img src={p.url||p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -7181,6 +7207,8 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
   const [cart,setCart]=useState([]); // {id,name,price,qty,from_stock,stock_item_id}
   const [method,setMethod]=useState("pix");
   const [saleNote,setSaleNote]=useState("");
+  const [discountType,setDiscountType]=useState("percent"); // percent | value
+  const [discountVal,setDiscountVal]=useState("");
   const [showShelfForm,setShowShelfForm]=useState(false);
   const [editItem,setEditItem]=useState(null);
   const [sfName,setSfName]=useState("");
@@ -7193,7 +7221,9 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
 
   const cats=["peças","acessórios","serviços","produtos","outros"];
   const METHODS=["pix","dinheiro","crédito","débito","transferência"];
-  const cartTotal=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const cartSubtotal=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const discountAmount=discountVal?(discountType==="percent"?cartSubtotal*(parseFloat(discountVal)||0)/100:Math.min(parseFloat(discountVal)||0,cartSubtotal)):0;
+  const cartTotal=Math.max(0,cartSubtotal-discountAmount);
 
   function addToCart(item,fromStock=false){
     setCart(c=>{
@@ -7207,10 +7237,11 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
 
   async function finalizeSale(){
     if(!cart.length) return;
-    const sale={total:cartTotal,method,note:saleNote,division:"performance",sold_at:new Date().toISOString()};
+    const discNote=discountAmount>0?` [Desconto: ${discountType==="percent"?discountVal+"%":"R$"+discountVal} = −${fmtBRL(discountAmount)}]`:"";
+    const sale={total:cartTotal,method,note:(saleNote+discNote).trim(),division:"performance",sold_at:new Date().toISOString()};
     const items=cart.map(i=>({shelf_item_id:i.from_stock?null:i.id,name:i.name,price:i.price,qty:i.qty,from_stock:i.from_stock}));
     await onAddSale(sale,items);
-    setCart([]);setSaleNote("");
+    setCart([]);setSaleNote("");setDiscountVal("");
   }
 
   function openShelfForm(item=null){
@@ -7282,9 +7313,27 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
             </div>
           ))}
           <div style={{borderTop:`1px solid ${B.gray700}`,paddingTop:12,marginTop:4}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <span style={{fontWeight:700,color:B.white}}>Total</span>
-              <span style={{fontSize:20,fontWeight:900,color:"#06b6d4"}}>{fmtBRL(cartTotal)}</span>
+            {/* Subtotal */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{color:B.gray400,fontSize:13}}>Subtotal</span>
+              <span style={{fontSize:14,color:B.gray300}}>{fmtBRL(cartSubtotal)}</span>
+            </div>
+            {/* Discount */}
+            <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
+              <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:`1px solid ${B.gray600}`,flexShrink:0}}>
+                <button onClick={()=>setDiscountType("percent")} style={{padding:"6px 10px",background:discountType==="percent"?B.amber+"33":B.gray700,color:discountType==="percent"?B.amber:B.gray400,border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>%</button>
+                <button onClick={()=>setDiscountType("value")} style={{padding:"6px 10px",background:discountType==="value"?B.amber+"33":B.gray700,color:discountType==="value"?B.amber:B.gray400,border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>R$</button>
+              </div>
+              <input type="number" value={discountVal} onChange={e=>setDiscountVal(e.target.value)} placeholder={discountType==="percent"?"Desconto %":"Desconto R$"} style={{flex:1,padding:"6px 10px",borderRadius:8,border:`1px solid ${discountVal?B.amber+"66":B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              {discountVal&&<span style={{fontSize:12,color:B.amber,fontWeight:700,flexShrink:0}}>−{fmtBRL(discountAmount)}</span>}
+            </div>
+            {/* Total */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,paddingTop:8,borderTop:`1px solid ${B.gray700}`}}>
+              <span style={{fontWeight:800,color:B.white,fontSize:15}}>Total</span>
+              <div style={{textAlign:"right"}}>
+                {discountAmount>0&&<div style={{fontSize:11,color:B.gray500,textDecoration:"line-through"}}>{fmtBRL(cartSubtotal)}</div>}
+                <span style={{fontSize:22,fontWeight:900,color:"#06b6d4"}}>{fmtBRL(cartTotal)}</span>
+              </div>
             </div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
               {METHODS.map(m=><button key={m} onClick={()=>setMethod(m)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${method===m?"#06b6d4":B.gray600}`,background:method===m?"#06b6d418":B.gray700,color:method===m?"#06b6d4":B.gray300,fontWeight:700,fontSize:11,cursor:"pointer",textTransform:"capitalize"}}>{m}</button>)}

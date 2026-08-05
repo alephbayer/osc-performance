@@ -1577,76 +1577,123 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
 
     y += 6;
 
-    // ── Totals ────────────────────────────────────────────────────────────
-    const laborTotal  = finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-    const matTotal    = finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
-    const freightTotal= finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
-    const discount    = laborTotal * Number(vehicle.osDiscountPctFinishing||0) / 100;
-    const grandTotal  = laborTotal + matTotal + freightTotal - discount;
+    // ── Totals box (same structure as Performance) ────────────────────────
+    const laborTotal   = finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+    const matTotal     = finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+    const freightTotal = finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
+    const osDiscountPct = Number(vehicle.osDiscountPctFinishing||0);
+    const laborSumForDiscount = laborTotal;
+    const osDiscountAmt = laborSumForDiscount * osDiscountPct / 100;
+    const grandTotal = laborTotal + matTotal + freightTotal - osDiscountAmt;
 
-    const totRows = [
-      {label:"Mão de obra",   val:laborTotal,   show:laborTotal>0},
-      {label:"Peças / materiais", val:matTotal, show:matTotal>0},
-      {label:"Frete",         val:freightTotal, show:freightTotal>0},
-      {label:"Desconto",      val:discount,     show:discount>0, red:true},
-    ].filter(r=>r.show);
+    const extraLines = (freightTotal>0?1:0) + (osDiscountAmt>0?1:0);
+    const totBoxH = 26 + extraLines * 8;
+    const boxW = 85, boxX = pageW - marginX - boxW;
+    checkPageBreak(totBoxH + 14);
 
-    const boxW = 90, boxX = pageW - marginX - boxW;
-    const totH = totRows.length * 7 + 12;
-    checkPageBreak(totH + 4);
-    doc.setFillColor(248,244,255); doc.setDrawColor(...purpleLight); doc.setLineWidth(0.3);
-    doc.roundedRect(boxX, y, boxW, totH, 2, 2, "FD");
-    let ry = y + 7;
-    totRows.forEach(r => {
-      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-      doc.text(r.label, boxX + 4, ry);
-      doc.setFont("helvetica","bold");
-      if(r.red) doc.setTextColor(220,38,38); else doc.setTextColor(...black);
-      doc.text((r.red?"-":"")+fmtBRL(r.val), boxX+boxW-4, ry, {align:"right"});
-      ry += 7;
+    doc.setDrawColor(220,220,220);
+    doc.setFillColor(250,248,255);
+    doc.roundedRect(boxX, y, boxW, totBoxH, 2, 2, "FD");
+
+    doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
+    doc.text("Total de Peças/Materiais", boxX+5, y+9);
+    doc.text("Total de Mão de Obra",     boxX+5, y+17);
+    let nextY = 25;
+    if (freightTotal>0)  { doc.text("Total de Frete", boxX+5, y+nextY); nextY+=8; }
+    if (osDiscountAmt>0) { doc.setTextColor(180,60,60); doc.text(`Desconto (${osDiscountPct}% m.o.)`, boxX+5, y+nextY); doc.setTextColor(...gray); nextY+=8; }
+
+    doc.setFont("helvetica","bold"); doc.setTextColor(...black);
+    doc.text(fmtBRL(matTotal),    boxX+boxW-5, y+9,  {align:"right"});
+    doc.text(fmtBRL(laborTotal),  boxX+boxW-5, y+17, {align:"right"});
+    let nextY2 = 25;
+    if (freightTotal>0)  { doc.text(fmtBRL(freightTotal), boxX+boxW-5, y+nextY2, {align:"right"}); nextY2+=8; }
+    if (osDiscountAmt>0) { doc.setTextColor(180,60,60); doc.text(`-${fmtBRL(osDiscountAmt)}`, boxX+boxW-5, y+nextY2, {align:"right"}); doc.setTextColor(...black); nextY2+=8; }
+
+    doc.setDrawColor(...purpleLight); doc.setLineWidth(0.4);
+    doc.line(boxX+5, y+nextY2-2, boxX+boxW-5, y+nextY2-2);
+    doc.setLineWidth(0.2);
+
+    doc.setFillColor(...purpleLight);
+    doc.roundedRect(boxX, y+nextY2, boxW, 11, 2, 2, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...white);
+    doc.text("TOTAL GERAL", boxX+5, y+nextY2+7);
+    doc.text(fmtBRL(grandTotal), boxX+boxW-5, y+nextY2+7, {align:"right"});
+
+    y += totBoxH + 10;
+
+    // ── Payment methods ────────────────────────────────────────────────────
+    if (y + 60 > 282) { doc.addPage(); y = 16; }
+    doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+    doc.line(marginX, y, pageW-marginX, y); y+=6;
+
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...black);
+    doc.text("FORMAS DE PAGAMENTO", marginX, y); y+=7;
+
+    const payMethods = [
+      {icon:"●", label:"Dinheiro / À vista",                                       lines:[], color:[22,163,74]},
+      {icon:"●", label:"PIX",                                                       lines:["Chave (CNPJ): 23.783.927/0001-40","Beneficiário: OSC Old School Customs"], color:[99,102,241]},
+      {icon:"●", label:"TED / DOC — Itaú",                                         lines:["Ag: 6541 · CC: 98991-6","Beneficiário: OSC Enterprise Custom"], color:[14,165,233]},
+      {icon:"●", label:"Cartão — até 2× sem juros",                                lines:[], color:[245,158,11]},
+      {icon:"●", label:"Cartão Parcelado — até 18× com juros e taxas",             lines:[], color:[239,68,68]},
+    ];
+    payMethods.forEach(pm=>{
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...pm.color);
+      doc.text(pm.icon, marginX, y);
+      doc.setTextColor(...black); doc.text(pm.label, marginX+5, y); y+=4.5;
+      pm.lines.forEach(l=>{ doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...gray); doc.text(l, marginX+5, y); y+=3.8; });
+      y+=1;
     });
-    doc.setFillColor(...purpleLight); doc.rect(boxX, y+totH-11, boxW, 11, "F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...white);
-    doc.text("TOTAL", boxX+4, y+totH-4);
-    doc.text(fmtBRL(grandTotal), boxX+boxW-4, y+totH-4, {align:"right"});
-    y += totH + 10;
+    y+=4;
 
-    // ── Payments ─────────────────────────────────────────────────────────
+    // ── Payments received ──────────────────────────────────────────────────
     const vPayments = payments.filter(p=>p.vehicleId===vehicle.id&&(p.division||"performance")==="finishing");
     if (vPayments.length > 0) {
-      checkPageBreak(16);
-      doc.setDrawColor(200,180,230); doc.setLineWidth(0.3); doc.line(marginX,y,pageW-marginX,y); y+=5;
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...purple);
+      if (y+30>282) { doc.addPage(); y=16; }
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+      doc.line(marginX,y,pageW-marginX,y); y+=6;
+
+      doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...black);
       doc.text("PAGAMENTOS RECEBIDOS", marginX, y); y+=6;
+
       const totalPaid = vPayments.reduce((s,p)=>s+Number(p.amount),0);
+      const balance = grandTotal - totalPaid;
+
       vPayments.forEach(p=>{
-        checkPageBreak(7);
+        if (y+7>282) { doc.addPage(); y=16; }
         const dateStr = p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"";
         doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
         doc.text(`${p.method}${dateStr?`   ${dateStr}`:""}${p.note?`   ${p.note}`:""}`, marginX+3, y);
         doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74);
-        doc.text(fmtBRL(p.amount), pageW-marginX-3, y, {align:"right"});
-        y+=6;
+        doc.text(fmtBRL(p.amount), pageW-marginX, y, {align:"right"});
+        y+=5;
       });
+
       y+=2;
-      const balance = grandTotal - totalPaid;
-      const summH = balance > 0 ? 18 : 12;
-      checkPageBreak(summH+4);
-      doc.setFillColor(...(balance>0?[255,245,245]:[240,255,245]));
-      doc.setDrawColor(...(balance>0?[220,38,38]:[22,163,74]));
-      doc.setLineWidth(0.3); doc.roundedRect(boxX, y, boxW, summH, 2, 2, "FD");
-      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-      doc.text("Total pago", boxX+4, y+7);
+      const balBoxW=85, balBoxX=pageW-marginX-balBoxW;
+      const balBoxH=balance>0?22:14;
+      if (y+balBoxH>282) { doc.addPage(); y=16; }
+      doc.setFillColor(245,245,245); doc.setDrawColor(220,220,220);
+      doc.roundedRect(balBoxX,y,balBoxW,balBoxH,2,2,"FD");
+
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+      doc.text("Total pago", balBoxX+5, y+7);
       doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74);
-      doc.text(fmtBRL(totalPaid), boxX+boxW-4, y+7, {align:"right"});
-      if (balance > 0) {
-        doc.setFont("helvetica","normal"); doc.setTextColor(...gray); doc.text("Saldo em aberto", boxX+4, y+14);
-        doc.setFont("helvetica","bold"); doc.setTextColor(220,38,38); doc.text(fmtBRL(balance), boxX+boxW-4, y+14, {align:"right"});
+      doc.text(fmtBRL(totalPaid), balBoxX+balBoxW-5, y+7, {align:"right"});
+      if (balance>0) {
+        doc.setFont("helvetica","normal"); doc.setTextColor(...gray); doc.text("Saldo em aberto", balBoxX+5, y+15);
+        doc.setFont("helvetica","bold"); doc.setTextColor(220,38,38); doc.text(fmtBRL(balance), balBoxX+balBoxW-5, y+15, {align:"right"});
       } else {
-        doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74); doc.text("QUITADO", boxX+boxW/2, y+7, {align:"center"});
+        doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74); doc.text("✓ Quitado", balBoxX+5, y+7+8);
       }
-      y += summH + 8;
+      y+=balBoxH+8;
     }
+
+    // Footer note
+    if (y+14>282) { doc.addPage(); y=16; }
+    doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...gray);
+    const footerLines = doc.splitTextToSize("Este orçamento é uma estimativa e pode sofrer alterações conforme a necessidade do serviço executado.", contentW);
+    footerLines.forEach((l,i)=>doc.text(l, marginX, y+i*4));
+    doc.text("OSC Finishing Division — Excelência em cada detalhe", marginX, y+footerLines.length*4+3);
   }
 
   // ── Footer ───────────────────────────────────────────────────────────────
@@ -6043,7 +6090,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.45";
+const APP_VERSION = "2026.08.03.46";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

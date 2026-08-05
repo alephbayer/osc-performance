@@ -1343,165 +1343,285 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 }
 
 // ─── Finishing PDF ────────────────────────────────────────────────────────────
-async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRate, payments=[]) {
-  const jsPDF = await loadJsPDF();
-  const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
-  const pageW=210, marginX=14, contentW=pageW-marginX*2;
-  const purple=[130,60,200], purpleLight=[168,85,247];
-  const black=[20,20,20], gray=[80,80,80], lightGray=[140,140,140], white=[255,255,255];
+async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRate, payments=[], company={}) {
+  const jsPDFCtor = await loadJsPDF();
+  const doc = new jsPDFCtor({ unit: "mm", format: "a4" });
+  const pageW = 210, marginX = 14, contentW = pageW - marginX * 2;
+  let y = 0;
 
-  let y=14;
-  const checkPageBreak=(needed)=>{ if(y+needed>282){ doc.addPage(); y=16; }};
+  const purple = [130,60,200], purpleLight = [168,85,247];
+  const black = [20,20,20], gray = [100,100,100];
+  const lightGray = [242,242,242], white = [255,255,255];
 
-  // Header
-  doc.setFillColor(20,20,20); doc.rect(0,0,pageW,26,"F");
-  doc.setFillColor(...purpleLight); doc.rect(0,26,pageW,2,"F");
-  doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(...white);
-  doc.text("OSC", marginX, 17);
-  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...purpleLight);
-  doc.text("FINISHING DIVISION", marginX+0.5, 23);
-  doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...white);
-  doc.text("ORDEM DE SERVICO / ORCAMENTO", pageW-marginX, 15, {align:"right"});
-  doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(180,180,180);
-  doc.text(`Emitido em: ${fmtD()}`, pageW-marginX, 22, {align:"right"});
-  y=34;
+  // ── Header band ──────────────────────────────────────────────────────────
+  doc.setFillColor(...black);
+  doc.rect(0, 0, pageW, 38, "F");
+  doc.setFillColor(...purpleLight);
+  doc.rect(0, 36, pageW, 2, "F");
 
-  // Vehicle info box
-  const extraLines=(client?1:0)+(employee?1:0);
-  const boxH=20+extraLines*6;
-  doc.setFillColor(248,244,255); doc.setDrawColor(...purpleLight); doc.setLineWidth(0.4);
-  doc.rect(marginX,y,contentW,boxH,"FD");
-  doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(...purple);
-  doc.text(vehicle.model||"Veiculo", marginX+4, y+8);
-  if(vehicle.osNumberFinishing){
-    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...purpleLight);
-    doc.text(fmtOSFD(vehicle.osNumberFinishing), pageW-marginX-4, y+8, {align:"right"});
+  // Logo
+  doc.setFillColor(...black);
+  doc.rect(marginX, 2, 32, 32, "F");
+  try {
+    doc.addImage(LOGO_B64, "PNG", marginX, 2, 32, 32);
+  } catch(e) {
+    doc.setTextColor(...white);
+    doc.setFont("helvetica","bold"); doc.setFontSize(14);
+    doc.text("OSC", marginX, 15);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(...purpleLight);
+    doc.text("FINISHING", marginX, 22);
   }
+
+  // Company info
+  const infoX = marginX + 36;
+  doc.setTextColor(...white);
+  doc.setFont("helvetica","bold"); doc.setFontSize(13);
+  doc.text("OSC Finishing Division", infoX, 13);
+  doc.setFont("helvetica","normal"); doc.setFontSize(8);
+  doc.setTextColor(210,210,210);
+  let hY = 20;
+  if (company?.address) { doc.text(company.address, infoX, hY); hY += 5; }
+  const contact = [company?.phone&&`Tel: ${company.phone}`, company?.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ");
+  if (contact) doc.text(contact, infoX, hY);
+
+  doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(180,180,180);
+  doc.text(`Emitido em ${fmtD()}`, pageW - marginX, 30, { align: "right" });
+
+  y = 44;
+
+  // ── Title ────────────────────────────────────────────────────────────────
+  doc.setTextColor(...black);
+  doc.setFont("helvetica","bold"); doc.setFontSize(13);
+  doc.text("ORÇAMENTO DE SERVIÇOS", marginX, y);
+  if (vehicle.osNumberFinishing) {
+    doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...gray);
+    doc.text(fmtOSFD(vehicle.osNumberFinishing), pageW - marginX, y, { align: "right" });
+  }
+  y += 10;
+
+  // ── Info box: client LEFT | vehicle RIGHT ────────────────────────────────
+  const boxH = 28;
+  doc.setFillColor(...lightGray);
+  doc.setDrawColor(220,220,220);
+  doc.roundedRect(marginX, y, contentW, boxH, 2, 2, "F");
+
+  const halfW = contentW / 2;
+  const lx = marginX + 5, rx = marginX + halfW + 5;
+
+  doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...gray);
+  doc.text("CLIENTE", lx, y + 6);
+  doc.text("VEÍCULO", rx, y + 6);
+
+  const clientName = client?.name || "Não informado";
+  doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...black);
+  doc.text(doc.splitTextToSize(clientName, halfW - 10)[0], lx, y + 13);
+
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-  const infoLine=`Placa: ${vehicle.plate}${vehicle.year?`  |  Ano: ${vehicle.year}`:""}${vehicle.color?`  |  Cor: ${vehicle.color}`:""}`;
-  doc.text(infoLine, marginX+4, y+15);
-  let infoY=y+21;
-  if(client){
-    doc.setFont("helvetica","bold"); doc.setTextColor(...black); doc.text("Cliente:", marginX+4, infoY);
-    doc.setFont("helvetica","normal"); doc.setTextColor(...gray); doc.text(client.name, marginX+21, infoY);
-    infoY+=6;
-  }
-  if(employee){
-    doc.setFont("helvetica","bold"); doc.setTextColor(...black); doc.text("Resp.:", marginX+4, infoY);
-    doc.setFont("helvetica","normal"); doc.setTextColor(...gray); doc.text(employee.name, marginX+18, infoY);
-  }
-  if(vehicle.enteredAtFinishing){
-    const d=new Date(vehicle.enteredAtFinishing).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-    doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...lightGray);
-    doc.text(`Entrada: ${d}`, pageW-marginX-4, y+boxH-4, {align:"right"});
-  }
-  y+=boxH+8;
+  doc.text(client?.phone ? `Tel: ${client.phone}` : "", lx, y + 20);
 
-  // Notes
-  if(vehicle.notesFinishing&&vehicle.notesFinishing.trim()){
-    checkPageBreak(16);
-    doc.setFillColor(250,245,255); doc.setDrawColor(...purpleLight); doc.setLineWidth(0.3);
-    doc.rect(marginX,y,contentW,7,"F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...purple);
-    doc.text("OBSERVACOES", marginX+3, y+4.8);
-    y+=10;
-    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-    doc.splitTextToSize(vehicle.notesFinishing.trim(), contentW-6).forEach(ln=>{
-      checkPageBreak(6); doc.text(ln, marginX+3, y); y+=5;
+  const vehicleModel = vehicle.model || "";
+  doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...black);
+  doc.text(doc.splitTextToSize(vehicleModel, halfW - 10)[0], rx, y + 13);
+
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+  const plateText = `Placa: ${vehicle.plate}${vehicle.year ? `  · Ano: ${vehicle.year}` : ""}${vehicle.color ? `  · Cor: ${vehicle.color}` : ""}`;
+  doc.text(plateText, rx, y + 20);
+  if (employee?.name) doc.text(`Resp: ${employee.name}`, rx, y + 26);
+
+  y += boxH + 8;
+
+  // ── Notes ────────────────────────────────────────────────────────────────
+  const notes = vehicle.notesFinishing || vehicle.notes;
+  if (notes && notes.trim()) {
+    if (y + 16 > 282) { doc.addPage(); y = 16; }
+    doc.setFillColor(250, 245, 255);
+    doc.setDrawColor(...purpleLight); doc.setLineWidth(0.3);
+    doc.rect(marginX, y, contentW, 7, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...purple);
+    doc.text("OBSERVAÇÕES DO VEÍCULO", marginX + 3, y + 4.8);
+    y += 14;
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+    doc.splitTextToSize(notes.trim(), contentW - 6).forEach(ln => {
+      if (y + 6 > 282) { doc.addPage(); y = 16; }
+      doc.text(ln, marginX + 3, y); y += 5.5;
     });
-    y+=5;
+    y += 10;
   }
 
-  // Services
-  const finTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&t.division==="finishing");
-  if(finTasks.length>0){
-    checkPageBreak(14);
-    doc.setFillColor(...purpleLight); doc.rect(marginX,y,contentW,7,"F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...white);
-    doc.text("DESCRICAO DO SERVICO", marginX+3, y+4.8);
-    doc.text("VALOR", pageW-marginX-3, y+4.8, {align:"right"});
-    y+=9;
+  // ── Checklist ─────────────────────────────────────────────────────────────
+  const cl = Array.isArray(vehicle.checklistFinishing||vehicle.checklist) ? (vehicle.checklistFinishing||vehicle.checklist) : [];
+  const clAnswered = cl.filter(c => c.status);
+  if (clAnswered.length > 0) {
+    if (y + 16 > 282) { doc.addPage(); y = 16; }
+    doc.setFillColor(240, 232, 255);
+    doc.setDrawColor(...purpleLight); doc.setLineWidth(0.3);
+    doc.rect(marginX, y, contentW, 7, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...purple);
+    doc.text("CHECKLIST DE ENTRADA", marginX + 3, y + 4.8);
+    y += 14;
+    const colW = (contentW - 6) / 2;
+    clAnswered.forEach((state, idx) => {
+      const item = CHECKLIST_ITEMS.find(i => i.id === state.id);
+      if (!item) return;
+      const isOk = state.status === "ok";
+      const statusColor = isOk ? [22,163,74] : [220,38,38];
+      const col = idx % 2;
+      const x = marginX + col * (colW + 6);
+      if (col === 0) { if (idx > 0) y += 7; if (y + 7 > 282) { doc.addPage(); y = 16; } }
+      doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...gray);
+      doc.text(doc.splitTextToSize(item.label, colW - 18)[0], x + 2, y);
+      doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...statusColor);
+      doc.text(isOk?"Bom":"Ruim", x + colW - 2, y, { align: "right" });
+    });
+    y += 14;
+  }
 
-    const catOrder=buildCatOrder(finTasks);
-    const allCatMap={...CAT_MAP,...CAT_MAP_FINISHING};
-    catOrder.forEach(cat=>{
-      const catTs=finTasks.filter(t=>(t.category||null)===cat);
-      if(catTs.every(t=>taskCost(t,defaultRate).total===0)) return;
+  // ── Table ─────────────────────────────────────────────────────────────────
+  const cQty   = marginX + contentW - 100;
+  const cUnit  = marginX + contentW - 70;
+  const cDisc  = marginX + contentW - 38;
+  const cTotal = marginX + contentW - 4;
+
+  const drawTableHeader = () => {
+    doc.setFillColor(...purpleLight);
+    doc.rect(marginX, y, contentW, 8, "F");
+    doc.setTextColor(...white); doc.setFont("helvetica","bold"); doc.setFontSize(8);
+    doc.text("SERVIÇO / MATERIAL", marginX + 3, y + 5.5);
+    doc.text("QTD/H",  cQty,   y + 5.5, { align: "right" });
+    doc.text("UNIT.",  cUnit,  y + 5.5, { align: "right" });
+    doc.text("DESC.",  cDisc,  y + 5.5, { align: "right" });
+    doc.text("TOTAL",  cTotal, y + 5.5, { align: "right" });
+    y += 8; y += 3;
+  };
+
+  const checkPageBreak = (needed = 10) => {
+    if (y + needed > 282) { doc.addPage(); y = 16; drawTableHeader(); }
+  };
+
+  const finTasks = tasks.filter(t => t.vehicleId === vehicle.id && t.division === "finishing");
+  if (finTasks.length > 0) {
+    drawTableHeader();
+
+    const catOrder = buildCatOrder(finTasks);
+    const allCatMap = {...CAT_MAP,...CAT_MAP_FINISHING};
+    let rowIdx = 0;
+
+    catOrder.forEach(cat => {
+      const catTs = finTasks.filter(t => (t.category||null) === cat);
+      if (catTs.length === 0) return;
+
       checkPageBreak(8);
-      const hexStr=cat?(allCatMap[cat]||"#9333ea"):"#9333ea";
-      const cr=parseInt(hexStr.slice(1,3),16), cg=parseInt(hexStr.slice(3,5),16), cb=parseInt(hexStr.slice(5,7),16);
-      // Category row — tinted background
-      const bgR=Math.min(255,Math.round(cr*0.2+235)), bgG=Math.min(255,Math.round(cg*0.2+225)), bgB=Math.min(255,Math.round(cb*0.2+245));
-      doc.setFillColor(bgR,bgG,bgB); doc.rect(marginX,y,contentW,5.5,"F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(cr,cg,cb);
-      doc.text((cat||"Sem categoria").toUpperCase(), marginX+3, y+3.8);
-      y+=6.5;
-      catTs.forEach(t=>{
-        const tc=taskCost(t,defaultRate);
-        if(tc.total===0) return;
-        const rowH=tc.labor>0&&tc.mat>0?11:7;
-        checkPageBreak(rowH+1);
-        doc.setFillColor(252,250,255); doc.rect(marginX,y-0.5,contentW,rowH,"F");
-        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...black);
-        const lbl=doc.splitTextToSize(t.label, contentW-45);
-        doc.text(lbl[0]+(lbl.length>1?"...":""), marginX+3, y+4);
-        doc.setFont("helvetica","bold"); doc.setTextColor(...purple);
-        doc.text(fmtBRL(tc.total), pageW-marginX-3, y+4, {align:"right"});
-        if(tc.labor>0&&tc.mat>0){
-          doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(...lightGray);
-          doc.text(`M.O.: ${fmtBRL(tc.labor)}   Mat.: ${fmtBRL(tc.mat)}`, marginX+5, y+8.5);
-        }
-        y+=rowH;
-        doc.setDrawColor(220,210,240); doc.setLineWidth(0.2); doc.line(marginX,y,pageW-marginX,y);
-        y+=1;
-      });
-      y+=2;
-    });
-    y+=4;
+      const hexStr = cat ? (allCatMap[cat] || "#9333ea") : "#9333ea";
+      const cr = parseInt(hexStr.slice(1,3),16), cg = parseInt(hexStr.slice(3,5),16), cb = parseInt(hexStr.slice(5,7),16);
+      const bgR = Math.min(255,Math.round(cr*0.15+230)), bgG = Math.min(255,Math.round(cg*0.15+220)), bgB = Math.min(255,Math.round(cb*0.15+240));
+      doc.setFillColor(bgR,bgG,bgB);
+      doc.rect(marginX, y, contentW, 6, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(cr,cg,cb);
+      doc.text((cat||"Sem categoria").toUpperCase(), marginX + 3, y + 4.2);
+      y += 7;
 
-    // Totals box
-    const laborTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-    const matTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
-    const freightTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
-    const discount=laborTotal*Number(vehicle.osDiscountPctFinishing||0)/100;
-    const grandTotal=laborTotal+matTotal+freightTotal-discount;
-    const rows=[
-      {label:"Mao de obra",val:laborTotal,show:laborTotal>0},
-      {label:"Pecas / materiais",val:matTotal,show:matTotal>0},
-      {label:"Frete",val:freightTotal,show:freightTotal>0},
-      {label:"Desconto",val:discount,show:discount>0,red:true},
-    ].filter(r=>r.show);
-    const boxW=90, boxX=pageW-marginX-boxW;
-    const totH=rows.length*7+12;
-    checkPageBreak(totH+4);
-    doc.setFillColor(248,244,255); doc.setDrawColor(...purpleLight); doc.setLineWidth(0.3);
-    doc.roundedRect(boxX,y,boxW,totH,2,2,"FD");
-    let ry=y+7;
-    rows.forEach(r=>{
-      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-      doc.text(r.label, boxX+4, ry);
-      doc.setFont("helvetica","bold");
-      if(r.red) doc.setTextColor(220,38,38); else doc.setTextColor(...black);
-      doc.text((r.red?"-":"")+fmtBRL(r.val), boxX+boxW-4, ry, {align:"right"});
-      ry+=7;
+      catTs.forEach(t => {
+        const tc = taskCost(t, defaultRate);
+        const mats = (t.materials||[]).filter(m=>m.name);
+        const rowH = mats.length > 0 ? 7 + mats.length * 5 : 7;
+        checkPageBreak(rowH + 2);
+
+        const rowBg = rowIdx % 2 === 0 ? [252,248,255] : [246,242,252];
+        doc.setFillColor(...rowBg);
+        doc.rect(marginX, y - 1, contentW, rowH + 1, "F");
+
+        // Task label
+        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...black);
+        const lbl = doc.splitTextToSize(t.label, cQty - marginX - 6);
+        doc.text(lbl[0]+(lbl.length>1?"...":""), marginX + 3, y + 4);
+
+        // Qty/hours
+        const qtyVal = t.rateType==="qty" ? (t.hours||1) : (t.hours||0);
+        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+        if (qtyVal) doc.text(String(qtyVal), cQty, y + 4, { align: "right" });
+
+        // Unit price
+        if (t.ratePerHour != null) doc.text(fmtBRL(t.ratePerHour), cUnit, y + 4, { align: "right" });
+
+        // Discount
+        if (vehicle.osDiscountPctFinishing) doc.text(`${vehicle.osDiscountPctFinishing}%`, cDisc, y + 4, { align: "right" });
+
+        // Total
+        doc.setFont("helvetica","bold"); doc.setTextColor(...purple);
+        if (tc.total > 0) doc.text(fmtBRL(tc.total), cTotal, y + 4, { align: "right" });
+
+        // Materials
+        if (mats.length > 0) {
+          let my = y + 9;
+          mats.forEach(m => {
+            doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(150,120,200);
+            const matLine = `  🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${m.estimated?" [EST.]":""}`;
+            doc.text(matLine, marginX + 5, my);
+            if (m.cost>0) {
+              const mp = Number(m.cost)*(1+(Number(m.markup||50))/100)*(m.qty||1);
+              doc.setFont("helvetica","normal"); doc.setTextColor(150,120,200);
+              doc.text(fmtBRL(mp), cTotal, my, { align: "right" });
+            }
+            my += 5;
+          });
+        }
+
+        y += rowH;
+        doc.setDrawColor(220,210,240); doc.setLineWidth(0.2);
+        doc.line(marginX, y, pageW - marginX, y);
+        y += 1;
+        rowIdx++;
+      });
+      y += 2;
     });
-    doc.setFillColor(...purpleLight); doc.rect(boxX,y+totH-11,boxW,11,"F");
+
+    y += 6;
+
+    // ── Totals ────────────────────────────────────────────────────────────
+    const laborTotal  = finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+    const matTotal    = finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+    const freightTotal= finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
+    const discount    = laborTotal * Number(vehicle.osDiscountPctFinishing||0) / 100;
+    const grandTotal  = laborTotal + matTotal + freightTotal - discount;
+
+    const totRows = [
+      {label:"Mão de obra",   val:laborTotal,   show:laborTotal>0},
+      {label:"Peças / materiais", val:matTotal, show:matTotal>0},
+      {label:"Frete",         val:freightTotal, show:freightTotal>0},
+      {label:"Desconto",      val:discount,     show:discount>0, red:true},
+    ].filter(r=>r.show);
+
+    const boxW = 90, boxX = pageW - marginX - boxW;
+    const totH = totRows.length * 7 + 12;
+    checkPageBreak(totH + 4);
+    doc.setFillColor(248,244,255); doc.setDrawColor(...purpleLight); doc.setLineWidth(0.3);
+    doc.roundedRect(boxX, y, boxW, totH, 2, 2, "FD");
+    let ry = y + 7;
+    totRows.forEach(r => {
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+      doc.text(r.label, boxX + 4, ry);
+      doc.setFont("helvetica","bold");
+      doc.setTextColor(r.red?[220,38,38]:black);
+      doc.text((r.red?"-":"")+fmtBRL(r.val), boxX+boxW-4, ry, {align:"right"});
+      ry += 7;
+    });
+    doc.setFillColor(...purpleLight); doc.rect(boxX, y+totH-11, boxW, 11, "F");
     doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...white);
     doc.text("TOTAL", boxX+4, y+totH-4);
     doc.text(fmtBRL(grandTotal), boxX+boxW-4, y+totH-4, {align:"right"});
-    y+=totH+10;
+    y += totH + 10;
 
-    // Payments
-    const vPayments=payments.filter(p=>p.vehicleId===vehicle.id&&(p.division||"performance")==="finishing");
-    if(vPayments.length>0){
+    // ── Payments ─────────────────────────────────────────────────────────
+    const vPayments = payments.filter(p=>p.vehicleId===vehicle.id&&(p.division||"performance")==="finishing");
+    if (vPayments.length > 0) {
       checkPageBreak(16);
       doc.setDrawColor(200,180,230); doc.setLineWidth(0.3); doc.line(marginX,y,pageW-marginX,y); y+=5;
       doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...purple);
       doc.text("PAGAMENTOS RECEBIDOS", marginX, y); y+=6;
-      const totalPaid=vPayments.reduce((s,p)=>s+Number(p.amount),0);
+      const totalPaid = vPayments.reduce((s,p)=>s+Number(p.amount),0);
       vPayments.forEach(p=>{
         checkPageBreak(7);
-        const dateStr=p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"";
+        const dateStr = p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"";
         doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
         doc.text(`${p.method}${dateStr?`   ${dateStr}`:""}${p.note?`   ${p.note}`:""}`, marginX+3, y);
         doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74);
@@ -1509,41 +1629,38 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
         y+=6;
       });
       y+=2;
-      const balance=grandTotal-totalPaid;
-      const summH=balance>0?18:12;
+      const balance = grandTotal - totalPaid;
+      const summH = balance > 0 ? 18 : 12;
       checkPageBreak(summH+4);
-      if(balance>0){
-        doc.setFillColor(255,245,245); doc.setDrawColor(220,38,38);
-      } else {
-        doc.setFillColor(240,255,245); doc.setDrawColor(22,163,74);
-      }
-      doc.setLineWidth(0.3); doc.roundedRect(boxX,y,boxW,summH,2,2,"FD");
+      doc.setFillColor(...(balance>0?[255,245,245]:[240,255,245]));
+      doc.setDrawColor(...(balance>0?[220,38,38]:[22,163,74]));
+      doc.setLineWidth(0.3); doc.roundedRect(boxX, y, boxW, summH, 2, 2, "FD");
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
       doc.text("Total pago", boxX+4, y+7);
       doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74);
       doc.text(fmtBRL(totalPaid), boxX+boxW-4, y+7, {align:"right"});
-      if(balance>0){
+      if (balance > 0) {
         doc.setFont("helvetica","normal"); doc.setTextColor(...gray); doc.text("Saldo em aberto", boxX+4, y+14);
         doc.setFont("helvetica","bold"); doc.setTextColor(220,38,38); doc.text(fmtBRL(balance), boxX+boxW-4, y+14, {align:"right"});
       } else {
         doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74); doc.text("QUITADO", boxX+boxW/2, y+7, {align:"center"});
       }
-      y+=summH+8;
+      y += summH + 8;
     }
   }
 
-  // Footer
-  const totalPages=doc.getNumberOfPages();
-  for(let pg=1;pg<=totalPages;pg++){
+  // ── Footer ───────────────────────────────────────────────────────────────
+  const totalPages = doc.getNumberOfPages();
+  for (let pg = 1; pg <= totalPages; pg++) {
     doc.setPage(pg);
-    doc.setFillColor(20,20,20); doc.rect(0,287,pageW,10,"F");
+    doc.setFillColor(...black); doc.rect(0, 287, pageW, 10, "F");
     doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(...purpleLight);
     doc.text("OSC Finishing Division", marginX, 293);
     doc.setFont("helvetica","normal"); doc.setTextColor(150,150,150);
-    doc.text(`Pagina ${pg} / ${totalPages}`, pageW-marginX, 293, {align:"right"});
+    doc.text(`Página ${pg} / ${totalPages}`, pageW-marginX, 293, {align:"right"});
   }
 
-  const fileName=`finishing-${(vehicle.plate||"").replace(/\s/g,"")}-${new Date().toISOString().slice(0,10)}.pdf`;
+  const fileName = `finishing-${(vehicle.plate||"").replace(/\s/g,"")}-${new Date().toISOString().slice(0,10)}.pdf`;
   doc.save(fileName);
 }
 
@@ -2517,7 +2634,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
     try{
       if(isFD){
         const finPayments=payments.filter(p=>p.division==="finishing");
-        await generateFinishingPDF(vehicle,tasks,cli,mech,defaultRate,finPayments);
+        await generateFinishingPDF(vehicle,tasks,cli,mech,defaultRate,finPayments,company);
       } else {
         await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate,undefined,payments);
       }
@@ -5926,7 +6043,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.43";
+const APP_VERSION = "2026.08.03.44";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

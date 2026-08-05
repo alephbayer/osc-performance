@@ -1543,8 +1543,14 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
         // Unit price
         if (t.ratePerHour != null) doc.text(fmtBRL(t.ratePerHour), cUnit, y + 4, { align: "right" });
 
-        // Discount
-        if (vehicle.osDiscountPctFinishing) doc.text(`${vehicle.osDiscountPctFinishing}%`, cDisc, y + 4, { align: "right" });
+        // Discount column — per-task discount
+        if (tc.discount > 0) {
+          doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(180,60,60);
+          doc.text(`-${fmtBRL(tc.discount)}`, cDisc, y + 4, { align: "right" });
+        } else {
+          doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
+          doc.text("—", cDisc, y + 4, { align: "right" });
+        }
 
         // Total
         doc.setFont("helvetica","bold"); doc.setTextColor(...purple);
@@ -6090,7 +6096,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.46";
+const APP_VERSION = "2026.08.03.47";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

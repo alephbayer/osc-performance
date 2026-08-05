@@ -5926,7 +5926,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.41";
+const APP_VERSION = "2026.08.03.43";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6210,6 +6210,25 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       {hasActive&&<div style={S.card}>
         <div style={S.pad}>
           <div style={{fontWeight:800,fontSize:13,color:B.orange,marginBottom:10}}>🔧 OS em andamento</div>
+          {/* Estimated materials warning */}
+          {(()=>{
+            const estimatedMats=activeTasks.flatMap(t=>(t.materials||[]).filter(m=>m.estimated&&m.name).map(m=>m.name));
+            if(estimatedMats.length===0) return null;
+            return(
+              <div style={{background:"#eab30818",border:"2px solid #eab30855",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                  <span style={{fontSize:16}}>⚠️</span>
+                  <span style={{fontWeight:800,fontSize:13,color:"#eab308"}}>Itens com valor estimado</span>
+                </div>
+                <p style={{fontSize:12,color:"#eab30899",margin:"0 0 8px 0",lineHeight:1.5}}>
+                  Os materiais abaixo estão com quantidades ou valores estimados. O preço final pode ser diferente após confirmação:
+                </p>
+                <ul style={{margin:0,padding:"0 0 0 16px"}}>
+                  {estimatedMats.map((n,i)=><li key={i} style={{fontSize:12,color:"#eab308",fontWeight:700,marginBottom:2}}>{n}</li>)}
+                </ul>
+              </div>
+            );
+          })()}
           {renderTaskList(activeTasks,(v.photos||[]).map(p=>typeof p==="string"?{url:p,taskId:null}:p))}
           {activeTasks.length===0&&<div style={{fontSize:13,color:B.gray500}}>Nenhuma tarefa registrada ainda.</div>}
         </div>
@@ -7859,7 +7878,7 @@ export default function App() {
     const liveEmp=mechSession?(employees.find(e=>e.id===mechSession.id)||mechSession):null;
     if(!liveEmp) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><MechanicLoginScreen employees={employees} onLogin={doLogin}/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
     return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><MechanicPortal employee={liveEmp} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} stock={stock}
-      onAddTask={async(vid,lbl)=>{try{const div=liveEmp.division||"performance";const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:0,ratePerHour:null,completedAt:null,division:div,rateType:div==="finishing"?"qty":"hour"});setTsk(p=>[...p,row]);const v=vehicles.find(x=>x.id===vid);const vModel=v?.model||v?.plate||"Veículo";db.sendPushToAdmins(`Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});}catch(e){errToast(e);}}}
+      onAddTask={async(vid,lbl)=>{try{const div=liveEmp.division||"performance";const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:div==="finishing"?1:0,ratePerHour:null,completedAt:null,division:div,rateType:div==="finishing"?"qty":"hour"});setTsk(p=>[...p,row]);const v=vehicles.find(x=>x.id===vid);const vModel=v?.model||v?.plate||"Veículo";db.sendPushToAdmins(`Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});}catch(e){errToast(e);}}}
       onToggleTask={async id=>{const t=tasks.find(x=>x.id===id);const nowDone=!t.done;const completedAt=nowDone?new Date().toISOString():null;const completedByEmployeeId=nowDone?liveEmp.id:null;setTsk(p=>p.map(x=>x.id===id?{...x,done:nowDone,completedAt,completedByEmployeeId}:x));try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});const v=vehicles.find(x=>x.id===t.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(nowDone){db.sendPushToAdmins(`✅ ${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`✅ ${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}else{db.sendPushToAdmins(`↩ ${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`🔄 ${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}pushToVehicleMechs(t.vehicleId,nowDone?`✅ Tarefa concluída — ${vModel}`:`↩ Tarefa reaberta — ${vModel}`,t.label,t.division);}catch(e){errToast(e);}}}
       onDeleteTask={async id=>{const t=tasks.find(x=>x.id===id);setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(t)db.sendPushToAdmins(`🗑 ${vModel}`,`Tarefa removida: ${t.label}`,"/?").catch(()=>{});if(t&&v?.clientId)db.sendPushToClient(v.clientId,`🗑 ${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}catch(e){errToast(e);}}}
       onUpdateTask={async(id,patch)=>{setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);if(patch.materials){const t=tasks.find(x=>x.id===id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";const matNames=(patch.materials||[]).filter(m=>m.name).map(m=>m.name).join(", ");if(matNames)db.sendPushToAdmins(`📦 Material — ${vModel}`,`Materiais atualizados: ${matNames}`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
@@ -8208,7 +8227,7 @@ export default function App() {
   // ── Tasks
   const addTask=async(vid,lbl,category=null,division="performance")=>{
     try{
-      const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:0,ratePerHour:null,completedAt:null,category:category||null,division,rateType:division==="finishing"?"qty":"hour"});
+      const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:division==="finishing"?1:0,ratePerHour:null,completedAt:null,category:category||null,division,rateType:division==="finishing"?"qty":"hour"});
       setTsk(p=>[...p,row]);
       // Push notification to assigned mechanics
       const v=vehicles.find(x=>x.id===vid);

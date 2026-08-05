@@ -1601,7 +1601,7 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
       doc.text(r.label, boxX + 4, ry);
       doc.setFont("helvetica","bold");
-      doc.setTextColor(r.red?[220,38,38]:black);
+      if(r.red) doc.setTextColor(220,38,38); else doc.setTextColor(...black);
       doc.text((r.red?"-":"")+fmtBRL(r.val), boxX+boxW-4, ry, {align:"right"});
       ry += 7;
     });
@@ -6043,7 +6043,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.44";
+const APP_VERSION = "2026.08.03.45";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

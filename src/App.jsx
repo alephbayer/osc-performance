@@ -2231,31 +2231,45 @@ function CreateVehicleModal({clients,onConfirm,onClose}) {
 
 function StockPickerModal({stock,onPick,onClose}) {
   const [q,setQ]=useState("");
+  const [quoteOnly,setQuoteOnly]=useState(false);
   const filtered=stock.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())||s.brand.toLowerCase().includes(q.toLowerCase()));
   return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:95,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",overflow:"hidden",border:`1px solid ${B.gray600}`}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.purple}`,display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:34,height:34,borderRadius:8,background:B.purpleBg,display:"flex",alignItems:"center",justifyContent:"center"}}><IWarehouse s={16} c={B.purple}/></div>
-        <div><div style={{fontWeight:700,fontSize:14,color:B.white}}>Selecionar do Estoque</div><div style={{fontSize:12,color:B.gray400}}>Clique para usar o item</div></div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:14,color:B.white}}>Selecionar do Estoque</div>
+          <div style={{fontSize:12,color:B.gray400}}>Clique para usar o item</div>
+        </div>
       </div>
       <div style={{padding:16}}>
+        {/* Quote-only toggle */}
+        <button onClick={()=>setQuoteOnly(q=>!q)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:9,background:quoteOnly?`${B.amber}18`:B.gray700,border:`1px solid ${quoteOnly?B.amber+"66":B.gray600}`,cursor:"pointer",marginBottom:10}}>
+          <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${quoteOnly?B.amber:B.gray500}`,background:quoteOnly?B.amber:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            {quoteOnly&&<span style={{fontSize:10,color:B.black,fontWeight:900}}>✓</span>}
+          </div>
+          <div style={{textAlign:"left"}}>
+            <div style={{fontSize:12,fontWeight:700,color:quoteOnly?B.amber:B.gray300}}>Apenas orçamento</div>
+            <div style={{fontSize:10,color:B.gray500}}>Lança o valor sem descontar do estoque</div>
+          </div>
+        </button>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar produto…" autoFocus
           style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
         <div style={{maxHeight:300,overflowY:"auto"}}>
           {filtered.length===0?<div style={{textAlign:"center",padding:"16px 0",color:B.gray400,fontSize:13}}>Nenhum produto encontrado.</div>
             :filtered.map(s=>(
-              <button key={s.id} onClick={()=>onPick(s)} disabled={s.qty<=0} style={{width:"100%",textAlign:"left",padding:"10px 12px",borderRadius:9,background:s.qty>0?B.gray700:B.gray800,border:`1px solid ${s.qty>0?B.gray600:B.gray700}`,color:s.qty>0?B.white:B.gray500,cursor:s.qty>0?"pointer":"not-allowed",marginBottom:7,display:"flex",alignItems:"center",gap:10,opacity:s.qty>0?1:.6}}
-                onMouseEnter={e=>{if(s.qty>0){e.currentTarget.style.background=B.purpleBg;e.currentTarget.style.borderColor=B.purple;}}}
-                onMouseLeave={e=>{if(s.qty>0){e.currentTarget.style.background=B.gray700;e.currentTarget.style.borderColor=B.gray600;}}}>
+              <button key={s.id} onClick={()=>onPick(s,quoteOnly)} disabled={!quoteOnly&&s.qty<=0} style={{width:"100%",textAlign:"left",padding:"10px 12px",borderRadius:9,background:(quoteOnly||s.qty>0)?B.gray700:B.gray800,border:`1px solid ${(quoteOnly||s.qty>0)?B.gray600:B.gray700}`,color:(quoteOnly||s.qty>0)?B.white:B.gray500,cursor:(quoteOnly||s.qty>0)?"pointer":"not-allowed",marginBottom:7,display:"flex",alignItems:"center",gap:10,opacity:(quoteOnly||s.qty>0)?1:.6}}
+                onMouseEnter={e=>{if(quoteOnly||s.qty>0){e.currentTarget.style.background=B.purpleBg;e.currentTarget.style.borderColor=B.purple;}}}
+                onMouseLeave={e=>{if(quoteOnly||s.qty>0){e.currentTarget.style.background=B.gray700;e.currentTarget.style.borderColor=B.gray600;}}}>
                 {s.photo?<img src={s.photo} alt="" style={{width:36,height:36,borderRadius:7,objectFit:"cover",flexShrink:0}}/>
                   :<div style={{width:36,height:36,borderRadius:7,background:B.purpleBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IBox s={16} c={B.purple}/></div>}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
-                  <div style={{fontSize:11,color:B.gray400}}>{s.brand} · {s.type} · Qtd: {s.qty}</div>
+                  <div style={{fontSize:11,color:B.gray400}}>{s.brand} · {s.type} · Qtd: {s.qty}{!quoteOnly&&s.qty<=0?" · SEM ESTOQUE":""}</div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:12,fontWeight:800,color:B.amber}}>{fmtBRL(s.salePrice)}</div>
-                  <div style={{fontSize:10,color:B.gray400}}>venda</div>
+                  <div style={{fontSize:12,fontWeight:800,color:quoteOnly?B.amber:B.amber}}>{fmtBRL(s.salePrice)}</div>
+                  <div style={{fontSize:10,color:quoteOnly?B.amber+"88":B.gray400}}>{quoteOnly?"orçamento":"venda"}</div>
                 </div>
               </button>
             ))}
@@ -2499,7 +2513,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
     if(m?.fromStock&&m?.stockItemId&&onReturnStock) onReturnStock(task.id,idx,m.stockItemId);
     else onUpdate(task.id,{materials:mats.filter((_,i)=>i!==idx)});
   };
-  const pickStock=(item)=>{ onConsumeStock(task.id,item,mats); setSP(false); };
+  const pickStock=(item,quoteOnly=false)=>{ onConsumeStock(task.id,item,mats,quoteOnly); setSP(false); };
 
   const addFromPurchaseOrder=(o)=>{
     const salePrice=o.costPrice!=null?o.costPrice*(1+(o.markupPct||30)/100):0;
@@ -3362,10 +3376,18 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
   const [confirmDelete,setConfirmDelete]=useState(null);
 
   const types =[...new Set(stock.map(s=>s.type).filter(Boolean))].sort();
-  const filtered=stock.filter(s=>
+  const filtered=[...stock.filter(s=>
     (!search||s.name.toLowerCase().includes(search.toLowerCase()))&&
     (!filterType||s.type===filterType)
-  );
+  )].sort((a,b)=>{
+    // Low stock first
+    const aLow=(a.qty||0)<=(a.minQty||2);
+    const bLow=(b.qty||0)<=(b.minQty||2);
+    if(aLow&&!bLow) return -1;
+    if(!aLow&&bLow) return 1;
+    // Then alphabetical
+    return (a.name||"").localeCompare(b.name||"","pt-BR");
+  });
 
   const salePrice=s=>Number(s.costPrice||0)*(1+Number(s.markup||0)/100);
 
@@ -3970,6 +3992,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 }
 function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment}) {
   const [search,setSearch]=useState("");
+  const [osFilter,setOsFilter]=useState("all"); // all | active | available
   const [now,setNow]=useState(Date.now());
   const [showCreate,setShowCreate]=useState(false);
 
@@ -3978,12 +4001,15 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
     return ()=>clearInterval(t);
   },[]);
 
-  const filtered=vehicles.filter(v=>
-    !search ||
-    v.model.toLowerCase().includes(search.toLowerCase()) ||
-    v.plate.toLowerCase().includes(search.toLowerCase()) ||
-    (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered=vehicles.filter(v=>{
+    const hasOS=!!(v.enteredAt||v.enteredAtFinishing);
+    if(osFilter==="active"&&!hasOS) return false;
+    if(osFilter==="available"&&hasOS) return false;
+    if(!search) return true;
+    return v.model.toLowerCase().includes(search.toLowerCase())||
+      v.plate.toLowerCase().includes(search.toLowerCase())||
+      (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase());
+  });
 
   const sorted=[...filtered].sort((a,b)=>{
     if(a.enteredAt && b.enteredAt) return new Date(a.enteredAt)-new Date(b.enteredAt);
@@ -3992,10 +4018,13 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
     return 0;
   });
 
+  const activeCount=vehicles.filter(v=>!!(v.enteredAt||v.enteredAtFinishing)).length;
+  const availableCount=vehicles.length-activeCount;
+
   return (<div>
-    {/* Search bar + new vehicle button */}
-    <div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center"}}>
-      <div style={{position:"relative",flex:1,maxWidth:340}}>
+    {/* Search bar + filters */}
+    <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
+      <div style={{position:"relative",flex:1,minWidth:180}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
           style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
         <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray400}}><ISearch s={14}/></span>
@@ -4004,7 +4033,19 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
       <button onClick={()=>setShowCreate(true)} style={{padding:"8px 14px",borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
         <IPlus s={14} c={B.orange}/>Novo veículo
       </button>
-      <div style={{fontSize:11,color:B.gray400,flexShrink:0}}>{sorted.length} veículo{sorted.length!==1?"s":""}</div>
+    </div>
+    {/* OS status filter */}
+    <div style={{display:"flex",gap:6,marginBottom:16}}>
+      {[
+        {k:"all",     label:`Todos (${vehicles.length})`,         color:B.gray400},
+        {k:"active",  label:`Em OS (${activeCount})`,             color:B.orange},
+        {k:"available",label:`Disponíveis (${availableCount})`,   color:B.green},
+      ].map(f=>(
+        <button key={f.k} onClick={()=>setOsFilter(f.k)} style={{padding:"5px 14px",borderRadius:99,border:`1px solid ${osFilter===f.k?f.color+"66":B.gray700}`,background:osFilter===f.k?`${f.color}18`:"transparent",color:osFilter===f.k?f.color:B.gray500,fontWeight:700,fontSize:12,cursor:"pointer"}}>
+          {f.label}
+        </button>
+      ))}
+      <div style={{marginLeft:"auto",fontSize:11,color:B.gray500,alignSelf:"center"}}>{sorted.length} resultado{sorted.length!==1?"s":""}</div>
     </div>
 
     {showCreate&&<CreateVehicleModal clients={clients} onConfirm={(data)=>{onCreateVehicle&&onCreateVehicle(data);setShowCreate(false);}} onClose={()=>setShowCreate(false)}/>}
@@ -4838,6 +4879,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
   const [receiveModal,setReceiveModal]=useState(null);
   const [returnModal,setReturnModal]=useState(null);
   const [location,setLocation]=useState("");
+  const [openReceived,setOpenReceived]=useState(false);
 
   const byStatus=filter==="all"?orders:orders.filter(o=>o.status===filter);
   const filtered=search.trim()
@@ -4980,7 +5022,8 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
       <div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum pedido aqui</div>
     </div>}
 
-    {filtered.map(o=>{
+    {/* Active orders */}
+    {filtered.filter(o=>o.status!=="received").map(o=>{
       const v=vehicles.find(x=>x.id===o.vehicleId);
       const emp=employees.find(x=>x.id===o.employeeId);
       const t=tasks.find(x=>x.id===o.taskId);
@@ -5074,6 +5117,42 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
         </div>
       </div>);
     })}
+
+    {/* Received orders — collapsible */}
+    {(()=>{
+      const received=filtered.filter(o=>o.status==="received");
+      if(received.length===0) return null;
+      return(<div style={{marginTop:16}}>
+        <button onClick={()=>setOpenReceived(r=>!r)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,background:B.gray800,border:`1px solid ${B.gray700}`,cursor:"pointer",color:B.gray300,fontWeight:700,fontSize:13}}>
+          <span style={{fontSize:16}}>{openReceived?"▾":"▸"}</span>
+          <span>Pedidos Recebidos</span>
+          <span style={{marginLeft:"auto",background:`${B.green}22`,color:B.green,fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:99}}>{received.length}</span>
+        </button>
+        {openReceived&&<div style={{marginTop:8}}>
+          {received.map(o=>{
+            const v=vehicles.find(x=>x.id===o.vehicleId);
+            const emp=employees.find(x=>x.id===o.employeeId);
+            const t=tasks.find(x=>x.id===o.taskId);
+            const st=PO_STATUS[o.status];
+            const isInstalled=o.status==="received"&&tasks.filter(x=>x.vehicleId===o.vehicleId).flatMap(x=>x.materials||[]).some(m=>m.purchaseOrderId===o.id);
+            const isReserved=o.status==="received"&&(v?.partsList||[]).some(p=>p.purchaseOrderId===o.id);
+            return(<div key={o.id} style={{background:`${B.green}08`,border:`1px solid ${B.green}22`,borderRadius:10,padding:"10px 12px",marginBottom:6,opacity:0.8}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:12,fontWeight:800,color:B.green}}>✓</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:13,color:B.white}}>{o.partName}</div>
+                  <div style={{fontSize:11,color:B.gray400}}>{v?.model} {v?.plate?`· ${v.plate}`:""}{emp?` · ${emp.name}`:""}</div>
+                  {o.costPrice&&<div style={{fontSize:11,color:B.green}}>R$ {Number(o.costPrice).toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>}
+                </div>
+                {isInstalled&&<span style={{fontSize:10,color:B.blue,fontWeight:700,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}>✓ Instalada</span>}
+                {isReserved&&!isInstalled&&<span style={{fontSize:10,color:B.purple,fontWeight:700,background:`${B.purple}18`,padding:"2px 7px",borderRadius:6}}>📦 Reservada</span>}
+                {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>setReturnModal(o)} style={{background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:700}}>Devolver</button>}
+              </div>
+            </div>);
+          })}
+        </div>}
+      </div>);
+    })()}
   </div>);
 }
 
@@ -6096,7 +6175,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.47";
+const APP_VERSION = "2026.08.03.48";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8485,17 +8564,20 @@ export default function App() {
     }catch(e){errToast(e);}
   };
   // Adds a stock item as a new material entry (list grows, no limit)
-  const consumeStock=async(taskId,item,currentMats)=>{
-    const matQty=1; // initial qty when adding from stock picker — user can edit afterwards
-    const newQty=Math.max(0,item.qty-matQty);
+  const consumeStock=async(taskId,item,currentMats,quoteOnly=false)=>{
+    const matQty=1;
     const mats = currentMats || tasks.find(t=>t.id===taskId)?.materials || [];
-    const newMats = [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:true,stockItemId:item.id}];
-    setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));
+    // quoteOnly: add value but don't deduct from stock, and don't link to stockItemId
+    const newMats = [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:!quoteOnly,stockItemId:quoteOnly?null:item.id,quoteOnly:quoteOnly||undefined}];
+    if(!quoteOnly){
+      const newQty=Math.max(0,item.qty-matQty);
+      setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));
+      try{ await db.updateStock(item.id,{qty:newQty}); }catch(e){errToast(e);}
+    }
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
     try{
-      await db.updateStock(item.id,{qty:newQty});
       await db.updateTask(taskId,{materials:newMats});
-      toast_(`${item.name} descontado do estoque ✓`);
+      toast_(quoteOnly?`${item.name} adicionado ao orçamento (sem descontar estoque) ✓`:`${item.name} descontado do estoque ✓`);
     }catch(e){errToast(e);}
   };
   // Removes one specific material (by index) from a task's list and returns its full quantity to stock if applicable
@@ -8899,7 +8981,7 @@ export default function App() {
 
     {/* ── Main content area ── */}
     <div style={{flex:1,overflow:"hidden",position:"relative",minWidth:0,background:B.black}}>
-    <div ref={mainScrollRef} onScroll={()=>setScrollY(mainScrollRef.current?.scrollTop||0)} style={{height:"100%",padding:"20px 14px 0",paddingTop:"calc(env(safe-area-inset-top) + 20px)",overflowY:"auto",scrollbarWidth:"none",msOverflowStyle:"none",WebkitOverflowScrolling:"touch",maxWidth:820,margin:"0 auto",width:"100%",boxSizing:"border-box"}}>
+    <div ref={mainScrollRef} onScroll={()=>setScrollY(mainScrollRef.current?.scrollTop||0)} style={{height:"100%",padding:"20px 14px 0",paddingTop:"calc(env(safe-area-inset-top) + 20px)",overflowY:"auto",scrollbarWidth:"none",msOverflowStyle:"none",WebkitOverflowScrolling:"touch",maxWidth:820,margin:"0 auto",width:"100%",boxSizing:"border-box",background:B.black}}>
       <ErrorBoundary>
 
       {/* Push notification banner */}
@@ -8926,7 +9008,7 @@ export default function App() {
               {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
               {allowedTabs.includes("clients")&&tabBtn("clients","OSC Performance",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,B.orange)}
               {allowedTabs.includes("finishing")&&tabBtn("finishing","OSC Finishing Division",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>,FD.primary)}
-              {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos",<ICar s={13}/>,B.blue)}
+              {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos Cadastrados",<ICar s={13}/>,B.blue)}
               {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
             </>}
             {navSection==="gestao"&&<>
@@ -9079,7 +9161,7 @@ export default function App() {
           osHistory={osHistory} payments={payments} onAddClient={addCliDirect}/>
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
-        <TabHeader color={B.blue} title="🚗 Veículos" subtitle="Visão geral, tempo na oficina e histórico"/>
+        <TabHeader color={B.blue} title="🚗 Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
         <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>

@@ -6205,7 +6205,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.54";
+const APP_VERSION = "2026.08.03.55";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9015,7 +9015,7 @@ export default function App() {
     {/* ── Main content area ── */}
     <div style={{flex:1,overflow:"hidden",position:"relative",minWidth:0,background:B.black}}>
     <div ref={mainScrollRef} onScroll={()=>setScrollY(mainScrollRef.current?.scrollTop||0)} style={{height:"100%",padding:"20px 14px 0",paddingTop:"calc(env(safe-area-inset-top) + 20px)",overflowY:"auto",scrollbarWidth:"none",msOverflowStyle:"none",WebkitOverflowScrolling:"touch",maxWidth:820,margin:"0 auto",width:"100%",boxSizing:"border-box",background:B.black}}>
-    <div style={{minHeight:"100%",background:B.black}}>
+    <div style={{minHeight:"calc(100vh - env(safe-area-inset-top) - 20px)",background:B.black,paddingBottom:"80px"}}>
       <ErrorBoundary>
 
       {/* Push notification banner */}
@@ -9301,7 +9301,7 @@ export default function App() {
       </>} {/* end oficina/gestao */}
       <div style={{height:"calc(68px + env(safe-area-inset-bottom))",flexShrink:0}}/>
       </ErrorBoundary>
-    </div>{/* end inner */}
+    </div>
     </div>{/* end scroll container */}
 
     {modal&&<ShareModal {...modal} onClose={()=>setMod(null)}/>}

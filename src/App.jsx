@@ -4570,7 +4570,8 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
         </div>
         {inv.objective&&<div style={{fontSize:12,color:B.gray400,marginBottom:4,lineHeight:1.4}}>{inv.objective}</div>}
         <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-          {inv.value>0&&<span style={{fontSize:12,color:B.white,fontWeight:700}}>{fmtBRL(total)}{inv.quantity>1?<span style={{color:B.gray500,fontWeight:400}}> ({inv.quantity}× {fmtBRL(inv.value)})</span>:""}</span>}
+          {inv.category==="materiais"&&<span style={{fontSize:12,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:6,padding:"1px 8px"}}>Qtd: {inv.quantity||1}</span>}
+          {inv.value>0&&<span style={{fontSize:12,color:B.white,fontWeight:700}}>{fmtBRL(total)}{inv.quantity>1&&inv.category!=="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({inv.quantity}× {fmtBRL(inv.value)})</span>:inv.quantity>1&&inv.category==="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({fmtBRL(inv.value)} cada)</span>:""}</span>}
           {inv.link&&<a href={inv.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:B.blue,display:"flex",alignItems:"center",gap:3}}>🔗 Ver link</a>}
         </div>
       </div>
@@ -6175,7 +6176,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.48";
+const APP_VERSION = "2026.08.03.50";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8982,6 +8983,7 @@ export default function App() {
     {/* ── Main content area ── */}
     <div style={{flex:1,overflow:"hidden",position:"relative",minWidth:0,background:B.black}}>
     <div ref={mainScrollRef} onScroll={()=>setScrollY(mainScrollRef.current?.scrollTop||0)} style={{height:"100%",padding:"20px 14px 0",paddingTop:"calc(env(safe-area-inset-top) + 20px)",overflowY:"auto",scrollbarWidth:"none",msOverflowStyle:"none",WebkitOverflowScrolling:"touch",maxWidth:820,margin:"0 auto",width:"100%",boxSizing:"border-box",background:B.black}}>
+    <div style={{minHeight:"100%",background:B.black}}>
       <ErrorBoundary>
 
       {/* Push notification banner */}
@@ -9265,8 +9267,9 @@ export default function App() {
       </>}
 
       </>} {/* end oficina/gestao */}
-      <div style={{height:"80px",flexShrink:0}}/>
+      <div style={{height:"calc(68px + env(safe-area-inset-bottom))",flexShrink:0}}/>
       </ErrorBoundary>
+    </div>{/* end inner */}
     </div>{/* end scroll container */}
 
     {modal&&<ShareModal {...modal} onClose={()=>setMod(null)}/>}

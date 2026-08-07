@@ -2356,7 +2356,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
         <div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 8px"}}>
           <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Qtd</span>
           {editableQty
-            ?<InlineEdit value={String(qty)} onSave={v=>onUpdate(idx,{...mat,qty:Math.max(1,parseInt(v)||1)})} placeholder="1" type="number"/>
+            ?<InlineEdit value={String(qty)} onSave={v=>onUpdate(idx,{...mat,qty:Math.max(0.01,parseFloat(v)||0.01)})} placeholder="1" type="number"/>
             :<span style={{fontSize:12,color:B.gray300,fontWeight:600}}>×{qty}</span>}
         </div>
 
@@ -6205,7 +6205,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.58";
+const APP_VERSION = "2026.08.03.59";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7039,7 +7039,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
   const costNum=parseFloat(cost.replace(",","."))||0;
   const markupNum=parseFloat(markup)||50;
   const salePrice=costNum*(1+markupNum/100);
-  const qtyNum=Math.max(1,parseInt(qty)||1);
+  const qtyNum=Math.max(0.01,parseFloat(qty)||0.01);
 
   const save=async(fromStockItem=null)=>{
     if(!selectedTid) return;
@@ -8603,7 +8603,7 @@ export default function App() {
     // quoteOnly: add value but don't deduct from stock, and don't link to stockItemId
     const newMats = [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:!quoteOnly,stockItemId:quoteOnly?null:item.id,quoteOnly:quoteOnly||undefined}];
     if(!quoteOnly){
-      const newQty=Math.max(0,item.qty-matQty);
+      const newQty=Math.max(0,Number((item.qty-matQty).toFixed(4)));
       setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));
       try{ await db.updateStock(item.id,{qty:newQty}); }catch(e){errToast(e);}
     }

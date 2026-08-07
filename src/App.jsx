@@ -6205,7 +6205,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.56";
+const APP_VERSION = "2026.08.03.57";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7975,7 +7975,7 @@ export default function App() {
   const [shelfItems,setShelfItems]=useState([]);
   const [sales,setSales]=useState([]);
   const [company,setCompany]=useState({name:"OSC Performance",address:"",phone:"",document:""});
-  const [tab,      setTab]=useState("mechanics");
+  const [tab,      setTab]=useState("clients");
   const [navSection,setNavSection]=useState("home");
   const [scrollY,setScrollY]=useState(0);
   const [showQuickSheet,setShowQuickSheet]=useState(false);

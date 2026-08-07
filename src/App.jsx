@@ -283,8 +283,8 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </div>
     </div>
 
-    <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
-    <div style={{maxWidth:680,margin:"0 auto",padding:"20px 14px",paddingBottom:"calc(20px + env(safe-area-inset-bottom))"}}>
+    <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black}}>
+    <div style={{maxWidth:680,margin:"0 auto",padding:"20px 14px",paddingBottom:"calc(40px + env(safe-area-inset-bottom))",minHeight:"100vh"}}>
       {pushStatus==="asking"&&VAPID_PUBLIC_KEY&&<div style={{marginBottom:14,padding:"10px 14px",background:`${B.blue}12`,border:`1px solid ${B.blue}33`,borderRadius:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
         <span style={{fontSize:18}}>🔔</span>
         <div style={{flex:1,minWidth:0}}>
@@ -6109,7 +6109,7 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
       </div>
     </div>
     <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
-    <div style={{maxWidth:680,margin:"0 auto",padding:"20px 14px",paddingBottom:"calc(20px + env(safe-area-inset-bottom))"}}>
+    <div style={{maxWidth:680,margin:"0 auto",padding:"20px 14px",paddingBottom:"calc(40px + env(safe-area-inset-bottom))",minHeight:"100vh"}}>
       {/* Push notification banner */}
       {pushStatus==="asking"&&<div style={{background:`${accentColor}18`,border:`1px solid ${accentColor}44`,borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         <span style={{fontSize:20}}>🔔</span>
@@ -6205,7 +6205,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.57";
+const APP_VERSION = "2026.08.03.58";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

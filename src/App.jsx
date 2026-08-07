@@ -6205,7 +6205,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.55";
+const APP_VERSION = "2026.08.03.56";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8772,7 +8772,7 @@ export default function App() {
   const navItems=NAV_ITEMS_BY_ROLE[adminRole]||NAV_ITEMS_BY_ROLE.owner;
 
   // Tab grouping by nav section
-  const OFICINA_TABS=["mechanics","clients","finishing","vehicles","clientsMonitor"];
+  const OFICINA_TABS=["clients","finishing","vehicles","clientsMonitor","mechanics"];
   const GESTAO_TABS=["finance","purchases","investments","stock","sales"];
 
   const goSection=(section,tab)=>{
@@ -8995,7 +8995,7 @@ export default function App() {
       {sidebarItems.map(item=>(
         <button key={item.id} onClick={()=>{
           setNavSection(item.id);
-          if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("mechanics");
+          if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
           if(item.id==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("purchases")?"purchases":"investments");
           mainScrollRef.current?.scrollTo({top:0});
         }} style={{
@@ -9039,11 +9039,11 @@ export default function App() {
         <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
           <div style={{display:"flex",gap:3,background:B.gray900,padding:4,borderRadius:12,border:`1px solid ${B.gray700}`,flexWrap:"wrap",justifyContent:"center"}}>
             {navSection==="oficina"&&<>
-              {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
               {allowedTabs.includes("clients")&&tabBtn("clients","OSC Performance",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,B.orange)}
               {allowedTabs.includes("finishing")&&tabBtn("finishing","OSC Finishing Division",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>,FD.primary)}
               {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos Cadastrados",<ICar s={13}/>,B.blue)}
               {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
+              {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
             </>}
             {navSection==="gestao"&&<>
               {allowedTabs.includes("finance")&&tabBtn("finance","Financeiro",<IChart s={13}/>,B.green)}
@@ -9363,7 +9363,7 @@ export default function App() {
     />}
     <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} theme={theme} setActive={(s)=>{
       setNavSection(s);
-      if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("mechanics");
+      if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
       if(s==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("purchases")?"purchases":"investments");
       mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});
     }}/>

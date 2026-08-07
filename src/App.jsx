@@ -1278,7 +1278,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   // ── Payments received ─────────────────────────────────────────────────────────
   const vehiclePayments = payments.filter(p =>
-    p.vehicleId === vehicle.id || p.osHistoryId === vehicle.id
+    p.vehicleId === vehicle.id && !p.osHistoryId &&
+    (p.division||"performance") === "performance"
   );
   if (vehiclePayments.length > 0) {
     if (y + 30 > 282) { doc.addPage(); y = 16; }
@@ -1652,7 +1653,7 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
     y+=4;
 
     // ── Payments received ──────────────────────────────────────────────────
-    const vPayments = payments.filter(p=>p.vehicleId===vehicle.id&&(p.division||"performance")==="finishing");
+    const vPayments = payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId&&(p.division||"performance")==="finishing");
     if (vPayments.length > 0) {
       if (y+30>282) { doc.addPage(); y=16; }
       doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
@@ -6204,7 +6205,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.52";
+const APP_VERSION = "2026.08.03.53";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

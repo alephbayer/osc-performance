@@ -100,29 +100,14 @@
           navigator.serviceWorker.addEventListener("controllerchange",()=>{
             if(!window.__oscReloading){ window.__oscReloading=true; window.location.reload(); }
           });
-          // Handle SW waiting
-          function onWaiting(worker){
-            if(window.__oscUpdatePending) return;
-            window.__oscUpdatePending=true;
-            const div=document.createElement("div");
-            div.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#ff6b00;color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;font-size:13px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.4);cursor:pointer;font-family:sans-serif;white-space:nowrap";
-            div.textContent="🔄 Nova versão disponível — toque para atualizar";
-            div.onclick=()=>worker.postMessage({type:"SKIP_WAITING"});
-            document.body.appendChild(div);
-          }
-          if(reg.waiting) onWaiting(reg.waiting);
-          reg.addEventListener("updatefound",()=>{
-            const w=reg.installing;
-            w.addEventListener("statechange",()=>{
-              if(w.state==="installed"&&navigator.serviceWorker.controller) onWaiting(w);
-            });
-          });
+          // SW already calls skipWaiting automatically — no manual banner needed here
+          // The version.json poll below handles the update banner
         }).catch(()=>{});
       }
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.08.03.59";
+        const CURRENT = "2026.08.03.60";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

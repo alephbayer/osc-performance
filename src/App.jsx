@@ -4151,6 +4151,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
   const [showOpenOSFD,setShowOpenOSFD]=useState(false);
   const [editEntry,setEditEntry]=useState(false);
   const [pdfLoading,setPdfLoading]=useState(null);
+  const [lightbox,setLightbox]=useState(null);
   const [entryInput,setEntryInput]=useState(vehicle.enteredAt?new Date(vehicle.enteredAt).toISOString().slice(0,16):"");
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
@@ -4440,6 +4441,18 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                   {taskCost(t,defaultRate).total>0&&<span style={{fontSize:10,color:t.done?B.green:B.amber,fontWeight:700}}>{fmtBRL(taskCost(t,defaultRate).total)}</span>}
                 </div>)}
               </div>}
+              {/* Photos from this OS */}
+              {(h.photos||[]).filter(p=>p).length>0&&<div style={{marginTop:8}}>
+                <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>📷 Fotos da OS</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {(h.photos||[]).filter(p=>p).map((photo,pi)=>{
+                    const url=typeof photo==="string"?photo:photo?.url;
+                    if(!url) return null;
+                    return(<img key={pi} src={url} alt="" onClick={()=>setLightbox(url)}
+                      style={{width:72,height:72,objectFit:"cover",borderRadius:8,cursor:"pointer",border:`1px solid ${B.gray600}`}}/>);
+                  })}
+                </div>
+              </div>}
               {/* Financial panel */}
               <OsHistoryPaymentPanel h={h} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment}/>
             </div>);
@@ -4463,10 +4476,12 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
         ))}
       </div>}
     </div>}
+    {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightbox(null)}>
+      <img src={lightbox} alt="" style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
+      <button onClick={()=>setLightbox(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.15)",border:"none",borderRadius:99,padding:"8px 12px",cursor:"pointer",color:"#fff",fontSize:16}}>✕</button>
+    </div>}
   </div>);
 }
-
-// ─── Settings Panel ───────────────────────────────────────────────────────────
 // ─── Finance Tab ──────────────────────────────────────────────────────────────
 // ─── Investments Tab ──────────────────────────────────────────────────────────
 const PRIORITY_LABELS = ["","🔴 Urgente","🟠 Alta","🟡 Média","🟢 Baixa","⚪ Futura"];
@@ -6189,7 +6204,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.51";
+const APP_VERSION = "2026.08.03.52";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8367,6 +8382,7 @@ export default function App() {
       tows: v.tows||[],
       osDiscountPct: v.osDiscountPct||0,
       totalValue,
+      photos: v.photos||[],
     };
 
     // Optimistic UI: update vehicle, remove its tasks, add to history
@@ -8424,7 +8440,8 @@ export default function App() {
         ...x, osNumber, enteredAt,
         status:"active", pausedAt:null, totalPausedMs:0, priority:"medium",
         deliveredAt:null,
-        mechanicIds:[...new Set([...(x.mechanicIds||[]),employeeId])],
+        mechanicIds:employeeId?[employeeId]:[],
+        photos:[],
       }:x));
       toast_(`OS ${fmtOS(osNumber)} aberta ✓`);
       const v=vehicles.find(x=>x.id===vid);
@@ -8442,7 +8459,8 @@ export default function App() {
         ...x,
         osNumberFinishing:osNumber, enteredAtFinishing:enteredAt,
         statusFinishing:"active", pausedAtFinishing:null, totalPausedMsFinishing:0,
-        mechanicIds:[...new Set([...(x.mechanicIds||[]),employeeId])],
+        mechanicIds:employeeId?[employeeId]:[],
+        photosFinishing:[],
       }:x));
       toast_(`${fmtOSFD(osNumber)} Finishing aberta ✓`);
       const v=vehicles.find(x=>x.id===vid);

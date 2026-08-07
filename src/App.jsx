@@ -1782,10 +1782,22 @@ function Toast({msg,onDone}) {
   useEffect(()=>{const t=setTimeout(onDone,2500);return()=>clearTimeout(t);},[onDone]);
   return <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:B.orange,color:B.white,padding:"10px 24px",borderRadius:99,fontWeight:700,fontSize:14,zIndex:999,boxShadow:"0 4px 24px rgba(255,107,0,.4)",pointerEvents:"none",whiteSpace:"nowrap"}}>{msg}</div>;
 }
-function InlineEdit({value,onSave,placeholder,type="text"}) {
+function InlineEdit({value,onSave,placeholder,type="text",multiline=false,textStyle={}}) {
   const [e,sE]=useState(false); const [v,sV]=useState(value||"");
   if(!e) return (<button onClick={()=>{sV(value||"");sE(true);}} style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"flex-start",gap:4,width:"100%",textAlign:"left"}}>
-    <span style={{color:value?B.white:B.gray400,fontSize:13,textAlign:"left",wordBreak:"break-word",flex:1}}>{value||placeholder}</span><IEdit s={10} c={B.gray500} style={{flexShrink:0,marginTop:2}}/></button>);
+    <span style={{color:value?B.white:B.gray400,fontSize:13,textAlign:"left",wordBreak:"break-word",flex:1,whiteSpace:"pre-wrap",...textStyle}}>{value||placeholder}</span><IEdit s={10} c={B.gray500} style={{flexShrink:0,marginTop:2}}/></button>);
+  if(multiline) return (<div style={{width:"100%"}}>
+    <textarea autoFocus value={v} onChange={ev=>sV(ev.target.value)}
+      onKeyDown={ev=>{if(ev.key==="Escape")sE(false); if(ev.key==="Enter"&&ev.metaKey){onSave(v);sE(false);}}}
+      rows={Math.max(2,v.split("\n").length+1)}
+      placeholder={placeholder}
+      style={{width:"100%",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:12,outline:"none",resize:"vertical",fontFamily:"inherit",lineHeight:1.5,boxSizing:"border-box"}}/>
+    <div style={{display:"flex",gap:5,marginTop:4}}>
+      <button onClick={()=>{onSave(v);sE(false);}} style={{padding:"4px 12px",borderRadius:5,background:B.green,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:11}}>OK</button>
+      <button onClick={()=>sE(false)} style={{padding:"4px 8px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11}}>✕</button>
+      <span style={{fontSize:10,color:B.gray600,alignSelf:"center"}}>⌘+Enter para salvar</span>
+    </div>
+  </div>);
   return (<div style={{display:"flex",gap:5,alignItems:"center",width:"100%"}}>
     <input autoFocus value={v} onChange={ev=>sV(ev.target.value)} type={type}
       onKeyDown={ev=>{if(ev.key==="Enter"){onSave(v);sE(false);}if(ev.key==="Escape")sE(false);}}
@@ -2550,6 +2562,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           {/* Description — optional */}
           <div style={{marginTop:3}}>
             <InlineEdit
+              multiline
               value={task.description||""}
               onSave={v=>onUpdate(task.id,{description:v.trim()})}
               placeholder="+ Descrição (opcional)"
@@ -6176,7 +6189,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.50";
+const APP_VERSION = "2026.08.03.51";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

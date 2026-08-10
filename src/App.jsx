@@ -4197,7 +4197,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
 }
 
 // ─── Clients Monitor Tab ──────────────────────────────────────────────────────
-function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete,osHistory=[],payments=[],onAddClient}) {
+function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete,osHistory=[],payments=[],onAddClient,isOwner=false}) {
   const [search,setSearch]=useState("");
   const [open,setOpen]=useState(null);
   const [confirmDel,setConfirmDel]=useState(null);
@@ -4343,9 +4343,19 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
             </div>}
 
             {/* Action buttons */}
-            <div style={{display:"flex",gap:8,marginTop:14}}>
+            <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
               {cli.phone&&<button onClick={()=>{}} style={{padding:"7px 14px",borderRadius:8,background:B.wa,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                 <IPhone s={13} c={B.white}/>WhatsApp
+              </button>}
+              {isOwner&&<button onClick={()=>{
+                try{
+                  const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
+                  delete pins[cli.id];
+                  localStorage.setItem(CLIENT_PIN_KEY,JSON.stringify(pins));
+                  toast_(`PIN de ${cli.name} resetado ✓`);
+                }catch(e){}
+              }} style={{padding:"7px 12px",borderRadius:8,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
+                🔑 Resetar PIN do portal
               </button>}
               <button onClick={()=>setConfirmDel(cli.id)} style={{marginLeft:"auto",padding:"7px 12px",borderRadius:8,background:"transparent",border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
                 <ITrash s={13} c={B.red}/>Remover cliente
@@ -6619,7 +6629,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.10.10";
+const APP_VERSION = "2026.08.10.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9655,7 +9665,7 @@ export default function App() {
         <TabHeader color="#0891b2" title="👥 Clientes" subtitle="Cadastro, contato e histórico de veículos"/>
         <ClientsMonitorTab clients={clients} vehicles={vehicles} tasks={tasks} employees={employees} defaultRate={defaultRate}
           onUpdateName={updCliN} onUpdatePhone={updCliP} onUpdateEmail={updCliE} onDelete={delCli}
-          osHistory={osHistory} payments={payments} onAddClient={addCliDirect}/>
+          osHistory={osHistory} payments={payments} onAddClient={addCliDirect} isOwner={adminRole==="owner"}/>
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <TabHeader color={B.blue} title="🚗 Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>

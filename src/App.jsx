@@ -6376,7 +6376,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.67";
+const APP_VERSION = "2026.08.03.68";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8652,6 +8652,8 @@ export default function App() {
     try{
       const osNumber=await db.openNewOS(vid,employeeId);
       const enteredAt=enteredAtStr?new Date(enteredAtStr).toISOString():new Date().toISOString();
+      // Explicitly reset mechanicIds in DB
+      await db.updateVehicle(vid,{mechanicIds:employeeId?[employeeId]:[], photos:[]});
       setVeh(p=>p.map(x=>x.id===vid?{
         ...x, osNumber, enteredAt,
         status:"active", pausedAt:null, totalPausedMs:0, priority:"medium",
@@ -8671,6 +8673,8 @@ export default function App() {
     try{
       const osNumber=await db.openNewOSFinishing(vid,employeeId);
       const enteredAt=enteredAtStr?new Date(enteredAtStr).toISOString():new Date().toISOString();
+      // Explicitly reset mechanicIds in DB
+      await db.updateVehicle(vid,{mechanicIds:employeeId?[employeeId]:[], photosFinishing:[]});
       setVeh(p=>p.map(x=>x.id===vid?{
         ...x,
         osNumberFinishing:osNumber, enteredAtFinishing:enteredAt,

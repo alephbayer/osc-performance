@@ -5689,7 +5689,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${hasFin?FD.primary:B.orange}`}}>
       {/* Top row: logos + name */}
-      <div style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"12px 16px",paddingTop:"calc(12px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
           <div style={{width:32,height:32,borderRadius:7,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center"}}><IWrench s={16} c={B.white}/></div>
           {hasFin&&<div style={{width:32,height:32,borderRadius:7,background:FD.primary,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎨</div>}
@@ -6376,7 +6376,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.66";
+const APP_VERSION = "2026.08.03.67";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

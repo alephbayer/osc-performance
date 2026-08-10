@@ -610,13 +610,13 @@ function productivityByEmployee(employees, vehicles, tasks, defaultRate, monthKe
 const taskCost=(t,defaultRate)=>{
   const rateType = t.rateType || "hour";
   const rate  = t.ratePerHour!=null ? Number(t.ratePerHour) : Number(defaultRate||0);
-  // hour mode: labor = hours × rate
-  // qty mode:  labor = hours (qty) × ratePerHour (unit price)
   const laborGross = Number(t.hours||0)*rate;
   const discount = Math.min(Number(t.discount||0), laborGross);
-  const labor = Math.max(0, laborGross - discount);
+  // Warranty: labor not charged to client
+  const labor = t.warranty ? 0 : Math.max(0, laborGross - discount);
   const mats  = Array.isArray(t.materials) ? t.materials : [];
   const mat = mats.reduce((s,m)=>{
+    if(m.noCharge) return s; // warranty material not billed
     const qty = Number(m.qty||1);
     const cost = Number(m.cost||0);
     if(m.fromStock){
@@ -1004,7 +1004,9 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   drawTableHeader();
 
   let laborTotal = 0, partsTotal = 0, freightTotal = 0;
-  const ts = tasksOverride || tasks.filter(t => t.vehicleId === vehicle.id);
+  const allTs = tasksOverride || tasks.filter(t => t.vehicleId === vehicle.id);
+  const ts = allTs.filter(t => !t.warranty); // regular tasks only in main table
+  const warrantyTs = allTs.filter(t => t.warranty); // warranty tasks separate
   const fuelCostVal = Number(vehicle.fuelCost || 0);
   const fuels = Array.isArray(vehicle.fuels) ? vehicle.fuels : [];
   const fuelTotal = fuels.reduce((s,f)=>s+Number(f.value||0),0);
@@ -1276,6 +1278,39 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   y += 4;
 
+  // ── Warranty section ──────────────────────────────────────────────────────────
+  if (warrantyTs.length > 0) {
+    if (y + 20 > 282) { doc.addPage(); y = 16; }
+    doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+    doc.line(marginX, y, pageW - marginX, y); y += 6;
+    // Red header
+    doc.setFillColor(220,38,38);
+    doc.rect(marginX, y, contentW, 8, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(255,255,255);
+    doc.text("🔴  SERVIÇOS EM GARANTIA — SEM COBRANÇA AO CLIENTE", marginX+3, y+5.5);
+    y += 10;
+
+    warrantyTs.forEach(t => {
+      if (y + 12 > 282) { doc.addPage(); y = 16; }
+      doc.setFillColor(255,245,245);
+      doc.setDrawColor(220,38,38); doc.setLineWidth(0.2);
+      doc.rect(marginX, y, contentW, 10, "FD");
+      doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(180,20,20);
+      doc.text(`• ${t.label}`, marginX+4, y+7);
+      y += 11;
+      const mats = (t.materials||[]).filter(m=>m.name);
+      mats.forEach(m=>{
+        if (y + 6 > 282) { doc.addPage(); y = 16; }
+        doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(180,80,80);
+        const noChargeLbl = m.noCharge?" [sem cobrança]":"";
+        doc.text(`   🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${noChargeLbl}`, marginX+5, y+4);
+        y += 5;
+      });
+      y += 2;
+    });
+    y += 4;
+  }
+
   // ── Payments received ─────────────────────────────────────────────────────────
   const vehiclePayments = payments.filter(p =>
     p.vehicleId === vehicle.id && !p.osHistoryId &&
@@ -1499,7 +1534,9 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
     if (y + needed > 282) { doc.addPage(); y = 16; drawTableHeader(); }
   };
 
-  const finTasks = tasks.filter(t => t.vehicleId === vehicle.id && t.division === "finishing");
+  const allFinTasks = tasks.filter(t => t.vehicleId === vehicle.id && t.division === "finishing");
+  const finTasks = allFinTasks.filter(t => !t.warranty);
+  const finWarrantyTs = allFinTasks.filter(t => t.warranty);
   if (finTasks.length > 0) {
     drawTableHeader();
 
@@ -1627,6 +1664,33 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
     doc.text(fmtBRL(grandTotal), boxX+boxW-5, y+nextY2+7, {align:"right"});
 
     y += totBoxH + 10;
+
+    // ── Warranty section ────────────────────────────────────────────────────
+    if (finWarrantyTs.length > 0) {
+      if (y + 20 > 282) { doc.addPage(); y = 16; }
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+      doc.line(marginX, y, pageW-marginX, y); y += 6;
+      doc.setFillColor(220,38,38);
+      doc.rect(marginX, y, contentW, 8, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(255,255,255);
+      doc.text("🔴  SERVIÇOS EM GARANTIA — SEM COBRANÇA AO CLIENTE", marginX+3, y+5.5);
+      y += 10;
+      finWarrantyTs.forEach(t => {
+        if (y + 12 > 282) { doc.addPage(); y = 16; }
+        doc.setFillColor(255,245,245); doc.setDrawColor(220,38,38); doc.setLineWidth(0.2);
+        doc.rect(marginX, y, contentW, 10, "FD");
+        doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(180,20,20);
+        doc.text(`• ${t.label}`, marginX+4, y+7); y += 11;
+        (t.materials||[]).filter(m=>m.name).forEach(m=>{
+          if (y + 6 > 282) { doc.addPage(); y = 16; }
+          doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(180,80,80);
+          doc.text(`   🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${m.noCharge?" [sem cobrança]":""}`, marginX+5, y+4);
+          y += 5;
+        });
+        y += 2;
+      });
+      y += 4;
+    }
 
     // ── Payment methods ────────────────────────────────────────────────────
     if (y + 60 > 282) { doc.addPage(); y = 16; }
@@ -2340,6 +2404,12 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
         style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
         ⚠ {isEstimated?"Estimado":"Estimado?"}
       </button>}
+      {/* No charge toggle (for warranty) */}
+      {onUpdate&&<button onClick={()=>onUpdate(idx,{...mat,noCharge:!mat.noCharge})}
+        title={mat.noCharge?"Cobrar do cliente":"Não cobrar do cliente"}
+        style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
+        {mat.noCharge?"✓ Grátis":"Grátis?"}
+      </button>}
       {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
         title={isImported?"Remover marcação de importado":"Marcar como importado"}
         style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
@@ -2547,14 +2617,19 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           {task.done&&<ICheck/>}
         </button>
         <div style={{flex:1,minWidth:0}}>
-          {/* Line 0: controls (category, outsourced, etc) */}
+          {/* Line 0: controls (category, outsourced, warranty, etc) */}
           <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}}>
             <CategorySelect value={task.category} onChange={cat=>onUpdate(task.id,{category:cat})} categories={isFD?CATEGORIES_FINISHING:CATEGORIES}/>
-            <button onClick={()=>onUpdate(task.id,{outsourced:!task.outsourced})} title={task.outsourced?"Marcar como interno":"Marcar como terceirizado"}
+            <button onClick={()=>onUpdate(task.id,{outsourced:!task.outsourced,warranty:false})} title={task.outsourced?"Marcar como interno":"Marcar como terceirizado"}
               style={{background:task.outsourced?"#a78bfa22":"none",border:`1px solid ${task.outsourced?"#a78bfa44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.outsourced?"#a78bfa":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
               {task.outsourced?"✓ 3º":"3º"}
             </button>
+            <button onClick={()=>onUpdate(task.id,{warranty:!task.warranty,outsourced:false})} title={task.warranty?"Remover garantia":"Marcar como garantia"}
+              style={{background:task.warranty?`${B.red}22`:"none",border:`1px solid ${task.warranty?B.red+"44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.warranty?B.red:B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
+              {task.warranty?"✓ Gar.":"Gar."}
+            </button>
             {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
+            {task.warranty&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>🔴 Garantia</span>}
           </div>
           {/* Line 1: task label — alone */}
           <div>
@@ -2569,8 +2644,12 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               placeholder="+ Descrição (opcional)"
               textStyle={{textAlign:"left",whiteSpace:"pre-wrap"}}/>
           </div>
-          {/* Per-task discount */}
-          {c.laborGross>0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>
+          {/* Warranty info box */}
+          {task.warranty&&<div style={{marginTop:5,padding:"5px 10px",background:`${B.red}10`,border:`1px solid ${B.red}33`,borderRadius:7,fontSize:11,color:B.red}}>
+            🔴 Serviço em garantia — mão de obra não cobrada do cliente
+          </div>}
+          {/* Per-task discount — hidden for warranty */}
+          {!task.warranty&&c.laborGross>0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>
             <span style={{fontSize:10,color:B.red,fontWeight:600,flexShrink:0}}>Desconto R$</span>
             <InlineEdit value={task.discount?fmtR2(task.discount):""} onSave={v=>onUpdate(task.id,{discount:Math.max(0,parseFloat(v.replace(",","."))||0)})} placeholder="0" type="number"/>
             {task.discount>0&&<>
@@ -6205,7 +6284,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.60";
+const APP_VERSION = "2026.08.03.61";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6436,8 +6515,9 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
                 <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600}}>{t.label}</div>
                 {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
                 {(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{color:m.estimated?"#eab308":B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</span>
+                  <span style={{color:m.estimated?"#eab308":m.noCharge?B.red:B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</span>
                   {m.estimated&&<span style={{fontSize:9,fontWeight:800,color:"#eab308",background:"#eab30820",border:"1px solid #eab30844",borderRadius:4,padding:"1px 5px",letterSpacing:.3}}>ESTIMADO</span>}
+                  {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px"}}>SEM COBRANÇA</span>}
                 </div>)}
                 {tPhotos.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
                   {tPhotos.map((p,pi)=><div key={pi} onClick={()=>setLB(p.url||p)} style={{width:60,height:60,borderRadius:6,overflow:"hidden",cursor:"pointer",flexShrink:0}}>

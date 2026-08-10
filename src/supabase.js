@@ -423,6 +423,7 @@ export const db = {
       tows: historyRecord.tows || [],
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
+      photos: historyRecord.photos || [],
     }).select("id").single();
     if (hErr) throw hErr;
 
@@ -475,6 +476,7 @@ export const db = {
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
       division: "finishing",
+      photos: historyRecord.photos || [],
     }).select("id").single();
     if (hErr) throw hErr;
 

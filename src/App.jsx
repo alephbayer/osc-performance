@@ -219,9 +219,42 @@ function ClientNotesTab({client, vehicles}) {
 }
 
 // ─── Client Portal ────────────────────────────────────────────────────────────
+function PixPaymentBox() {
+  const [copied,setCopied]=useState(false);
+  const pix="23783927000140";
+  const wa="5521966816241";
+  const copy=()=>{navigator.clipboard?.writeText(pix).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});};
+  return(
+    <div style={{background:"linear-gradient(135deg,#0d7a4e18,#0d7a4e08)",border:"2px solid #0d7a4e44",borderRadius:16,padding:"16px 18px",marginBottom:16}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+        <div style={{width:36,height:36,borderRadius:10,background:"#0d7a4e22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>💰</div>
+        <div>
+          <div style={{fontWeight:800,fontSize:14,color:B.white}}>Pagar via PIX</div>
+          <div style={{fontSize:11,color:B.gray400}}>Chave CNPJ</div>
+        </div>
+      </div>
+      <div style={{background:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:10,color:B.gray500,marginBottom:2}}>Chave PIX</div>
+          <div style={{fontSize:14,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:.5}}>23.783.927/0001-40</div>
+        </div>
+        <button onClick={copy} style={{padding:"8px 14px",borderRadius:9,background:copied?"#0d7a4e":"#0d7a4e22",border:`1px solid ${copied?"#0d7a4e":"#0d7a4e66"}`,color:copied?B.white:"#4ade80",cursor:"pointer",fontWeight:800,fontSize:12,flexShrink:0,transition:"all .2s",whiteSpace:"nowrap"}}>
+          {copied?"✓ Copiado!":"Copiar chave"}
+        </button>
+      </div>
+      <a href={`https://wa.me/${wa}?text=${encodeURIComponent("Olá! Segue o comprovante de pagamento.")}`} target="_blank" rel="noreferrer"
+        style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"#25d36618",border:"1px solid #25d36644",borderRadius:10,textDecoration:"none",color:"#25d366",fontWeight:700,fontSize:13}}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+        Enviar comprovante pelo WhatsApp
+      </a>
+    </div>
+  );
+}
+
 function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout}) {
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
+  const [showDebtPopup,setShowDebtPopup]=useState(false);
 
   useEffect(()=>{
     if(!VAPID_PUBLIC_KEY) return;
@@ -231,6 +264,16 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       else if("Notification" in window && Notification.permission==="denied") setPushStatus("denied");
       else if("PushManager" in window) setPushStatus("asking");
     });
+  },[]);
+
+  useEffect(()=>{
+    const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
+    const cliHist=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
+    const hasDebt=cliHist.some(h=>{
+      const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);
+      return Number(h.total_value||h.totalValue||0)-paid>0.009;
+    });
+    if(hasDebt) setShowDebtPopup(true);
   },[]);
 
   const requestPush=async()=>{
@@ -262,6 +305,36 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   );
 
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+
+    {/* Debt popup */}
+    {showDebtPopup&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:B.gray900,borderRadius:20,padding:28,maxWidth:340,width:"100%",border:`2px solid ${B.red}55`,boxShadow:"0 8px 40px rgba(0,0,0,.6)"}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:48,marginBottom:12}}>⚠️</div>
+          <div style={{fontWeight:900,fontSize:18,color:B.white,marginBottom:8}}>Saldo em aberto</div>
+          <div style={{fontSize:14,color:B.gray400,lineHeight:1.6}}>Identificamos um ou mais serviços anteriores com valor pendente de pagamento.</div>
+        </div>
+        <div style={{background:`${B.red}12`,border:`1px solid ${B.red}33`,borderRadius:12,padding:"12px 16px",marginBottom:20}}>
+          {(()=>{
+            const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
+            const cliHist=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
+            return cliHist.filter(h=>{const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);return Number(h.total_value||h.totalValue||0)-paid>0.009;}).map(h=>{
+              const osNum=h.os_number||h.osNumber;const div=h.division||"performance";
+              const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
+              const totalValue=Number(h.total_value||h.totalValue||0);
+              const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);
+              return (<div key={h.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${B.red}22`}}>
+                <span style={{fontSize:13,color:B.gray300,fontWeight:700}}>{osLabel}</span>
+                <span style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(totalValue-paid)}</span>
+              </div>);
+            });
+          })()}
+        </div>
+        <div style={{fontSize:12,color:B.gray500,textAlign:"center",marginBottom:16}}>Consulte a aba <strong style={{color:B.white}}>Conta</strong> para mais detalhes ou entre em contato conosco.</div>
+        <button onClick={()=>{setShowDebtPopup(false);setTab("account");}} style={{width:"100%",padding:"13px",borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",marginBottom:8}}>Ver conta</button>
+        <button onClick={()=>setShowDebtPopup(false)} style={{width:"100%",padding:"11px",borderRadius:12,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>Fechar</button>
+      </div>
+    </div>}
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${blue}`,padding:"0 18px",paddingTop:"env(safe-area-inset-top)",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",height:58,gap:12}}>
@@ -424,6 +497,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
       {/* ── Account ── */}
       {tab==="account"&&<>
+        <PixPaymentBox/>
         {cliVehicles.map(v=>{
           const vPayments=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId);
           const vHistory=cliHistory.filter(h=>(h.vehicle_id||h.vehicleId)===v.id);
@@ -478,19 +552,36 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
                 const divColor=div==="finishing"?FD.primary:B.orange;
                 const deliveredAt=h.delivered_at||h.deliveredAt;
-                const totalValue=h.total_value||h.totalValue||0;
+                const totalValue=Number(h.total_value||h.totalValue||0);
                 const hPays=payments.filter(p=>p.osHistoryId===h.id);
                 const paid=hPays.reduce((s,p)=>s+Number(p.amount),0);
-                return (<div key={h.id} style={{background:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:8,border:`1px solid ${B.gray700}`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:hPays.length>0?6:0}}>
+                const balance=totalValue-paid;
+                const isOpen=balance>0.009;
+                return (<div key={h.id} style={{background:isOpen?`${B.red}08`:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:8,border:`1px solid ${isOpen?B.red+"44":B.gray700}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                     <span style={{fontSize:11,fontWeight:800,color:divColor}}>{osLabel}</span>
                     <span style={{fontSize:10,color:B.gray500}}>· {deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
-                    <span style={{marginLeft:"auto",fontSize:12,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:B.green}}>✓ {fmtBRL(paid)}</span>
+                    {isOpen&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",whiteSpace:"nowrap"}}>⚠ Em aberto</span>}
+                    {!isOpen&&paid>0&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"2px 8px"}}>✓ Quitado</span>}
                   </div>
-                  {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:i===0?`1px solid ${B.gray700}`:"none"}}>
+                  <div style={{display:"flex",gap:1,background:B.gray800,borderRadius:8,overflow:"hidden",marginBottom:hPays.length>0?8:0}}>
+                    <div style={{flex:1,padding:"8px 10px",textAlign:"center"}}>
+                      <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Total</div>
+                      <div style={{fontSize:13,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</div>
+                    </div>
+                    <div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}>
+                      <div style={{fontSize:9,color:B.green,marginBottom:1}}>Pago</div>
+                      <div style={{fontSize:13,fontWeight:800,color:B.green}}>{fmtBRL(paid)}</div>
+                    </div>
+                    {isOpen&&<div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`,background:`${B.red}12`}}>
+                      <div style={{fontSize:9,color:B.red,marginBottom:1}}>Em aberto</div>
+                      <div style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(balance)}</div>
+                    </div>}
+                  </div>
+                  {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:`1px solid ${B.gray700}`}}>
                     <span style={{fontSize:11,color:B.green}}>💰</span>
                     <span style={{fontSize:11,color:B.gray300,flex:1}}>{p.method}{p.note?` · ${p.note}`:""}</span>
+                    <span style={{fontSize:10,color:B.gray500}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
                     <span style={{fontSize:11,fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
                   </div>)}
                 </div>);
@@ -5693,7 +5784,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${hasFin?FD.primary:B.orange}`}}>
       {/* Top row: logos + name */}
-      <div style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"12px 16px",paddingTop:"calc(12px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
           <div style={{width:32,height:32,borderRadius:7,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center"}}><IWrench s={16} c={B.white}/></div>
           {hasFin&&<div style={{width:32,height:32,borderRadius:7,background:FD.primary,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎨</div>}
@@ -6351,7 +6442,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.10.4";
+const APP_VERSION = "2026.08.10.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

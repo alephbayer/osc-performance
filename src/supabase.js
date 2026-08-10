@@ -514,7 +514,7 @@ export const db = {
   },
   async updateTask(id, patch) {
     const dbPatch = {};
-    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced", discount:"discount", category:"category", description:"description", rateType:"rate_type", division:"division" };
+    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced", warranty:"warranty", discount:"discount", category:"category", description:"description", rateType:"rate_type", division:"division" };
     Object.keys(patch).forEach((k) => { if (map[k]) dbPatch[map[k]] = patch[k]; });
     const { error } = await supabase.from("tasks").update(dbPatch).eq("id", id);
     if (error) throw error;

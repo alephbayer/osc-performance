@@ -5764,7 +5764,9 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const [lb,setLB]=useState(null);
   const hasPerf=!!v.enteredAt||perfTasks.length>0;
   const hasFin=!!v.enteredAtFinishing||finTasks.length>0;
-  const catOrder=buildCatOrder(perfTasks);
+  const regularTs=ts.filter(t=>!t.warranty);
+  const warrantyAllTasks=tasks.filter(t=>t.vehicleId===v.id&&t.warranty);
+  const catOrder=buildCatOrder(regularTs);
 
   const statusCfg={
     active:{label:"Em serviço",     icon:"🔧", color:B.orange, bg:`${B.orange}18`},
@@ -5928,7 +5930,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           </div>}
           <div style={{marginTop:8}}>
             {catOrder.map(cat=>{
-              const groupTasks=ts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+              const groupTasks=regularTs.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
               const isFDCat=groupTasks.length>0&&groupTasks[0].division==="finishing";
               const catColor=cat?(isFDCat?CAT_MAP_FINISHING[cat]||CAT_MAP[cat]:CAT_MAP[cat]||CAT_MAP_FINISHING[cat])||B.gray500:null;
               // Photos linked to tasks in this category
@@ -6034,6 +6036,46 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             </div>)}
           </div>
         </div>}
+      </div>}
+
+      {/* ── Warranty section ── */}
+      {warrantyAllTasks.length>0&&<div style={{background:B.gray900,borderRadius:14,overflow:"hidden",margin:"0 0 16px",border:`2px solid ${B.red}44`}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",background:`${B.red}18`,borderBottom:`1px solid ${B.red}33`}}>
+          <span style={{fontSize:20}}>🔴</span>
+          <div>
+            <div style={{fontWeight:800,fontSize:14,color:B.red}}>Serviços em Garantia</div>
+            <div style={{fontSize:11,color:`${B.red}99`}}>Sem cobrança ao cliente</div>
+          </div>
+        </div>
+        <div style={{padding:"12px 14px"}}>
+          {buildCatOrder(warrantyAllTasks).map(cat=>{
+            const wGroup=warrantyAllTasks.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+            const catColor=cat?(CAT_MAP[cat]||CAT_MAP_FINISHING[cat]||B.red):B.red;
+            return(<div key={cat||"__wno__"} style={{marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",background:`${catColor}18`,borderLeft:`3px solid ${B.red}`,borderRadius:"0 5px 5px 0",marginBottom:6}}>
+                <span style={{width:6,height:6,borderRadius:99,background:catColor,flexShrink:0,display:"inline-block"}}/>
+                <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
+              </div>
+              {wGroup.map((t,i)=>(
+                <div key={i} style={{padding:"10px 12px",marginBottom:4,background:`${B.red}08`,borderRadius:10,border:`1px solid ${B.red}33`}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                    <span style={{fontSize:18,flexShrink:0}}>🔴</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,color:B.gray100,fontWeight:600}}>{t.label}</div>
+                      {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
+                      {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
+                        <div key={mi} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
+                          <span style={{fontSize:11,color:m.noCharge?B.red:B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
+                          {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px",whiteSpace:"nowrap"}}>SEM COBRANÇA</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>);
+          })}
+        </div>
       </div>}
 
       {/* ── Account / Financeiro ── */}
@@ -6442,7 +6484,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.10.5";
+const APP_VERSION = "2026.08.10.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -222,6 +222,7 @@ function ClientNotesTab({client, vehicles}) {
 function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout}) {
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
+  const [showDebtPopup,setShowDebtPopup]=useState(false);
 
   useEffect(()=>{
     if(!VAPID_PUBLIC_KEY) return;
@@ -231,6 +232,18 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       else if("Notification" in window && Notification.permission==="denied") setPushStatus("denied");
       else if("PushManager" in window) setPushStatus("asking");
     });
+  },[]);
+
+  // Check for outstanding balances on old OSs
+  useEffect(()=>{
+    const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
+    const cliHistory=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
+    const hasDebt=cliHistory.some(h=>{
+      const totalValue=Number(h.total_value||h.totalValue||0);
+      const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);
+      return totalValue-paid>0.009;
+    });
+    if(hasDebt) setShowDebtPopup(true);
   },[]);
 
   const requestPush=async()=>{
@@ -262,6 +275,34 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   );
 
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+
+    {/* Outstanding balance popup */}
+    {showDebtPopup&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:B.gray900,borderRadius:20,padding:28,maxWidth:340,width:"100%",border:`2px solid ${B.red}55`,boxShadow:`0 8px 40px rgba(0,0,0,.6)`}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:48,marginBottom:12}}>⚠️</div>
+          <div style={{fontWeight:900,fontSize:18,color:B.white,marginBottom:8}}>Saldo em aberto</div>
+          <div style={{fontSize:14,color:B.gray400,lineHeight:1.6}}>Identificamos um ou mais serviços anteriores com valor pendente de pagamento.</div>
+        </div>
+        <div style={{background:`${B.red}12`,border:`1px solid ${B.red}33`,borderRadius:12,padding:"12px 16px",marginBottom:20}}>
+          {(()=>{
+            const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
+            const cliHist=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
+            return cliHist.filter(h=>{const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);return Number(h.total_value||h.totalValue||0)-paid>0.009;}).map(h=>{
+              const osNum=h.os_number||h.osNumber;const div=h.division||"performance";const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
+              const totalValue=Number(h.total_value||h.totalValue||0);const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);const balance=totalValue-paid;
+              return (<div key={h.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${B.red}22`}}>
+                <span style={{fontSize:13,color:B.gray300,fontWeight:700}}>{osLabel}</span>
+                <span style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(balance)}</span>
+              </div>);
+            });
+          })()}
+        </div>
+        <div style={{fontSize:12,color:B.gray500,textAlign:"center",marginBottom:16}}>Consulte a aba <strong style={{color:B.white}}>Conta</strong> para mais detalhes ou entre em contato conosco.</div>
+        <button onClick={()=>{setShowDebtPopup(false);setTab("account");}} style={{width:"100%",padding:"13px",borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",marginBottom:8}}>Ver conta</button>
+        <button onClick={()=>setShowDebtPopup(false)} style={{width:"100%",padding:"11px",borderRadius:12,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>Fechar</button>
+      </div>
+    </div>}
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${blue}`,padding:"0 18px",paddingTop:"env(safe-area-inset-top)",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",height:58,gap:12}}>
@@ -6396,7 +6437,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.70";
+const APP_VERSION = "2026.08.03.71";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

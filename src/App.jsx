@@ -85,14 +85,98 @@ const LOGIN_KEY="osc_mech_session";
 const CLIENT_LOGIN_KEY="osc_client_session";
 
 // ─── Client Login Screen ──────────────────────────────────────────────────────
+const CLIENT_PIN_KEY = "osc_client_pins"; // { [clientId]: sha256hash }
+
+async function getClientPinHash(clientId) {
+  try { const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}"); return pins[clientId]||null; } catch { return null; }
+}
+async function saveClientPin(clientId, pin) {
+  try {
+    const h = await sha256(pin);
+    const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
+    pins[clientId]=h;
+    localStorage.setItem(CLIENT_PIN_KEY, JSON.stringify(pins));
+  } catch {}
+}
+async function checkClientPin(clientId, pin) {
+  const stored = await getClientPinHash(clientId);
+  if (!stored) return null; // no pin set
+  const h = await sha256(pin);
+  return h === stored;
+}
+
+function PinInput({label, onSubmit, error, submitLabel="Confirmar", autoFocus=true}) {
+  const [pin,setPin]=useState("");
+  const inputs=[0,1,2,3];
+  const refs=inputs.map(()=>React.createRef());
+  const handleKey=(i,val)=>{
+    if(!/^\d*$/.test(val)) return;
+    const next=pin.slice(0,i)+val+pin.slice(i+1);
+    setPin(next.slice(0,4));
+    if(val&&i<3) refs[i+1].current?.focus();
+  };
+  const handleBackspace=(i,e)=>{
+    if(e.key==="Backspace"&&!pin[i]&&i>0){ refs[i-1].current?.focus(); }
+    if(e.key==="Enter"&&pin.length===4) onSubmit(pin);
+  };
+  return(<div>
+    <div style={{fontSize:12,color:B.gray400,marginBottom:12,textAlign:"center"}}>{label}</div>
+    <div style={{display:"flex",gap:10,justifyContent:"center",marginBottom:16}}>
+      {inputs.map(i=>(
+        <input key={i} ref={refs[i]} type="password" inputMode="numeric" maxLength={1}
+          value={pin[i]||""} autoFocus={autoFocus&&i===0}
+          onChange={e=>handleKey(i,e.target.value)}
+          onKeyDown={e=>handleBackspace(i,e)}
+          style={{width:52,height:60,borderRadius:12,border:`2px solid ${error?B.red:pin[i]?B.blue:B.gray600}`,background:B.gray900,color:B.white,fontSize:28,textAlign:"center",outline:"none",caretColor:"transparent"}}/>
+      ))}
+    </div>
+    {error&&<div style={{color:B.red,fontSize:12,textAlign:"center",marginBottom:10}}>{error}</div>}
+    <button onClick={()=>onSubmit(pin)} disabled={pin.length<4}
+      style={{width:"100%",padding:"12px 0",borderRadius:10,background:pin.length===4?B.blue:"rgba(255,255,255,.1)",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:pin.length===4?"pointer":"default"}}>
+      {submitLabel}
+    </button>
+  </div>);
+}
+
 function ClientLoginScreen({clients,onLogin}) {
   const [phone,setPhone]=useState("");
   const [err,setErr]=useState("");
-  const tryLogin=()=>{
-    const found=clients.find(c=>samePhone(c.phone,phone));
-    if(!found){ setErr("Número não encontrado. Entre em contato com a oficina."); return; }
+  const [step,setStep]=useState("phone"); // phone | pin | create_pin | confirm_pin
+  const [found,setFound]=useState(null);
+  const [newPin,setNewPin]=useState("");
+
+  const tryPhone=()=>{
+    const cli=clients.find(c=>samePhone(c.phone,phone));
+    if(!cli){ setErr("Número não encontrado. Entre em contato com a oficina."); return; }
+    setFound(cli);
+    setErr("");
+    const hasPin=getClientPinHash(cli.id);
+    // Check synchronously from localStorage
+    try {
+      const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
+      if(pins[cli.id]) setStep("pin");
+      else setStep("create_pin");
+    } catch { setStep("create_pin"); }
+  };
+
+  const tryPin=async(pin)=>{
+    const ok=await checkClientPin(found.id, pin);
+    if(ok) onLogin(found);
+    else setErr("PIN incorreto. Tente novamente.");
+  };
+
+  const createPin=async(pin)=>{
+    setNewPin(pin);
+    setStep("confirm_pin");
+    setErr("");
+  };
+
+  const confirmPin=async(pin)=>{
+    if(pin!==newPin){ setErr("Os PINs não coincidem. Tente novamente."); setStep("create_pin"); setNewPin(""); return; }
+    await saveClientPin(found.id, pin);
     onLogin(found);
   };
+
   return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",padding:20}}>
     <div style={{maxWidth:380,width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
@@ -101,15 +185,61 @@ function ClientLoginScreen({clients,onLogin}) {
         <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Portal do Cliente</div>
       </div>
       <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
-        <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:B.gray200,fontWeight:600,marginBottom:10}}>
-          <ILock s={14} c={B.blue}/>Seu número de WhatsApp
-        </label>
-        <input value={phone} onChange={e=>{setPhone(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&tryLogin()}
-          placeholder="Ex: 5511999998888" autoFocus
-          style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`1px solid ${err?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:15,outline:"none",boxSizing:"border-box"}}/>
-        {err&&<div style={{color:B.red,fontSize:12,marginTop:8}}>{err}</div>}
-        <button onClick={tryLogin} style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:10,background:B.blue,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Entrar</button>
-        <div style={{marginTop:14,fontSize:11.5,color:B.gray500,textAlign:"center",lineHeight:1.5}}>Use o mesmo número cadastrado pela oficina, com DDI e DDD (ex: 55119...)</div>
+
+        {step==="phone"&&<>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:B.gray200,fontWeight:600,marginBottom:10}}>
+            <ILock s={14} c={B.blue}/>Seu número de WhatsApp
+          </label>
+          <input value={phone} onChange={e=>{setPhone(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&tryPhone()}
+            placeholder="Ex: 5511999998888" autoFocus
+            style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`1px solid ${err?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:15,outline:"none",boxSizing:"border-box"}}/>
+          {err&&<div style={{color:B.red,fontSize:12,marginTop:8}}>{err}</div>}
+          <button onClick={tryPhone} style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:10,background:B.blue,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Continuar</button>
+          <div style={{marginTop:14,fontSize:11.5,color:B.gray500,textAlign:"center",lineHeight:1.5}}>Use o mesmo número cadastrado pela oficina, com DDI e DDD (ex: 55119...)</div>
+        </>}
+
+        {step==="pin"&&<>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+            <button onClick={()=>{setStep("phone");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}>←</button>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:B.white}}>{found?.name}</div>
+              <div style={{fontSize:11,color:B.gray500}}>Digite seu PIN de acesso</div>
+            </div>
+          </div>
+          <PinInput label="PIN de 4 dígitos" onSubmit={tryPin} error={err} submitLabel="Entrar"/>
+          <button onClick={async()=>{
+            await saveClientPin(found.id,"");
+            const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
+            delete pins[found.id];
+            localStorage.setItem(CLIENT_PIN_KEY,JSON.stringify(pins));
+            setStep("create_pin");setErr("");
+          }} style={{width:"100%",marginTop:10,padding:"8px",background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>
+            Esqueci meu PIN
+          </button>
+        </>}
+
+        {step==="create_pin"&&<>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+            <button onClick={()=>{setStep("phone");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}>←</button>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:B.white}}>{found?.name}</div>
+              <div style={{fontSize:11,color:B.gray500}}>Crie um PIN para proteger sua conta</div>
+            </div>
+          </div>
+          <PinInput label="Crie um PIN de 4 dígitos" onSubmit={createPin} error={err} submitLabel="Continuar"/>
+        </>}
+
+        {step==="confirm_pin"&&<>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+            <button onClick={()=>{setStep("create_pin");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}>←</button>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:B.white}}>Confirmar PIN</div>
+              <div style={{fontSize:11,color:B.gray500}}>Digite o PIN novamente</div>
+            </div>
+          </div>
+          <PinInput label="Confirme seu PIN" onSubmit={confirmPin} error={err} submitLabel="Criar PIN e entrar"/>
+        </>}
+
       </div>
     </div>
   </div>);
@@ -6484,7 +6614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.10.8";
+const APP_VERSION = "2026.08.10.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

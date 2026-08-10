@@ -638,7 +638,7 @@ async function uploadImg(file, folder) {
 
 // ─── Public link ─────────────────────────────────────────────────────────────
 function getPublicLink(vehicleId) {
-  return `${window.location.href.split("?")[0]}?v=${vehicleId}`;
+  return `${window.location.href.split("?")[0]}?vh=${vehicleId}`;
 }
 function getMechanicPortalLink() {
   return `${window.location.href.split("?")[0]}?portal=mecanico`;
@@ -1314,8 +1314,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
         checkPageBreak(rowH+2);
 
         // Alternating light red rows
-        doc.setFillColor(rowIdx%2===0?[255,245,245]:[255,240,240]);
-        doc.setFillColor(rowIdx%2===0?255:253, rowIdx%2===0?245:240, rowIdx%2===0?245:240);
+          doc.setFillColor(rowIdx%2===0?255:253, rowIdx%2===0?245:240, rowIdx%2===0?245:240);
         doc.rect(marginX, y-1, contentW, rowH+1, "F");
 
         doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(180,20,20);
@@ -6337,7 +6336,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.64";
+const APP_VERSION = "2026.08.03.65";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

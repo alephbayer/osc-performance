@@ -638,7 +638,7 @@ async function uploadImg(file, folder) {
 
 // ─── Public link ─────────────────────────────────────────────────────────────
 function getPublicLink(vehicleId) {
-  return `${window.location.href.split("?")[0]}?vh=${vehicleId}`;
+  return `${window.location.href.split("?")[0]}?v=${vehicleId}`;
 }
 function getMechanicPortalLink() {
   return `${window.location.href.split("?")[0]}?portal=mecanico`;
@@ -6282,15 +6282,24 @@ const ROLE_CONFIG = {
   admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments"],           envVar:"VITE_ADMIN_PASSWORD" },
   supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
-function getRolePassword(role) {
+// Hash a string with SHA-256 — used to avoid storing plain passwords in memory
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function getRolePasswordHash(role) {
   const envVar = ROLE_CONFIG[role]?.envVar;
+  // Env var stores the SHA-256 hash of the password (not the plain password)
   return (envVar && import.meta.env[envVar]) || "";
 }
+
 // Tries the entered password against all configured roles, returns the matching role or null.
-function matchRole(pwd) {
+async function matchRole(pwd) {
+  const h = await sha256(pwd);
   for (const role of Object.keys(ROLE_CONFIG)) {
-    const real = getRolePassword(role);
-    if (real && pwd === real) return role;
+    const stored = getRolePasswordHash(role);
+    if (stored && h === stored) return role;
   }
   return null;
 }
@@ -6342,7 +6351,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.10.2";
+const APP_VERSION = "2026.08.10.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6447,10 +6456,10 @@ function AdminLoginScreen({onLogin}) {
   const [pendingRole,setPendingRole]=useState(null);
   const [bioLoading,setBioLoading]=useState(false);
 
-  const tryLogin=()=>{
-    const anyConfigured = Object.keys(ROLE_CONFIG).some(r=>getRolePassword(r));
+  const tryLogin=async()=>{
+    const anyConfigured = Object.keys(ROLE_CONFIG).some(r=>getRolePasswordHash(r));
     if(!anyConfigured){ setErr("Nenhuma senha configurada. Configure as variáveis de ambiente no Vercel."); return; }
-    const role = matchRole(pwd);
+    const role = await matchRole(pwd);
     if(!role){ setErr("Senha incorreta."); return; }
     // If WebAuthn available and no credential saved yet, offer to register
     if(bioAvailable && !hasBio) {
@@ -8221,7 +8230,7 @@ export default function App() {
     try{ return JSON.parse(localStorage.getItem(LOGIN_KEY)||"null"); }catch{ return null; }
   });
   const [clientSession,setClientSession]=useState(()=>{
-    try{ return JSON.parse(localStorage.getItem(CLIENT_LOGIN_KEY)||"null"); }catch{ return null; }
+    try{ return localStorage.getItem(CLIENT_LOGIN_KEY)||null; }catch{ return null; }
   });
   const [adminRole,setAdminRole]=useState(()=>{
     try{ return sessionStorage.getItem(ADMIN_SESSION_KEY)||null; }catch{ return null; }
@@ -8351,9 +8360,14 @@ export default function App() {
 
   if(isClientPortal){
     if(loading) return <LoadingScreen/>;
-    const doLogin=(cli)=>{ setClientSession(cli); localStorage.setItem(CLIENT_LOGIN_KEY,JSON.stringify(cli)); };
+    const doLogin=(cli)=>{ setClientSession(cli); localStorage.setItem(CLIENT_LOGIN_KEY, cli.id); };
     const doLogout=()=>{ setClientSession(null); localStorage.removeItem(CLIENT_LOGIN_KEY); };
-    const liveCli=clientSession?(clients.find(c=>c.id===clientSession.id)||clientSession):null;
+    // Resolve clientSession: if it's just an ID string (new format), find full object from clients
+    const liveCli = clientSession
+      ? (typeof clientSession === "string"
+          ? clients.find(c=>c.id===clientSession)
+          : clients.find(c=>c.id===clientSession.id)||clientSession)
+      : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
     return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
   }

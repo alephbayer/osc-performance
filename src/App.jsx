@@ -219,44 +219,9 @@ function ClientNotesTab({client, vehicles}) {
 }
 
 // ─── Client Portal ────────────────────────────────────────────────────────────
-function PixPaymentBox() {
-  const [copied,setCopied]=useState(false);
-  const pix="23783927000140";
-  const wa="5521966816241";
-  const copy=()=>{
-    navigator.clipboard?.writeText(pix).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});
-  };
-  return(
-    <div style={{background:"linear-gradient(135deg,#0d7a4e18,#0d7a4e08)",border:"2px solid #0d7a4e44",borderRadius:16,padding:"16px 18px",marginBottom:16}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-        <div style={{width:36,height:36,borderRadius:10,background:"#0d7a4e22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>💰</div>
-        <div>
-          <div style={{fontWeight:800,fontSize:14,color:B.white}}>Pagar via PIX</div>
-          <div style={{fontSize:11,color:B.gray400}}>Chave CNPJ</div>
-        </div>
-      </div>
-      <div style={{background:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:10,color:B.gray500,marginBottom:2}}>Chave PIX</div>
-          <div style={{fontSize:14,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:.5}}>{pix.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,"$1.$2.$3/$4-$5")}</div>
-        </div>
-        <button onClick={copy} style={{padding:"8px 14px",borderRadius:9,background:copied?"#0d7a4e":"#0d7a4e22",border:`1px solid ${copied?"#0d7a4e":"#0d7a4e66"}`,color:copied?B.white:"#4ade80",cursor:"pointer",fontWeight:800,fontSize:12,flexShrink:0,transition:"all .2s",whiteSpace:"nowrap"}}>
-          {copied?"✓ Copiado!":"Copiar chave"}
-        </button>
-      </div>
-      <a href={`https://wa.me/${wa}?text=${encodeURIComponent("Olá! Segue o comprovante de pagamento.")}`} target="_blank" rel="noreferrer"
-        style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"#25d36618",border:"1px solid #25d36644",borderRadius:10,textDecoration:"none",color:"#25d366",fontWeight:700,fontSize:13}}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
-        Enviar comprovante pelo WhatsApp
-      </a>
-    </div>
-  );
-}
-
 function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout}) {
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
-  const [showDebtPopup,setShowDebtPopup]=useState(false);
 
   useEffect(()=>{
     if(!VAPID_PUBLIC_KEY) return;
@@ -266,18 +231,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       else if("Notification" in window && Notification.permission==="denied") setPushStatus("denied");
       else if("PushManager" in window) setPushStatus("asking");
     });
-  },[]);
-
-  // Check for outstanding balances on old OSs
-  useEffect(()=>{
-    const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
-    const cliHistory=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
-    const hasDebt=cliHistory.some(h=>{
-      const totalValue=Number(h.total_value||h.totalValue||0);
-      const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);
-      return totalValue-paid>0.009;
-    });
-    if(hasDebt) setShowDebtPopup(true);
   },[]);
 
   const requestPush=async()=>{
@@ -309,34 +262,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   );
 
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
-
-    {/* Outstanding balance popup */}
-    {showDebtPopup&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:B.gray900,borderRadius:20,padding:28,maxWidth:340,width:"100%",border:`2px solid ${B.red}55`,boxShadow:`0 8px 40px rgba(0,0,0,.6)`}}>
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:48,marginBottom:12}}>⚠️</div>
-          <div style={{fontWeight:900,fontSize:18,color:B.white,marginBottom:8}}>Saldo em aberto</div>
-          <div style={{fontSize:14,color:B.gray400,lineHeight:1.6}}>Identificamos um ou mais serviços anteriores com valor pendente de pagamento.</div>
-        </div>
-        <div style={{background:`${B.red}12`,border:`1px solid ${B.red}33`,borderRadius:12,padding:"12px 16px",marginBottom:20}}>
-          {(()=>{
-            const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
-            const cliHist=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
-            return cliHist.filter(h=>{const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);return Number(h.total_value||h.totalValue||0)-paid>0.009;}).map(h=>{
-              const osNum=h.os_number||h.osNumber;const div=h.division||"performance";const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
-              const totalValue=Number(h.total_value||h.totalValue||0);const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);const balance=totalValue-paid;
-              return (<div key={h.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${B.red}22`}}>
-                <span style={{fontSize:13,color:B.gray300,fontWeight:700}}>{osLabel}</span>
-                <span style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(balance)}</span>
-              </div>);
-            });
-          })()}
-        </div>
-        <div style={{fontSize:12,color:B.gray500,textAlign:"center",marginBottom:16}}>Consulte a aba <strong style={{color:B.white}}>Conta</strong> para mais detalhes ou entre em contato conosco.</div>
-        <button onClick={()=>{setShowDebtPopup(false);setTab("account");}} style={{width:"100%",padding:"13px",borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",marginBottom:8}}>Ver conta</button>
-        <button onClick={()=>setShowDebtPopup(false)} style={{width:"100%",padding:"11px",borderRadius:12,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>Fechar</button>
-      </div>
-    </div>}
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${blue}`,padding:"0 18px",paddingTop:"env(safe-area-inset-top)",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",height:58,gap:12}}>
@@ -499,8 +424,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
       {/* ── Account ── */}
       {tab==="account"&&<>
-        {/* PIX payment info */}
-        <PixPaymentBox/>
         {cliVehicles.map(v=>{
           const vPayments=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId);
           const vHistory=cliHistory.filter(h=>(h.vehicle_id||h.vehicleId)===v.id);
@@ -555,35 +478,17 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
                 const divColor=div==="finishing"?FD.primary:B.orange;
                 const deliveredAt=h.delivered_at||h.deliveredAt;
-                const totalValue=Number(h.total_value||h.totalValue||0);
+                const totalValue=h.total_value||h.totalValue||0;
                 const hPays=payments.filter(p=>p.osHistoryId===h.id);
                 const paid=hPays.reduce((s,p)=>s+Number(p.amount),0);
-                const histBalance=totalValue-paid;
-                const isOpen=histBalance>0.009;
-                return (<div key={h.id} style={{background:isOpen?`${B.red}08`:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:8,border:`1px solid ${isOpen?B.red+"44":B.gray700}`}}>
-                  {/* Header row */}
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                return (<div key={h.id} style={{background:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:8,border:`1px solid ${B.gray700}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:hPays.length>0?6:0}}>
                     <span style={{fontSize:11,fontWeight:800,color:divColor}}>{osLabel}</span>
                     <span style={{fontSize:10,color:B.gray500}}>· {deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
-                    {isOpen&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",whiteSpace:"nowrap"}}>⚠ Em aberto</span>}
-                    {!isOpen&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"2px 8px"}}>✓ Quitado</span>}
+                    <span style={{marginLeft:"auto",fontSize:12,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:B.green}}>✓ {fmtBRL(paid)}</span>
                   </div>
-                  {/* Financial summary */}
-                  <div style={{display:"flex",gap:1,background:B.gray800,borderRadius:8,overflow:"hidden",marginBottom:hPays.length>0?8:0}}>
-                    <div style={{flex:1,padding:"8px 10px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Total</div>
-                      <div style={{fontSize:13,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</div>
-                    </div>
-                    <div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}>
-                      <div style={{fontSize:9,color:B.green,marginBottom:1}}>Pago</div>
-                      <div style={{fontSize:13,fontWeight:800,color:B.green}}>{fmtBRL(paid)}</div>
-                    </div>
-                    {isOpen&&<div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`,background:`${B.red}12`}}>
-                      <div style={{fontSize:9,color:B.red,marginBottom:1}}>Em aberto</div>
-                      <div style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(histBalance)}</div>
-                    </div>}
-                  </div>
-                  {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:`1px solid ${B.gray700}`}}>
+                  {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:i===0?`1px solid ${B.gray700}`:"none"}}>
                     <span style={{fontSize:11,color:B.green}}>💰</span>
                     <span style={{fontSize:11,color:B.gray300,flex:1}}>{p.method}{p.note?` · ${p.note}`:""}</span>
                     <span style={{fontSize:11,fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
@@ -733,7 +638,7 @@ async function uploadImg(file, folder) {
 
 // ─── Public link ─────────────────────────────────────────────────────────────
 function getPublicLink(vehicleId) {
-  return `${window.location.href.split("?")[0]}?v=${vehicleId}`;
+  return `${window.location.href.split("?")[0]}?vh=${vehicleId}`;
 }
 function getMechanicPortalLink() {
   return `${window.location.href.split("?")[0]}?portal=mecanico`;
@@ -2546,28 +2451,26 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
                 :<InlineEdit value="" onSave={v=>v.trim()&&onUpdate(idx,{...mat,brand:v.trim()})} placeholder="+ Marca"/>}
             </div>}
       </div>
-      <button onClick={()=>onRemove(idx)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2,display:"flex",flexShrink:0,alignSelf:"flex-start"}}
-        onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={13}/></button>
-    </div>
-
-    {/* Toggle buttons row — below name */}
-    {onUpdate&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:4}}>
-      <button onClick={()=>onUpdate(idx,{...mat,estimated:!isEstimated})}
+      {/* Estimated toggle */}
+      {onUpdate&&<button onClick={()=>onUpdate(idx,{...mat,estimated:!isEstimated})}
         title={isEstimated?"Confirmar quantidade":"Marcar como estimado"}
-        style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
         ⚠ {isEstimated?"Estimado":"Estimado?"}
-      </button>
-      <button onClick={()=>onUpdate(idx,{...mat,noCharge:!mat.noCharge})}
+      </button>}
+      {/* No charge toggle (for warranty) */}
+      {onUpdate&&<button onClick={()=>onUpdate(idx,{...mat,noCharge:!mat.noCharge})}
         title={mat.noCharge?"Cobrar do cliente":"Não cobrar do cliente"}
-        style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
         {mat.noCharge?"✓ Grátis":"Grátis?"}
-      </button>
+      </button>}
       {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
         title={isImported?"Remover marcação de importado":"Marcar como importado"}
-        style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
         ✈ {isImported?"Importado":"Import."}
       </button>}
-    </div>}
+      <button onClick={()=>onRemove(idx)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2,display:"flex",flexShrink:0}}
+        onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={13}/></button>
+    </div>
 
     {/* Line 2: qty + cost options */}
     {(showCost||editableQty)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":isImported?importColor+"22":B.gray600}`}}>
@@ -4310,6 +4213,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
   const [amount,setAmount]=useState("");
   const [method,setMethod]=useState("Dinheiro");
   const [note,setNote]=useState("");
+  const [paidAt,setPaidAt]=useState(new Date().toISOString().slice(0,10));
 
   const hPayments=payments.filter(p=>p.osHistoryId===h.id);
   const totalValue=Number(h.total_value||0);
@@ -4320,8 +4224,9 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
   const save=()=>{
     const val=parseFloat(amount.replace(",","."))||0;
     if(val<=0) return;
-    onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:val,method,paidAt:new Date().toISOString(),note});
-    setAmount(""); setNote(""); setShowForm(false);
+    const date=paidAt?new Date(paidAt+"T12:00:00").toISOString():new Date().toISOString();
+    onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:val,method,paidAt:date,note});
+    setAmount(""); setNote(""); setPaidAt(new Date().toISOString().slice(0,10)); setShowForm(false);
   };
 
   return (<div style={{marginTop:8,borderTop:`1px solid ${B.gray600}`,paddingTop:8}}>
@@ -4364,10 +4269,12 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
         style={{flex:"0 1 110px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
         {["Dinheiro","Pix","Cartão Débito","Cartão Crédito","Transferência","Outro"].map(m=><option key={m}>{m}</option>)}
       </select>
+      <input type="date" value={paidAt} onChange={e=>setPaidAt(e.target.value)}
+        style={{flex:"0 1 130px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
       <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
         style={{flex:"1 1 120px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
       <button onClick={save} style={{padding:"5px 12px",borderRadius:6,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
-      <button onClick={()=>{setShowForm(false);setAmount("");setNote("");}} style={{padding:"5px 8px",borderRadius:6,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
+      <button onClick={()=>{setShowForm(false);setAmount("");setNote("");setPaidAt(new Date().toISOString().slice(0,10));}} style={{padding:"5px 8px",borderRadius:6,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
     </div>}
   </div>);
 }
@@ -5752,9 +5659,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
   const perfTasks=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
   const finTasks=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
-  const regularPerfTasks=perfTasks.filter(t=>!t.warranty);
-  const warrantyAllTasks=tasks.filter(t=>t.vehicleId===v.id&&t.warranty);
-  const ts=[...regularPerfTasks,...finTasks.filter(t=>!t.warranty)];
+  const ts=[...perfTasks,...finTasks]; // all tasks for progress
   const done=ts.filter(t=>t.done).length;
   const pct=ts.length?Math.round(done/ts.length*100):0;
   const mechs=(v.mechanicIds||[v.employeeId]).filter(Boolean).map(id=>employees.find(e=>e.id===id)).filter(Boolean);
@@ -5766,7 +5671,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const [lb,setLB]=useState(null);
   const hasPerf=!!v.enteredAt||perfTasks.length>0;
   const hasFin=!!v.enteredAtFinishing||finTasks.length>0;
-  const catOrder=buildCatOrder(regularPerfTasks);
+  const catOrder=buildCatOrder(perfTasks);
 
   const statusCfg={
     active:{label:"Em serviço",     icon:"🔧", color:B.orange, bg:`${B.orange}18`},
@@ -5786,7 +5691,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${hasFin?FD.primary:B.orange}`}}>
       {/* Top row: logos + name */}
-      <div style={{padding:"12px 16px",paddingTop:"calc(12px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
           <div style={{width:32,height:32,borderRadius:7,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center"}}><IWrench s={16} c={B.white}/></div>
           {hasFin&&<div style={{width:32,height:32,borderRadius:7,background:FD.primary,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎨</div>}
@@ -5930,7 +5835,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           </div>}
           <div style={{marginTop:8}}>
             {catOrder.map(cat=>{
-              const groupTasks=regularPerfTasks.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+              const groupTasks=ts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
               const isFDCat=groupTasks.length>0&&groupTasks[0].division==="finishing";
               const catColor=cat?(isFDCat?CAT_MAP_FINISHING[cat]||CAT_MAP[cat]:CAT_MAP[cat]||CAT_MAP_FINISHING[cat])||B.gray500:null;
               // Photos linked to tasks in this category
@@ -5976,48 +5881,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               </div>);
             })}
           </div>
-
-          {/* ── Warranty section ── */}
-          {warrantyAllTasks.length>0&&<div style={{marginTop:16,background:`${B.red}0a`,border:`2px solid ${B.red}44`,borderRadius:12,overflow:"hidden"}}>
-            <div style={{background:`${B.red}22`,padding:"10px 14px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${B.red}33`}}>
-              <span style={{fontSize:18}}>🔴</span>
-              <div>
-                <div style={{fontWeight:800,fontSize:13,color:B.red}}>Serviços em Garantia</div>
-                <div style={{fontSize:11,color:`${B.red}99`}}>Sem cobrança ao cliente</div>
-              </div>
-            </div>
-            <div style={{padding:"12px 14px"}}>
-              {buildCatOrder(warrantyAllTasks).map(cat=>{
-                const wGroup=warrantyAllTasks.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
-                const catColor=cat?(CAT_MAP[cat]||CAT_MAP_FINISHING[cat]||B.red):B.red;
-                return(<div key={cat||"__wno__"} style={{marginBottom:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",background:`${catColor}18`,borderLeft:`3px solid ${B.red}`,borderRadius:"0 5px 5px 0",marginBottom:6}}>
-                    <span style={{width:6,height:6,borderRadius:99,background:catColor,flexShrink:0,display:"inline-block"}}/>
-                    <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
-                  </div>
-                  {wGroup.map((t,i)=>(
-                    <div key={i} style={{padding:"10px 12px",marginBottom:4,background:`${B.red}08`,borderRadius:10,border:`1px solid ${B.red}33`}}>
-                      <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                        <span style={{fontSize:18,flexShrink:0}}>🔴</span>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:14,color:B.gray100,fontWeight:600}}>{t.label}</div>
-                          {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
-                          {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
-                            <div key={mi} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
-                              <span style={{fontSize:11,color:m.noCharge?B.red:B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
-                              {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px",whiteSpace:"nowrap"}}>SEM COBRANÇA</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>);
-              })}
-            </div>
-          </div>}
         </div>
       </div>}
+
+      {/* ── Finishing Division tasks ── */}
       {hasFin&&finTasks.length>0&&<div style={{...S.card,border:`1px solid ${FD.border}`}}>
         <div style={{background:FD.bg,borderBottom:`2px solid ${FD.primary}`,padding:"10px 16px",display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:16}}>🎨</span>
@@ -6473,7 +6340,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.73";
+const APP_VERSION = "2026.08.10.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8749,8 +8616,6 @@ export default function App() {
     try{
       const osNumber=await db.openNewOS(vid,employeeId);
       const enteredAt=enteredAtStr?new Date(enteredAtStr).toISOString():new Date().toISOString();
-      // Explicitly reset mechanicIds in DB
-      await db.updateVehicle(vid,{mechanicIds:employeeId?[employeeId]:[], photos:[]});
       setVeh(p=>p.map(x=>x.id===vid?{
         ...x, osNumber, enteredAt,
         status:"active", pausedAt:null, totalPausedMs:0, priority:"medium",
@@ -8770,8 +8635,6 @@ export default function App() {
     try{
       const osNumber=await db.openNewOSFinishing(vid,employeeId);
       const enteredAt=enteredAtStr?new Date(enteredAtStr).toISOString():new Date().toISOString();
-      // Explicitly reset mechanicIds in DB
-      await db.updateVehicle(vid,{mechanicIds:employeeId?[employeeId]:[], photosFinishing:[]});
       setVeh(p=>p.map(x=>x.id===vid?{
         ...x,
         osNumberFinishing:osNumber, enteredAtFinishing:enteredAt,

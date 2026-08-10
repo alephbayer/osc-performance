@@ -2469,26 +2469,28 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
                 :<InlineEdit value="" onSave={v=>v.trim()&&onUpdate(idx,{...mat,brand:v.trim()})} placeholder="+ Marca"/>}
             </div>}
       </div>
-      {/* Estimated toggle */}
-      {onUpdate&&<button onClick={()=>onUpdate(idx,{...mat,estimated:!isEstimated})}
-        title={isEstimated?"Confirmar quantidade":"Marcar como estimado"}
-        style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
-        ⚠ {isEstimated?"Estimado":"Estimado?"}
-      </button>}
-      {/* No charge toggle (for warranty) */}
-      {onUpdate&&<button onClick={()=>onUpdate(idx,{...mat,noCharge:!mat.noCharge})}
-        title={mat.noCharge?"Cobrar do cliente":"Não cobrar do cliente"}
-        style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
-        {mat.noCharge?"✓ Grátis":"Grátis?"}
-      </button>}
-      {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
-        title={isImported?"Remover marcação de importado":"Marcar como importado"}
-        style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,flexShrink:0,whiteSpace:"nowrap"}}>
-        ✈ {isImported?"Importado":"Import."}
-      </button>}
-      <button onClick={()=>onRemove(idx)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2,display:"flex",flexShrink:0}}
+      <button onClick={()=>onRemove(idx)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2,display:"flex",flexShrink:0,alignSelf:"flex-start"}}
         onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={13}/></button>
     </div>
+
+    {/* Toggle buttons row — below name */}
+    {onUpdate&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:4}}>
+      <button onClick={()=>onUpdate(idx,{...mat,estimated:!isEstimated})}
+        title={isEstimated?"Confirmar quantidade":"Marcar como estimado"}
+        style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        ⚠ {isEstimated?"Estimado":"Estimado?"}
+      </button>
+      <button onClick={()=>onUpdate(idx,{...mat,noCharge:!mat.noCharge})}
+        title={mat.noCharge?"Cobrar do cliente":"Não cobrar do cliente"}
+        style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        {mat.noCharge?"✓ Grátis":"Grátis?"}
+      </button>
+      {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
+        title={isImported?"Remover marcação de importado":"Marcar como importado"}
+        style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        ✈ {isImported?"Importado":"Import."}
+      </button>}
+    </div>}
 
     {/* Line 2: qty + cost options */}
     {(showCost||editableQty)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":isImported?importColor+"22":B.gray600}`}}>
@@ -6394,7 +6396,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.69";
+const APP_VERSION = "2026.08.03.70";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

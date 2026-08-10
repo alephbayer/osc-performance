@@ -2690,8 +2690,8 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         </div>
       </div>
 
-      {/* ── Row 3: Hours/Qty + Rate + Toggle ── */}
-      <div style={{marginLeft:30,marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+      {/* ── Row 3: Hours/Qty + Rate + Toggle — hidden for warranty ── */}
+      {!task.warranty&&<div style={{marginLeft:30,marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
         <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px"}}>
           {task.rateType==="qty"?<IBox s={12} c={B.gray400}/>:<IClock s={12} c={B.gray400}/>}
           <InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"Qtd":"Horas"} type="number"/>
@@ -2706,11 +2706,10 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
           {task.rateType==="qty"?"📦 Qtd":"⏱ H"}
         </button>
-        {/* Total at the end */}
         {c.total>0&&<div style={{marginLeft:"auto",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 10px",flexShrink:0}}>
           <span style={{fontSize:13,fontWeight:800,color:B.amber}}>{fmtBRL(c.total)}</span>
         </div>}
-      </div>
+      </div>}
     </div>
     {showSP&&<StockPickerModal stock={stock} onPick={pickStock} onClose={()=>setSP(false)}/>}
     {showPOP&&hasPickable&&<div style={{margin:"4px 0 8px 30px",background:`${B.amber}10`,border:`1px solid ${B.amber}33`,borderRadius:9,padding:"8px 12px"}}>
@@ -6284,7 +6283,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.61";
+const APP_VERSION = "2026.08.03.62";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

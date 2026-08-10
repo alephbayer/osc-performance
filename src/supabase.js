@@ -146,6 +146,7 @@ const mapTaskIn = (t) => ({
   completedAt: t.completed_at,
   completedByEmployeeId: t.completed_by_employee_id || null,
   outsourced: t.outsourced || false,
+  warranty: t.warranty || false,
   discount: Number(t.discount || 0),
   category: t.category || null,
   description: t.description || '',
@@ -165,7 +166,8 @@ const mapTaskOut = (t) => ({
   rate_type: t.rateType || 'hour',
   description: t.description || '',
   outsourced: t.outsourced || false,
-  division: t.division || 'performance',
+  warranty: t.warranty || false,
+  discount: Number(t.discount || 0),
 });
 const mapStockIn = (s) => ({
   id: s.id,

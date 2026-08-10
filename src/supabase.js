@@ -423,12 +423,8 @@ export const db = {
       tows: historyRecord.tows || [],
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
+      photos: historyRecord.photos || [],
     }).select("id").single();
-    if (hErr) throw hErr;
-
-    const osHistoryId = hData.id;
-
-    // 2) Migrate existing vehicle payments to this OS history
     await supabase.from("payments")
       .update({ os_history_id: osHistoryId })
       .eq("vehicle_id", vehicleId)
@@ -475,6 +471,7 @@ export const db = {
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
       division: "finishing",
+      photos: historyRecord.photos || [],
     }).select("id").single();
     if (hErr) throw hErr;
 

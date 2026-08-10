@@ -207,15 +207,9 @@ function ClientLoginScreen({clients,onLogin}) {
             </div>
           </div>
           <PinInput label="PIN de 4 dígitos" onSubmit={tryPin} error={err} submitLabel="Entrar"/>
-          <button onClick={async()=>{
-            await saveClientPin(found.id,"");
-            const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
-            delete pins[found.id];
-            localStorage.setItem(CLIENT_PIN_KEY,JSON.stringify(pins));
-            setStep("create_pin");setErr("");
-          }} style={{width:"100%",marginTop:10,padding:"8px",background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>
-            Esqueci meu PIN
-          </button>
+          <div style={{marginTop:12,fontSize:11,color:B.gray500,textAlign:"center",lineHeight:1.6}}>
+            Esqueceu o PIN? Entre em contato com a oficina para fazer o reset.
+          </div>
         </>}
 
         {step==="create_pin"&&<>
@@ -3588,6 +3582,17 @@ function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,o
         <button onClick={()=>onSendWA(client)} style={{padding:"7px 11px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:4,background:client.phone?B.wa:B.gray700,color:client.phone?B.white:B.gray500}}>
           <IPhone s={13} c={client.phone?B.white:B.gray500}/>{client.phone?"WA":"Sem WA"}
         </button>
+        {isOwner&&<button onClick={()=>{
+          try{
+            const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
+            delete pins[client.id];
+            localStorage.setItem(CLIENT_PIN_KEY,JSON.stringify(pins));
+            toast_(`PIN de ${client.name} resetado ✓`);
+          }catch(e){}
+        }} title="Resetar PIN do portal do cliente"
+          style={{background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:8,padding:"5px 8px",cursor:"pointer",color:B.amber,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:3,flexShrink:0,whiteSpace:"nowrap"}}>
+          🔑 Reset PIN
+        </button>}
         <button onClick={()=>setConfirmDel(true)} style={{background:`${B.white}10`,border:"none",borderRadius:8,padding:7,cursor:"pointer",color:B.gray400,display:"flex"}}
           onMouseEnter={e=>{e.currentTarget.style.background="#ef444430";e.currentTarget.style.color=B.red;}}
           onMouseLeave={e=>{e.currentTarget.style.background=`${B.white}10`;e.currentTarget.style.color=B.gray400;}}><ITrash s={14}/></button>
@@ -6614,7 +6619,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.10.9";
+const APP_VERSION = "2026.08.10.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

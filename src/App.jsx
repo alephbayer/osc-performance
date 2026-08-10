@@ -1280,35 +1280,65 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   // ── Warranty section ──────────────────────────────────────────────────────────
   if (warrantyTs.length > 0) {
-    if (y + 20 > 282) { doc.addPage(); y = 16; }
+    if (y + 24 > 282) { doc.addPage(); y = 16; }
     doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
     doc.line(marginX, y, pageW - marginX, y); y += 6;
-    // Red header
-    doc.setFillColor(220,38,38);
-    doc.rect(marginX, y, contentW, 8, "F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(255,255,255);
-    doc.text("🔴  SERVIÇOS EM GARANTIA — SEM COBRANÇA AO CLIENTE", marginX+3, y+5.5);
-    y += 10;
 
-    warrantyTs.forEach(t => {
-      if (y + 12 > 282) { doc.addPage(); y = 16; }
-      doc.setFillColor(255,245,245);
-      doc.setDrawColor(220,38,38); doc.setLineWidth(0.2);
-      doc.rect(marginX, y, contentW, 10, "FD");
-      doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(180,20,20);
-      doc.text(`• ${t.label}`, marginX+4, y+7);
-      y += 11;
-      const mats = (t.materials||[]).filter(m=>m.name);
-      mats.forEach(m=>{
-        if (y + 6 > 282) { doc.addPage(); y = 16; }
-        doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(180,80,80);
-        const noChargeLbl = m.noCharge?" [sem cobrança]":"";
-        doc.text(`   🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${noChargeLbl}`, marginX+5, y+4);
-        y += 5;
+    // Section header — same style as main table header but red
+    doc.setFillColor(220,38,38);
+    doc.rect(marginX, y, contentW, 9, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+    doc.text("SERVIÇOS EM GARANTIA — SEM COBRANÇA AO CLIENTE", marginX+4, y+6);
+    y += 11;
+
+    // Grouped by category
+    const wCatOrder = buildCatOrder(warrantyTs);
+    const allCatMap2 = {...CAT_MAP,...CAT_MAP_FINISHING};
+    wCatOrder.forEach(cat => {
+      const group = warrantyTs.filter(t=>(t.category||null)===cat);
+      if (group.length === 0) return;
+
+      // Category sub-header
+      checkPageBreak(8);
+      const hexStr = cat ? (allCatMap2[cat]||"#dc2626") : "#dc2626";
+      const cr=parseInt(hexStr.slice(1,3),16), cg=parseInt(hexStr.slice(3,5),16), cb=parseInt(hexStr.slice(5,7),16);
+      doc.setFillColor(Math.round(cr*.15+240*.85),Math.round(cg*.15+235*.85),Math.round(cb*.15+235*.85));
+      doc.rect(marginX, y, contentW, 6, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(180,20,20);
+      doc.text((cat||"Sem categoria").toUpperCase(), marginX+3, y+4.2);
+      y += 7;
+
+      group.forEach((t,rowIdx) => {
+        const mats = (t.materials||[]).filter(m=>m.name);
+        const rowH = mats.length > 0 ? 8 + mats.length*5 : 8;
+        checkPageBreak(rowH+2);
+
+        // Alternating light red rows
+        doc.setFillColor(rowIdx%2===0?[255,245,245]:[255,240,240]);
+        doc.setFillColor(rowIdx%2===0?255:253, rowIdx%2===0?245:240, rowIdx%2===0?245:240);
+        doc.rect(marginX, y-1, contentW, rowH+1, "F");
+
+        doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(180,20,20);
+        doc.text(`• ${t.label}`, marginX+4, y+5.5);
+
+        doc.setFillColor(220,38,38); doc.setDrawColor(220,38,38); doc.setLineWidth(0.15);
+        doc.line(marginX, y+rowH, pageW-marginX, y+rowH);
+        doc.setLineWidth(0.2);
+
+        if (mats.length > 0) {
+          let my = y + 10;
+          mats.forEach(m => {
+            doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(160,60,60);
+            const noChargeLbl = m.noCharge ? " [sem cobrança]" : "";
+            doc.text(`  🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${noChargeLbl}`, marginX+6, my);
+            my += 5;
+          });
+        }
+        y += rowH + 1;
       });
-      y += 2;
+      y += 3;
     });
-    y += 4;
+    y += 6;
   }
 
   // ── Payments received ─────────────────────────────────────────────────────────
@@ -1667,29 +1697,53 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
 
     // ── Warranty section ────────────────────────────────────────────────────
     if (finWarrantyTs.length > 0) {
-      if (y + 20 > 282) { doc.addPage(); y = 16; }
+      if (y + 24 > 282) { doc.addPage(); y = 16; }
       doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
       doc.line(marginX, y, pageW-marginX, y); y += 6;
+
       doc.setFillColor(220,38,38);
-      doc.rect(marginX, y, contentW, 8, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(255,255,255);
-      doc.text("🔴  SERVIÇOS EM GARANTIA — SEM COBRANÇA AO CLIENTE", marginX+3, y+5.5);
-      y += 10;
-      finWarrantyTs.forEach(t => {
-        if (y + 12 > 282) { doc.addPage(); y = 16; }
-        doc.setFillColor(255,245,245); doc.setDrawColor(220,38,38); doc.setLineWidth(0.2);
-        doc.rect(marginX, y, contentW, 10, "FD");
-        doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(180,20,20);
-        doc.text(`• ${t.label}`, marginX+4, y+7); y += 11;
-        (t.materials||[]).filter(m=>m.name).forEach(m=>{
-          if (y + 6 > 282) { doc.addPage(); y = 16; }
-          doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(180,80,80);
-          doc.text(`   🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${m.noCharge?" [sem cobrança]":""}`, marginX+5, y+4);
-          y += 5;
+      doc.rect(marginX, y, contentW, 9, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+      doc.text("SERVIÇOS EM GARANTIA — SEM COBRANÇA AO CLIENTE", marginX+4, y+6);
+      y += 11;
+
+      const wCatOrderFD = buildCatOrder(finWarrantyTs);
+      const allCatMapFD = {...CAT_MAP,...CAT_MAP_FINISHING};
+      wCatOrderFD.forEach(cat => {
+        const group = finWarrantyTs.filter(t=>(t.category||null)===cat);
+        if (group.length === 0) return;
+        checkPageBreak(8);
+        const hexStr = cat ? (allCatMapFD[cat]||"#dc2626") : "#dc2626";
+        const cr=parseInt(hexStr.slice(1,3),16), cg=parseInt(hexStr.slice(3,5),16), cb=parseInt(hexStr.slice(5,7),16);
+        doc.setFillColor(Math.round(cr*.15+240*.85),Math.round(cg*.15+235*.85),Math.round(cb*.15+235*.85));
+        doc.rect(marginX, y, contentW, 6, "F");
+        doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(180,20,20);
+        doc.text((cat||"Sem categoria").toUpperCase(), marginX+3, y+4.2);
+        y += 7;
+
+        group.forEach((t,rowIdx) => {
+          const mats = (t.materials||[]).filter(m=>m.name);
+          const rowH = mats.length > 0 ? 8 + mats.length*5 : 8;
+          checkPageBreak(rowH+2);
+          doc.setFillColor(rowIdx%2===0?255:253, rowIdx%2===0?245:240, rowIdx%2===0?245:240);
+          doc.rect(marginX, y-1, contentW, rowH+1, "F");
+          doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(180,20,20);
+          doc.text(`• ${t.label}`, marginX+4, y+5.5);
+          doc.setDrawColor(220,38,38); doc.setLineWidth(0.15);
+          doc.line(marginX, y+rowH, pageW-marginX, y+rowH);
+          if (mats.length > 0) {
+            let my = y + 10;
+            mats.forEach(m => {
+              doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(160,60,60);
+              doc.text(`  🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${m.noCharge?" [sem cobrança]":""}`, marginX+6, my);
+              my += 5;
+            });
+          }
+          y += rowH + 1;
         });
-        y += 2;
+        y += 3;
       });
-      y += 4;
+      y += 6;
     }
 
     // ── Payment methods ────────────────────────────────────────────────────
@@ -6283,7 +6337,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.63";
+const APP_VERSION = "2026.08.03.64";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -6587,8 +6641,51 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
               </div>
             );
           })()}
-          {renderTaskList(activeTasks,(v.photos||[]).map(p=>typeof p==="string"?{url:p,taskId:null}:p))}
+          {renderTaskList(activeTasks.filter(t=>!t.warranty),(v.photos||[]).map(p=>typeof p==="string"?{url:p,taskId:null}:p))}
           {activeTasks.length===0&&<div style={{fontSize:13,color:B.gray500}}>Nenhuma tarefa registrada ainda.</div>}
+
+          {/* Warranty tasks — separate red section */}
+          {(()=>{
+            const wts=activeTasks.filter(t=>t.warranty);
+            if(wts.length===0) return null;
+            const catOrder=buildCatOrder(wts);
+            return(<div style={{marginTop:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:`${B.red}18`,border:`2px solid ${B.red}55`,borderRadius:10,marginBottom:10}}>
+                <span style={{fontSize:18}}>🔴</span>
+                <div>
+                  <div style={{fontWeight:800,fontSize:13,color:B.red}}>Serviços em Garantia</div>
+                  <div style={{fontSize:11,color:`${B.red}99`}}>Sem cobrança ao cliente</div>
+                </div>
+              </div>
+              {catOrder.map(cat=>{
+                const group=wts.filter(t=>(t.category||null)===cat);
+                const catColor=cat?(CAT_MAP[cat]||CAT_MAP_FINISHING[cat]||B.red):B.red;
+                return(<div key={cat||"__none__"} style={{marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",background:`${catColor}18`,borderLeft:`3px solid ${B.red}`,borderRadius:"0 5px 5px 0",marginBottom:5}}>
+                    <span style={{width:6,height:6,borderRadius:99,background:B.red,flexShrink:0,display:"inline-block"}}/>
+                    <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
+                  </div>
+                  {group.map((t,i)=>(
+                    <div key={i} style={{padding:"8px 10px",marginBottom:3,background:`${B.red}08`,borderRadius:8,border:`1px solid ${B.red}33`}}>
+                      <div style={{display:"flex",gap:7,alignItems:"flex-start"}}>
+                        <span style={{fontSize:15,flexShrink:0}}>🔴</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,color:B.gray100,fontWeight:600}}>{t.label}</div>
+                          {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
+                          {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
+                            <div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
+                              <span style={{color:m.noCharge?B.red:B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
+                              {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px"}}>SEM COBRANÇA</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>);
+              })}
+            </div>);
+          })()}
         </div>
       </div>}
 

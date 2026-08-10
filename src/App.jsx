@@ -478,17 +478,35 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
                 const divColor=div==="finishing"?FD.primary:B.orange;
                 const deliveredAt=h.delivered_at||h.deliveredAt;
-                const totalValue=h.total_value||h.totalValue||0;
+                const totalValue=Number(h.total_value||h.totalValue||0);
                 const hPays=payments.filter(p=>p.osHistoryId===h.id);
                 const paid=hPays.reduce((s,p)=>s+Number(p.amount),0);
-                return (<div key={h.id} style={{background:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:8,border:`1px solid ${B.gray700}`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:hPays.length>0?6:0}}>
+                const histBalance=totalValue-paid;
+                const isOpen=histBalance>0.009;
+                return (<div key={h.id} style={{background:isOpen?`${B.red}08`:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:8,border:`1px solid ${isOpen?B.red+"44":B.gray700}`}}>
+                  {/* Header row */}
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                     <span style={{fontSize:11,fontWeight:800,color:divColor}}>{osLabel}</span>
                     <span style={{fontSize:10,color:B.gray500}}>· {deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
-                    <span style={{marginLeft:"auto",fontSize:12,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:B.green}}>✓ {fmtBRL(paid)}</span>
+                    {isOpen&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",whiteSpace:"nowrap"}}>⚠ Em aberto</span>}
+                    {!isOpen&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"2px 8px"}}>✓ Quitado</span>}
                   </div>
-                  {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:i===0?`1px solid ${B.gray700}`:"none"}}>
+                  {/* Financial summary */}
+                  <div style={{display:"flex",gap:1,background:B.gray800,borderRadius:8,overflow:"hidden",marginBottom:hPays.length>0?8:0}}>
+                    <div style={{flex:1,padding:"8px 10px",textAlign:"center"}}>
+                      <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Total</div>
+                      <div style={{fontSize:13,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</div>
+                    </div>
+                    <div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}>
+                      <div style={{fontSize:9,color:B.green,marginBottom:1}}>Pago</div>
+                      <div style={{fontSize:13,fontWeight:800,color:B.green}}>{fmtBRL(paid)}</div>
+                    </div>
+                    {isOpen&&<div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`,background:`${B.red}12`}}>
+                      <div style={{fontSize:9,color:B.red,marginBottom:1}}>Em aberto</div>
+                      <div style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(histBalance)}</div>
+                    </div>}
+                  </div>
+                  {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:`1px solid ${B.gray700}`}}>
                     <span style={{fontSize:11,color:B.green}}>💰</span>
                     <span style={{fontSize:11,color:B.gray300,flex:1}}>{p.method}{p.note?` · ${p.note}`:""}</span>
                     <span style={{fontSize:11,fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
@@ -6376,7 +6394,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.03.68";
+const APP_VERSION = "2026.08.03.69";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -3010,7 +3010,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
 }
 
 // ─── VehicleCard ──────────────────────────────────────────────────────────────
-function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[]}) {
+function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null}) {
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
   useEffect(()=>{
@@ -3152,33 +3152,45 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         {!hideManagerButtons&&<button onClick={()=>setXfM(true)} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           <IWrench s={12} c={B.orange}/>+ Mec.
         </button>}
+        {!hideManagerButtons&&isOwner&&onOpenOS&&!vehicle.osNumber&&division==="performance"&&<button onClick={()=>onOpenOS(vehicle.id,null,null)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
+          🔧 Abrir OS
+        </button>}
         {!hideManagerButtons&&isOwner&&onSetStatus&&<>
-          {vehicle.status!=="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"paused")} style={{background:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-            ⏸ Pausar
-          </button>}
-          {vehicle.status==="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-            ▶ Retomar
-          </button>}
           {(()=>{
-            const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id);
-            const hasEstimated=vTasks.some(t=>(t.materials||[]).some(m=>m.estimated));
+            const curStatus=division==="finishing"?(vehicle.statusFinishing||"active"):vehicle.status;
+            const deliveredField=division==="finishing"?vehicle.deliveredAtFinishing:vehicle.deliveredAt;
             return(<>
-              {vehicle.status!=="ready"&&<button onClick={()=>{
-                if(hasEstimated){alert("⚠️ Existem materiais estimados nesta OS. Confirme ou remova-os antes de marcar como pronto.");return;}
-                onSetStatus(vehicle.id,"ready");
-              }} title={hasEstimated?"Há materiais estimados a confirmar":""} style={{background:hasEstimated?`${B.amber}22`:B.blueBg,border:`1px solid ${hasEstimated?B.amber:B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                {hasEstimated?"⚠️ Estimados":"✓ Pronto"}
+              {curStatus!=="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"paused")} style={{background:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+                ⏸ Pausar
               </button>}
-              {vehicle.status==="ready"&&!vehicle.deliveredAt&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                ↩ Reabrir
+              {curStatus==="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+                ▶ Retomar
               </button>}
-              {vehicle.status==="ready"&&!vehicle.deliveredAt&&isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
-                🚗 Entregar
-              </button>}
+              {(()=>{
+                const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(division==="finishing"?t.division==="finishing":(t.division||"performance")==="performance"));
+                const hasEstimated=vTasks.some(t=>(t.materials||[]).some(m=>m.estimated));
+                return(<>
+                  {curStatus!=="ready"&&<button onClick={()=>{
+                    if(hasEstimated){alert("⚠️ Existem materiais estimados nesta OS. Confirme ou remova-os antes de marcar como pronto.");return;}
+                    onSetStatus(vehicle.id,"ready");
+                  }} title={hasEstimated?"Há materiais estimados a confirmar":""} style={{background:hasEstimated?`${B.amber}22`:B.blueBg,border:`1px solid ${hasEstimated?B.amber:B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+                    {hasEstimated?"⚠️ Estimados":"✓ Pronto"}
+                  </button>}
+                  {curStatus==="ready"&&!deliveredField&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+                    ↩ Reabrir
+                  </button>}
+                  {curStatus==="ready"&&!deliveredField&&isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
+                    🚗 Entregar
+                  </button>}
+                </>);
+              })()}
             </>);
           })()}
-          {vehicle.deliveredAt&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
+          {vehicle.deliveredAt&&division!=="finishing"&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
             ✅ Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
+          </span>}
+          {vehicle.deliveredAtFinishing&&division==="finishing"&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
+            ✅ Entregue {new Date(vehicle.deliveredAtFinishing).toLocaleDateString("pt-BR")}
           </span>}
         </>}
         {!hideManagerButtons&&<button onClick={()=>setConfirmDelV(true)} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}
@@ -4153,7 +4165,7 @@ function PurchaseForm({stockId,onConfirm,onCancel}) {
 function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaultRate,company,
   addTask,toggleT,delTask,updTask,updVeh,delVeh,xferMech,xferOwn,consumeStock,returnStock,
   payments,addPayment,deletePayment,addVehicleMechanic,removeVehicleMechanic,setVehicleStatus,deliverVehicle,deliverVehicleFinishing,adminRole,searching=false,division="performance",
-  purchaseOrders=[],onAddPurchaseOrder}) {
+  purchaseOrders=[],onAddPurchaseOrder,onOpenOS=null}) {
   const [collapsed,setCollapsed]=useState(()=>{
     const init={};
     groups.forEach(({emp})=>{ init[emp?.id||"__none__"]=true; });
@@ -4189,7 +4201,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
             onConsumeStock={consumeStock} onReturnStock={returnStock}
             payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} company={company}
             onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"} division={division||"performance"}
-            onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>)}
+            onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>)}
         </div>}
       </div>);
     })}
@@ -4784,6 +4796,14 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 {hClient&&<span style={{fontSize:11,color:B.blue}}>👤 {hClient.name}</span>}
                 {hMechs.length>0&&<span style={{fontSize:11,color:B.orange}}>🔧 {hMechs.join(", ")}</span>}
                 {h.total_value>0&&<span style={{fontSize:12,fontWeight:800,color:B.amber,marginLeft:"auto"}}>{fmtBRL(h.total_value)}</span>}
+                {/* Reopen OS button — owner only, when no active OS */}
+                {isOwner&&!hasActiveOS&&onOpenOS&&(h.division||"performance")==="performance"&&<button onClick={()=>{
+                  if(window.confirm(`Reabrir a ${h.os_number?fmtOS(h.os_number):"OS"} para ${vehicle.model}? Os dados históricos serão mantidos.`)){
+                    onOpenOS(vehicle.id, null, h.entered_at||null);
+                  }
+                }} style={{background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.green,fontSize:10,fontWeight:800,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}>
+                  ↩ Reabrir
+                </button>}
                 <button disabled={pdfLoading===h.id} onClick={async()=>{
                   setPdfLoading(h.id);
                   try{
@@ -5998,16 +6018,21 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       </div>
 
       {/* ── Progress ── */}
-      {ts.length>0&&<div style={S.card}>
+      {(()=>{
+        const progTasks=perfTasks.filter(t=>!t.warranty);
+        const progDone=progTasks.filter(t=>t.done).length;
+        const progPct=progTasks.length?Math.round(progDone/progTasks.length*100):0;
+        if(progTasks.length===0) return null;
+        return(<div style={S.card}>
         <div style={S.pad}>
           <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}}>📋 Progresso do serviço</div>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:pct===100?14:6}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:progPct===100?14:6}}>
             <div style={{flex:1,height:12,borderRadius:99,background:B.gray700,overflow:"hidden"}}>
-              <div style={{width:`${pct}%`,height:"100%",background:pct===100?B.green:B.orange,borderRadius:99,transition:"width .5s"}}/>
+              <div style={{width:`${progPct}%`,height:"100%",background:progPct===100?B.green:B.orange,borderRadius:99,transition:"width .5s"}}/>
             </div>
-            <span style={{fontSize:18,fontWeight:900,color:pct===100?B.green:B.orange,minWidth:50,textAlign:"right"}}>{pct}%</span>
+            <span style={{fontSize:18,fontWeight:900,color:progPct===100?B.green:B.orange,minWidth:50,textAlign:"right"}}>{progPct}%</span>
           </div>
-          {pct===100&&<div style={{background:B.greenBg,border:`1px solid ${B.green}55`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,fontWeight:700,color:B.green,textAlign:"center"}}>
+          {progPct===100&&<div style={{background:B.greenBg,border:`1px solid ${B.green}55`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,fontWeight:700,color:B.green,textAlign:"center"}}>
             🎉 Seu veículo está pronto para retirada!
           </div>}
 
@@ -6122,7 +6147,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             })}
           </div>
         </div>
-      </div>}
+      </div>);
+      })()}
 
       {/* ── Finishing Division tasks ── */}
       {hasFin&&finTasks.length>0&&<div style={{...S.card,border:`1px solid ${FD.border}`}}>
@@ -6629,7 +6655,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.10.11";
+const APP_VERSION = "2026.08.11.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8822,7 +8848,28 @@ export default function App() {
     }catch(e){errToast(e);}
   };
 
-  const deliverVehicle=async(vid)=>{
+  const setVehicleStatusFinishing=async(vid,newStatus)=>{
+    const v=vehicles.find(x=>x.id===vid);
+    if(!v)return;
+    const now=Date.now();
+    let patch={statusFinishing:newStatus};
+    if(newStatus==="paused"){
+      patch.pausedAtFinishing=new Date().toISOString();
+    } else if(v.statusFinishing==="paused"&&v.pausedAtFinishing){
+      const added=now-new Date(v.pausedAtFinishing).getTime();
+      patch.totalPausedMsFinishing=(v.totalPausedMsFinishing||0)+added;
+      patch.pausedAtFinishing=null;
+    } else {
+      patch.pausedAtFinishing=null;
+    }
+    setVeh(p=>p.map(x=>x.id===vid?{...x,...patch}:x));
+    try{
+      await db.updateVehicle(vid,patch);
+      const vModel=v?.model||v?.plate||"Veículo";
+      const statusLabel=newStatus==="paused"?"⏸ pausado (Finishing)":newStatus==="active"?"▶ retomado (Finishing)":"atualizado";
+      pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de acabamento foi pausado.":"O serviço de acabamento foi retomado.");
+    }catch(e){errToast(e);}
+  };
     const v=vehicles.find(x=>x.id===vid);
     if(!v)return;
     const nowMs=Date.now();
@@ -8859,36 +8906,7 @@ export default function App() {
       photos: v.photos||[],
     };
 
-    // Optimistic UI: update vehicle, remove its tasks, add to history
-    const newOsEntry={
-      id:`local-${Date.now()}`,
-      vehicle_id:vid,
-      ...historyRecord,
-      created_at:deliveredAt,
-    };
-    setVeh(p=>p.map(x=>x.id===vid?{
-      ...x,
-      deliveredAt,
-      status:"active",
-      pausedAt:null,
-      totalPausedMs:0,
-      enteredAt:null,
-      osNumber:null,
-      priority:"medium",
-      fuelCost:0,
-      fuels:[],
-      tows:[],
-      photos:[],
-      checklist:[],
-      partsList:[],
-      notes:"",
-      osDiscountPct:0,
-      mechanicIds:[], // clear so mechanic portal removes vehicle immediately
-    }:x));
-    setTsk(p=>p.filter(t=>!(t.vehicleId===vid&&(t.division||"performance")==="performance")));
-    // Will update payments osHistoryId after we get the real ID from the server
-    setOsHistory(p=>[newOsEntry,...p]);
-
+    // Don't update UI optimistically — wait for DB to confirm
     try{
       await db.archiveAndResetVehicle(vid,historyRecord);
       // Reload to get real os_history id and updated payments
@@ -8901,6 +8919,7 @@ export default function App() {
       if(v?.clientId) db.sendPushToClient(v.clientId,`🏁 ${vModel} pronto!`,"Seu veículo foi entregue. Obrigado pela preferência!",`/?portal=cliente`).catch(()=>{});
     }catch(e){
       errToast(e);
+      // Reload from DB to restore correct state
       const d=await db.loadAll();
       setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]); setPay(d.payments||[]);
     }
@@ -8959,15 +8978,9 @@ export default function App() {
       enteredAt:v.enteredAtFinishing, deliveredAt, totalPausedMs:v.totalPausedMsFinishing||0,
       tasksSnapshot:finTasks, fuelCost:0, fuels:[], tows:[],
       osDiscountPct:v.osDiscountPctFinishing||0, totalValue, division:"finishing",
+      photos: v.photosFinishing||[],
     };
-    const newEntry={...historyRecord, id:`temp-${Date.now()}`, vehicle_id:vid, os_number:v.osNumberFinishing, delivered_at:deliveredAt, entered_at:v.enteredAtFinishing, tasks_snapshot:finTasks, total_value:totalValue};
-    setVeh(p=>p.map(x=>x.id===vid?{...x,
-      osNumberFinishing:null, enteredAtFinishing:null, statusFinishing:"active",
-      pausedAtFinishing:null, totalPausedMsFinishing:0, photosFinishing:[],
-      notesFinishing:"", checklistFinishing:[], osDiscountPctFinishing:0, partsListFinishing:[],
-    }:x));
-    setTsk(p=>p.filter(t=>!(t.vehicleId===vid&&t.division==="finishing")));
-    setOsHistory(p=>[newEntry,...p]);
+    // Don't update UI optimistically — wait for DB to confirm
     try{
       await db.archiveAndResetVehicleFinishing(vid,historyRecord);
       const d=await db.loadAll();
@@ -8976,7 +8989,12 @@ export default function App() {
       const vFin=vehicles.find(x=>x.id===vid);
       const vModelFin=vFin?.model||vFin?.plate||"Veículo";
       pushToVehicleMechs(vid,`🏁 OS Finishing encerrada — ${vModelFin}`,"O veículo foi entregue ao cliente.","finishing");
-    }catch(e){errToast(e);}
+    }catch(e){
+      errToast(e);
+      // Reload from DB to restore correct state
+      const d=await db.loadAll();
+      setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]); setPay(d.payments||[]);
+    }
   };
 
   // ── Tasks
@@ -9566,7 +9584,7 @@ export default function App() {
       {tab==="clients"&&allowedTabs.includes("clients")&&<>
         <TabHeader color={B.orange} title="OSC Performance" subtitle={`OS em andamento · Taxa: ${fmtBRL(defaultRate)}/h`}/>
         {(()=>{
-          const allActive=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id));
+          const allActive=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"));
           const activeVehicles=osSearch
             ? allActive.filter(v=>
                 v.model.toLowerCase().includes(osSearch.toLowerCase())||
@@ -9610,7 +9628,7 @@ export default function App() {
             payments={payments} addPayment={addPayment} deletePayment={deletePayment}
             addVehicleMechanic={addVehicleMechanic} removeVehicleMechanic={removeVehicleMechanic}
             setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} deliverVehicleFinishing={deliverVehicleFinishing} adminRole={adminRole}
-            searching={!!osSearch} purchaseOrders={purchaseOrders}
+            searching={!!osSearch} purchaseOrders={purchaseOrders} onOpenOS={openNewOS}
             onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}}
             />}</>;
         })()}
@@ -9646,7 +9664,7 @@ export default function App() {
               onTransferMechanic={xferMech} onTransferOwner={xferOwn}
               onConsumeStock={consumeStock} onReturnStock={returnStock}
               payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} company={company}
-              onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus}
+              onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
               onDeliver={deliverVehicleFinishing} onDeliverFinishing={deliverVehicleFinishing}
               isOwner={adminRole==="owner"} division="finishing"
               onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders}/>)}

@@ -408,8 +408,9 @@ export const db = {
 
   // Archive current OS to history and reset vehicle for next OS
   async archiveAndResetVehicle(vehicleId, historyRecord) {
-    // 1) Save OS snapshot to os_history
-    const { data: hData, error: hErr } = await supabase.from("os_history").insert({
+    // 1) Save OS snapshot to os_history — try with photos first, fallback without
+    let hData, hErr;
+    const insertPayload = {
       vehicle_id: vehicleId,
       os_number: historyRecord.osNumber,
       client_id: historyRecord.clientId,
@@ -424,11 +425,16 @@ export const db = {
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
       photos: historyRecord.photos || [],
-    }).select("id").single();
-    await supabase.from("payments")
-      .update({ os_history_id: osHistoryId })
-      .eq("vehicle_id", vehicleId)
-      .is("os_history_id", null);
+    };
+    ({ data: hData, error: hErr } = await supabase.from("os_history").insert(insertPayload).select("id").single());
+    // If photos column doesn't exist yet, retry without it
+    if (hErr && hErr.message && hErr.message.includes("photos")) {
+      const { photos: _, ...payloadWithoutPhotos } = insertPayload;
+      ({ data: hData, error: hErr } = await supabase.from("os_history").insert(payloadWithoutPhotos).select("id").single());
+    }
+    if (hErr) throw hErr;
+
+    const osHistoryId = hData.id;
 
     // 3) Delete all current tasks for this vehicle
     await supabase.from("tasks").delete().eq("vehicle_id", vehicleId).eq("division", "performance");
@@ -456,7 +462,8 @@ export const db = {
 
   async archiveAndResetVehicleFinishing(vehicleId, historyRecord) {
     // 1) Save Finishing OS snapshot to os_history with division="finishing"
-    const { data: hData, error: hErr } = await supabase.from("os_history").insert({
+    let hData, hErr;
+    const insertPayload = {
       vehicle_id: vehicleId,
       os_number: historyRecord.osNumber,
       client_id: historyRecord.clientId,
@@ -472,7 +479,12 @@ export const db = {
       total_value: historyRecord.totalValue || 0,
       division: "finishing",
       photos: historyRecord.photos || [],
-    }).select("id").single();
+    };
+    ({ data: hData, error: hErr } = await supabase.from("os_history").insert(insertPayload).select("id").single());
+    if (hErr && hErr.message && hErr.message.includes("photos")) {
+      const { photos: _, ...payloadWithoutPhotos } = insertPayload;
+      ({ data: hData, error: hErr } = await supabase.from("os_history").insert(payloadWithoutPhotos).select("id").single());
+    }
     if (hErr) throw hErr;
 
     const osHistoryId = hData.id;

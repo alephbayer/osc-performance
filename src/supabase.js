@@ -882,6 +882,11 @@ export const db = {
     if (error) throw error;
   },
 
+  async deleteOsHistory(id) {
+    const { error } = await supabase.from("os_history").delete().eq("id", id);
+    if (error) throw error;
+  },
+
   // ── Internal mappers exposed for Realtime ──
   _mapTask: mapTaskIn,
   _mapVehicle: mapVehicleIn,

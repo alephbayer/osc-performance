@@ -4385,7 +4385,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
       onCancel={()=>setConfirmDel(null)}/>}
   </div>);
 }
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,isOwner=false}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,isOwner=false,onDeleteOsHistory=null}) {
   const [search,setSearch]=useState("");
   const [osFilter,setOsFilter]=useState("all"); // all | active | available
   const [now,setNow]=useState(Date.now());
@@ -4452,7 +4452,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
         <div style={{fontSize:13}}>Clique em <b style={{color:B.orange}}>+ Novo veículo</b> para cadastrar o primeiro.</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner}/>)}
+      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory}/>)}
     </div>}
   </div>);
 }
@@ -4529,7 +4529,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,isOwner=false}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,isOwner=false,onDeleteOsHistory=null}) {
   const isFD = false;
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
@@ -4815,6 +4815,14 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 }} style={{background:pdfLoading===h.id?B.gray600:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"3px 9px",cursor:pdfLoading===h.id?"wait":"pointer",color:pdfLoading===h.id?B.gray400:B.amber,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
                   <IFileText s={11} c={pdfLoading===h.id?B.gray400:B.amber}/>{pdfLoading===h.id?"PDF…":"PDF"}
                 </button>
+                {isOwner&&<button onClick={()=>{
+                  const osLabel=h.os_number?fmtOS(h.os_number):"OS";
+                  if(!window.confirm(`Excluir ${osLabel} do histórico de ${vehicle.model}?\n\nEsta ação não pode ser desfeita.`)) return;
+                  if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nTem certeza que deseja excluir permanentemente ${osLabel}?\n\nTodos os dados desta OS serão perdidos.`)) return;
+                  onDeleteOsHistory&&onDeleteOsHistory(h.id);
+                }} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.red,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
+                  <ITrash s={10} c={B.red}/>
+                </button>}
               </div>
               <div style={{fontSize:11,color:B.gray400,display:"flex",gap:12,flexWrap:"wrap",marginBottom:hTasks.length?6:0}}>
                 {h.entered_at&&<span>📅 Entrada: {new Date(h.entered_at).toLocaleDateString("pt-BR")}</span>}
@@ -6655,7 +6663,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.5";
+const APP_VERSION = "2026.08.11.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9689,7 +9697,8 @@ export default function App() {
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <TabHeader color={B.blue} title="🚗 Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
-        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} isOwner={adminRole==="owner"}/>
+        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} isOwner={adminRole==="owner"}
+          onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico ✓");}catch(e){errToast(e);}}}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="💰 Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>

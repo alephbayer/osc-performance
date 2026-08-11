@@ -6669,7 +6669,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.7";
+const APP_VERSION = "2026.08.11.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9621,7 +9621,7 @@ export default function App() {
           // Group by mechanics — sorted alphabetically, "Sem mecânico" last
           const groups=[];
           const assignedVehicleIds=new Set();
-          [...employees].sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).forEach(emp=>{
+          [...employees].filter(e=>e.division!=="finishing").sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).forEach(emp=>{
             const empVs=activeVehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id));
             if(empVs.length>0){
               groups.push({emp,vehicles:empVs});

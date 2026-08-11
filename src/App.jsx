@@ -6655,7 +6655,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.3";
+const APP_VERSION = "2026.08.11.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8870,6 +8870,8 @@ export default function App() {
       pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de acabamento foi pausado.":"O serviço de acabamento foi retomado.");
     }catch(e){errToast(e);}
   };
+
+  const deliverVehicle=async(vid)=>{
     const v=vehicles.find(x=>x.id===vid);
     if(!v)return;
     const nowMs=Date.now();

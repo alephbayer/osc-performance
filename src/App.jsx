@@ -3052,8 +3052,9 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const total      = managerMode?tasksTotal+fuelTotal+towTotal-osDiscount:0;
   const photos= isFD ? (vehicle.photosFinishing||[]) : (vehicle.photos||[]);
   const pubLink=getPublicLink(vehicle.id);
-  const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo"}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"⏸ Aguardando cliente"}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"✓ Pronto"}};
-  const sc = statusColors[vehicle.status||"active"];
+  const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo"}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"⏸ Pausado (Performance)"}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"✓ Pronto"}};
+  const statusColorsFD = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo"}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"⏸ Pausado (Finishing)"}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"✓ Pronto (Finishing)"}};
+  const sc = division==="finishing" ? (statusColorsFD[vehicle.statusFinishing||"active"]) : (statusColors[vehicle.status||"active"]);
 
   const addT=()=>{if(!newT.trim())return;onAddTask(vehicle.id,newT.trim(),null,isFD?"finishing":"performance");setNewT("");};
   const doAI=async()=>{setAiL(true);setAiS([]);try{setAiS(await aiSuggest(vehicle.model));}catch{}setAiL(false);};
@@ -5942,9 +5943,14 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const catOrder=buildCatOrder(regularTs);
 
   const statusCfg={
-    active:{label:"Em serviço",     icon:"🔧", color:B.orange, bg:`${B.orange}18`},
-    paused:{label:"Aguardando peça",icon:"⏸",  color:B.amber,  bg:`${B.amber}18`},
-    ready: {label:"Pronto!",        icon:"✅", color:B.green,  bg:B.greenBg},
+    active:{label:"Em serviço",               icon:"🔧", color:B.orange, bg:`${B.orange}18`},
+    paused:{label:"Pausado — Performance",     icon:"⏸",  color:B.amber,  bg:`${B.amber}18`},
+    ready: {label:"Pronto!",                  icon:"✅", color:B.green,  bg:B.greenBg},
+  };
+  const scFin={
+    active:{label:"Em acabamento",            icon:"🎨", color:FD.primary, bg:FD.bg},
+    paused:{label:"Pausado — Finishing",      icon:"⏸",  color:B.amber,   bg:`${B.amber}18`},
+    ready: {label:"Acabamento pronto!",       icon:"✅", color:B.green,   bg:B.greenBg},
   };
   const sc=statusCfg[v.status||"active"];
 
@@ -6663,7 +6669,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.6";
+const APP_VERSION = "2026.08.11.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8850,9 +8856,9 @@ export default function App() {
       await db.updateVehicle(vid,patch);
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
-      const statusLabel=newStatus==="paused"?"⏸ pausado":newStatus==="active"?"▶ retomado":"atualizado";
-      pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O veículo foi pausado.":"O veículo voltou a ser atendido.");
-      if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço foi pausado momentaneamente.":"O serviço foi retomado!",`/?portal=cliente`).catch(()=>{});
+      const statusLabel=newStatus==="paused"?"⏸ pausado (Performance)":newStatus==="active"?"▶ retomado (Performance)":"atualizado";
+      pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de performance foi pausado.":"O serviço de performance foi retomado.");
+      if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de performance foi pausado momentaneamente.":"O serviço de performance foi retomado!",`/?portal=cliente`).catch(()=>{});
     }catch(e){errToast(e);}
   };
 
@@ -8875,7 +8881,8 @@ export default function App() {
       await db.updateVehicle(vid,patch);
       const vModel=v?.model||v?.plate||"Veículo";
       const statusLabel=newStatus==="paused"?"⏸ pausado (Finishing)":newStatus==="active"?"▶ retomado (Finishing)":"atualizado";
-      pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de acabamento foi pausado.":"O serviço de acabamento foi retomado.");
+      pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de Finishing foi pausado.":"O serviço de Finishing foi retomado.");
+      if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de acabamento (Finishing) foi pausado momentaneamente.":"O serviço de acabamento (Finishing) foi retomado!",`/?portal=cliente`).catch(()=>{});
     }catch(e){errToast(e);}
   };
 

@@ -4385,7 +4385,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
       onCancel={()=>setConfirmDel(null)}/>}
   </div>);
 }
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,isOwner=false}) {
   const [search,setSearch]=useState("");
   const [osFilter,setOsFilter]=useState("all"); // all | active | available
   const [now,setNow]=useState(Date.now());
@@ -4452,7 +4452,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
         <div style={{fontSize:13}}>Clique em <b style={{color:B.orange}}>+ Novo veículo</b> para cadastrar o primeiro.</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment}/>)}
+      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner}/>)}
     </div>}
   </div>);
 }
@@ -4529,7 +4529,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,isOwner=false}) {
   const isFD = false;
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
@@ -6655,7 +6655,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.4";
+const APP_VERSION = "2026.08.11.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9689,7 +9689,7 @@ export default function App() {
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <TabHeader color={B.blue} title="🚗 Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
-        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment}/>
+        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} isOwner={adminRole==="owner"}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="💰 Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>

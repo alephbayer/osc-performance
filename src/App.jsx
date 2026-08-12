@@ -4492,16 +4492,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
       {sorted.map(v=>{
         const hasActiveOS=!!(v.enteredAt||v.enteredAtFinishing);
         return(<div key={v.id}>
-          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory}/>
-          {isOwner&&!hasActiveOS&&onDeleteVehicle&&<div style={{display:"flex",justifyContent:"flex-end",marginTop:4,marginBottom:4}}>
-            <button onClick={()=>{
-              if(!window.confirm(`Excluir ${v.model}${v.plate?` (${v.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
-              if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${v.model}?`)) return;
-              onDeleteVehicle(v.id);
-            }} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:7,padding:"5px 12px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
-              <ITrash s={11} c={B.red}/>Excluir veículo
-            </button>
-          </div>}
+          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory} onDeleteVehicle={onDeleteVehicle}/>
         </div>);
       })}
     </div>}
@@ -4580,7 +4571,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,isOwner=false,onDeleteOsHistory=null}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
   const isFD = false;
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
@@ -4927,6 +4918,19 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             </button>
           </div>
         ))}
+      </div>}
+
+      {/* Delete vehicle — owner only, no active OS, inside expanded card */}
+      {isOwner&&!hasActiveOS&&!hasActiveFinishing&&onDeleteVehicle&&open&&<div style={{padding:"12px 16px",borderTop:`1px solid ${B.gray700}`}}>
+        <button onClick={()=>{
+          if(!window.confirm(`Excluir ${vehicle.model}${vehicle.plate?` (${vehicle.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
+          if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${vehicle.model}?`)) return;
+          onDeleteVehicle(vehicle.id);
+        }} style={{background:"none",border:`1px solid ${B.red}33`,borderRadius:7,padding:"6px 12px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:5,opacity:.7}}
+          onMouseEnter={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.background=`${B.red}12`;}}
+          onMouseLeave={e=>{e.currentTarget.style.opacity=".7";e.currentTarget.style.background="none";}}>
+          <ITrash s={11} c={B.red}/>Excluir veículo do cadastro
+        </button>
       </div>}
     </div>}
     {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightbox(null)}>
@@ -6719,7 +6723,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.17";
+const APP_VERSION = "2026.08.11.18";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

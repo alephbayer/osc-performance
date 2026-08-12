@@ -2139,7 +2139,7 @@ function InlineEdit({value,onSave,placeholder,type="text",multiline=false,textSt
     <button onClick={()=>sE(false)} style={{padding:"3px 6px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>
   </div>);
 }
-function UploadBtn({onFile,label="Adicionar foto",accept="image/*",style={},folder="misc",multiple=false}) {
+function UploadBtn({onFile,onFiles,label="Adicionar foto",accept="image/*",style={},folder="misc",multiple=false}) {
   const ref=useRef();
   const [busy,setBusy]=useState(false);
   return (<>
@@ -2151,10 +2151,10 @@ function UploadBtn({onFile,label="Adicionar foto",accept="image/*",style={},fold
       if(!files.length) return;
       setBusy(true);
       try{
-        for(const f of files){
-          const url=await uploadImg(f,folder);
-          onFile(url);
-        }
+        // Upload all in parallel, then call onFiles once with all URLs
+        const urls=await Promise.all(files.map(f=>uploadImg(f,folder)));
+        if(onFiles) onFiles(urls);
+        else urls.forEach(url=>onFile&&onFile(url));
       }catch(err){ alert("Erro ao enviar foto: "+err.message); }
       setBusy(false);
       e.target.value="";
@@ -2163,7 +2163,7 @@ function UploadBtn({onFile,label="Adicionar foto",accept="image/*",style={},fold
 }
 
 // ─── PhotoGallery ─────────────────────────────────────────────────────────────
-function PhotoGallery({photos=[],onAdd,onRemove,onUpdate,readOnly=false,maxH=140,tasks=[]}) {
+function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=false,maxH=140,tasks=[]}) {
   const [lightbox,setLB]=useState(null);
   const [editIdx,setEditIdx]=useState(null);
   const [confirmRemove,setConfirmRemove]=useState(null); // index pending removal
@@ -2219,7 +2219,11 @@ function PhotoGallery({photos=[],onAdd,onRemove,onUpdate,readOnly=false,maxH=140
           </div>}
         </div>);
       })}
-      {!readOnly&&<UploadBtn onFile={onAdd} folder="os-photos" label="+ Foto" multiple style={{width:maxH,height:maxH,justifyContent:"center",flexDirection:"column",gap:6,borderRadius:8,fontSize:11}}/>}
+      {!readOnly&&<UploadBtn onFiles={urls=>{
+        const norm=photos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
+        if(onAddMany) onAddMany(urls);
+        else urls.forEach(url=>onAdd&&onAdd(url));
+      }} folder="os-photos" label="+ Foto" multiple style={{width:maxH,height:maxH,justifyContent:"center",flexDirection:"column",gap:6,borderRadius:8,fontSize:11}}/>}
     </div>
     {lightbox&&(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
@@ -3235,6 +3239,11 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           onAdd={url=>{
             const norm=photos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
             onUpdateVehicle(vehicle.id,{[isFD?"photosFinishing":"photos"]:[...norm,{url,taskId:null,caption:""}]});
+          }}
+          onAddMany={urls=>{
+            const norm=photos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
+            const newPhotos=[...norm,...urls.map(url=>({url,taskId:null,caption:""}))];
+            onUpdateVehicle(vehicle.id,{[isFD?"photosFinishing":"photos"]:newPhotos});
           }}
           onRemove={i=>{
             const norm=photos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
@@ -6672,7 +6681,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.11";
+const APP_VERSION = "2026.08.11.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7536,7 +7545,15 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
           <span style={{fontSize:9,color:B.gray500}}>+ Foto</span>
           <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={async e=>{
             const files=Array.from(e.target.files||[]);
-            for(const f of files) await uploadPhoto(f);
+            if(!files.length) return;
+            setUploading(true);
+            setUploadErr("");
+            try{
+              const urls=await Promise.all(files.map(f=>resizeAndUpload(f,`checklist/${vehicle.id}`)));
+              savePhotos([...clPhotos,...urls]);
+            }catch(err){
+              setUploadErr(err?.message||"Erro ao fazer upload.");
+            }finally{ setUploading(false); }
             e.target.value="";
           }}/>        </label>
       </div>

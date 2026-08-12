@@ -6669,7 +6669,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.9";
+const APP_VERSION = "2026.08.11.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7438,10 +7438,8 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
         img.onerror=()=>{ URL.revokeObjectURL(url); res(file); };
         img.src=url;
       });
-      const {error:upErr} = await supabase.storage.from("photos").upload(path, resized, {upsert:true, contentType:"image/jpeg"});
-      if(upErr) throw upErr;
-      const {data:urlData} = supabase.storage.from("photos").getPublicUrl(path);
-      savePhotos([...clPhotos, urlData.publicUrl]);
+      const url = await resizeAndUpload(resized, `checklist/${vehicle.id}`);
+      savePhotos([...clPhotos, url]);
     } catch(err) {
       console.error("Upload erro:", err);
       setUploadErr(err?.message||"Erro ao fazer upload da foto.");

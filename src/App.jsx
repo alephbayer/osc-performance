@@ -6669,7 +6669,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.8";
+const APP_VERSION = "2026.08.11.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7415,16 +7415,37 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
     onUpdateVehicle(vehicle.id, {[checklistField]:[...rest, {id:"__photos", urls}]});
   };
 
+  const [uploading,setUploading]=useState(false);
+  const [uploadErr,setUploadErr]=useState("");
+
   const uploadPhoto = async (file) => {
     if(!file) return;
+    setUploading(true);
+    setUploadErr("");
     try {
-      const ext = file.name.split(".").pop();
+      const ext = file.name.split(".").pop().toLowerCase()||"jpg";
       const path = `checklist/${vehicle.id}/${Date.now()}.${ext}`;
-      const {error:upErr} = await supabase.storage.from("photos").upload(path, file, {upsert:true});
+      // Resize to max 1200px before uploading
+      const resized = await new Promise((res,rej)=>{
+        const img=new Image(); const url=URL.createObjectURL(file);
+        img.onload=()=>{
+          const max=1200; let w=img.width,h=img.height;
+          if(w>max){h=Math.round(h*max/w);w=max;}
+          const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+          cv.getContext("2d").drawImage(img,0,0,w,h);
+          cv.toBlob(b=>{ URL.revokeObjectURL(url); res(b||file); },"image/jpeg",0.85);
+        };
+        img.onerror=()=>{ URL.revokeObjectURL(url); res(file); };
+        img.src=url;
+      });
+      const {error:upErr} = await supabase.storage.from("photos").upload(path, resized, {upsert:true, contentType:"image/jpeg"});
       if(upErr) throw upErr;
       const {data:urlData} = supabase.storage.from("photos").getPublicUrl(path);
       savePhotos([...clPhotos, urlData.publicUrl]);
-    } catch(err) { console.error("Upload erro:", err); }
+    } catch(err) {
+      console.error("Upload erro:", err);
+      setUploadErr(err?.message||"Erro ao fazer upload da foto.");
+    } finally { setUploading(false); }
   };
 
   const createTask = async (item) => {
@@ -7513,7 +7534,8 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
           <span style={{fontSize:20}}>📷</span>
           <span style={{fontSize:9,color:B.gray500}}>+ Foto</span>
           <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{uploadPhoto(e.target.files?.[0]);e.target.value="";}}/>
-        </label>
+          {uploading&&<span style={{fontSize:11,color:B.gray400,marginLeft:6}}>Enviando…</span>}
+          {uploadErr&&<div style={{fontSize:11,color:B.red,marginTop:4}}>{uploadErr}</div>}        </label>
       </div>
     </div>
     {lbPhoto&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLbPhoto(null)}>

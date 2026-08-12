@@ -4491,15 +4491,17 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {sorted.map(v=>{
         const hasActiveOS=!!(v.enteredAt||v.enteredAtFinishing);
-        return(<div key={v.id} style={{position:"relative"}}>
+        return(<div key={v.id}>
           <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory}/>
-          {isOwner&&!hasActiveOS&&onDeleteVehicle&&<button onClick={()=>{
-            if(!window.confirm(`Excluir ${v.model}${v.plate?` (${v.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
-            if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${v.model}?`)) return;
-            onDeleteVehicle(v.id);
-          }} style={{position:"absolute",top:10,right:10,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:7,padding:"4px 9px",cursor:"pointer",color:B.red,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
-            <ITrash s={10} c={B.red}/>Excluir veículo
-          </button>}
+          {isOwner&&!hasActiveOS&&onDeleteVehicle&&<div style={{display:"flex",justifyContent:"flex-end",marginTop:4,marginBottom:4}}>
+            <button onClick={()=>{
+              if(!window.confirm(`Excluir ${v.model}${v.plate?` (${v.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
+              if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${v.model}?`)) return;
+              onDeleteVehicle(v.id);
+            }} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:7,padding:"5px 12px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+              <ITrash s={11} c={B.red}/>Excluir veículo
+            </button>
+          </div>}
         </div>);
       })}
     </div>}
@@ -6717,7 +6719,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.16";
+const APP_VERSION = "2026.08.11.17";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -2463,30 +2463,35 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose,title="Abrir nova OS",
 
 
 // ─── Create Vehicle modal — from Vehicles tab ─────────────────────────────────
-function CreateVehicleModal({clients,onConfirm,onClose}) {
+function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
   const [model,setModel]=useState("");
   const [plate,setPlate]=useState("");
   const [color,setColor]=useState("");
   const [year,setYear]=useState("");
-  const [clientMode,setClientMode]=useState("none"); // "none" | "existing" | "new"
+  const [clientMode,setClientMode]=useState("none");
   const [selectedClientId,setSelectedClientId]=useState("");
   const [clientSearch,setClientSearch]=useState("");
   const [newName,setNewName]=useState("");
   const [newPhone,setNewPhone]=useState("");
   const [newEmail,setNewEmail]=useState("");
+  const [plateErr,setPlateErr]=useState("");
 
   const filteredClients=clients.filter(c=>
     c.name.toLowerCase().includes(clientSearch.toLowerCase())||
     (c.phone||"").includes(clientSearch)
   );
 
-  const canSave=model.trim()&&
+  const plateNorm=plate.trim().toUpperCase().replace(/\s/g,"");
+  const plateConflict=plateNorm?vehicles.find(v=>v.plate?.toUpperCase().replace(/\s/g,"")===plateNorm):null;
+
+  const canSave=model.trim()&&!plateConflict&&
     (clientMode==="none"||
      (clientMode==="existing"&&selectedClientId)||
      (clientMode==="new"&&newName.trim()));
 
   const confirm=()=>{
     if(!canSave) return;
+    if(plateConflict){setPlateErr(`Placa já cadastrada: ${plateConflict.model}`);return;}
     onConfirm({
       model,plate,color,year:year?parseInt(year):null,
       clientId:clientMode==="existing"?selectedClientId:null,
@@ -2513,8 +2518,11 @@ function CreateVehicleModal({clients,onConfirm,onClose}) {
         </div>
         <div style={{marginBottom:14}}>
           <FieldLabel>Placa</FieldLabel>
-          <input value={plate} onChange={e=>setPlate(e.target.value.toUpperCase())} placeholder="Ex: ABC-1234"
-            style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:1}}/>
+          <input value={plate} onChange={e=>{setPlate(e.target.value.toUpperCase());setPlateErr("");}} placeholder="Ex: ABC-1234"
+            style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${plateConflict?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:1}}/>
+          {plateConflict&&<div style={{fontSize:11,color:B.red,marginTop:5,display:"flex",alignItems:"center",gap:4}}>
+            ⚠️ Placa já cadastrada: <b>{plateConflict.model}</b>{plateConflict.plate&&` (${plateConflict.plate})`}
+          </div>}
         </div>
         <div style={{marginBottom:18}}>
           <FieldLabel>Cor (opcional)</FieldLabel>
@@ -4414,7 +4422,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
       onCancel={()=>setConfirmDel(null)}/>}
   </div>);
 }
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,isOwner=false,onDeleteOsHistory=null}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
   const [search,setSearch]=useState("");
   const [osFilter,setOsFilter]=useState("all"); // all | active | available
   const [now,setNow]=useState(Date.now());
@@ -4472,7 +4480,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
       <div style={{marginLeft:"auto",fontSize:11,color:B.gray500,alignSelf:"center"}}>{sorted.length} resultado{sorted.length!==1?"s":""}</div>
     </div>
 
-    {showCreate&&<CreateVehicleModal clients={clients} onConfirm={(data)=>{onCreateVehicle&&onCreateVehicle(data);setShowCreate(false);}} onClose={()=>setShowCreate(false)}/>}
+    {showCreate&&<CreateVehicleModal clients={clients} vehicles={vehicles} onConfirm={(data)=>{onCreateVehicle&&onCreateVehicle(data);setShowCreate(false);}} onClose={()=>setShowCreate(false)}/>}
 
     {sorted.length===0?
       <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
@@ -4481,7 +4489,19 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
         <div style={{fontSize:13}}>Clique em <b style={{color:B.orange}}>+ Novo veículo</b> para cadastrar o primeiro.</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-      {sorted.map(v=><VehicleHistoryCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory}/>)}
+      {sorted.map(v=>{
+        const hasActiveOS=!!(v.enteredAt||v.enteredAtFinishing);
+        return(<div key={v.id} style={{position:"relative"}}>
+          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory}/>
+          {isOwner&&!hasActiveOS&&onDeleteVehicle&&<button onClick={()=>{
+            if(!window.confirm(`Excluir ${v.model}${v.plate?` (${v.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
+            if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${v.model}?`)) return;
+            onDeleteVehicle(v.id);
+          }} style={{position:"absolute",top:10,right:10,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:7,padding:"4px 9px",cursor:"pointer",color:B.red,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+            <ITrash s={10} c={B.red}/>Excluir veículo
+          </button>}
+        </div>);
+      })}
     </div>}
   </div>);
 }
@@ -6697,7 +6717,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.15";
+const APP_VERSION = "2026.08.11.16";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9763,6 +9783,7 @@ export default function App() {
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <TabHeader color={B.blue} title="🚗 Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
         <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} isOwner={adminRole==="owner"}
+          onDeleteVehicle={adminRole==="owner"?async(id)=>{try{await db.deleteVehicle(id);setVeh(p=>p.filter(v=>v.id!==id));toast_("Veículo removido ✓");}catch(e){errToast(e);}}:null}
           onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico ✓");}catch(e){errToast(e);}}}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>

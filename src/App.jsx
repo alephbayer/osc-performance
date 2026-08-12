@@ -2139,21 +2139,24 @@ function InlineEdit({value,onSave,placeholder,type="text",multiline=false,textSt
     <button onClick={()=>sE(false)} style={{padding:"3px 6px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>
   </div>);
 }
-function UploadBtn({onFile,label="Adicionar foto",accept="image/*",style={},folder="misc"}) {
+function UploadBtn({onFile,label="Adicionar foto",accept="image/*",style={},folder="misc",multiple=false}) {
   const ref=useRef();
   const [busy,setBusy]=useState(false);
   return (<>
     <button onClick={()=>ref.current.click()} disabled={busy} style={{padding:"6px 12px",borderRadius:7,background:B.purpleBg,border:`1px dashed ${B.purple}66`,color:B.purple,cursor:busy?"wait":"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5,opacity:busy?.6:1,...style}}>
       <IPhoto s={13} c={B.purple}/>{busy?"Enviando…":label}
     </button>
-    <input ref={ref} type="file" accept={accept} style={{display:"none"}} onChange={async e=>{
-      const f=e.target.files[0];
-      if(f){
-        setBusy(true);
-        try{ const url=await uploadImg(f,folder); onFile(url); }
-        catch(err){ alert("Erro ao enviar foto: "+err.message); }
-        setBusy(false);
-      }
+    <input ref={ref} type="file" accept={accept} multiple={multiple} style={{display:"none"}} onChange={async e=>{
+      const files=Array.from(e.target.files||[]);
+      if(!files.length) return;
+      setBusy(true);
+      try{
+        for(const f of files){
+          const url=await uploadImg(f,folder);
+          onFile(url);
+        }
+      }catch(err){ alert("Erro ao enviar foto: "+err.message); }
+      setBusy(false);
       e.target.value="";
     }}/>
   </>);
@@ -2216,7 +2219,7 @@ function PhotoGallery({photos=[],onAdd,onRemove,onUpdate,readOnly=false,maxH=140
           </div>}
         </div>);
       })}
-      {!readOnly&&<UploadBtn onFile={onAdd} folder="os-photos" label="+ Foto" style={{width:maxH,height:maxH,justifyContent:"center",flexDirection:"column",gap:6,borderRadius:8,fontSize:11}}/>}
+      {!readOnly&&<UploadBtn onFile={onAdd} folder="os-photos" label="+ Foto" multiple style={{width:maxH,height:maxH,justifyContent:"center",flexDirection:"column",gap:6,borderRadius:8,fontSize:11}}/>}
     </div>
     {lightbox&&(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
@@ -5282,7 +5285,7 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[]}) {
             ?<img src={form.photoUrl} alt="" style={{width:48,height:48,borderRadius:7,objectFit:"cover",border:`1px solid ${B.gray600}`}}/>
             :<label style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,fontSize:11,cursor:"pointer",fontWeight:600}}>
               📷 {uploading?"Enviando...":"Foto (opcional)"}
-              <input type="file" accept="image/*" onChange={handlePhoto} style={{display:"none"}}/>
+              <input type="file" accept="image/*" multiple onChange={handlePhoto} style={{display:"none"}}/>
             </label>}
           {form.photoUrl&&<button onClick={()=>setForm(p=>({...p,photoUrl:""}))} style={{background:"none",border:"none",cursor:"pointer",color:B.red,fontSize:11}}>Remover</button>}
         </div>
@@ -6669,7 +6672,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.10";
+const APP_VERSION = "2026.08.11.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7531,9 +7534,11 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
         <label style={{width:90,height:90,borderRadius:8,border:`2px dashed ${B.gray600}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:4,flexShrink:0}}>
           <span style={{fontSize:20}}>📷</span>
           <span style={{fontSize:9,color:B.gray500}}>+ Foto</span>
-          <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{uploadPhoto(e.target.files?.[0]);e.target.value="";}}/>
-          {uploading&&<span style={{fontSize:11,color:B.gray400,marginLeft:6}}>Enviando…</span>}
-          {uploadErr&&<div style={{fontSize:11,color:B.red,marginTop:4}}>{uploadErr}</div>}        </label>
+          <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={async e=>{
+            const files=Array.from(e.target.files||[]);
+            for(const f of files) await uploadPhoto(f);
+            e.target.value="";
+          }}/>        </label>
       </div>
     </div>
     {lbPhoto&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLbPhoto(null)}>

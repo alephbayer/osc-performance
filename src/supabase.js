@@ -436,6 +436,12 @@ export const db = {
 
     const osHistoryId = hData.id;
 
+    // 2) Migrate existing vehicle payments to this OS history
+    await supabase.from("payments")
+      .update({ os_history_id: osHistoryId })
+      .eq("vehicle_id", vehicleId)
+      .is("os_history_id", null);
+
     // 3) Delete all current tasks for this vehicle
     await supabase.from("tasks").delete().eq("vehicle_id", vehicleId).eq("division", "performance");
 

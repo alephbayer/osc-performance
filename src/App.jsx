@@ -2166,13 +2166,20 @@ function UploadBtn({onFile,onFiles,label="Adicionar foto",accept="image/*",style
 function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=false,maxH=140,tasks=[]}) {
   const [lightbox,setLB]=useState(null);
   const [editIdx,setEditIdx]=useState(null);
-  const [confirmRemove,setConfirmRemove]=useState(null); // index pending removal
+  const [confirmRemove,setConfirmRemove]=useState(null);
+  const [captionDraft,setCaptionDraft]=useState(""); // local draft — only saved on blur
 
   const normalized = photos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
 
   const updatePhoto=(i,patch)=>{
     const updated=normalized.map((p,j)=>j===i?{...p,...patch}:p);
     onUpdate&&onUpdate(updated);
+  };
+
+  const openEdit=(i)=>{
+    if(editIdx===i){ setEditIdx(null); return; }
+    setCaptionDraft(normalized[i]?.caption||"");
+    setEditIdx(i);
   };
 
   return (<>
@@ -2202,7 +2209,7 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
             </div>}
           </div>
           {/* Edit button outside photo */}
-          <button onClick={e=>{e.stopPropagation();setEditIdx(editIdx===i?null:i);}}
+          <button onClick={e=>{e.stopPropagation();openEdit(i);}}
             style={{width:"100%",marginTop:3,padding:"3px 0",borderRadius:5,border:`1px solid ${editIdx===i?B.purple:B.gray600}`,background:editIdx===i?`${B.purple}22`:"none",cursor:"pointer",color:editIdx===i?B.purple:B.gray500,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
             <IEdit s={10}/>{editIdx===i?"Fechar":"Referência"}
           </button>
@@ -2213,9 +2220,14 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
               <option value="">— Sem tarefa vinculada —</option>
               {tasks.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
-            <input value={p.caption||""} onChange={e=>updatePhoto(i,{caption:e.target.value})}
+            <input
+              value={captionDraft}
+              onChange={e=>setCaptionDraft(e.target.value)}
+              onBlur={()=>updatePhoto(i,{caption:captionDraft})}
+              onKeyDown={e=>{if(e.key==="Enter"){updatePhoto(i,{caption:captionDraft});e.target.blur();}}}
               placeholder="Legenda (opcional)"
               style={{width:"100%",padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none",boxSizing:"border-box"}}/>
+            <div style={{fontSize:9,color:B.gray600,marginTop:3}}>Enter ou clique fora para salvar</div>
           </div>}
         </div>);
       })}
@@ -6685,7 +6697,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.13";
+const APP_VERSION = "2026.08.11.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

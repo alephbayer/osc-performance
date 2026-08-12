@@ -3136,7 +3136,11 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           📋 Checklist
         </button>
         <button onClick={()=>setShowParts(p=>!p)} style={{background:showParts?`${B.purple}22`:`${B.purple}10`,border:`1px solid ${B.purple}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          🔩 Peças
+          {(()=>{
+            const pendingMats=vts.filter(t=>!t.done&&!t.warranty).flatMap(t=>(t.materials||[]).filter(m=>m.name&&!m.noCharge));
+            const count=pendingMats.length;
+            return <>🔩 Peças{count>0&&<span style={{background:`${B.purple}33`,borderRadius:99,padding:"0px 6px",fontSize:10,fontWeight:900}}>{count}</span>}</>;
+          })()}
         </button>
         {onAddPurchaseOrder&&<button onClick={()=>setShowPOForm(p=>!p)} style={{background:showPOForm?`${B.amber}22`:`${B.amber}10`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           🛒{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length>0?` (${purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length})`:""} Pedidos
@@ -6681,7 +6685,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.12";
+const APP_VERSION = "2026.08.11.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

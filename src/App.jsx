@@ -6754,7 +6754,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.38";
+const APP_VERSION = "2026.08.11.39";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10101,6 +10101,8 @@ export default function App() {
         <TabHeader color={B.blue} title="Lista de Presenças" subtitle="Controle de presença, atrasos e faltas da equipe"/>
         <PresencaTab employees={employees}/>
       </>}
+
+      {tab==="sales"&&allowedTabs.includes("sales")&&<>
         <TabHeader color="#06b6d4" title="Vendas" subtitle="Venda avulsa de itens da prateleira ou do estoque"/>
         <SalesTab
           shelfItems={shelfItems} sales={sales} stock={stock}

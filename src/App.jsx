@@ -6753,7 +6753,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.31";
+const APP_VERSION = "2026.08.11.32";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9607,11 +9607,11 @@ export default function App() {
 
   // Desktop sidebar nav items
   const sidebarItems=[
-    {id:"home",    label:"Início",    emoji:"🏠"},
-    ...(navItems.find(n=>n.id==="oficina")?[{id:"oficina",label:"Oficina",emoji:"🔧"}]:[]),
-    ...(navItems.find(n=>n.id==="compras")?[{id:"compras",label:"Compras", emoji:"🛒"}]:[]),
-    ...(navItems.find(n=>n.id==="gestao") ?[{id:"gestao", label:"Gestão",  emoji:"💰"}]:[]),
-    ...(navItems.find(n=>n.id==="mais")   ?[{id:"mais",   label:"Mais",    emoji:"⋯"}]:[]),
+    {id:"home",    label:"Início",   icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
+    ...(navItems.find(n=>n.id==="oficina")?[{id:"oficina",label:"Oficina", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>}]:[]),
+    ...(navItems.find(n=>n.id==="compras")?[{id:"compras",label:"Compras", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>}]:[]),
+    ...(navItems.find(n=>n.id==="gestao") ?[{id:"gestao", label:"Gestão",  icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>}]:[]),
+    ...(navItems.find(n=>n.id==="mais")   ?[{id:"mais",   label:"Mais",    icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>}]:[]),
   ];
 
   return (<div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
@@ -9639,7 +9639,7 @@ export default function App() {
           fontWeight:navSection===item.id?700:500,fontSize:13,
           transition:"all .15s",
         }}>
-          <span style={{fontSize:16}}>{item.emoji}</span>
+          <span style={{display:"flex",alignItems:"center",justifyContent:"center"}}>{item.icon}</span>
           {item.label}
         </button>
       ))}

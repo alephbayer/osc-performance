@@ -200,7 +200,7 @@ function ClientLoginScreen({clients,onLogin}) {
 
         {step==="pin"&&<>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-            <button onClick={()=>{setStep("phone");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}>←</button>
+            <button onClick={()=>{setStep("phone");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
             <div>
               <div style={{fontWeight:700,fontSize:14,color:B.white}}>{found?.name}</div>
               <div style={{fontSize:11,color:B.gray500}}>Digite seu PIN de acesso</div>
@@ -214,7 +214,7 @@ function ClientLoginScreen({clients,onLogin}) {
 
         {step==="create_pin"&&<>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-            <button onClick={()=>{setStep("phone");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}>←</button>
+            <button onClick={()=>{setStep("phone");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
             <div>
               <div style={{fontWeight:700,fontSize:14,color:B.white}}>{found?.name}</div>
               <div style={{fontSize:11,color:B.gray500}}>Crie um PIN para proteger sua conta</div>
@@ -225,7 +225,7 @@ function ClientLoginScreen({clients,onLogin}) {
 
         {step==="confirm_pin"&&<>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-            <button onClick={()=>{setStep("create_pin");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}>←</button>
+            <button onClick={()=>{setStep("create_pin");setErr("");}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18,padding:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
             <div>
               <div style={{fontWeight:700,fontSize:14,color:B.white}}>Confirmar PIN</div>
               <div style={{fontSize:11,color:B.gray500}}>Digite o PIN novamente</div>
@@ -290,7 +290,7 @@ function ClientNotesTab({client, vehicles}) {
   const blue=B.blue;
   return (<>
     <div style={{marginBottom:16,padding:"10px 14px",background:`${blue}10`,border:`1px solid ${blue}33`,borderRadius:10}}>
-      <div style={{fontSize:12,fontWeight:700,color:blue,marginBottom:4}}>📋 Anotações para a oficina</div>
+      <div style={{fontSize:12,fontWeight:700,color:blue,marginBottom:4}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Anotações para a oficina</div>
       <div style={{fontSize:11,color:B.gray400,lineHeight:1.5}}>Descreva problemas ou itens que gostaria que fossem verificados quando seu veículo entrar na oficina. A equipe verá essas anotações ao receber o carro.</div>
     </div>
 
@@ -351,7 +351,7 @@ function PixPaymentBox() {
   return(
     <div style={{background:"linear-gradient(135deg,#0d7a4e18,#0d7a4e08)",border:"2px solid #0d7a4e44",borderRadius:16,padding:"16px 18px",marginBottom:16}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-        <div style={{width:36,height:36,borderRadius:10,background:"#0d7a4e22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>💰</div>
+        <div style={{width:36,height:36,borderRadius:10,background:"#0d7a4e22",display:"flex",alignItems:"center",justifyContent:"center",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
         <div>
           <div style={{fontWeight:800,fontSize:14,color:B.white}}>Pagar via PIX</div>
           <div style={{fontSize:11,color:B.gray400}}>Chave CNPJ</div>
@@ -434,7 +434,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
     {showDebtPopup&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <div style={{background:B.gray900,borderRadius:20,padding:28,maxWidth:340,width:"100%",border:`2px solid ${B.red}55`,boxShadow:"0 8px 40px rgba(0,0,0,.6)"}}>
         <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:48,marginBottom:12}}>⚠️</div>
+          <div style={{fontSize:48,marginBottom:12,display:"flex",justifyContent:"center"}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
           <div style={{fontWeight:900,fontSize:18,color:B.white,marginBottom:8}}>Saldo em aberto</div>
           <div style={{fontSize:14,color:B.gray400,lineHeight:1.6}}>Identificamos um ou mais serviços anteriores com valor pendente de pagamento.</div>
         </div>
@@ -483,7 +483,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
     <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black}}>
     <div style={{maxWidth:680,margin:"0 auto",padding:"20px 14px",paddingBottom:"calc(40px + env(safe-area-inset-bottom))",minHeight:"100vh"}}>
       {pushStatus==="asking"&&VAPID_PUBLIC_KEY&&<div style={{marginBottom:14,padding:"10px 14px",background:`${B.blue}12`,border:`1px solid ${B.blue}33`,borderRadius:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-        <span style={{fontSize:18}}>🔔</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:12,fontWeight:700,color:B.white}}>Ativar notificações?</div>
           <div style={{fontSize:11,color:B.gray400}}>Receba alertas sobre seus veículos em tempo real.</div>
@@ -496,7 +496,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       {tab==="active"&&<>
         {activeVehicles.length===0
           ?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
-            <div style={{fontSize:44,marginBottom:12}}>🚗</div>
+            <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6l2-5h1a2 2 0 010 4h-1"/><circle cx="17" cy="17" r="2"/></svg></div>
             <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum veículo em serviço</div>
             <div style={{fontSize:13}}>Quando seu veículo entrar na oficina, aparece aqui.</div>
           </div>
@@ -564,7 +564,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       {tab==="history"&&<>
         {cliHistory.length===0
           ?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
-            <div style={{fontSize:44,marginBottom:12}}>📋</div>
+            <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
             <div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhuma OS finalizada ainda</div>
           </div>
           :cliVehicles.map(v=>{
@@ -608,7 +608,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                   {hPayments.length>0&&<div style={{padding:"10px 16px",background:`${B.green}08`}}>
                     <div style={{fontSize:10,color:B.green,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos</div>
                     {hPayments.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0"}}>
-                      <span style={{fontSize:12,color:B.green}}>💰</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                       <span style={{fontSize:12,color:B.gray200,flex:1}}>{p.method}{p.note?` · ${p.note}`:""}</span>
                       <span style={{fontSize:12,fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
                     </div>)}
@@ -661,7 +661,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
               {vPayments.map((p,i)=>(
                 <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i<vPayments.length-1?`1px solid ${B.gray700}`:"none"}}>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:700,color:B.green}}>💰 {fmtBRL(p.amount)}</div>
+                    <div style={{fontSize:13,fontWeight:700,color:B.green,display:"flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>{fmtBRL(p.amount)}</div>
                     <div style={{fontSize:11,color:B.gray400}}>{p.method} · {p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"—"}{p.note?` · ${p.note}`:""}</div>
                   </div>
                   <span style={{fontSize:9,fontWeight:800,borderRadius:4,padding:"2px 6px",color:(p.division||"performance")==="finishing"?FD.primary:B.orange,background:(p.division||"performance")==="finishing"?FD.bg:`${B.orange}12`,border:`1px solid ${(p.division||"performance")==="finishing"?FD.border:B.orange+"33"}`}}>{(p.division||"performance")==="finishing"?"🎨":"⚙️"}</span>
@@ -685,8 +685,8 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                     <span style={{fontSize:11,fontWeight:800,color:divColor}}>{osLabel}</span>
                     <span style={{fontSize:10,color:B.gray500}}>· {deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
-                    {isOpen&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",whiteSpace:"nowrap"}}>⚠ Em aberto</span>}
-                    {!isOpen&&paid>0&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"2px 8px"}}>✓ Quitado</span>}
+                    {isOpen&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",whiteSpace:"nowrap"}}>Em aberto</span>}
+                    {!isOpen&&paid>0&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"2px 8px"}}>Quitado</span>}
                   </div>
                   <div style={{display:"flex",gap:1,background:B.gray800,borderRadius:8,overflow:"hidden",marginBottom:hPays.length>0?8:0}}>
                     <div style={{flex:1,padding:"8px 10px",textAlign:"center"}}>
@@ -703,7 +703,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                     </div>}
                   </div>
                   {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:`1px solid ${B.gray700}`}}>
-                    <span style={{fontSize:11,color:B.green}}>💰</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                     <span style={{fontSize:11,color:B.gray300,flex:1}}>{p.method}{p.note?` · ${p.note}`:""}</span>
                     <span style={{fontSize:10,color:B.gray500}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
                     <span style={{fontSize:11,fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
@@ -716,7 +716,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         })}
         {cliVehicles.every(v=>!v.enteredAt&&!v.enteredAtFinishing&&!payments.some(p=>p.vehicleId===v.id)&&!cliHistory.some(h=>(h.vehicle_id||h.vehicleId)===v.id))&&
           <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
-            <div style={{fontSize:44,marginBottom:12}}>💰</div>
+            <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
             <div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhuma conta ainda</div>
           </div>}
       </>}
@@ -2218,7 +2218,7 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
             </button>}
             {/* Badges */}
             {(p.caption||linkedTask)&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.65)",padding:"3px 5px"}}>
-              {linkedTask&&<div style={{fontSize:9,color:B.purple,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>🔗 {linkedTask.label}</div>}
+              {linkedTask&&<div style={{fontSize:9,color:B.purple,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} style={{display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>{linkedTask.label}</div>}
               {p.caption&&<div style={{fontSize:9,color:B.gray200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.caption}</div>}
             </div>}
           </div>
@@ -2255,7 +2255,7 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
         <img src={lightbox.url} alt="" style={{maxWidth:"95vw",maxHeight:"85vh",objectFit:"contain",borderRadius:8}}/>
         {(lightbox.caption||tasks.find(t=>t.id===lightbox.taskId))&&<div style={{textAlign:"center",color:B.gray200,fontSize:13}}>
-          {tasks.find(t=>t.id===lightbox.taskId)&&<div style={{color:B.purple,fontWeight:700,marginBottom:2}}>🔗 {tasks.find(t=>t.id===lightbox.taskId).label}</div>}
+          {tasks.find(t=>t.id===lightbox.taskId)&&<div style={{color:B.purple,fontWeight:700,marginBottom:2}} style={{display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>{tasks.find(t=>t.id===lightbox.taskId).label}</div>}
           {lightbox.caption&&<div>{lightbox.caption}</div>}
         </div>}
         <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
@@ -2410,7 +2410,7 @@ function VehiclePickerModal({vehicles,employees,clients,employeeId,onPickExistin
               <div style={{fontSize:11,color:B.gray400,display:"flex",gap:6,flexWrap:"wrap"}}>
                 <span style={{fontFamily:"monospace"}}>{v.plate}</span>
                 {v.osNumber&&<span style={{color:B.orange}}>{fmtOS(v.osNumber)}</span>}
-                {cli&&<span>👤 {cli.name}</span>}
+                {cli&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
                 {hasOS&&<span style={{color:B.amber}}>● OS aberta</span>}
               </div>
             </div>
@@ -6753,7 +6753,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.33";
+const APP_VERSION = "2026.08.11.34";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7107,7 +7107,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
 
       {/* History */}
       {sortedHistory.length===0&&!hasActive&&<div style={{textAlign:"center",padding:"48px 0",color:B.gray400}}>
-        <div style={{fontSize:44,marginBottom:12}}>📋</div>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
         <div style={{fontSize:15,color:B.gray200,fontWeight:700}}>Nenhum histórico ainda</div>
       </div>}
 
@@ -7857,7 +7857,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
 
       {/* Header */}
       <div style={{background:B.gray900,borderBottom:`2px solid ${B.green}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <div style={{width:36,height:36,borderRadius:9,background:`${B.green}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>💰</div>
+        <div style={{width:36,height:36,borderRadius:9,background:`${B.green}22`,display:"flex",alignItems:"center",justifyContent:"center",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:15,color:B.white}}>Registrar pagamento</div>
           <div style={{fontSize:11,color:B.gray400}}>Lançamento rápido por veículo</div>
@@ -9653,7 +9653,7 @@ export default function App() {
 
       {/* Push notification banner */}
       {adminPushStatus==="asking"&&VAPID_PUBLIC_KEY&&<div style={{marginBottom:14,padding:"10px 14px",background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-        <span style={{fontSize:18}}>🔔</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:12,fontWeight:700,color:B.white}}>Ativar notificações de atualização?</div>
           <div style={{fontSize:11,color:B.gray400}}>Receba alertas quando mecânicos atualizarem tarefas.</div>

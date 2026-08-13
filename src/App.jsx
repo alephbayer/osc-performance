@@ -2807,11 +2807,13 @@ function TaskLabel({task,onUpdate}) {
 }
 
 // ─── TaskItem — Mechanic ──────────────────────────────────────────────────────
-function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[]}) {
+function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentEmployee=null}) {
   const mats = task.materials||[];
   const [newMat,setNewMat]=useState("");
   const [newBrand,setNewBrand]=useState("");
   const [confirmDel,setConfirmDel]=useState(false);
+  const [showUpdates,setShowUpdates]=useState(false);
+  const [updateText,setUpdateText]=useState("");
   const signer = task.completedByEmployeeId ? employees.find(e=>e.id===task.completedByEmployeeId) : null;
   const addMat=()=>{ if(!newMat.trim())return; onUpdate(task.id,{materials:[...mats,{name:newMat.trim(),brand:newBrand.trim(),cost:0,qty:1,fromStock:false,stockItemId:null}]}); setNewMat(""); setNewBrand(""); };
   const updMat=(idx,patch)=>onUpdate(task.id,{materials:mats.map((m,i)=>i===idx?patch:m)});
@@ -2873,6 +2875,30 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[]}) {
       </div>
     </div>
   </div>
+  {showUpdates&&<div style={{margin:"4px 0 4px 30px",padding:"10px 12px",background:`${B.blue}08`,border:`1px solid ${B.blue}22`,borderRadius:10}}>
+    {[...(task.updates||[])].reverse().map((u,ui)=>(
+      <div key={ui} style={{padding:"7px 10px",background:B.gray900,borderRadius:8,marginBottom:5,border:`1px solid ${B.gray700}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+          <span style={{fontSize:10,fontWeight:800,color:B.blue}}>{u.author||"Equipe"}</span>
+          <span style={{fontSize:9,color:B.gray500}}>{u.at?new Date(u.at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</span>
+        </div>
+        <div style={{fontSize:12,color:B.gray200,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{u.text}</div>
+      </div>
+    ))}
+    {/* Input for mechanic */}
+    <textarea value={updateText} onChange={e=>setUpdateText(e.target.value)}
+      placeholder="Escreva um update…"
+      rows={2}
+      style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box",marginTop:4}}/>
+    <button onClick={()=>{
+      if(!updateText.trim()) return;
+      const u={text:updateText.trim(),author:currentEmployee?.name||"Mecânico",at:new Date().toISOString()};
+      onUpdate(task.id,{updates:[...(task.updates||[]),u]});
+      setUpdateText("");
+    }} disabled={!updateText.trim()} style={{marginTop:6,padding:"7px 14px",borderRadius:8,background:updateText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:updateText.trim()?"pointer":"not-allowed"}}>
+      Publicar update
+    </button>
+  </div>}
   {confirmDel&&<ConfirmModal title="Excluir tarefa?" message={<>Excluir <b style={{color:B.white}}>{task.label}</b>? Esta ação não pode ser desfeita.</>} confirmLabel="Excluir tarefa" onConfirm={()=>{onDelete(task.id);setConfirmDel(false);}} onCancel={()=>setConfirmDel(false)}/>}
   </>);
 }
@@ -3114,7 +3140,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
 }
 
 // ─── VehicleCard ──────────────────────────────────────────────────────────────
-function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null}) {
+function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null}) {
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
   useEffect(()=>{
@@ -3447,7 +3473,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
                 <span style={{color:(catColor||B.gray500),fontSize:9,flexShrink:0}}>{isCollapsed?"▶":"▼"}</span>
               </div>
               {!isCollapsed&&groupTasks.map(t=>managerMode
-                ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>                :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask}/>
+                ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>                :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>
               )}
             </div>);
           });
@@ -6741,7 +6767,7 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
           onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask}
           onDeleteVehicle={()=>{}} onTransferMechanic={()=>{}} onTransferOwner={()=>{}} onUpdateVehicle={onUpdateVehicle}
           onConsumeStock={()=>{}} onReturnStock={()=>{}} hideManagerButtons division={div}
-          onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>)}
+          onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} currentMechanic={employee}/>)}
     </div>
     </div>{/* end scroll */}
   </div>);
@@ -6826,7 +6852,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.40";
+const APP_VERSION = "2026.08.11.42";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

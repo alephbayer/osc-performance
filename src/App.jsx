@@ -6852,7 +6852,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.44";
+const APP_VERSION = "2026.08.11.45";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9490,6 +9490,8 @@ export default function App() {
           db.sendPushToClient(v.clientId,`Atualização — ${vModel}`,`${t?.label||"Serviço"}: ${lastUpdate.text.slice(0,80)}${lastUpdate.text.length>80?"…":""}`,`/?v=${v.id}`).catch(()=>{});
         }
       }
+      // Notify admins when mechanic adds/changes materials
+      if(patch.materials){
         const t=tasks.find(x=>x.id===id);
         const v=vehicles.find(x=>x.id===t?.vehicleId);
         const vModel=v?.model||v?.plate||"Veículo";

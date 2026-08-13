@@ -2067,6 +2067,12 @@ const IUser  =({s=18,c="currentColor"})=><Svg d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 
 const IChevD =({s=18,c="currentColor"})=><Svg d="M6 9l6 6 6-6" s={s} c={c}/>;
 const IChevU =({s=18,c="currentColor"})=><Svg d="M18 15l-6-6-6 6" s={s} c={c}/>;
 const ICheck =({s=14,c="#fff"})        =><Svg d="M20 6L9 17l-5-5" s={s} c={c}/>;
+const IPause    =({s=14,c="currentColor"})=><Svg d="M10 4H6v16h4zM18 4h-4v16h4z" s={s} c={c}/>;
+const IPlay     =({s=14,c="currentColor"})=><Svg d="M5 3l14 9-14 9V3z" s={s} c={c}/>;
+const IDelivery =({s=14,c="currentColor"})=><Svg d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3M9 17H7" d2="M13 17h1a2 2 0 002-2v-2M16 17h1a2 2 0 000-4h-1" s={s} c={c}/>;
+const IUndo     =({s=14,c="currentColor"})=><Svg d="M3 7v6h6" d2="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" s={s} c={c}/>;
+const IWarning  =({s=14,c="currentColor"})=><Svg d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" s={s} c={c}/>;
+const ICar2     =({s=14,c="currentColor"})=><Svg d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" d2="M13 17H6m5 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zM14 9l1-5h4l1 5" s={s} c={c}/>;
 const IWrench=({s=18,c="currentColor"})=><Svg d="M14.7 6.3a1 1 0 010 1.4l-8 8a1 1 0 01-.7.3H4v-2l8-8a1 1 0 011.4 0l1.3 1.3zM3 21h18" s={s} c={c}/>;
 const IPhone =({s=18,c="currentColor"})=><Svg d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 01.1 1.17 2 2 0 012.11 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" s={s} c={c}/>;
 const IEdit  =({s=18,c="currentColor"})=><Svg d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" s={s} c={c}/>;
@@ -2101,14 +2107,6 @@ const PRIORITY={
 const IFileText=({s=18,c="currentColor"})=><Svg d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" d2="M14 2v6h6M16 13H8M16 17H8M10 9H8" s={s} c={c}/>;
 const ITrendUp=({s=16,c="currentColor"})=><Svg d="M23 6l-9.5 9.5-5-5L1 18" d2="M17 6h6v6" s={s} c={c}/>;
 // Action icons
-const IPause    =({s=14,c="currentColor"})=><Svg d="M10 4H6v16h4zM18 4h-4v16h4z" s={s} c={c}/>;
-const IPlay     =({s=14,c="currentColor"})=><Svg d="M5 3l14 9-14 9V3z" s={s} c={c}/>;
-const ICheck    =({s=14,c="currentColor"})=><Svg d="M20 6L9 17l-5-5" s={s} c={c}/>;
-const IDelivery =({s=14,c="currentColor"})=><Svg d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3M9 17H7" d2="M13 17h1a2 2 0 002-2v-2M16 17h1a2 2 0 000-4h-1" s={s} c={c}/>;
-const IUndo     =({s=14,c="currentColor"})=><Svg d="M3 7v6h6" d2="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" s={s} c={c}/>;
-const IWarning  =({s=14,c="currentColor"})=><Svg d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" s={s} c={c}/>;
-const ICar2     =({s=14,c="currentColor"})=><Svg d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" d2="M13 17H6m5 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zM14 9l1-5h4l1 5" s={s} c={c}/>;
-// Render icon key → SVG component
 const IKey=({k,s=12,c="currentColor"})=>{
   if(k==="check") return <ICheck s={s} c={c}/>;
   if(k==="cart")  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>;
@@ -6755,7 +6753,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.30";
+const APP_VERSION = "2026.08.11.31";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

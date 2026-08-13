@@ -319,7 +319,7 @@ function ClientNotesTab({client, vehicles}) {
     {/* Notes list */}
     {loading?<div style={{textAlign:"center",padding:20,color:B.gray400}}>Carregando...</div>
     :notes.length===0?<div style={{textAlign:"center",padding:"32px 0",color:B.gray400}}>
-        <div style={{fontSize:36,marginBottom:8}}>📝</div>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
         <div style={{fontSize:13}}>Nenhuma anotação ainda</div>
       </div>
     :notes.map(n=>(
@@ -328,7 +328,7 @@ function ClientNotesTab({client, vehicles}) {
           <div style={{fontSize:13,color:n.resolved?B.gray400:B.white,textDecoration:n.resolved?"line-through":"none",lineHeight:1.5}}>{n.note}</div>
           <div style={{fontSize:10,color:B.gray500,marginTop:4}}>
             {new Date(n.created_at).toLocaleDateString("pt-BR")}
-            {n.resolved&&<span style={{color:B.green,marginLeft:8}}>✓ Recebido pela oficina</span>}
+            {n.resolved&&<span style={{color:B.green,marginLeft:8,display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Recebido pela oficina</span>}
           </div>
         </div>
         {!n.resolved&&<button onClick={()=>deleteNote(n.id)}
@@ -522,14 +522,14 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
               {/* Performance tasks */}
               {hasPerf&&perfTs.length>0&&<div style={{padding:"12px 16px",borderBottom:hasFin?`1px solid ${B.gray700}`:"none"}}>
-                <div style={{fontSize:11,fontWeight:700,color:B.orange,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>⚙️ Performance</div>
+                <div style={{fontSize:11,fontWeight:700,color:B.orange,marginBottom:8,textTransform:"uppercase",letterSpacing:.5,display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Performance</div>
                 {buildCatOrder(perfTs).map(cat=>{
                   const catTs=perfTs.filter(t=>(t.category||null)===cat);
                   const catColor=cat?CAT_MAP[cat]||B.gray500:B.gray500;
                   return <div key={cat||"__"} style={{marginBottom:8}}>
                     {cat&&<div style={{fontSize:10,fontWeight:700,color:catColor,marginBottom:4,textTransform:"uppercase"}}>{cat}</div>}
                     {catTs.map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.gray700}`}}>
-                      <span style={{fontSize:16,flexShrink:0}}>{t.done?"✅":"⬜"}</span>
+                      <span style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",width:18,height:18,borderRadius:4,border:`2px solid ${t.done?"#16a34a":"#6b7280"}`,background:t.done?"#16a34a":"transparent"}}>{t.done&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}</span>
                       <span style={{fontSize:13,color:t.done?B.gray400:B.white,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
                     </div>)}
                   </div>;
@@ -539,14 +539,14 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
               {/* Finishing tasks */}
               {hasFin&&finTs.length>0&&<div style={{padding:"12px 16px"}}>
-                <div style={{fontSize:11,fontWeight:700,color:FD.primary,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>🎨 Finishing Division</div>
+                <div style={{fontSize:11,fontWeight:700,color:FD.primary,marginBottom:8,textTransform:"uppercase",letterSpacing:.5,display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing Division</div>
                 {buildCatOrder(finTs).map(cat=>{
                   const catTs=finTs.filter(t=>(t.category||null)===cat);
                   const catColor=cat?CAT_MAP_FINISHING[cat]||B.gray500:B.gray500;
                   return <div key={cat||"__"} style={{marginBottom:8}}>
                     {cat&&<div style={{fontSize:10,fontWeight:700,color:catColor,marginBottom:4,textTransform:"uppercase"}}>{cat}</div>}
                     {catTs.map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.gray700}`}}>
-                      <span style={{fontSize:16,flexShrink:0}}>{t.done?"✅":"⬜"}</span>
+                      <span style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",width:18,height:18,borderRadius:4,border:`2px solid ${t.done?"#16a34a":"#6b7280"}`,background:t.done?"#16a34a":"transparent"}}>{t.done&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}</span>
                       <span style={{fontSize:13,color:t.done?B.gray400:B.white,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
                     </div>)}
                   </div>;
@@ -600,7 +600,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                   </div>
                   {snap.length>0&&<div style={{padding:"10px 16px",borderBottom:hPayments.length>0?`1px solid ${B.gray700}`:"none"}}>
                     {snap.map((t,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:i<snap.length-1?`1px solid ${B.gray700}`:"none"}}>
-                      <span style={{color:B.green,fontSize:14,flexShrink:0}}>✓</span>
+                      <span style={{color:B.green,flexShrink:0,display:"flex"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
                       <span style={{fontSize:12,color:B.gray200,flex:1}}>{t.label||t.name}</span>
                       {(t.value||t.total)&&<span style={{fontSize:12,color:B.gray400}}>{fmtBRL(t.value||t.total)}</span>}
                     </div>)}
@@ -664,7 +664,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                     <div style={{fontSize:13,fontWeight:700,color:B.green,display:"flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>{fmtBRL(p.amount)}</div>
                     <div style={{fontSize:11,color:B.gray400}}>{p.method} · {p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"—"}{p.note?` · ${p.note}`:""}</div>
                   </div>
-                  <span style={{fontSize:9,fontWeight:800,borderRadius:4,padding:"2px 6px",color:(p.division||"performance")==="finishing"?FD.primary:B.orange,background:(p.division||"performance")==="finishing"?FD.bg:`${B.orange}12`,border:`1px solid ${(p.division||"performance")==="finishing"?FD.border:B.orange+"33"}`}}>{(p.division||"performance")==="finishing"?"🎨":"⚙️"}</span>
+                  <span style={{fontSize:9,fontWeight:800,borderRadius:4,padding:"2px 6px",color:(p.division||"performance")==="finishing"?FD.primary:B.orange,background:(p.division||"performance")==="finishing"?FD.bg:`${B.orange}12`,border:`1px solid ${(p.division||"performance")==="finishing"?FD.border:B.orange+"33"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(p.division||"performance")==="finishing"?<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/></svg>:<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/></svg>}</span>
                 </div>
               ))}
             </div>}
@@ -6753,7 +6753,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.34";
+const APP_VERSION = "2026.08.11.35";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -6681,9 +6681,9 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais"],           envVar:"VITE_ADMIN_PASSWORD" },
-  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca"], envVar:"VITE_OWNER_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca"],           envVar:"VITE_ADMIN_PASSWORD" },
+  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
 // Hash a string with SHA-256 — used to avoid storing plain passwords in memory
 async function sha256(str) {
@@ -6754,7 +6754,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.36";
+const APP_VERSION = "2026.08.11.37";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8126,6 +8126,173 @@ function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,
 }
 
 // ─── Sales Tab ────────────────────────────────────────────────────────────────
+// ─── PresencaTab ──────────────────────────────────────────────────────────────
+const PRESENCA_KEY = "osc_presenca_v1"; // localStorage key
+const MAX_FALTAS = 1, MAX_ATRASOS = 3, MAX_FA_COMB_F = 1, MAX_FA_COMB_A = 2;
+const DIAS_SEMANA = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+function PresencaTab({employees}) {
+  const mechs = employees.filter(e=>e.division!=="finishing");
+  const today = new Date();
+  const [viewMonth,setViewMonth] = useState(today.getMonth());
+  const [viewYear,setViewYear]   = useState(today.getFullYear());
+  const [data,setData]           = useState(()=>{
+    try{ return JSON.parse(localStorage.getItem(PRESENCA_KEY)||"{}"); }catch{ return {}; }
+  });
+  const [markDate,setMarkDate]   = useState(today.toISOString().slice(0,10));
+
+  const save=(newData)=>{ setData(newData); localStorage.setItem(PRESENCA_KEY,JSON.stringify(newData)); };
+
+  const isWorkday=(dateStr)=>{
+    const d=new Date(dateStr+"T12:00:00"); const dow=d.getDay();
+    return dow>=1&&dow<=5; // Mon–Fri
+  };
+
+  const setStatus=(empId,dateStr,status)=>{
+    if(!isWorkday(dateStr)) return;
+    const k=`${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
+    const nd={...data,[k]:{...(data[k]||{}),[empId]:{...(data[k]?.[empId]||{}),[dateStr]:status}}};
+    if(status==="presente") {
+      delete nd[k][empId][dateStr]; // "presente" is default — remove to save space
+      if(Object.keys(nd[k][empId]).length===0) delete nd[k][empId];
+      if(Object.keys(nd[k]).length===0) delete nd[k];
+    }
+    save(nd);
+  };
+
+  const getStatus=(empId,dateStr)=>{
+    const k=`${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
+    return data[k]?.[empId]?.[dateStr]||"presente";
+  };
+
+  const getMonthStats=(empId)=>{
+    const k=`${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
+    const empData=data[k]?.[empId]||{};
+    let faltas=0,atrasos=0;
+    Object.values(empData).forEach(s=>{
+      if(s==="falta") faltas++;
+      else if(s==="atraso") atrasos++;
+    });
+    return {faltas,atrasos};
+  };
+
+  const concorre=(stats)=>{
+    if(stats.faltas>MAX_FALTAS) return false;
+    if(stats.atrasos>MAX_ATRASOS) return false;
+    if(stats.faltas>=MAX_FA_COMB_F&&stats.atrasos>=MAX_FA_COMB_A+1) return false;
+    return true;
+  };
+
+  // Build days for the selected month
+  const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+  const days=Array.from({length:daysInMonth},(_,i)=>{
+    const d=new Date(viewYear,viewMonth,i+1);
+    return {num:i+1,str:`${viewYear}-${String(viewMonth+1).padStart(2,"0")}-${String(i+1).padStart(2,"0")}`,dow:d.getDay()};
+  }).filter(d=>d.dow>=1&&d.dow<=5);
+
+  const isCurrentMonth=viewMonth===today.getMonth()&&viewYear===today.getFullYear();
+  const isPast=(dateStr)=>new Date(dateStr+"T12:00:00")<new Date(today.toISOString().slice(0,10)+"T12:00:00");
+  const isToday=(dateStr)=>dateStr===today.toISOString().slice(0,10);
+
+  const STATUS_CFG={
+    presente:{label:"P", color:B.green,  bg:`${B.green}22`,  border:`${B.green}44`},
+    atraso:  {label:"A", color:B.amber,  bg:`${B.amber}22`,  border:`${B.amber}44`},
+    falta:   {label:"F", color:B.red,    bg:`${B.red}22`,    border:`${B.red}44`},
+  };
+
+  const prevMonth=()=>{ if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
+  const nextMonth=()=>{ if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+
+  return(<div>
+    {/* Header */}
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+        <button onClick={prevMonth} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"6px 10px",cursor:"pointer",color:B.gray300,fontSize:14}}>‹</button>
+        <div style={{fontWeight:800,fontSize:16,color:B.white,minWidth:160,textAlign:"center"}}>{MESES[viewMonth]} {viewYear}</div>
+        <button onClick={nextMonth} disabled={isCurrentMonth} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"6px 10px",cursor:isCurrentMonth?"not-allowed":"pointer",color:isCurrentMonth?B.gray600:B.gray300,fontSize:14}}>›</button>
+      </div>
+      <div style={{fontSize:11,color:B.gray500,textAlign:"right"}}>
+        Prêmio: máx. {MAX_FALTAS}F · {MAX_ATRASOS}A · ou {MAX_FA_COMB_F}F+{MAX_FA_COMB_A}A
+      </div>
+    </div>
+
+    {/* Date picker for marking */}
+    {isCurrentMonth&&<div style={{background:B.gray900,borderRadius:12,padding:"12px 16px",marginBottom:16,border:`1px solid ${B.gray700}`}}>
+      <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Marcar presença para</div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        {days.filter(d=>!isPast(d.str)||isToday(d.str)).slice(0,7).map(d=>(
+          <button key={d.str} onClick={()=>setMarkDate(d.str)}
+            style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${markDate===d.str?B.blue:B.gray700}`,background:markDate===d.str?`${B.blue}22`:"none",color:markDate===d.str?B.blue:isToday(d.str)?B.amber:B.gray300,fontWeight:markDate===d.str||isToday(d.str)?800:400,fontSize:12,cursor:"pointer"}}>
+            {DIAS_SEMANA[d.dow]} {d.num}
+            {isToday(d.str)&&<span style={{fontSize:8,verticalAlign:"super",color:B.amber}}> hoje</span>}
+          </button>
+        ))}
+      </div>
+    </div>}
+
+    {/* Mechanics rows */}
+    {mechs.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray400}}>Nenhum mecânico da Performance cadastrado.</div>}
+    {mechs.map(emp=>{
+      const stats=getMonthStats(emp.id);
+      const ok=concorre(stats);
+      const dayStatus=isCurrentMonth?getStatus(emp.id,markDate):null;
+
+      return(<div key={emp.id} style={{background:B.gray900,borderRadius:14,marginBottom:10,overflow:"hidden",border:`1px solid ${ok?B.gray700:B.red+"44"}`}}>
+        {/* Employee header */}
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:`1px solid ${B.gray800}`}}>
+          <div style={{width:36,height:36,borderRadius:10,background:ok?`${B.green}22`:`${B.red}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ok?B.green:B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:800,fontSize:14,color:B.white}}>{emp.name}</div>
+            <div style={{fontSize:11,color:B.gray400,display:"flex",gap:10,marginTop:2}}>
+              <span style={{color:B.red}}>F: {stats.faltas}/{MAX_FALTAS}</span>
+              <span style={{color:B.amber}}>A: {stats.atrasos}/{MAX_ATRASOS}</span>
+              <span style={{color:ok?B.green:B.red,fontWeight:700}}>{ok?"✓ Concorre ao prêmio":"✗ Fora do prêmio"}</span>
+            </div>
+          </div>
+          {/* Quick mark buttons for selected date */}
+          {isCurrentMonth&&<div style={{display:"flex",gap:4,flexShrink:0}}>
+            {(["presente","atraso","falta"]).map(s=>{
+              const sc=STATUS_CFG[s];
+              const active=dayStatus===s||(s==="presente"&&!["atraso","falta"].includes(dayStatus));
+              return(<button key={s} onClick={()=>setStatus(emp.id,markDate,s)}
+                style={{width:36,height:36,borderRadius:8,border:`2px solid ${active?sc.color:B.gray700}`,background:active?sc.bg:"none",color:active?sc.color:B.gray500,fontWeight:800,fontSize:12,cursor:"pointer"}}>
+                {sc.label}
+              </button>);
+            })}
+          </div>}
+        </div>
+
+        {/* Month calendar — compact */}
+        <div style={{padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:3}}>
+          {days.map(d=>{
+            const s=getStatus(emp.id,d.str);
+            const sc=STATUS_CFG[s];
+            const fut=isCurrentMonth&&!isPast(d.str)&&!isToday(d.str);
+            return(<div key={d.str} title={`${DIAS_SEMANA[d.dow]} ${d.num}/${viewMonth+1}: ${s}`}
+              style={{width:26,height:26,borderRadius:5,background:fut?"none":sc.bg,border:`1px solid ${fut?B.gray700:sc.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:fut?B.gray600:sc.color,flexShrink:0}}>
+              {d.num}
+            </div>);
+          })}
+        </div>
+      </div>);
+    })}
+
+    {/* Legend */}
+    <div style={{display:"flex",gap:12,marginTop:8,justifyContent:"center"}}>
+      {Object.entries(STATUS_CFG).map(([k,v])=>(
+        <div key={k} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:v.color}}>
+          <div style={{width:14,height:14,borderRadius:3,background:v.bg,border:`1px solid ${v.border}`}}/>
+          {k.charAt(0).toUpperCase()+k.slice(1)} ({v.label})
+        </div>
+      ))}
+      <div style={{fontSize:11,color:B.gray500}}>· dias úteis (seg–sex)</div>
+    </div>
+  </div>);
+}
+
 function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale}){
   const [view,setView]=useState("sell"); // sell | shelf | history
   const [cart,setCart]=useState([]); // {id,name,price,qty,from_stock,stock_item_id}
@@ -9404,7 +9571,7 @@ export default function App() {
 
   // Tab grouping by nav section
   const OFICINA_TABS=["clients","finishing","vehicles","clientsMonitor","mechanics"];
-  const GESTAO_TABS=["finance","investments","sales"];
+  const GESTAO_TABS=["finance","investments","sales","presenca"];
   const COMPRAS_TABS=["purchases","stock","materiais"];
 
   const goSection=(section,tab)=>{
@@ -9683,6 +9850,7 @@ export default function App() {
               {allowedTabs.includes("finance")&&tabBtn("finance","Financeiro",<IChart s={13}/>,B.green)}
               {allowedTabs.includes("investments")&&tabBtn("investments","Investimentos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,B.green)}
               {allowedTabs.includes("sales")&&tabBtn("sales","Vendas",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,"#06b6d4")}
+              {allowedTabs.includes("presenca")&&tabBtn("presenca","Presenças",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,B.blue)}
             </>}
             {navSection==="compras"&&<>
               {allowedTabs.includes("purchases")&&tabBtn("purchases","Pedidos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
@@ -9929,7 +10097,10 @@ export default function App() {
         />
       </>}
 
-      {tab==="sales"&&allowedTabs.includes("sales")&&<>
+      {tab==="presenca"&&allowedTabs.includes("presenca")&&<>
+        <TabHeader color={B.blue} title="Lista de Presenças" subtitle="Controle de presença, atrasos e faltas da equipe"/>
+        <PresencaTab employees={employees}/>
+      </>}
         <TabHeader color="#06b6d4" title="Vendas" subtitle="Venda avulsa de itens da prateleira ou do estoque"/>
         <SalesTab
           shelfItems={shelfItems} sales={sales} stock={stock}

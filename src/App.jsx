@@ -701,6 +701,10 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                       <div style={{fontSize:9,color:B.red,marginBottom:1}}>Em aberto</div>
                       <div style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(balance)}</div>
                     </div>}
+                    {!isOpen&&<div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`,background:B.greenBg}}>
+                      <div style={{fontSize:9,color:B.green,marginBottom:1}}>Situação</div>
+                      <div style={{fontSize:13,fontWeight:900,color:B.green}}>Quitado</div>
+                    </div>}
                   </div>
                   {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:`1px solid ${B.gray700}`}}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
@@ -6885,7 +6889,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.47";
+const APP_VERSION = "2026.08.11.48";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

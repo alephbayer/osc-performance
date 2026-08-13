@@ -4614,10 +4614,10 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
   const [paidAt,setPaidAt]=useState(new Date().toISOString().slice(0,10));
 
   const hPayments=payments.filter(p=>p.osHistoryId===h.id);
-  const totalValue=Number(h.total_value||0);
-  const paid=hPayments.reduce((s,p)=>s+Number(p.amount),0);
-  const owed=Math.max(0,totalValue-paid);
-  const overpaid=paid>totalValue?paid-totalValue:0;
+  const totalValue=Math.round(Number(h.total_value||0)*100)/100;
+  const paid=Math.round(hPayments.reduce((s,p)=>s+Number(p.amount),0)*100)/100;
+  const owed=Math.round(Math.max(0,totalValue-paid)*100)/100;
+  const overpaid=Math.round(Math.max(0,paid-totalValue)*100)/100;
 
   const save=()=>{
     const val=parseFloat(amount.replace(",","."))||0;
@@ -4634,7 +4634,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
         <span style={{fontSize:11,color:B.gray400}}>Total: <b style={{color:B.amber}}>{fmtBRL(totalValue)}</b></span>
         <span style={{fontSize:11,color:B.gray400}}>Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></span>
         {owed>0&&<span style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px"}}>⚠ {fmtBRL(owed)} em aberto</span>}
-        {owed===0&&paid>0&&<span style={{fontSize:11,fontWeight:700,color:B.green}}>✅ Quitado</span>}
+        {owed===0&&paid>0&&<span style={{fontSize:11,fontWeight:700,color:B.green,display:"inline-flex",alignItems:"center",gap:3}}><ICheck s={10} c={B.green}/>Quitado</span>}
         {overpaid>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>+{fmtBRL(overpaid)} crédito</span>}
       </div>
       {!showForm&&<button onClick={()=>setShowForm(true)}
@@ -6898,7 +6898,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.51";
+const APP_VERSION = "2026.08.11.52";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

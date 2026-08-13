@@ -3218,13 +3218,13 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             {isFD
               ?(vehicle.osNumberFinishing&&<span style={{background:`${FD.primary}22`,color:FD.primary,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOSFD(vehicle.osNumberFinishing)}</span>)
               :(vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>)}
-            {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
-            {mechs.length>0&&<span style={{color:B.orange}}>🔧 {mechs.map(m=>m.name).join(", ")}</span>}
+            {cli&&<span style={{color:B.blue,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
+            {mechs.length>0&&<span style={{color:B.orange,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}>{sc.icon}{sc.label}</span>
-            {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300}}>🎨{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
-            {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600}}>📝 Obs.</span>}
-            {photos.length>0&&<span style={{color:B.purple}}>📷 {photos.length}</span>}
-            {managerMode&&clientNotes.length>0&&<span style={{color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>⚠️ {clientNotes.length} nota{clientNotes.length!==1?"s":""}</span>}
+            {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
+            {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Obs.</span>}
+            {photos.length>0&&<span style={{color:B.purple,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>{photos.length}</span>}
+            {managerMode&&clientNotes.length>0&&<span style={{color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""}</span>}
           </div>
           {vts.length>0&&<ProgressBar value={done} max={vts.length}/>}
         </div>
@@ -3391,7 +3391,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       {open&&<div style={{padding:"12px 14px"}}>
         {/* Paused banner */}
         {vehicle.status==="paused"&&<div style={{marginBottom:10,padding:"8px 12px",background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:8,display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:14}}>⏸</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
           <span style={{fontSize:12.5,fontWeight:700,color:B.amber}}>Veículo pausado — aguardando cliente. Não trabalhe neste carro no momento.</span>
         </div>}
 
@@ -3468,7 +3468,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
                 <span style={{width:7,height:7,borderRadius:99,background:catColor||B.gray500,flexShrink:0}}/>
                 <span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
                 <span style={{fontSize:10,color:(catColor||B.gray500)+"99"}}>{doneCount}/{groupTasks.length}</span>
-                {allDone&&<span style={{fontSize:9,color:B.green,fontWeight:700}}>✓ concluída</span>}
+                {allDone&&<span style={{fontSize:9,color:B.green,fontWeight:700,display:"inline-flex",alignItems:"center",gap:2}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>concluída</span>}
                 {managerMode&&catTotal>0&&<span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,marginLeft:"auto",marginRight:4}}>{fmtBRL(catTotal)}</span>}
                 <span style={{color:(catColor||B.gray500),fontSize:9,flexShrink:0}}>{isCollapsed?"▶":"▼"}</span>
               </div>
@@ -3496,7 +3496,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           {/* Fuels array */}
           <div>
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-              <span style={{fontSize:13}}>⛽</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22V6a2 2 0 012-2h7a2 2 0 012 2v16"/><path d="M14 9h2a2 2 0 012 2v3a2 2 0 002 2 2 2 0 002-2V9.83a2 2 0 00-.59-1.42L19 6"/><line x1="3" y1="22" x2="14" y2="22"/></svg>
               <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Combustível</span>
               <button onClick={()=>{const fuels=[...(vehicle.fuels||[]),{date:"",type:"",value:0}];onUpdateVehicle(vehicle.id,{fuels});}}
                 style={{marginLeft:"auto",background:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
@@ -4733,7 +4733,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             {vehicle.year&&<span style={{color:B.gray400}}>{vehicle.year}</span>}
             {(vehicle.color||vehicle.year)&&vehicle.color&&<span style={{color:B.gray300}}>🎨 {vehicle.color}</span>}
             {vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>}
-            {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
+            {cli&&<span style={{color:B.blue,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
             {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}>📋 {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
           {(()=>{
             const totalOwed=sortedHistory.reduce((s,h)=>{
@@ -6080,7 +6080,7 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 }
 
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
-function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0}) {
+function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[]}) {
   const v=vehicles.find(x=>x.id===vehicleId);
   if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
     <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
@@ -6405,6 +6405,39 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           </div>
         </div>}
       </div>}
+
+      {/* ── Pedidos de peças ── */}
+      {(()=>{
+        const vPOs=purchaseOrders.filter(p=>p.vehicleId===v.id&&p.status!=="received");
+        if(!vPOs.length) return null;
+        const statusCfgPO={
+          pending:      {label:"Aguardando aprovação", color:B.gray400,  bg:B.gray800},
+          approved:     {label:"Aprovado",             color:B.blue,     bg:`${B.blue}15`},
+          ready_to_buy: {label:"Pronto para compra",   color:B.blue,     bg:`${B.blue}15`},
+          bought:       {label:"Comprado",              color:B.purple,   bg:`${B.purple}15`},
+          received:     {label:"Recebido",              color:B.green,    bg:B.greenBg},
+        };
+        return(<div style={{...S.card,marginBottom:20}}>
+          <div style={{...S.pad,borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.amber} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+            <span style={{fontWeight:800,fontSize:13,color:B.white}}>Pedidos de peças</span>
+            <span style={{fontSize:11,color:B.gray400}}>{vPOs.length} em andamento</span>
+          </div>
+          <div style={{...S.pad,display:"flex",flexDirection:"column",gap:8}}>
+            {vPOs.map(po=>{
+              const sc=statusCfgPO[po.status]||statusCfgPO.pending;
+              return(<div key={po.id} style={{background:sc.bg,borderRadius:10,padding:"10px 12px",border:`1px solid ${sc.color}33`}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  <span style={{fontWeight:700,fontSize:13,color:B.white,flex:1}}>{po.partName}</span>
+                  <span style={{fontSize:10,fontWeight:700,color:sc.color,background:`${sc.color}18`,border:`1px solid ${sc.color}44`,borderRadius:5,padding:"2px 8px",whiteSpace:"nowrap"}}>{sc.label}</span>
+                </div>
+                {po.description&&<div style={{fontSize:11,color:B.gray400,marginTop:4,fontStyle:"italic"}}>{po.description}</div>}
+                {po.quantity>1&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>Qtd: {po.quantity}</div>}
+              </div>);
+            })}
+          </div>
+        </div>);
+      })()}
 
       {/* ── Warranty section ── */}
       {warrantyAllTasks.length>0&&<div style={{background:B.gray900,borderRadius:14,overflow:"hidden",margin:"0 0 16px",border:`2px solid ${B.red}44`}}>
@@ -6852,7 +6885,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.46";
+const APP_VERSION = "2026.08.11.47";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9035,7 +9068,7 @@ export default function App() {
   // If public view (still needs data loaded)
   if(publicVehicleId){
     if(loading) return <LoadingScreen/>;
-    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
+    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
   }
   if(publicHistoryId){
     if(loading) return <LoadingScreen/>;

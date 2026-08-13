@@ -6753,7 +6753,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.32";
+const APP_VERSION = "2026.08.11.33";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9589,7 +9589,7 @@ export default function App() {
               style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
             <div style={{display:"flex",gap:6}}>
               <div style={{display:"flex",gap:4,alignItems:"center",background:B.gray700,borderRadius:8,padding:3,flex:1}}>
-                <button onClick={()=>setEDiv("performance")} style={{flex:1,padding:"6px 0",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,background:eDiv==="performance"?B.orange:"none",color:eDiv==="performance"?B.white:B.gray400}}><IGear s={11} c={payDiv==="performance"?B.orange:B.gray400}/>Performance</button>
+                <button onClick={()=>setEDiv("performance")} style={{flex:1,padding:"6px 0",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,background:eDiv==="performance"?B.orange:"none",color:eDiv==="performance"?B.white:B.gray400}}><IGear s={11} c={eDiv==="performance"?B.white:B.gray400}/>Performance</button>
                 <button onClick={()=>setEDiv("finishing")} style={{flex:1,padding:"6px 0",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,background:eDiv==="finishing"?FD.primary:"none",color:eDiv==="finishing"?B.white:B.gray400}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing</button>
               </div>
               <button onClick={addEmp} style={{padding:"8px 16px",borderRadius:8,background:B.orange,color:B.white,border:"none",cursor:"pointer",fontWeight:800,fontSize:13}}>+ Adicionar</button>

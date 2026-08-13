@@ -4943,7 +4943,16 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                   :<span style={{background:`${B.orange}12`,color:B.orange,borderRadius:5,padding:"1px 6px",fontWeight:800,fontSize:9}}>⚙️ PERFORMANCE</span>}
                 {hClient&&<span style={{fontSize:11,color:B.blue}}>👤 {hClient.name}</span>}
                 {hMechs.length>0&&<span style={{fontSize:11,color:B.orange}}>🔧 {hMechs.join(", ")}</span>}
-                {h.total_value>0&&<span style={{fontSize:12,fontWeight:800,color:B.amber,marginLeft:"auto"}}>{fmtBRL(h.total_value)}</span>}
+                {h.total_value>0&&(()=>{
+                  const hPaid=Math.round(payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0)*100)/100;
+                  const hBalance=Math.round((h.total_value-hPaid)*100)/100;
+                  const hIsOpen=hBalance>=0.01;
+                  return(<>
+                    <span style={{fontSize:12,fontWeight:800,color:B.amber,marginLeft:"auto"}}>{fmtBRL(h.total_value)}</span>
+                    {hIsOpen&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 7px",whiteSpace:"nowrap"}}>⚠ {fmtBRL(hBalance)} em aberto</span>}
+                    {!hIsOpen&&hPaid>0&&<span style={{fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"2px 7px"}}>Quitado</span>}
+                  </>);
+                })()}
                 {/* Reopen OS button — owner only, when no active OS */}
                 {isOwner&&!hasActiveOS&&onOpenOS&&(h.division||"performance")==="performance"&&<button onClick={()=>{
                   if(window.confirm(`Reabrir a ${h.os_number?fmtOS(h.os_number):"OS"} para ${vehicle.model}? Os dados históricos serão mantidos.`)){
@@ -6889,7 +6898,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.50";
+const APP_VERSION = "2026.08.11.51";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

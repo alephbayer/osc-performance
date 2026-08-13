@@ -395,7 +395,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
     const cliHist=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
     const hasDebt=cliHist.some(h=>{
       const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);
-      return Number(h.total_value||h.totalValue||0)-paid>0.009;
+      return Math.round((Number(h.total_value||h.totalValue||0)-paid)*100)/100>0.01;
     });
     if(hasDebt) setShowDebtPopup(true);
   },[]);
@@ -442,7 +442,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           {(()=>{
             const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
             const cliHist=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
-            return cliHist.filter(h=>{const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);return Number(h.total_value||h.totalValue||0)-paid>0.009;}).map(h=>{
+            return cliHist.filter(h=>{const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);return Math.round((Number(h.total_value||h.totalValue||0)-paid)*100)/100>0.01;}).map(h=>{
               const osNum=h.os_number||h.osNumber;const div=h.division||"performance";
               const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
               const totalValue=Number(h.total_value||h.totalValue||0);
@@ -679,8 +679,8 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 const totalValue=Number(h.total_value||h.totalValue||0);
                 const hPays=payments.filter(p=>p.osHistoryId===h.id);
                 const paid=hPays.reduce((s,p)=>s+Number(p.amount),0);
-                const balance=totalValue-paid;
-                const isOpen=balance>0.009;
+                const balance=Math.round((totalValue-paid)*100)/100;
+                const isOpen=balance>0.01;
                 return (<div key={h.id} style={{background:isOpen?`${B.red}08`:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:8,border:`1px solid ${isOpen?B.red+"44":B.gray700}`}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                     <span style={{fontSize:11,fontWeight:800,color:divColor}}>{osLabel}</span>
@@ -6889,7 +6889,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.48";
+const APP_VERSION = "2026.08.11.49";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

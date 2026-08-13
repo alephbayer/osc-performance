@@ -4907,7 +4907,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
               </div>}
               {/* Photos from this OS */}
               {(h.photos||[]).filter(p=>p).length>0&&<div style={{marginTop:8}}>
-                <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>📷 Fotos da OS</div>
+                <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos da OS</div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {(h.photos||[]).filter(p=>p).map((photo,pi)=>{
                     const url=typeof photo==="string"?photo:photo?.url;
@@ -5155,16 +5155,17 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     {key:"received", label:"🎉 Recebidos",   color:"#22c55e"},
   ];
 
-  const sectionHeader=(items,color,icon,title,open,setOpen)=>(
-    <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"12px 14px",background:B.gray800,border:`1px solid ${color}33`,borderRadius:open?"12px 12px 0 0":12,cursor:"pointer",textAlign:"left",marginBottom:open?0:8}}>
-      <span style={{fontSize:16}}>{icon}</span>
+  const sectionHeader=(items,color,icon,title,open,setOpen)=>{
+    const iconEl = icon==="box" ? <IBox s={16} c={color}/> : icon==="tool" ? <IWrench s={16} c={color}/> : <span style={{fontSize:16}}>{icon}</span>;
+    return(<button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"12px 14px",background:B.gray800,border:`1px solid ${color}33`,borderRadius:open?"12px 12px 0 0":12,cursor:"pointer",textAlign:"left",marginBottom:open?0:8}}>
+      <span style={{display:"flex",alignItems:"center",justifyContent:"center"}}>{iconEl}</span>
       <div style={{flex:1}}>
         <div style={{fontWeight:800,fontSize:14,color:B.white}}>{title}</div>
         <div style={{fontSize:11,color:B.gray400}}>{items.length} item{items.length!==1?"s":""}{items.filter(i=>i.value>0).length>0?` · ${fmtBRL(items.reduce((s,i)=>s+i.value*(i.quantity||1),0))} total`:""}</div>
       </div>
       <span style={{color:B.gray400,fontSize:12}}>{open?"▲":"▼"}</span>
-    </button>
-  );
+    </button>);
+  };
 
   const renderCat=(items,color,open,isMateriais=false)=>(<>
     {statusGroups.map(sg=>{
@@ -5223,7 +5224,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
 
     {/* Materiais Sortidos — only shown in dedicated materiais tab */}
     {defaultCategory==="materiais"&&(catFilter==="all"||catFilter==="materiais")&&<div style={{marginBottom:8}}>
-      {sectionHeader(materiais,B.amber,"📦","Materiais Sortidos",openMateriais,setOpenMateriais)}
+      {sectionHeader(materiais,B.amber,"box","Materiais Sortidos",openMateriais,setOpenMateriais)}
       {openMateriais&&<div style={{border:`1px solid ${B.amber}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
         {renderCat(materiais,B.amber,openMateriais,true)}
       </div>}
@@ -5239,7 +5240,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
 
     {/* Pesados */}
     {(catFilter==="all"||catFilter==="pesado")&&<div style={{marginBottom:8}}>
-      {sectionHeader(pesados,B.red,"🔧","Investimentos Pesados",openPesado,setOpenPesado)}
+      {sectionHeader(pesados,B.red,"tool","Investimentos Pesados",openPesado,setOpenPesado)}
       {openPesado&&<div style={{border:`1px solid ${B.red}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
         {renderCat(pesados,B.red,openPesado)}
       </div>}
@@ -6123,7 +6124,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         if(progTasks.length===0) return null;
         return(<div style={S.card}>
         <div style={S.pad}>
-          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}}>📋 Progresso do serviço</div>
+          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Progresso do serviço</div>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:progPct===100?14:6}}>
             <div style={{flex:1,height:12,borderRadius:99,background:B.gray700,overflow:"hidden"}}>
               <div style={{width:`${progPct}%`,height:"100%",background:progPct===100?B.green:B.orange,borderRadius:99,transition:"width .5s"}}/>
@@ -6161,7 +6162,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               </div>
               {/* Entry photos */}
               {(cl.find(c=>c.id==="__photos")?.urls||[]).length>0&&<div style={{padding:"10px 14px",borderTop:`1px solid ${B.gray800}`}}>
-                <div style={{fontSize:11,color:B.gray500,marginBottom:8}}>📷 Fotos de entrada</div>
+                <div style={{fontSize:11,color:B.gray500,marginBottom:8}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de entrada</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {(cl.find(c=>c.id==="__photos")?.urls||[]).map((url,i)=>(
                     <div key={i} style={{width:80,height:80,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray700}`,flexShrink:0}} onClick={()=>setLB({url})}>
@@ -6298,7 +6299,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>
         {/* Finishing photos not linked to tasks */}
         {photosF.filter(p=>!p.taskId).length>0&&<div style={{padding:"0 16px 14px"}}>
-          <div style={{fontSize:11,color:FD.primary,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>📷 Fotos da Finishing</div>
+          <div style={{fontSize:11,color:FD.primary,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos da Finishing</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             {photosF.filter(p=>!p.taskId).map((p,i)=><div key={i} onClick={()=>setLB(p.url||p)} style={{width:80,height:80,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${FD.border}`}}>
               <img src={p.url||p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -6510,7 +6511,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* ── Photos without task link ── */}
       {photos.filter(p=>!p.taskId).length>0&&<div style={S.card}>
         <div style={S.pad}>
-          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}}>📷 Fotos do serviço</div>
+          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos do serviço</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
             {photos.filter(p=>!p.taskId).map((p,i)=>(
               <div key={i} style={{width:140,flexShrink:0}}>
@@ -6753,7 +6754,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.35";
+const APP_VERSION = "2026.08.11.36";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7599,7 +7600,7 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
     {/* Photos section */}
     <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-        <span style={{fontSize:12,fontWeight:700,color:B.gray300}}>📷 Fotos de entrada do veículo</span>
+        <span style={{fontSize:12,fontWeight:700,color:B.gray300}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de entrada do veículo</span>
         <span style={{fontSize:10,color:B.gray500}}>{clPhotos.length} foto{clPhotos.length!==1?"s":""}</span>
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
@@ -9821,25 +9822,25 @@ export default function App() {
 
       {/* ══ STOCK ══ */}
       {tab==="stock"&&allowedTabs.includes("stock")&&<>
-        <TabHeader color={B.purple} title="📦 Estoque" subtitle="Produtos, preços e quantidades · Vinculados às OSs"/>
+        <TabHeader color={B.purple} title="Estoque" subtitle="Produtos, preços e quantidades · Vinculados às OSs"/>
         <StockTab stock={stock} purchases={stockPurchases} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}/>
       </>}
 
       {/* ══ FINANCE ══ */}
       {tab==="clientsMonitor"&&allowedTabs.includes("clientsMonitor")&&<>
-        <TabHeader color="#0891b2" title="👥 Clientes" subtitle="Cadastro, contato e histórico de veículos"/>
+        <TabHeader color="#0891b2" title="Clientes" subtitle="Cadastro, contato e histórico de veículos"/>
         <ClientsMonitorTab clients={clients} vehicles={vehicles} tasks={tasks} employees={employees} defaultRate={defaultRate}
           onUpdateName={updCliN} onUpdatePhone={updCliP} onUpdateEmail={updCliE} onDelete={delCli}
           osHistory={osHistory} payments={payments} onAddClient={addCliDirect} isOwner={adminRole==="owner"}/>
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
-        <TabHeader color={B.blue} title="🚗 Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
+        <TabHeader color={B.blue} title="Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
         <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} isOwner={adminRole==="owner"}
           onDeleteVehicle={adminRole==="owner"?async(id)=>{try{await db.deleteVehicle(id);setVeh(p=>p.filter(v=>v.id!==id));toast_("Veículo removido ✓");}catch(e){errToast(e);}}:null}
           onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico ✓");}catch(e){errToast(e);}}}/>
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
-        <TabHeader color={B.green} title="💰 Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
+        <TabHeader color={B.green} title="Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
         <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses}
           onAddExpense={async e=>{try{const r=await db.addExpense(e);setExpenses(p=>[...p,r]);}catch(err){errToast(err);}}}
           onUpdateExpense={async(id,patch)=>{try{await db.updateExpense(id,patch);setExpenses(p=>p.map(e=>e.id===id?{...e,...patch}:e));}catch(err){errToast(err);}}}
@@ -9847,7 +9848,7 @@ export default function App() {
         />
       </>}
       {tab==="purchases"&&allowedTabs.includes("purchases")&&<>
-        <TabHeader color={B.amber} title="🛒 Pedidos de Compras" subtitle="Pedidos dos mecânicos · Aprovação e compra pelo gestor"/>
+        <TabHeader color={B.amber} title="Pedidos de Compras" subtitle="Pedidos dos mecânicos · Aprovação e compra pelo gestor"/>
         <PurchaseOrdersTab orders={purchaseOrders} vehicles={vehicles} employees={employees} tasks={tasks} adminRole={adminRole}
           onUpdate={async(id,patch)=>{
             try{
@@ -9878,7 +9879,7 @@ export default function App() {
         />
       </>}
       {tab==="investments"&&allowedTabs.includes("investments")&&<>
-        <TabHeader color={B.green} title="📈 Investimentos" subtitle="Compras para a empresa · Por porte e prioridade"/>
+        <TabHeader color={B.green} title="Investimentos" subtitle="Compras para a empresa · Por porte e prioridade"/>
         <InvestmentsTab investments={investments.filter(i=>i.category!=="materiais")} adminRole={adminRole}
           onAdd={async inv=>{try{const r=await db.addInvestment({...inv,createdBy:adminRole});setInvestments(p=>[...p,r]);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
@@ -9907,7 +9908,7 @@ export default function App() {
       </>}
 
       {tab==="materiais"&&<>
-        <TabHeader color={B.orange} title="📦 Materiais Sortidos" subtitle="Peças e materiais avulsos para estoque da oficina"/>
+        <TabHeader color={B.orange} title="Materiais Sortidos" subtitle="Peças e materiais avulsos para estoque da oficina"/>
         <InvestmentsTab investments={investments.filter(i=>i.category==="materiais")} adminRole={adminRole} defaultCategory="materiais"
           onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
@@ -9929,7 +9930,7 @@ export default function App() {
       </>}
 
       {tab==="sales"&&allowedTabs.includes("sales")&&<>
-        <TabHeader color="#06b6d4" title="🛍️ Vendas" subtitle="Venda avulsa de itens da prateleira ou do estoque"/>
+        <TabHeader color="#06b6d4" title="Vendas" subtitle="Venda avulsa de itens da prateleira ou do estoque"/>
         <SalesTab
           shelfItems={shelfItems} sales={sales} stock={stock}
           onAddShelfItem={async item=>{try{const r=await db.addShelfItem(item);setShelfItems(p=>[...p,r]);toast_("Item adicionado ✓");}catch(e){errToast(e);}}}

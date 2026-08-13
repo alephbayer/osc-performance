@@ -574,7 +574,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
               {vHist.map(h=>{
                 const div=h.division||"performance";
                 const divColor=div==="finishing"?FD.primary:B.orange;
-                const divLabel=div==="finishing"?"🎨 Finishing":"⚙️ Performance";
+                const divLabel=div==="finishing"?"Finishing":"Performance";
                 const osNum=h.os_number||h.osNumber;
                 const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
                 const deliveredAt=h.delivered_at||h.deliveredAt;
@@ -2100,6 +2100,22 @@ const PRIORITY={
 };
 const IFileText=({s=18,c="currentColor"})=><Svg d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" d2="M14 2v6h6M16 13H8M16 17H8M10 9H8" s={s} c={c}/>;
 const ITrendUp=({s=16,c="currentColor"})=><Svg d="M23 6l-9.5 9.5-5-5L1 18" d2="M17 6h6v6" s={s} c={c}/>;
+// Action icons
+const IPause    =({s=14,c="currentColor"})=><Svg d="M10 4H6v16h4zM18 4h-4v16h4z" s={s} c={c}/>;
+const IPlay     =({s=14,c="currentColor"})=><Svg d="M5 3l14 9-14 9V3z" s={s} c={c}/>;
+const ICheck    =({s=14,c="currentColor"})=><Svg d="M20 6L9 17l-5-5" s={s} c={c}/>;
+const IDelivery =({s=14,c="currentColor"})=><Svg d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3M9 17H7" d2="M13 17h1a2 2 0 002-2v-2M16 17h1a2 2 0 000-4h-1" s={s} c={c}/>;
+const IUndo     =({s=14,c="currentColor"})=><Svg d="M3 7v6h6" d2="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" s={s} c={c}/>;
+const IWarning  =({s=14,c="currentColor"})=><Svg d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" s={s} c={c}/>;
+const ICar2     =({s=14,c="currentColor"})=><Svg d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" d2="M13 17H6m5 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zM14 9l1-5h4l1 5" s={s} c={c}/>;
+// Render icon key → SVG component
+const IKey=({k,s=12,c="currentColor"})=>{
+  if(k==="check") return <ICheck s={s} c={c}/>;
+  if(k==="cart")  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>;
+  if(k==="box")   return <IBox s={s} c={c}/>;
+  if(k==="gear")  return <IGear s={s} c={c}/>;
+  return null;
+};
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 function ProgressBar({value,max}) {
@@ -2878,10 +2894,16 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
     return allocated<(o.quantity||1);
   });
 
-  // Reserved parts from partsList not yet fully used
+  // Reserved parts from partsList not yet fully used in tasks
   const availableReserved=reservedParts.filter(p=>{
-    const usedInTasks=allTasks.flatMap(t=>t.materials||[]).filter(m=>m.reservedPartIdx===p._idx).reduce((s,m)=>s+(m.qty||1),0);
-    return usedInTasks<(p.qty||1);
+    // Parts with purchaseOrderId — check allocated quantity
+    if(p.purchaseOrderId){
+      const usedInTasks=allTasks.flatMap(t=>t.materials||[]).filter(m=>m.purchaseOrderId===p.purchaseOrderId).reduce((s,m)=>s+Number(m.qty||1),0);
+      return usedInTasks<Number(p.qty||1);
+    }
+    // Manual parts — check by id
+    const usedInTasks=allTasks.flatMap(t=>t.materials||[]).filter(m=>m.reservedPartId===p.id).reduce((s,m)=>s+Number(m.qty||1),0);
+    return usedInTasks<Number(p.qty||1);
   });
 
   const hasPickable=receivedOrders.length>0||availableReserved.length>0;
@@ -2903,7 +2925,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
   };
 
   const addFromReserved=(p)=>{
-    const newMats=[...mats,{name:p.name,brand:p.brand||"",cost:p.cost||0,value:p.value||0,qty:p.qty||1,fromStock:false,stockItemId:null,reservedPartIdx:p._idx}];
+    const newMats=[...mats,{name:p.name,brand:p.brand||"",cost:p.cost||0,value:p.value||0,qty:p.qty||1,fromStock:false,stockItemId:null,reservedPartId:p.id}];
     onUpdate(task.id,{materials:newMats});
     setShowPOP(false);
   };
@@ -3079,8 +3101,8 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const total      = managerMode?tasksTotal+fuelTotal+towTotal-osDiscount:0;
   const photos= isFD ? (vehicle.photosFinishing||[]) : (vehicle.photos||[]);
   const pubLink=getPublicLink(vehicle.id);
-  const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo"}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"⏸ Pausado (Performance)"}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"✓ Pronto"}};
-  const statusColorsFD = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo"}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"⏸ Pausado (Finishing)"}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"✓ Pronto (Finishing)"}};
+  const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Perf.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
+  const statusColorsFD = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Fin.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
   const sc = division==="finishing" ? (statusColorsFD[vehicle.statusFinishing||"active"]) : (statusColors[vehicle.status||"active"]);
 
   const addT=()=>{if(!newT.trim())return;onAddTask(vehicle.id,newT.trim(),null,isFD?"finishing":"performance");setNewT("");};
@@ -3117,7 +3139,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
               :(vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>)}
             {cli&&<span style={{color:B.blue}}>👤 {cli.name}</span>}
             {mechs.length>0&&<span style={{color:B.orange}}>🔧 {mechs.map(m=>m.name).join(", ")}</span>}
-            <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10}}>{sc.label}</span>
+            <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}>{sc.icon}{sc.label}</span>
             {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300}}>🎨{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
             {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600}}>📝 Obs.</span>}
             {photos.length>0&&<span style={{color:B.purple}}>📷 {photos.length}</span>}
@@ -3153,13 +3175,13 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           <IFileText s={12} c={pdfLoading?B.gray400:B.amber}/>{pdfLoading?"Gerando…":"PDF"}
         </button>}
         <button onClick={()=>setSCL(p=>!p)} style={{background:showChecklist?`${B.blue}22`:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          📋 Checklist
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Checklist
         </button>
         <button onClick={()=>setShowParts(p=>!p)} style={{background:showParts?`${B.purple}22`:`${B.purple}10`,border:`1px solid ${B.purple}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           {(()=>{
             const pendingMats=vts.filter(t=>!t.done&&!t.warranty).flatMap(t=>(t.materials||[]).filter(m=>m.name&&!m.noCharge));
             const count=pendingMats.length;
-            return <>🔩 Peças{count>0&&<span style={{background:`${B.purple}33`,borderRadius:99,padding:"0px 6px",fontSize:10,fontWeight:900}}>{count}</span>}</>;
+            return <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Peças{count>0&&<span style={{background:`${B.purple}33`,borderRadius:99,padding:"0px 6px",fontSize:10,fontWeight:900}}>{count}</span>}</>;
           })()}
         </button>
         {onAddPurchaseOrder&&<button onClick={()=>setShowPOForm(p=>!p)} style={{background:showPOForm?`${B.amber}22`:`${B.amber}10`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
@@ -3185,7 +3207,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           <IWrench s={12} c={B.orange}/>+ Mec.
         </button>}
         {!hideManagerButtons&&isOwner&&onOpenOS&&!vehicle.osNumber&&division==="performance"&&<button onClick={()=>onOpenOS(vehicle.id,null,null)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
-          🔧 Abrir OS
+          <IWrench s={12} c={B.green}/>Abrir OS
         </button>}
         {!hideManagerButtons&&isOwner&&onSetStatus&&<>
           {(()=>{
@@ -3193,10 +3215,10 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             const deliveredField=division==="finishing"?vehicle.deliveredAtFinishing:vehicle.deliveredAt;
             return(<>
               {curStatus!=="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"paused")} style={{background:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                ⏸ Pausar
+                <IPause s={12} c={B.amber}/>Pausar
               </button>}
               {curStatus==="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                ▶ Retomar
+                <IPlay s={12} c={B.green}/>Retomar
               </button>}
               {(()=>{
                 const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(division==="finishing"?t.division==="finishing":(t.division||"performance")==="performance"));
@@ -3206,13 +3228,13 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
                     if(hasEstimated){alert("⚠️ Existem materiais estimados nesta OS. Confirme ou remova-os antes de marcar como pronto.");return;}
                     onSetStatus(vehicle.id,"ready");
                   }} title={hasEstimated?"Há materiais estimados a confirmar":""} style={{background:hasEstimated?`${B.amber}22`:B.blueBg,border:`1px solid ${hasEstimated?B.amber:B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                    {hasEstimated?"⚠️ Estimados":"✓ Pronto"}
+                    {hasEstimated?<><IWarning s={12} c={B.amber}/>Estimados</>:<><ICheck s={12} c={B.blue}/>Pronto</>}
                   </button>}
                   {curStatus==="ready"&&!deliveredField&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                    ↩ Reabrir
+                    <IUndo s={12} c={B.orange}/>Reabrir
                   </button>}
                   {curStatus==="ready"&&!deliveredField&&isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
-                    🚗 Entregar
+                    <ICar2 s={12} c={B.green}/>Entregar
                   </button>}
                 </>);
               })()}
@@ -3256,7 +3278,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         ))}
       </div>}
       {showPhotos&&<div style={{padding:"12px 14px",background:B.black,borderBottom:`1px solid ${B.gray700}`}}>
-        <div style={{fontSize:11,color:isFD?FD.primary:B.purple,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>📷 Fotos da OS — visíveis ao cliente</div>
+        <div style={{fontSize:11,color:isFD?FD.primary:B.purple,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>Fotos da OS — visíveis ao cliente</div>
         <PhotoGallery
           photos={photos}
           tasks={vts}
@@ -3719,12 +3741,12 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
         <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
           {hasBoth?<>
             <div style={{flex:"1 1 100px",background:B.gray700,borderRadius:10,padding:"10px 12px"}}>
-              <div style={{fontSize:10,color:B.orange}}>⚙️ Performance</div>
+              <div style={{fontSize:10,color:B.orange,display:"flex",alignItems:"center",gap:3}}><IGear s={10} c={B.orange}/>Performance</div>
               <div style={{fontSize:14,fontWeight:800,color:B.white}}>{fmtBRL(perfTotal)}</div>
               <div style={{fontSize:10,color:B.green}}>Pago: {fmtBRL(perfPaid)}</div>
             </div>
             <div style={{flex:"1 1 100px",background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:10,padding:"10px 12px"}}>
-              <div style={{fontSize:10,color:FD.primary}}>🎨 Finishing</div>
+              <div style={{fontSize:10,color:FD.primary,display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing</div>
               <div style={{fontSize:14,fontWeight:800,color:B.white}}>{fmtBRL(finTotal)}</div>
               <div style={{fontSize:10,color:B.green}}>Pago: {fmtBRL(finPaid)}</div>
             </div>
@@ -3759,8 +3781,8 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
           <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
             style={{width:"100%",marginTop:7,padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           {hasFinishing&&<div style={{marginTop:8,display:"flex",gap:6}}>
-            <button onClick={()=>setPayDiv("performance")} style={{flex:1,padding:"6px 0",borderRadius:7,border:`1px solid ${payDiv==="performance"?B.orange+"66":B.gray600}`,background:payDiv==="performance"?`${B.orange}22`:"none",color:payDiv==="performance"?B.orange:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}>⚙️ Performance</button>
-            <button onClick={()=>setPayDiv("finishing")} style={{flex:1,padding:"6px 0",borderRadius:7,border:`1px solid ${payDiv==="finishing"?FD.primary+"66":B.gray600}`,background:payDiv==="finishing"?FD.bg:"none",color:payDiv==="finishing"?FD.primary:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}>🎨 Finishing</button>
+            <button onClick={()=>setPayDiv("performance")} style={{flex:1,padding:"6px 0",borderRadius:7,border:`1px solid ${payDiv==="performance"?B.orange+"66":B.gray600}`,background:payDiv==="performance"?`${B.orange}22`:"none",color:payDiv==="performance"?B.orange:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}><IGear s={11} c={payDiv==="performance"?B.orange:B.gray400}/>Performance</button>
+            <button onClick={()=>setPayDiv("finishing")} style={{flex:1,padding:"6px 0",borderRadius:7,border:`1px solid ${payDiv==="finishing"?FD.primary+"66":B.gray600}`,background:payDiv==="finishing"?FD.bg:"none",color:payDiv==="finishing"?FD.primary:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing</button>
           </div>}          <button onClick={submit} style={{marginTop:10,width:"100%",padding:"9px 0",borderRadius:8,background:B.green,border:"none",color:B.white,fontWeight:800,cursor:"pointer",fontSize:13}}>Registrar pagamento</button>
         </div>
 
@@ -4795,7 +4817,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       </div>
 
       {showOpenOS&&<OpenOSModal vehicle={vehicle} employees={employees.filter(e=>e.division==="performance")} onConfirm={(empId,entryStr)=>{onOpenOS(vehicle.id,empId,entryStr);setShowOpenOS(false);}} onClose={()=>setShowOpenOS(false)}/>}
-      {showOpenOSFD&&<OpenOSModal vehicle={vehicle} employees={employees.filter(e=>e.division==="finishing")} title="🎨 Abrir OS — Finishing Division" color={FD.primary} optional={true} onConfirm={(empId,entryStr)=>{onOpenOSFinishing&&onOpenOSFinishing(vehicle.id,empId,entryStr);setShowOpenOSFD(false);}} onClose={()=>setShowOpenOSFD(false)}/>}
+      {showOpenOSFD&&<OpenOSModal vehicle={vehicle} employees={employees.filter(e=>e.division==="finishing")} title="Abrir OS — Finishing Division" color={FD.primary} optional={true} onConfirm={(empId,entryStr)=>{onOpenOSFinishing&&onOpenOSFinishing(vehicle.id,empId,entryStr);setShowOpenOSFD(false);}} onClose={()=>setShowOpenOSFD(false)}/>}
 
       {/* ── OS History ── */}
       <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
@@ -4844,7 +4866,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                     onOpenOS(vehicle.id, null, h.entered_at||null);
                   }
                 }} style={{background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.green,fontSize:10,fontWeight:800,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}>
-                  ↩ Reabrir
+                  <IUndo s={10} c={B.green}/>Reabrir
                 </button>}
                 <button disabled={pdfLoading===h.id} onClick={async()=>{
                   setPdfLoading(h.id);
@@ -4920,10 +4942,14 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
         ))}
       </div>}
 
+      {/* Parts inventory — visible when expanded, for all vehicles */}
+      {open&&onUpdateVehicle&&<div style={{padding:"12px 16px",borderTop:`1px solid ${B.gray700}`}}>
+        <VehiclePartsList vehicle={vehicle} onUpdateVehicle={onUpdateVehicle} managerMode={isOwner} tasks={tasks}/>
+      </div>}
+
       {/* Delete vehicle — owner only, no active OS, inside expanded card */}
       {isOwner&&!hasActiveOS&&!hasActiveFinishing&&onDeleteVehicle&&open&&<div style={{padding:"12px 16px",borderTop:`1px solid ${B.gray700}`}}>
-        <button onClick={()=>{
-          if(!window.confirm(`Excluir ${vehicle.model}${vehicle.plate?` (${vehicle.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
+        <button onClick={()=>{          if(!window.confirm(`Excluir ${vehicle.model}${vehicle.plate?` (${vehicle.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
           if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${vehicle.model}?`)) return;
           onDeleteVehicle(vehicle.id);
         }} style={{background:"none",border:`1px solid ${B.red}33`,borderRadius:7,padding:"6px 12px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:5,opacity:.7}}
@@ -4945,27 +4971,28 @@ const PRIORITY_LABELS = ["","🔴 Urgente","🟠 Alta","🟡 Média","🟢 Baixa
 const PRIORITY_COLORS = ["","#ef4444","#f97316","#eab308","#22c55e","#6b7280"];
 const INV_STATUS = {
   pending:  {label:"Pendente",  color:"#f59e0b", icon:"⏳", next:"approved",  nextLabel:"Aprovar"},
-  approved: {label:"Aprovado",  color:"#3b82f6", icon:"✅", next:"bought",    nextLabel:"Marcar comprado"},
-  bought:   {label:"Comprado",  color:"#8b5cf6", icon:"🛒", next:"received",  nextLabel:"Marcar recebido"},
+  approved: {label:"Aprovado",  color:"#3b82f6", icon:"check", next:"bought",    nextLabel:"Marcar comprado"},
+  bought:   {label:"Comprado",  color:"#8b5cf6", icon:"cart", next:"received",  nextLabel:"Marcar recebido"},
   received: {label:"Recebido",  color:"#22c55e", icon:"🎉", next:null,        nextLabel:null},
 };
 
 // ─── Investment Form Panel (top-level to avoid keyboard dismissal) ────────────
-function InvFormPanel({cat,form,setForm,editId,onSubmit,onCancel}) {
-  return (<div style={{background:B.gray900,borderRadius:11,padding:14,border:`1px solid ${(form.category||cat)==="pesado"?B.red+"44":B.blue+"44"}`,marginBottom:14}}>
-    <div style={{fontSize:11,fontWeight:700,color:(form.category||cat)==="pesado"?B.red:B.blue,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>
-      {(form.category||cat)==="pesado"?"🔧 Investimento Pesado":"⚡ Investimento Leve"} — {editId?"Editar":"Novo"}
+function InvFormPanel({cat,form,setForm,editId,onSubmit,onCancel,hideCategoryToggle=false}) {
+  const isMat=hideCategoryToggle||(form.category||cat)==="materiais";
+  return (<div style={{background:B.gray900,borderRadius:11,padding:14,border:`1px solid ${isMat?B.amber+"44":(form.category||cat)==="pesado"?B.red+"44":B.blue+"44"}`,marginBottom:14}}>
+    <div style={{fontSize:11,fontWeight:700,color:isMat?B.amber:(form.category||cat)==="pesado"?B.red:B.blue,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>
+      {isMat?"📦 Material Sortido":(form.category||cat)==="pesado"?"🔧 Investimento Pesado":"⚡ Investimento Leve"} — {editId?"Editar":"Novo"}
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
-      {/* Category toggle */}
-      <div style={{display:"flex",gap:6}}>
-        {[{k:"pesado",l:"🔧 Pesado"},{k:"leve",l:"⚡ Leve"},{k:"materiais",l:"📦 Materiais"}].map(c=>(
+      {/* Category toggle — hidden in materiais context, and excludes materiais option in investments */}
+      {!hideCategoryToggle&&<div style={{display:"flex",gap:6}}>
+        {[{k:"pesado",l:"🔧 Pesado"},{k:"leve",l:"⚡ Leve"}].map(c=>(
           <button key={c.k} type="button" onClick={()=>setForm(p=>({...p,category:c.k}))}
             style={{flex:1,padding:"8px 0",borderRadius:8,border:`1px solid ${(form.category||cat)===c.k?(c.k==="pesado"?B.red:B.blue):B.gray600}`,background:(form.category||cat)===c.k?(c.k==="pesado"?`${B.red}18`:`${B.blue}18`):"none",color:(form.category||cat)===c.k?(c.k==="pesado"?B.red:B.blue):B.gray500,fontWeight:700,fontSize:12,cursor:"pointer"}}>
             {c.l}
           </button>
         ))}
-      </div>
+      </div>}
       <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="Nome do item *"
         style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
       <input value={form.link} onChange={e=>setForm(p=>({...p,link:e.target.value}))} placeholder="Link (opcional)"
@@ -5051,7 +5078,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
           <span style={{fontWeight:800,fontSize:14,color:B.white}}>{inv.name}</span>
           {inv.status==="pending"&&<span style={{fontSize:10,color:prColor,background:`${prColor}18`,border:`1px solid ${prColor}33`,borderRadius:5,padding:"1px 7px",fontWeight:700}}>{PRIORITY_LABELS[inv.priority]}</span>}
           <span style={{fontSize:10,color:B.gray400}}>{divLabel}</span>
-          <span style={{fontSize:10,fontWeight:700,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}33`,borderRadius:5,padding:"1px 7px"}}>{st.icon} {st.label}</span>
+          <span style={{fontSize:10,fontWeight:700,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}33`,borderRadius:5,padding:"1px 7px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}</span>
         </div>
         {inv.objective&&<div style={{fontSize:12,color:B.gray400,marginBottom:4,lineHeight:1.4}}>{inv.objective}</div>}
         <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
@@ -5087,14 +5114,14 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
     </div>
   </div>);
 }
-function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToStock}) {
+function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToStock,defaultCategory=null}) {
   const [search,setSearch]=useState("");
-  const [catFilter,setCatFilter]=useState("all");
+  const [catFilter,setCatFilter]=useState(defaultCategory||"all");
   const [divFilter,setDivFilter]=useState("all");
   const [adding,setAdding]=useState(null);
-  const [form,setForm]=useState({name:"",link:"",value:"",quantity:"1",objective:"",division:"performance",priority:"3"});
+  const [form,setForm]=useState({name:"",link:"",value:"",quantity:"1",objective:"",division:"performance",priority:"3",category:defaultCategory||"pesado"});
   const [editId,setEditId]=useState(null);
-  const [stockModal,setStockModal]=useState(null); // inv being received as materiais
+  const [stockModal,setStockModal]=useState(null);
   const [stockForm,setStockForm]=useState({name:"",qty:"1",price:"",unit:"un",category:"materiais"});
 
   const filtered=investments.filter(inv=>{
@@ -5125,8 +5152,8 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
 
   const statusGroups=[
     {key:"pending",  label:"⏳ Pendentes",  color:"#f59e0b"},
-    {key:"approved", label:"✅ Aprovados",   color:"#3b82f6"},
-    {key:"bought",   label:"🛒 Comprados",   color:"#8b5cf6"},
+    {key:"approved", label:"Aprovados",   color:"#3b82f6"},
+    {key:"bought",   label:"Comprados",   color:"#8b5cf6"},
     {key:"received", label:"🎉 Recebidos",   color:"#22c55e"},
   ];
 
@@ -5166,19 +5193,19 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
   </>);
 
   return (<div>
-    {/* Filters */}
-    <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10,alignItems:"center"}}>
+    {/* Filters — hidden when locked to a defaultCategory */}
+    {!defaultCategory&&<div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10,alignItems:"center"}}>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
-        {[{k:"all",l:"Todos"},{k:"pesado",l:"🔧 Pesados"},{k:"leve",l:"⚡ Leves"},{k:"materiais",l:"📦 Materiais"}].map(f=>(
+        {[{k:"all",l:"Todos"},{k:"pesado",l:"🔧 Pesados"},{k:"leve",l:"⚡ Leves"}].map(f=>(
           <button key={f.k} onClick={()=>setCatFilter(f.k)} style={{padding:"5px 14px",borderRadius:99,border:`1px solid ${catFilter===f.k?B.orange:B.gray700}`,background:catFilter===f.k?`${B.orange}22`:"none",color:catFilter===f.k?B.orange:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>{f.l}</button>
         ))}
       </div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
-        {[{k:"all",l:"Todas"},{k:"performance",l:"⚙️ Performance"},{k:"finishing",l:"🎨 Finishing"}].map(f=>(
+        {[{k:"all",l:"Todas"},{k:"performance",l:"Performance"},{k:"finishing",l:"Finishing"}].map(f=>(
           <button key={f.k} onClick={()=>setDivFilter(f.k)} style={{padding:"5px 14px",borderRadius:99,border:`1px solid ${divFilter===f.k?FD.primary:B.gray700}`,background:divFilter===f.k?FD.bg:"none",color:divFilter===f.k?FD.primary:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>{f.l}</button>
         ))}
       </div>
-    </div>
+    </div>}
     <div style={{position:"relative",marginBottom:12}}>
       <svg style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome ou objetivo..."
@@ -5187,17 +5214,17 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     </div>
 
     {/* Add button */}
-    {!adding&&(adminRole==="owner"||adminRole==="admin"||adminRole==="supervisor")&&<button onClick={()=>{setAdding("pesado");resetForm();setEditId(null);}}
+    {!adding&&(adminRole==="owner"||adminRole==="admin"||adminRole==="supervisor")&&<button onClick={()=>{setAdding(defaultCategory||"pesado");resetForm();if(defaultCategory) setForm(p=>({...p,category:defaultCategory}));setEditId(null);}}
       style={{width:"100%",padding:"11px 0",borderRadius:10,background:`${B.orange}18`,border:`1px dashed ${B.orange}66`,color:B.orange,fontWeight:800,fontSize:13,cursor:"pointer",marginBottom:16}}>
-      + Novo investimento
+      {defaultCategory==="materiais"?"+ Novo material sortido":"+ Novo investimento"}
     </button>}
 
     {/* Form at top level */}
-    {adding&&<InvFormPanel cat={adding} form={form} setForm={setForm} editId={editId}
+    {adding&&<InvFormPanel cat={adding} form={form} setForm={setForm} editId={editId} hideCategoryToggle={!!defaultCategory}
       onSubmit={submit} onCancel={()=>{setAdding(null);setEditId(null);resetForm();}}/>}
 
-    {/* Materiais Sortidos */}
-    {(catFilter==="all"||catFilter==="materiais")&&<div style={{marginBottom:8}}>
+    {/* Materiais Sortidos — only shown in dedicated materiais tab */}
+    {defaultCategory==="materiais"&&(catFilter==="all"||catFilter==="materiais")&&<div style={{marginBottom:8}}>
       {sectionHeader(materiais,B.amber,"📦","Materiais Sortidos",openMateriais,setOpenMateriais)}
       {openMateriais&&<div style={{border:`1px solid ${B.amber}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
         {renderCat(materiais,B.amber,openMateriais,true)}
@@ -5309,7 +5336,7 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[]}) {
             {o.description&&<div style={{fontSize:11,color:B.gray400}}>{o.description}</div>}
           </div>
           <div style={{flexShrink:0,textAlign:"right"}}>
-            <div style={{fontSize:10,fontWeight:800,color:st.color,background:`${st.color}18`,borderRadius:5,padding:"1px 7px"}}>{st.icon} {st.label}</div>
+            <div style={{fontSize:10,fontWeight:800,color:st.color,background:`${st.color}18`,borderRadius:5,padding:"1px 7px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}</div>
             <div style={{fontSize:10,color:B.gray500,marginTop:2}}>Qtd: {o.quantity}</div>
           </div>
         </div>
@@ -5352,9 +5379,9 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[]}) {
 // ─── Purchase Orders Tab ──────────────────────────────────────────────────────
 const PO_STATUS = {
   pending:       { label:"Pendente",          color:"#f59e0b", icon:"⏳", next:"ready_to_buy",  nextLabel:"Pronto p/ compra" },
-  ready_to_buy:  { label:"Aguardando compra", color:"#3b82f6", icon:"🛒", next:"bought",         nextLabel:"Marcar comprado"  },
-  bought:        { label:"Comprado",          color:"#8b5cf6", icon:"📦", next:"received",       nextLabel:"Marcar recebido"  },
-  received:      { label:"Recebido ✓",        color:"#22c55e", icon:"✅", next:null,             nextLabel:null               },
+  ready_to_buy:  { label:"Aguardando compra", color:"#3b82f6", icon:"cart", next:"bought",         nextLabel:"Marcar comprado"  },
+  bought:        { label:"Comprado",          color:"#8b5cf6", icon:"box", next:"received",       nextLabel:"Marcar recebido"  },
+  received:      { label:"Recebido ✓",        color:"#22c55e", icon:"check", next:null,             nextLabel:null               },
 };
 
 function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,onDelete,onReserve}) {
@@ -5484,9 +5511,9 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
       {[
         {key:"all",label:`Todos (${orders.length})`,color:B.gray400},
         {key:"pending",label:`⏳ Pendentes (${pendingCount})`,color:"#f59e0b"},
-        {key:"ready_to_buy",label:`🛒 Aguardando (${readyCount})`,color:"#3b82f6"},
-        {key:"bought",label:`📦 Comprados (${boughtCount})`,color:"#8b5cf6"},
-        {key:"received",label:`✅ Recebidos`,color:"#22c55e"},
+        {key:"ready_to_buy",label:`Aguardando (${readyCount})`,color:"#3b82f6"},
+        {key:"bought",label:`Comprados (${boughtCount})`,color:"#8b5cf6"},
+        {key:"received",label:`Recebidos`,color:"#22c55e"},
       ].map(f=>(
         <button key={f.key} onClick={()=>setFilter(f.key)}
           style={{padding:"6px 14px",borderRadius:99,border:`1px solid ${filter===f.key?f.color:B.gray700}`,background:filter===f.key?`${f.color}22`:"none",color:filter===f.key?f.color:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>
@@ -5534,7 +5561,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
             </div>
           </div>
           <div style={{textAlign:"right",flexShrink:0}}>
-            <div style={{fontSize:11,fontWeight:800,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}44`,borderRadius:6,padding:"2px 8px"}}>{st.icon} {st.label}</div>
+            <div style={{fontSize:11,fontWeight:800,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}44`,borderRadius:6,padding:"2px 8px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}</div>
             {isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>✓ Instalada</div>}
             {isReserved&&!isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.purple,background:`${B.purple}18`,border:`1px solid ${B.purple}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>📦 Armazenada</div>}
             <div style={{fontSize:10,color:B.gray500,marginTop:4}}>{new Date(o.createdAt).toLocaleDateString("pt-BR")}</div>
@@ -5581,7 +5608,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
           </button>}
           {canAdvance(o)&&st.next&&<button onClick={()=>advanceStatus(o)}
             style={{padding:"6px 14px",borderRadius:8,background:`${st.color}22`,border:`1px solid ${st.color}66`,color:st.color,fontSize:11,fontWeight:800,cursor:"pointer"}}>
-            {st.icon} {st.nextLabel}
+            <IKey k={st.icon} s={11} c="currentColor"/> {st.nextLabel}
           </button>}
           {(adminRole==="owner"||adminRole==="admin")&&o.status==="received"&&<button onClick={()=>setReturnModal(o)}
             style={{padding:"6px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
@@ -5818,7 +5845,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
   return (<div>
     {/* Division sub-tabs */}
     <div style={{display:"flex",gap:6,marginBottom:16,justifyContent:"center"}}>
-      {[{id:"performance",label:"⚙️ Performance",color:B.orange},{id:"finishing",label:"🎨 Finishing",color:FD.primary}].map(d=>(
+      {[{id:"performance",label:"Performance",color:B.orange},{id:"finishing",label:"Finishing",color:FD.primary}].map(d=>(
         <button key={d.id} onClick={()=>setFinDiv(d.id)}
           style={{padding:"7px 18px",borderRadius:8,border:`1px solid ${finDiv===d.id?d.color+"66":B.gray600}`,background:finDiv===d.id?`${d.color}22`:"none",color:finDiv===d.id?d.color:B.gray400,cursor:"pointer",fontWeight:700,fontSize:13}}>
           {d.label}
@@ -5997,14 +6024,14 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const catOrder=buildCatOrder(regularTs);
 
   const statusCfg={
-    active:{label:"Em serviço",               icon:"🔧", color:B.orange, bg:`${B.orange}18`},
-    paused:{label:"Pausado — Performance",     icon:"⏸",  color:B.amber,  bg:`${B.amber}18`},
-    ready: {label:"Pronto!",                  icon:"✅", color:B.green,  bg:B.greenBg},
+    active:{label:"Em serviço",               icon:"service", color:B.orange, bg:`${B.orange}18`},
+    paused:{label:"Pausado — Performance",     icon:"paused",  color:B.amber,  bg:`${B.amber}18`},
+    ready: {label:"Pronto!",                  icon:"ready",   color:B.green,  bg:B.greenBg},
   };
   const scFin={
-    active:{label:"Em acabamento",            icon:"🎨", color:FD.primary, bg:FD.bg},
-    paused:{label:"Pausado — Finishing",      icon:"⏸",  color:B.amber,   bg:`${B.amber}18`},
-    ready: {label:"Acabamento pronto!",       icon:"✅", color:B.green,   bg:B.greenBg},
+    active:{label:"Em acabamento",            icon:"service", color:FD.primary, bg:FD.bg},
+    paused:{label:"Pausado — Finishing",      icon:"paused",  color:B.amber,   bg:`${B.amber}18`},
+    ready: {label:"Acabamento pronto!",       icon:"ready",   color:B.green,   bg:B.greenBg},
   };
   const sc=statusCfg[v.status||"active"];
 
@@ -6038,7 +6065,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       </div>
       {/* Bottom row: status badge full width */}
       <div style={{padding:"8px 16px",borderTop:`1px solid ${B.gray800}`,background:`${sc.color}10`,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-        <span style={{fontWeight:800,fontSize:12,color:sc.color}}>{sc.icon} {sc.label}</span>
+        <span style={{fontWeight:800,fontSize:12,color:sc.color,display:"inline-flex",alignItems:"center",gap:5}}>
+          {sc.icon==="service"&&<IWrench s={13} c={sc.color}/>}
+          {sc.icon==="paused"&&<IPause s={13} c={sc.color}/>}
+          {sc.icon==="ready"&&<ICheck s={13} c={sc.color}/>}
+          {sc.label}
+        </span>
       </div>
     </div>
 
@@ -6420,7 +6452,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                           color:isFDPay?FD.primary:B.orange,
                           background:isFDPay?FD.bg:`${B.orange}12`,
                           border:`1px solid ${isFDPay?FD.border:B.orange+"33"}`}}>
-                          {isFDPay?"🎨 Finishing":"⚙️ Performance"}
+                          {isFDPay?"Finishing":"Performance"}
                         </span>
                         <span style={{fontSize:11,color:B.gray500,width:"100%",marginTop:2}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</span>
                       </div>
@@ -6650,9 +6682,9 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments"],           envVar:"VITE_ADMIN_PASSWORD" },
-  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais"], envVar:"VITE_OWNER_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais"],           envVar:"VITE_ADMIN_PASSWORD" },
+  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
 // Hash a string with SHA-256 — used to avoid storing plain passwords in memory
 async function sha256(str) {
@@ -6723,7 +6755,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.18";
+const APP_VERSION = "2026.08.11.30";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7348,7 +7380,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
   // Check if a part has been used in any task material
   const isInstalled=(part,idx)=>{
     return tasks.filter(t=>t.vehicleId===vehicle.id).flatMap(t=>t.materials||[]).some(m=>
-      m.reservedPartIdx===idx || (part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)
+      m.reservedPartId===part.id || (part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)
     );
   };
   const [newName, setNewName] = useState("");
@@ -7864,7 +7896,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
         <div>
           <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Empresa</label>
           <div style={{display:"flex",gap:6}}>
-            {[{id:"performance",label:"⚙️ Performance",color:B.orange},{id:"finishing",label:"🎨 Finishing",color:FD.primary}].map(d=>(
+            {[{id:"performance",label:"Performance",color:B.orange},{id:"finishing",label:"Finishing",color:FD.primary}].map(d=>(
               <button key={d.id} onClick={()=>setPayDiv(d.id)}
                 style={{flex:1,padding:"7px 0",borderRadius:8,border:`1px solid ${payDiv===d.id?d.color+"66":B.gray600}`,background:payDiv===d.id?`${d.color}22`:"none",color:payDiv===d.id?d.color:B.gray400,cursor:"pointer",fontSize:12,fontWeight:700}}>
                 {d.label}
@@ -8046,7 +8078,7 @@ function DashAlert({color,label,sub,icon,onClick}){
 }
 
 // ─── Quick Action Sheet ───────────────────────────────────────────────────────
-function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,theme}){
+function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,onPedidoOS,onPecasVeiculo,onMatSortidos,theme}){
   const dk=theme!=="light";
   const bg=dk?"rgba(16,16,20,0.94)":"rgba(245,245,250,0.97)";
   const border=dk?"1px solid rgba(255,255,255,.10)":"1px solid rgba(0,0,0,.08)";
@@ -8061,6 +8093,9 @@ function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,
       {icon:<Ico d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M12 18v-6","M9 15h6"]} c={B.orange}/>, color:B.orange, label:"Nova OS",        onClick:()=>{onClose();onNovaOS();}},
       {icon:<Ico d={["M9 11l3 3L22 4","M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"]} c={B.green}/>,  color:B.green,  label:"Nova tarefa",     onClick:()=>{onClose();onTask();}},
       {icon:<Ico d={["M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z","M3.27 6.96 12 12.01 20.73 6.96","M12 22.08V12"]} c={B.purple}/>, color:B.purple, label:"Lançar material",onClick:()=>{onClose();onMat();}},
+      {icon:<Ico d={["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"]} c={B.blue}/>, color:B.blue, label:"Pedido p/ OS", onClick:()=>{onClose();onPedidoOS();}},
+      {icon:<Ico d={["M20 7h-9","M14 17H5","M17 3l4 4-4 4","M7 13l-4 4 4 4"]} c={B.purple}/>, color:B.purple, label:"Peças do carro", onClick:()=>{onClose();onPecasVeiculo();}},
+      {icon:<Ico d={["M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 8v10a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v4M19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 8v10a1 1 0 0 0-1 1h-4"]} c={B.amber}/>, color:B.amber, label:"Mat. sortidos", onClick:()=>{onClose();onMatSortidos();}},
     ]},
     ...(adminRole==="owner"?[{label:"Financeiro",color:B.green,actions:[
       {icon:<Ico d={["M12 1v22","M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]} c={B.green}/>,                color:B.green, label:"Registrar pag.", onClick:()=>{onClose();onPay();}},
@@ -8076,7 +8111,7 @@ function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,
         {GROUPS.map(g=>(
           <div key={g.label} style={{marginBottom:16}}>
             <div style={{fontSize:9,fontWeight:800,color:`${g.color}99`,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{g.label}</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
               {g.actions.map(a=>(
                 <button key={a.label} onClick={a.onClick} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"12px 4px 10px",borderRadius:16,border:btnBorder,background:`${a.color}10`,cursor:"pointer"}}>
                   <div style={{width:40,height:40,borderRadius:12,background:`${a.color}20`,display:"flex",alignItems:"center",justifyContent:"center"}}>{a.icon}</div>
@@ -8158,9 +8193,9 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
   return(<div>
     {/* View switcher */}
     <div style={{display:"flex",gap:6,marginBottom:20}}>
-      <ViewBtn id="sell" label="🛒 Vender"/>
+      <ViewBtn id="sell" label="Vender"/>
       <ViewBtn id="shelf" label="🏪 Prateleira"/>
-      <ViewBtn id="history" label="📋 Histórico"/>
+      <ViewBtn id="history" label="Histórico"/>
     </div>
 
     {/* ── SELL ── */}
@@ -8571,6 +8606,9 @@ export default function App() {
   const [navSection,setNavSection]=useState("home");
   const [scrollY,setScrollY]=useState(0);
   const [showQuickSheet,setShowQuickSheet]=useState(false);
+  const [showQuickPedidoOS,setShowQuickPedidoOS]=useState(false);
+  const [showQuickPecasVeiculo,setShowQuickPecasVeiculo]=useState(false);
+  const [showQuickMatSortidos,setShowQuickMatSortidos]=useState(false);
   const [showNovaOS,setShowNovaOS]=useState(false);
   const mainScrollRef=useRef(null);
   const [theme,setTheme]=useState(getTheme);
@@ -8753,7 +8791,7 @@ export default function App() {
       onToggleTask={async id=>{const t=tasks.find(x=>x.id===id);const nowDone=!t.done;const completedAt=nowDone?new Date().toISOString():null;const completedByEmployeeId=nowDone?liveEmp.id:null;setTsk(p=>p.map(x=>x.id===id?{...x,done:nowDone,completedAt,completedByEmployeeId}:x));try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});const v=vehicles.find(x=>x.id===t.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(nowDone){db.sendPushToAdmins(`✅ ${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`✅ ${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}else{db.sendPushToAdmins(`↩ ${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`🔄 ${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}pushToVehicleMechs(t.vehicleId,nowDone?`✅ Tarefa concluída — ${vModel}`:`↩ Tarefa reaberta — ${vModel}`,t.label,t.division);}catch(e){errToast(e);}}}
       onDeleteTask={async id=>{const t=tasks.find(x=>x.id===id);setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(t)db.sendPushToAdmins(`🗑 ${vModel}`,`Tarefa removida: ${t.label}`,"/?").catch(()=>{});if(t&&v?.clientId)db.sendPushToClient(v.clientId,`🗑 ${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}catch(e){errToast(e);}}}
       onUpdateTask={async(id,patch)=>{setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);if(patch.materials){const t=tasks.find(x=>x.id===id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";const matNames=(patch.materials||[]).filter(m=>m.name).map(m=>m.name).join(", ");if(matNames)db.sendPushToAdmins(`📦 Material — ${vModel}`,`Materiais atualizados: ${matNames}`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
-      onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);if("photos" in patch||"photosFinishing" in patch){const v=vehicles.find(x=>x.id===id);const vModel=v?.model||v?.plate||"Veículo";const div="photosFinishing" in patch?"🎨 Finishing":"⚙️ Performance";db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
+      onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);if("photos" in patch||"photosFinishing" in patch){const v=vehicles.find(x=>x.id===id);const vModel=v?.model||v?.plate||"Veículo";const div="photosFinishing" in patch?"Finishing":"Performance";db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
       onLogout={doLogout}
       purchaseOrders={purchaseOrders}
       onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(e){errToast(e);}}}
@@ -8878,7 +8916,7 @@ export default function App() {
       if("photos" in patch||"photosFinishing" in patch){
         const v=vehicles.find(x=>x.id===id);
         const vModel=v?.model||v?.plate||"Veículo";
-        const div="photosFinishing" in patch?"🎨 Finishing":"⚙️ Performance";
+        const div="photosFinishing" in patch?"Finishing":"Performance";
         db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});
       }
     }catch(e){errToast(e);}
@@ -9346,12 +9384,14 @@ export default function App() {
     owner:[
       {id:"home",    label:"Início",   svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
       {id:"oficina", label:"Oficina",  svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
+      {id:"compras", label:"Compras",  svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
       {id:"gestao",  label:"Gestão",   svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
       {id:"mais",    label:"Mais",     svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
     ],
     admin:[
       {id:"home",    label:"Início",   svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
       {id:"oficina", label:"Oficina",  svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
+      {id:"compras", label:"Compras",  svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
       {id:"gestao",  label:"Gestão",   svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
       {id:"mais",    label:"Mais",     svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
     ],
@@ -9365,7 +9405,8 @@ export default function App() {
 
   // Tab grouping by nav section
   const OFICINA_TABS=["clients","finishing","vehicles","clientsMonitor","mechanics"];
-  const GESTAO_TABS=["finance","purchases","investments","stock","sales"];
+  const GESTAO_TABS=["finance","investments","sales"];
+  const COMPRAS_TABS=["purchases","stock","materiais"];
 
   const goSection=(section,tab)=>{
     setNavSection(section);
@@ -9539,7 +9580,7 @@ export default function App() {
       <Item icon={themeLabel.split(" ")[0]} label="Tema do app" sub={themeLabel} color={B.gray400} onClick={toggleTheme} right={<span style={{fontSize:12,color:B.gray400,fontWeight:700}}>{themeLabel}</span>}/>
       {/* Owner-only items */}
       {adminRole==="owner"&&<>
-        <Item icon="⚙️" label="Configurações" sub="Taxa padrão, empresa" color={B.orange} onClick={()=>setSCfg(true)}/>
+        <Item icon={<IGear s={14} c={B.orange}/>} label="Configurações" sub="Taxa padrão, empresa" color={B.orange} onClick={()=>setSCfg(true)}/>
         <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10,marginTop:20}}>Equipe</div>
         <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${B.gray700}`,marginBottom:10}}>
           <div style={{fontWeight:700,fontSize:13,color:B.white,marginBottom:12}}>Cadastrar mecânico</div>
@@ -9550,17 +9591,17 @@ export default function App() {
               style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
             <div style={{display:"flex",gap:6}}>
               <div style={{display:"flex",gap:4,alignItems:"center",background:B.gray700,borderRadius:8,padding:3,flex:1}}>
-                <button onClick={()=>setEDiv("performance")} style={{flex:1,padding:"6px 0",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,background:eDiv==="performance"?B.orange:"none",color:eDiv==="performance"?B.white:B.gray400}}>⚙️ Performance</button>
-                <button onClick={()=>setEDiv("finishing")} style={{flex:1,padding:"6px 0",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,background:eDiv==="finishing"?FD.primary:"none",color:eDiv==="finishing"?B.white:B.gray400}}>🎨 Finishing</button>
+                <button onClick={()=>setEDiv("performance")} style={{flex:1,padding:"6px 0",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,background:eDiv==="performance"?B.orange:"none",color:eDiv==="performance"?B.white:B.gray400}}><IGear s={11} c={payDiv==="performance"?B.orange:B.gray400}/>Performance</button>
+                <button onClick={()=>setEDiv("finishing")} style={{flex:1,padding:"6px 0",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,background:eDiv==="finishing"?FD.primary:"none",color:eDiv==="finishing"?B.white:B.gray400}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing</button>
               </div>
               <button onClick={addEmp} style={{padding:"8px 16px",borderRadius:8,background:B.orange,color:B.white,border:"none",cursor:"pointer",fontWeight:800,fontSize:13}}>+ Adicionar</button>
             </div>
           </div>
         </div>
         <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10,marginTop:20}}>Portais</div>
-        <Item icon="👤" label="Portal do cliente" sub={clientPortalUrl} color={B.blue} onClick={()=>navigator.clipboard?.writeText(clientPortalUrl).then(()=>toast_("Link copiado ✓")).catch(()=>{})}/>
-        <Item icon="🔧" label="Portal do mecânico" sub={mechPortalUrl} color={B.purple} onClick={()=>navigator.clipboard?.writeText(mechPortalUrl).then(()=>toast_("Link copiado ✓")).catch(()=>{})}/>
-        <Item icon="🚪" label="Sair" sub="Encerrar sessão" color={B.red} onClick={adminLogout}/>
+        <Item icon={<IUser s={14} c={B.blue}/>} label="Portal do cliente" sub={clientPortalUrl} color={B.blue} onClick={()=>navigator.clipboard?.writeText(clientPortalUrl).then(()=>toast_("Link copiado ✓")).catch(()=>{})}/>
+        <Item icon={<IWrench s={14} c={B.purple}/>} label="Portal do mecânico" sub={mechPortalUrl} color={B.purple} onClick={()=>navigator.clipboard?.writeText(mechPortalUrl).then(()=>toast_("Link copiado ✓")).catch(()=>{})}/>
+        <Item icon={<ILogout s={14} c={B.red}/>} label="Sair" sub="Encerrar sessão" color={B.red} onClick={adminLogout}/>
       </>}
       <div style={{textAlign:"center",marginTop:24,fontSize:10,color:B.gray700}}>v{APP_VERSION}</div>
     </div>);
@@ -9570,6 +9611,7 @@ export default function App() {
   const sidebarItems=[
     {id:"home",    label:"Início",    emoji:"🏠"},
     ...(navItems.find(n=>n.id==="oficina")?[{id:"oficina",label:"Oficina",emoji:"🔧"}]:[]),
+    ...(navItems.find(n=>n.id==="compras")?[{id:"compras",label:"Compras", emoji:"🛒"}]:[]),
     ...(navItems.find(n=>n.id==="gestao") ?[{id:"gestao", label:"Gestão",  emoji:"💰"}]:[]),
     ...(navItems.find(n=>n.id==="mais")   ?[{id:"mais",   label:"Mais",    emoji:"⋯"}]:[]),
   ];
@@ -9588,7 +9630,8 @@ export default function App() {
         <button key={item.id} onClick={()=>{
           setNavSection(item.id);
           if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
-          if(item.id==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("purchases")?"purchases":"investments");
+          if(item.id==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
+          if(item.id==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("purchases")?"purchases":allowedTabs.includes("stock")?"stock":"materiais");
           mainScrollRef.current?.scrollTo({top:0});
         }} style={{
           display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,
@@ -9627,7 +9670,7 @@ export default function App() {
       {/* ══ MAIS ══ */}
       {navSection==="mais"&&<MaisPage/>}
 
-      {(navSection==="oficina"||navSection==="gestao")&&<>
+      {(navSection==="oficina"||navSection==="gestao"||navSection==="compras")&&<>
         <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
           <div style={{display:"flex",gap:3,background:B.gray900,padding:4,borderRadius:12,border:`1px solid ${B.gray700}`,flexWrap:"wrap",justifyContent:"center"}}>
             {navSection==="oficina"&&<>
@@ -9639,21 +9682,24 @@ export default function App() {
             </>}
             {navSection==="gestao"&&<>
               {allowedTabs.includes("finance")&&tabBtn("finance","Financeiro",<IChart s={13}/>,B.green)}
-              {allowedTabs.includes("purchases")&&tabBtn("purchases","Pedidos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
               {allowedTabs.includes("investments")&&tabBtn("investments","Investimentos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,B.green)}
-              {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
               {allowedTabs.includes("sales")&&tabBtn("sales","Vendas",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,"#06b6d4")}
+            </>}
+            {navSection==="compras"&&<>
+              {allowedTabs.includes("purchases")&&tabBtn("purchases","Pedidos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
+              {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
+              {tabBtn("materiais","Mat. Sortidos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 8v10a1 1 0 0 0 1 1h4M19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 8v10"/></svg>,B.orange)}
             </>}
           </div>
         </div>
       </>}
 
       {/* ══ TAB CONTENT ══ */}
-      {(navSection==="oficina"||navSection==="gestao")&&<>
+      {(navSection==="oficina"||navSection==="gestao"||navSection==="compras")&&<>
 
       {/* ══ MECHANICS ══ */}
       {tab==="mechanics"&&allowedTabs.includes("mechanics")&&<>
-        <TabHeader color={B.orange} title="⚙️ Mecânicos" subtitle="Tarefas, materiais e progresso da equipe"/>
+        <TabHeader color={B.orange} title="Mecânicos" subtitle="Tarefas, materiais e progresso da equipe"/>
         {employees.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>🔧</div><div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum mecânico</div></div>
           :<>
             {employees.length>2&&<div style={{position:"relative",marginBottom:14}}>
@@ -9692,7 +9738,8 @@ export default function App() {
                 v.plate.toLowerCase().includes(osSearch.toLowerCase())||
                 (v.color||"").toLowerCase().includes(osSearch.toLowerCase())||
                 employees.filter(e=>(v.mechanicIds||[]).includes(e.id)).some(e=>e.name.toLowerCase().includes(osSearch.toLowerCase()))||
-                tasks.filter(t=>t.vehicleId===v.id).some(t=>t.label.toLowerCase().includes(osSearch.toLowerCase()))
+                tasks.filter(t=>t.vehicleId===v.id).some(t=>t.label.toLowerCase().includes(osSearch.toLowerCase()))||
+                (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase())
               )
             : allActive;
           if(allActive.length===0) return (
@@ -9716,7 +9763,7 @@ export default function App() {
           if(unassigned.length>0) groups.push({emp:null,vehicles:unassigned});
           const sortVehicles=vs=>[...vs].sort((a,b)=>Number(a.sortOrder||0)-Number(b.sortOrder||0));
           return <><div style={{position:"relative",marginBottom:14}}>
-            <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder="Buscar veículo, mecânico ou tarefa…"
+            <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder="Buscar veículo, cliente, mecânico ou tarefa…"
               style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
             <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
             {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
@@ -9740,7 +9787,7 @@ export default function App() {
         <TabHeader color={FD.primary} title="OSC Finishing Division" subtitle="OS em andamento · Pintura, Funilaria e Acabamento"/>
         {/* Search */}
         <div style={{position:"relative",marginBottom:14}}>
-          <input value={finSearch} onChange={e=>setFinSearch(e.target.value)} placeholder="Buscar veículo, mecânico ou tarefa…"
+          <input value={finSearch} onChange={e=>setFinSearch(e.target.value)} placeholder="Buscar veículo, cliente, mecânico ou tarefa…"
             style={{width:"100%",padding:"10px 36px 10px 14px",borderRadius:9,border:`1px solid ${finSearch?FD.border:B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           {finSearch&&<button onClick={()=>setFinSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
         </div>
@@ -9750,7 +9797,8 @@ export default function App() {
             v.model.toLowerCase().includes(finSearch.toLowerCase())||
             v.plate.toLowerCase().includes(finSearch.toLowerCase())||
             employees.filter(e=>(v.mechanicIds||[]).includes(e.id)&&e.division==="finishing").some(e=>e.name.toLowerCase().includes(finSearch.toLowerCase()))||
-            tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing").some(t=>t.label.toLowerCase().includes(finSearch.toLowerCase()))
+            tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing").some(t=>t.label.toLowerCase().includes(finSearch.toLowerCase()))||
+            (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(finSearch.toLowerCase())
           ):activeFin;
           if(activeFin.length===0) return (<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
             <div style={{fontSize:44,marginBottom:12}}>🎨</div>
@@ -9833,7 +9881,7 @@ export default function App() {
       </>}
       {tab==="investments"&&allowedTabs.includes("investments")&&<>
         <TabHeader color={B.green} title="📈 Investimentos" subtitle="Compras para a empresa · Por porte e prioridade"/>
-        <InvestmentsTab investments={investments} adminRole={adminRole}
+        <InvestmentsTab investments={investments.filter(i=>i.category!=="materiais")} adminRole={adminRole}
           onAdd={async inv=>{try{const r=await db.addInvestment({...inv,createdBy:adminRole});setInvestments(p=>[...p,r]);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
             const r=await db.updateInvestment(id,patch);
@@ -9850,6 +9898,28 @@ export default function App() {
                   division:inv.division||"ambos",
                   recurrent:false,
                 });
+                setExpenses(p=>[...p,exp]);
+                toast_(`💰 R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
+              }
+            }
+          }catch(e){errToast(e);}}}
+          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));}catch(e){errToast(e);}}}
+          onAddToStock={async item=>{try{const r=await db.addStock(item);setStk(p=>[...p,r]);toast_(`"${item.name}" adicionado ao estoque ✓`);}catch(e){errToast(e);}}}
+        />
+      </>}
+
+      {tab==="materiais"&&<>
+        <TabHeader color={B.orange} title="📦 Materiais Sortidos" subtitle="Peças e materiais avulsos para estoque da oficina"/>
+        <InvestmentsTab investments={investments.filter(i=>i.category==="materiais")} adminRole={adminRole} defaultCategory="materiais"
+          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);}catch(e){errToast(e);}}}
+          onUpdate={async(id,patch)=>{try{
+            const r=await db.updateInvestment(id,patch);
+            setInvestments(p=>p.map(i=>i.id===id?r:i));
+            if(patch.status==="bought"){
+              const inv=investments.find(i=>i.id===id);
+              if(inv&&inv.value>0){
+                const total=inv.value*(inv.quantity||1);
+                const exp=await db.addExpense({description:`Mat. Sortido: ${inv.name}`,date:new Date().toISOString().slice(0,10),amount:total,category:"materiais",division:inv.division||"ambos",recurrent:false});
                 setExpenses(p=>[...p,exp]);
                 toast_(`💰 R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
               }
@@ -9928,7 +9998,10 @@ export default function App() {
       onFuel={()=>setFuelModal(true)}
       onTask={()=>setQuickTaskModal(true)} onMat={()=>setQuickMatModal(true)}
       onPay={()=>setQuickPayModal(true)}
-      onNovaOS={()=>setShowNovaOS(true)}/>}
+      onNovaOS={()=>setShowNovaOS(true)}
+      onPedidoOS={()=>setShowQuickPedidoOS(true)}
+      onPecasVeiculo={()=>setShowQuickPecasVeiculo(true)}
+      onMatSortidos={()=>setShowQuickMatSortidos(true)}/>}
     {showNovaOS&&<NovaOSModal theme={theme}
       onClose={()=>setShowNovaOS(false)}
       clients={clients} vehicles={vehicles} employees={employees}
@@ -9955,10 +10028,223 @@ export default function App() {
         setTab(division==="finishing"?"finishing":"clients");
       }}
     />}
+
+    {/* Quick: Pedido de material em OS ativa */}
+    {showQuickPedidoOS&&(()=>{
+      const QuickPedidoModal=()=>{
+        const [vehicleId,setVehicleId]=useState("");
+        const [search,setSearch]=useState("");
+        const [form,setForm]=useState({partName:"",description:"",taskId:"",quantity:"1"});
+        const [saving,setSaving]=useState(false);
+        const activeVehicles=vehicles.filter(v=>v.enteredAt||v.enteredAtFinishing);
+        const filtered=activeVehicles.filter(v=>!search||v.model.toLowerCase().includes(search.toLowerCase())||(v.plate||"").toLowerCase().includes(search.toLowerCase())||(clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase()));
+        const vTasks=tasks.filter(t=>t.vehicleId===vehicleId);
+        const submit=async()=>{
+          if(!vehicleId||!form.partName.trim()) return;
+          setSaving(true);
+          try{
+            const r=await db.addPurchaseOrder({vehicleId,taskId:form.taskId||null,partName:form.partName.trim(),description:form.description.trim(),quantity:parseInt(form.quantity)||1,photoUrl:""});
+            setPurchaseOrders(prev=>[r,...prev]);
+            const v=vehicles.find(x=>x.id===vehicleId);
+            db.sendPushToAdmins(`🛒 Pedido — ${v?.model||"Veículo"}`,form.partName,"/?").catch(()=>{});
+            toast_(`Pedido "${form.partName}" criado ✓`);
+            setShowQuickPedidoOS(false);
+          }catch(e){errToast(e);}
+          setSaving(false);
+        };
+        return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickPedidoOS(false)}>
+          <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.amber}44`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+              <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🛒</div>
+              <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Novo pedido de peça</div><div style={{fontSize:11,color:B.gray400}}>Para uma OS em andamento</div></div>
+              <button onClick={()=>setShowQuickPedidoOS(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
+            </div>
+            <div style={{padding:16,display:"flex",flexDirection:"column",gap:10,overflowY:"auto"}}>
+              {/* Vehicle search */}
+              <div>
+                <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Veículo</div>
+                <div style={{position:"relative",marginBottom:6}}>
+                  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
+                    style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500}}>🔍</span>
+                </div>
+                {activeVehicles.length===0
+                  ?<div style={{fontSize:13,color:B.gray500,padding:"10px",textAlign:"center"}}>Nenhuma OS em andamento</div>
+                  :<div style={{maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+                    {filtered.map(v=>{
+                      const cli=clients.find(c=>c.id===v.clientId);
+                      const sel=vehicleId===v.id;
+                      return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.amber}22`:B.gray800,border:`1px solid ${sel?B.amber:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+                        {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}>🚗</span>}
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+                          {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
+                        </div>
+                        {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,flexShrink:0}}>{fmtOS(v.osNumber)}</span>}
+                        {sel&&<span style={{color:B.amber,fontSize:14,flexShrink:0}}>✓</span>}
+                      </button>);
+                    })}
+                  </div>}
+              </div>
+              <input value={form.partName} onChange={e=>setForm(p=>({...p,partName:e.target.value}))} placeholder="Nome da peça *"
+                style={{padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} placeholder="Descrição / especificações (opcional)" rows={2}
+                style={{padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
+              <div style={{display:"flex",gap:8}}>
+                <select value={form.taskId} onChange={e=>setForm(p=>({...p,taskId:e.target.value}))} disabled={!vehicleId}
+                  style={{flex:1,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:form.taskId?B.white:B.gray500,fontSize:12,outline:"none"}}>
+                  <option value="">Serviço relacionado (opcional)</option>
+                  {vTasks.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+                <input value={form.quantity} onChange={e=>setForm(p=>({...p,quantity:e.target.value}))} type="number" min="1" placeholder="Qtd"
+                  style={{width:70,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              </div>
+              <button onClick={submit} disabled={!vehicleId||!form.partName.trim()||saving}
+                style={{padding:"12px",borderRadius:10,background:vehicleId&&form.partName.trim()?B.amber:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:vehicleId&&form.partName.trim()?"pointer":"not-allowed"}}>
+                {saving?"Salvando…":"Criar pedido"}
+              </button>
+            </div>
+          </div>
+        </div>);
+      };
+      return <QuickPedidoModal/>;
+    })()}
+
+    {/* Quick: Adicionar peças ao estoque de um veículo */}
+    {showQuickPecasVeiculo&&(()=>{
+      const QuickPecasModal=()=>{
+        const [vehicleId,setVehicleId]=useState("");
+        const [search,setSearch]=useState("");
+        const [name,setName]=useState("");
+        const [qty,setQty]=useState("1");
+        const [location,setLocation]=useState("");
+        const [saving,setSaving]=useState(false);
+        const filtered=[...vehicles].sort((a,b)=>(a.model||"").localeCompare(b.model||"","pt-BR")).filter(v=>!search||v.model.toLowerCase().includes(search.toLowerCase())||(v.plate||"").toLowerCase().includes(search.toLowerCase())||(clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase()));
+        const submit=async()=>{
+          if(!vehicleId||!name.trim()) return;
+          setSaving(true);
+          try{
+            const v=vehicles.find(x=>x.id===vehicleId);
+            const parts=v?.partsList||[];
+            const newParts=[...parts,{id:Date.now().toString(),name:name.trim(),qty:parseInt(qty)||1,location:location.trim(),note:"",photos:[]}];
+            await db.updateVehicle(vehicleId,{partsList:newParts});
+            setVeh(p=>p.map(x=>x.id===vehicleId?{...x,partsList:newParts}:x));
+            toast_(`Peça "${name}" adicionada ao ${v?.model} ✓`);
+            setShowQuickPecasVeiculo(false);
+          }catch(e){errToast(e);}
+          setSaving(false);
+        };
+        return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickPecasVeiculo(false)}>
+          <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.purple}44`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+              <div style={{width:36,height:36,borderRadius:10,background:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🔩</div>
+              <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Adicionar peça ao veículo</div><div style={{fontSize:11,color:B.gray400}}>Peça enviada pelo cliente</div></div>
+              <button onClick={()=>setShowQuickPecasVeiculo(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
+            </div>
+            <div style={{padding:16,display:"flex",flexDirection:"column",gap:10,overflowY:"auto"}}>
+              {/* Vehicle search */}
+              <div>
+                <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Veículo</div>
+                <div style={{position:"relative",marginBottom:6}}>
+                  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
+                    style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500}}>🔍</span>
+                </div>
+                <div style={{maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+                  {filtered.map(v=>{
+                    const cli=clients.find(c=>c.id===v.clientId);
+                    const sel=vehicleId===v.id;
+                    const parts=(v.partsList||[]).length;
+                    return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.purple}22`:B.gray800,border:`1px solid ${sel?B.purple:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+                      {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}>🚗</span>}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+                        {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
+                      </div>
+                      {parts>0&&<span style={{fontSize:10,fontWeight:800,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"1px 6px",flexShrink:0}}>{parts}🔩</span>}
+                      {sel&&<span style={{color:B.purple,fontSize:14,flexShrink:0}}>✓</span>}
+                    </button>);
+                  })}
+                </div>
+              </div>
+              <input value={name} onChange={e=>setName(e.target.value)} placeholder="Nome da peça *"
+                style={{padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              <div style={{display:"flex",gap:8}}>
+                <input value={qty} onChange={e=>setQty(e.target.value)} type="number" min="1" placeholder="Qtd"
+                  style={{width:80,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+                <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="Localização (prateleira, caixa…)"
+                  style={{flex:1,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              </div>
+              <button onClick={submit} disabled={!vehicleId||!name.trim()||saving}
+                style={{padding:"12px",borderRadius:10,background:vehicleId&&name.trim()?B.purple:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:vehicleId&&name.trim()?"pointer":"not-allowed"}}>
+                {saving?"Salvando…":"Adicionar peça"}
+              </button>
+            </div>
+          </div>
+        </div>);
+      };
+      return <QuickPecasModal/>;
+    })()}
+
+    {/* Quick: Pedido de materiais sortidos */}
+    {showQuickMatSortidos&&(()=>{
+      const QuickMatSortidosModal=()=>{
+        const [form,setForm]=useState({name:"",link:"",value:"",quantity:"1",priority:"3",objective:""});
+        const [saving,setSaving]=useState(false);
+        const submit=async()=>{
+          if(!form.name.trim()) return;
+          setSaving(true);
+          try{
+            const inv={name:form.name.trim(),link:form.link.trim(),value:parseFloat(form.value)||0,quantity:parseInt(form.quantity)||1,priority:parseInt(form.priority)||3,objective:form.objective.trim(),status:"pending",category:"materiais",division:"performance"};
+            const r=await db.addInvestment(inv);
+            setInvestments(p=>[r,...p]);
+            toast_(`Material "${form.name}" adicionado aos sortidos ✓`);
+            setShowQuickMatSortidos(false);
+          }catch(e){errToast(e);}
+          setSaving(false);
+        };
+        return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickMatSortidos(false)}>
+          <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.amber}44`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+            <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📦</div>
+              <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Pedido de material sortido</div><div style={{fontSize:11,color:B.gray400}}>Adiciona direto aos Materiais Sortidos</div></div>
+              <button onClick={()=>setShowQuickMatSortidos(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
+            </div>
+            <div style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
+              <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="Nome do material *"
+                style={{padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              <input value={form.link} onChange={e=>setForm(p=>({...p,link:e.target.value}))} placeholder="Link (opcional)"
+                style={{padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              <input value={form.objective} onChange={e=>setForm(p=>({...p,objective:e.target.value}))} placeholder="Descrição / objetivo (opcional)"
+                style={{padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <input value={form.value} onChange={e=>setForm(p=>({...p,value:e.target.value}))} type="number" min="0" placeholder="Valor R$"
+                  style={{flex:"1 1 100px",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+                <input value={form.quantity} onChange={e=>setForm(p=>({...p,quantity:e.target.value}))} type="number" min="1" placeholder="Qtd"
+                  style={{width:70,flexShrink:0,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+                <select value={form.priority} onChange={e=>setForm(p=>({...p,priority:e.target.value}))}
+                  style={{flex:"1 1 120px",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
+                  <option value="1">🔴 Urgente</option>
+                  <option value="2">🟠 Alta</option>
+                  <option value="3">🟡 Média</option>
+                  <option value="4">🟢 Baixa</option>
+                </select>
+              </div>
+              <button onClick={submit} disabled={!form.name.trim()||saving}
+                style={{padding:"12px",borderRadius:10,background:form.name.trim()?B.amber:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:form.name.trim()?"pointer":"not-allowed"}}>
+                {saving?"Salvando…":"Criar pedido"}
+              </button>
+            </div>
+          </div>
+        </div>);
+      };
+      return <QuickMatSortidosModal/>;
+    })()}}
     <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} theme={theme} setActive={(s)=>{
       setNavSection(s);
       if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
-      if(s==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("purchases")?"purchases":"investments");
+      if(s==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
+      if(s==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("purchases")?"purchases":allowedTabs.includes("stock")?"stock":"materiais");
       mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});
     }}/>
     </div>{/* end main content */}

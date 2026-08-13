@@ -2838,6 +2838,11 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[]}) {
         {signer&&task.done&&<div style={{marginTop:2}}>
           <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
         </div>}
+        {/* Updates feed button */}
+        {(task.updates||[]).length>0&&<button onClick={()=>setShowUpdates(u=>!u)} style={{marginTop:4,background:"none",border:"none",cursor:"pointer",color:B.blue,fontSize:10,fontWeight:700,padding:0,display:"flex",alignItems:"center",gap:3}}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          {(task.updates||[]).length} atualização{(task.updates||[]).length!==1?"s":""} {showUpdates?"▲":"▼"}
+        </button>}
       </div>
       <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2,display:"flex",flexShrink:0,marginTop:1}}
         onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}><ITrash s={14}/></button>
@@ -2873,12 +2878,14 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[]}) {
 }
 
 // ─── TaskItem — Manager ───────────────────────────────────────────────────────
-function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[]}) {
+function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
   const [showSP,setSP]=useState(false);
   const [showPOP,setShowPOP]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
   const [newMat,setNewMat]=useState("");
   const [newBrand,setNewBrand]=useState("");
+  const [showUpdates,setShowUpdates]=useState(false);
+  const [updateText,setUpdateText]=useState("");
   const c=taskCost(task,defaultRate);
   const mats = task.materials||[];
   const signer = task.completedByEmployeeId ? employees.find(e=>e.id===task.completedByEmployeeId) : null;
@@ -2977,6 +2984,14 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           {signer&&task.done&&<div style={{marginTop:2}}>
             <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
           </div>}
+          {/* Updates feed toggle */}
+          <div style={{marginTop:5,display:"flex",alignItems:"center",gap:5}}>
+            <button onClick={()=>setShowUpdates(u=>!u)}
+              style={{background:"none",border:`1px solid ${B.gray700}`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:B.gray400,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              {(task.updates||[]).length>0?`${(task.updates||[]).length} update${(task.updates||[]).length!==1?"s":""}` : "Adicionar update"}
+            </button>
+          </div>
         </div>
         <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2,display:"flex",flexShrink:0,marginTop:1}}
           onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}><ITrash s={14}/></button>
@@ -3052,6 +3067,48 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         </div>
       ))}
     </div>}
+
+    {/* ── Updates feed ── */}
+    {showUpdates&&<div style={{marginTop:6,padding:"10px 12px",background:`${B.blue}08`,border:`1px solid ${B.blue}22`,borderRadius:10}}>
+      {/* Existing updates */}
+      {(task.updates||[]).length>0&&<div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:6}}>
+        {[...(task.updates||[])].reverse().map((u,i)=>(
+          <div key={i} style={{padding:"8px 10px",background:B.gray900,borderRadius:8,border:`1px solid ${B.gray700}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+              <span style={{fontSize:10,fontWeight:700,color:B.blue}}>{u.author||"—"}</span>
+              <span style={{fontSize:9,color:B.gray500}}>{u.at?new Date(u.at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</span>
+            </div>
+            <div style={{fontSize:12,color:B.gray200,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{u.text}</div>
+          </div>
+        ))}
+      </div>}
+      {/* New update input */}
+      <div style={{marginBottom:6}}>
+        <select defaultValue="" id={`update-author-${task.id}`}
+          style={{width:"100%",padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",marginBottom:6}}>
+          <option value="">— Quem está atualizando? —</option>
+          {employees.map(e=><option key={e.id} value={e.name}>{e.name}</option>)}
+          <option value="Gestor">Gestor</option>
+        </select>
+      </div>
+      <textarea value={updateText} onChange={e=>setUpdateText(e.target.value)}
+        placeholder="Escreva um update sobre esta etapa…"
+        rows={2}
+        style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+      <button onClick={()=>{
+        if(!updateText.trim()) return;
+        const sel=document.getElementById(`update-author-${task.id}`);
+        const author=sel?.value||"Equipe";
+        const u={text:updateText.trim(),author,at:new Date().toISOString()};
+        const newUpdates=[...(task.updates||[]),u];
+        onUpdate(task.id,{updates:newUpdates});
+        setUpdateText("");
+        if(sel) sel.value="";
+      }} disabled={!updateText.trim()} style={{marginTop:6,padding:"7px 14px",borderRadius:8,background:updateText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:updateText.trim()?"pointer":"not-allowed"}}>
+        Publicar update
+      </button>
+    </div>}
+
     {confirmDel&&<ConfirmModal title="Excluir tarefa?" message={<>Excluir <b style={{color:B.white}}>{task.label}</b>? Esta ação não pode ser desfeita.</>} confirmLabel="Excluir tarefa" onConfirm={()=>{onDelete(task.id);setConfirmDel(false);}} onCancel={()=>setConfirmDel(false)}/>}
   </>);
 }
@@ -3390,8 +3447,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
                 <span style={{color:(catColor||B.gray500),fontSize:9,flexShrink:0}}>{isCollapsed?"▶":"▼"}</span>
               </div>
               {!isCollapsed&&groupTasks.map(t=>managerMode
-                ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))}/>
-                :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask}/>
+                ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>                :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask}/>
               )}
             </div>);
           });
@@ -6232,6 +6288,22 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                           </div>
                         ))}
                         {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
+                        {/* Updates feed */}
+                        {(t.updates||[]).length>0&&<div style={{marginTop:8,borderTop:`1px solid ${B.gray700}`,paddingTop:8}}>
+                          <div style={{fontSize:10,fontWeight:700,color:B.blue,marginBottom:6,display:"flex",alignItems:"center",gap:4,textTransform:"uppercase",letterSpacing:.5}}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={B.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                            Atualizações
+                          </div>
+                          {[...(t.updates||[])].reverse().map((u,ui)=>(
+                            <div key={ui} style={{padding:"7px 10px",background:B.gray800,borderRadius:8,marginBottom:5,border:`1px solid ${B.gray700}`}}>
+                              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                                <span style={{fontSize:10,fontWeight:800,color:B.blue}}>{u.author||"Equipe"}</span>
+                                <span style={{fontSize:9,color:B.gray500}}>{u.at?new Date(u.at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</span>
+                              </div>
+                              <div style={{fontSize:12,color:B.gray200,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{u.text}</div>
+                            </div>
+                          ))}
+                        </div>}
                         {/* Photos linked to this task */}
                         {tPhotos.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
                           {tPhotos.map((p,pi)=><div key={pi} style={{width:72,height:72,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray600}`,flexShrink:0}} onClick={()=>setLB(p)}>
@@ -6754,7 +6826,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.39";
+const APP_VERSION = "2026.08.11.40";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

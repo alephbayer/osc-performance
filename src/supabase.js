@@ -152,6 +152,7 @@ const mapTaskIn = (t) => ({
   description: t.description || '',
   rateType: t.rate_type || 'hour',
   division: t.division || 'performance',
+  updates: Array.isArray(t.updates) ? t.updates : [],
 });
 const mapTaskOut = (t) => ({
   vehicle_id: t.vehicleId,
@@ -529,7 +530,7 @@ export const db = {
   },
   async updateTask(id, patch) {
     const dbPatch = {};
-    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced", warranty:"warranty", discount:"discount", category:"category", description:"description", rateType:"rate_type", division:"division" };
+    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced", warranty:"warranty", discount:"discount", category:"category", description:"description", rateType:"rate_type", division:"division", updates:"updates" };
     Object.keys(patch).forEach((k) => { if (map[k]) dbPatch[map[k]] = patch[k]; });
     const { error } = await supabase.from("tasks").update(dbPatch).eq("id", id);
     if (error) throw error;

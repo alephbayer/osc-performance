@@ -3351,7 +3351,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         {clientNotes.map(n=>(
           <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderBottom:`1px solid ${B.amber}22`}}>
             <div style={{flex:1}}>
-              <div style={{fontSize:13,color:B.white,lineHeight:1.5}}>{n.note}</div>
+              <div style={{fontSize:13,color:B.white,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{n.note}</div>
               <div style={{fontSize:10,color:B.gray500,marginTop:2}}>{new Date(n.created_at).toLocaleDateString("pt-BR")}</div>
             </div>
             <button onClick={()=>{db.resolveClientVehicleNote(n.id).then(()=>setClientNotes(p=>p.filter(x=>x.id!==n.id)));}} style={{padding:"4px 10px",borderRadius:6,background:B.greenBg,border:`1px solid ${B.green}44`,color:B.green,cursor:"pointer",fontSize:11,fontWeight:700,flexShrink:0}}>✓ Recebido</button>
@@ -5011,7 +5011,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
         {clientNotes.map(n=>(
           <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderBottom:`1px solid ${B.amber}22`}}>
             <div style={{flex:1}}>
-              <div style={{fontSize:13,color:B.white,lineHeight:1.5}}>{n.note}</div>
+              <div style={{fontSize:13,color:B.white,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{n.note}</div>
               <div style={{fontSize:10,color:B.gray500,marginTop:2}}>{new Date(n.created_at).toLocaleDateString("pt-BR")}</div>
             </div>
             <button onClick={async()=>{await db.resolveClientVehicleNote(n.id);setClientNotes(p=>p.filter(x=>x.id!==n.id));}}
@@ -6852,7 +6852,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.42";
+const APP_VERSION = "2026.08.11.43";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

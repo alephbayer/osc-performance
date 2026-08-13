@@ -6852,7 +6852,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.43";
+const APP_VERSION = "2026.08.11.44";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9480,8 +9480,16 @@ export default function App() {
     setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));
     try{
       await db.updateTask(id,patch);
-      // Notify admins when mechanic adds/changes materials
-      if(patch.materials){
+      // Notify client when a task update is published
+      if(patch.updates){
+        const t=tasks.find(x=>x.id===id);
+        const v=vehicles.find(x=>x.id===t?.vehicleId);
+        const lastUpdate=patch.updates[patch.updates.length-1];
+        if(lastUpdate&&v?.clientId){
+          const vModel=v?.model||v?.plate||"Veículo";
+          db.sendPushToClient(v.clientId,`Atualização — ${vModel}`,`${t?.label||"Serviço"}: ${lastUpdate.text.slice(0,80)}${lastUpdate.text.length>80?"…":""}`,`/?v=${v.id}`).catch(()=>{});
+        }
+      }
         const t=tasks.find(x=>x.id===id);
         const v=vehicles.find(x=>x.id===t?.vehicleId);
         const vModel=v?.model||v?.plate||"Veículo";

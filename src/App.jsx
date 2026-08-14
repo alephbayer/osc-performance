@@ -2983,7 +2983,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               {task.warranty?"✓ Gar.":"Gar."}
             </button>
             {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
-            {task.warranty&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>🔴 Garantia</span>}
+            {task.warranty&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"},display:"flex",alignItems:"center",gap:4}}><svg width="10" height="10" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="0"><circle cx="12" cy="12" r="10"/></svg>Garantia</span>}
           </div>
           {/* Line 1: task label — alone */}
           <div>
@@ -3000,7 +3000,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           </div>
           {/* Warranty info box */}
           {task.warranty&&<div style={{marginTop:5,padding:"5px 10px",background:`${B.red}10`,border:`1px solid ${B.red}33`,borderRadius:7,fontSize:11,color:B.red}}>
-            🔴 Serviço em garantia — mão de obra não cobrada do cliente
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Serviço em garantia — mão de obra não cobrada do cliente
           </div>}
           {/* Per-task discount — hidden for warranty */}
           {!task.warranty&&c.laborGross>0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>
@@ -3047,7 +3047,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
             <IWarehouse s={11} c={B.purple}/>Do estoque
           </button>
           {hasPickable&&<button onClick={()=>setShowPOP(p=>!p)} style={{padding:"4px 8px",borderRadius:6,background:showPOP?`${B.amber}22`:`${B.amber}10`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
-            🛒 Peças ({receivedOrders.length+availableReserved.length})
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Peças ({receivedOrders.length+availableReserved.length})
           </button>}
         </div>
       </div>
@@ -3075,7 +3075,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
     </div>
     {showSP&&<StockPickerModal stock={stock} onPick={pickStock} onClose={()=>setSP(false)}/>}
     {showPOP&&hasPickable&&<div style={{margin:"4px 0 8px 30px",background:`${B.amber}10`,border:`1px solid ${B.amber}33`,borderRadius:9,padding:"8px 12px"}}>
-      <div style={{fontSize:10,fontWeight:700,color:B.amber,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>🛒 Selecione para adicionar à tarefa</div>
+      <div style={{fontSize:10,fontWeight:700,color:B.amber,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Selecione para adicionar à tarefa</div>
       {receivedOrders.map(o=>{
         const salePrice=o.costPrice!=null?o.costPrice*(1+(o.markupPct||30)/100):null;
         return (<div key={o.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.amber}22`}}>
@@ -3237,7 +3237,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>
           {(()=>{const bal=total-vehiclePaid(vehicle.id,payments,isFD?"finishing":"performance"); return bal>0
             ?<div style={{fontSize:10,color:B.red,fontWeight:700}}>Deve {fmtBRL(bal)}</div>
-            :<div style={{fontSize:10,color:B.green,fontWeight:700}}>✓ Pago</div>;})()}
+            :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;})()}
         </div>}
         {/* action buttons — wrapped grid of 4 per row, outside the header */}
         <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
@@ -3270,13 +3270,13 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           })()}
         </button>
         {onAddPurchaseOrder&&<button onClick={()=>setShowPOForm(p=>!p)} style={{background:showPOForm?`${B.amber}22`:`${B.amber}10`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          🛒{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length>0?` (${purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length})`:""} Pedidos
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length>0?` (${purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length})`:""} Pedidos
         </button>}
         {managerMode&&<button onClick={()=>setSA(true)} style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           <IBank s={12} c={B.green}/>Conta
         </button>}
         {managerMode&&clientNotes.length>0&&<button onClick={()=>setShowClientNotes(p=>!p)} style={{background:showClientNotes?`${B.amber}22`:`${B.amber}15`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          ⚠️ {clientNotes.length} nota{clientNotes.length!==1?"s":""}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""}
         </button>}
         {managerMode&&<button onClick={copyLink} style={{background:cpLink?B.greenBg:B.purpleBg,border:`1px solid ${cpLink?B.green:B.purple}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:cpLink?B.green:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           <ILink s={12} c={cpLink?B.green:B.purple}/>{cpLink?"Copiado!":"Link"}
@@ -3326,10 +3326,10 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             </>);
           })()}
           {vehicle.deliveredAt&&division!=="finishing"&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
-            ✅ Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
           </span>}
           {vehicle.deliveredAtFinishing&&division==="finishing"&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
-            ✅ Entregue {new Date(vehicle.deliveredAtFinishing).toLocaleDateString("pt-BR")}
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Entregue {new Date(vehicle.deliveredAtFinishing).toLocaleDateString("pt-BR")}
           </span>}
         </>}
         {!hideManagerButtons&&<button onClick={()=>setConfirmDelV(true)} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}
@@ -3351,14 +3351,14 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       </div>}
       {showPOForm&&<PurchaseOrderPanel vehicleId={vehicle.id} tasks={vts} onAdd={onAddPurchaseOrder} orders={purchaseOrders.filter(p=>p.vehicleId===vehicle.id)}/>}
       {showClientNotes&&clientNotes.length>0&&<div style={{padding:"12px 16px",background:`${B.amber}08`,borderBottom:`1px solid ${B.amber}33`}}>
-        <div style={{fontSize:11,fontWeight:700,color:B.amber,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>⚠️ Anotações do cliente</div>
+        <div style={{fontSize:11,fontWeight:700,color:B.amber,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anotações do cliente</div>
         {clientNotes.map(n=>(
           <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderBottom:`1px solid ${B.amber}22`}}>
             <div style={{flex:1}}>
               <div style={{fontSize:13,color:B.white,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{n.note}</div>
               <div style={{fontSize:10,color:B.gray500,marginTop:2}}>{new Date(n.created_at).toLocaleDateString("pt-BR")}</div>
             </div>
-            <button onClick={()=>{db.resolveClientVehicleNote(n.id).then(()=>setClientNotes(p=>p.filter(x=>x.id!==n.id)));}} style={{padding:"4px 10px",borderRadius:6,background:B.greenBg,border:`1px solid ${B.green}44`,color:B.green,cursor:"pointer",fontSize:11,fontWeight:700,flexShrink:0}}>✓ Recebido</button>
+            <button onClick={()=>{db.resolveClientVehicleNote(n.id).then(()=>setClientNotes(p=>p.filter(x=>x.id!==n.id)));}} style={{padding:"4px 10px",borderRadius:6,background:B.greenBg,border:`1px solid ${B.green}44`,color:B.green,cursor:"pointer",fontSize:11,fontWeight:700,flexShrink:0}} style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Recebido</button>
           </div>
         ))}
       </div>}
@@ -3382,7 +3382,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           }}
           onUpdate={updated=>onUpdateVehicle(vehicle.id,{[isFD?"photosFinishing":"photos"]:updated})}/>
         <div style={{marginTop:10,borderTop:`1px solid ${B.gray700}`,paddingTop:10}}>
-          <div style={{fontSize:11,color:B.orange,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>🚗 Foto de identificação do veículo</div>
+          <div style={{fontSize:11,color:B.orange,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Foto de identificação</div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             {vehicle.photo?<img src={vehicle.photo} alt="" style={{width:80,height:60,objectFit:"cover",borderRadius:8,border:`1px solid ${B.gray600}`}}/>:null}
             <UploadBtn onFile={src=>onUpdateVehicle(vehicle.id,{photo:src})} folder="vehicles" label={vehicle.photo?"Trocar foto":"+ Adicionar foto do carro"}/>
@@ -3401,7 +3401,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 
         {/* Mechanic chips with add/remove — manager only */}
         {managerMode&&<div style={{marginBottom:10}}>
-          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>🔧 Mecânicos</div>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Mecânicos</div>
           <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
             {mechs.map(m=>(
               <div key={m.id} style={{display:"flex",alignItems:"center",gap:4,background:`${B.orange}18`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"3px 8px"}}>
@@ -3422,7 +3422,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 
         {/* Notes — visible and editable by both mechanic and manager */}
         <div style={{marginBottom:10}}>
-          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>📝 Observações</div>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Observações</div>
           <textarea
             defaultValue={isFD?(vehicle.notesFinishing||""):(vehicle.notes||"")}
             key={vehicle.id+(isFD?"fd":"")}
@@ -3434,7 +3434,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         </div>
         {/* Vehicle data — inline editable (manager only) */}
         {managerMode&&<div style={{marginBottom:10,padding:"8px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8}}>
-          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>🚗 Dados do veículo</div>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Dados do veículo</div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <div style={{flex:"2 1 150px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Modelo</div>
@@ -3483,7 +3483,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           });
         })()}
         {aiS.length>0&&<div style={{marginTop:10,marginBottom:4}}>
-          <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>💡 Sugestões IA</div>
+          <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/><circle cx="12" cy="12" r="4"/></svg>Sugestões IA</div>
           {aiS.map((sg,i)=>(<button key={i} onClick={()=>{onAddTask(vehicle.id,sg);setAiS(p=>p.filter((_,j)=>j!==i));}}
             style={{display:"flex",alignItems:"center",gap:6,width:"100%",textAlign:"left",padding:"6px 10px",marginBottom:4,borderRadius:6,background:`${B.orange}15`,border:`1px dashed ${B.orange}66`,color:B.orangeL,fontSize:12.5,cursor:"pointer"}}>
             <IPlus s={12} c={B.orange}/>{sg}</button>))}
@@ -3533,7 +3533,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           </div>
           {/* OS-level % discount on labor */}
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${B.gray700}`}}>
-            <span style={{fontSize:13}}>🏷️</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             <span style={{fontSize:12,color:B.red,fontWeight:600}}>Desconto geral (% sobre mão de obra):</span>
             <span style={{display:"flex",alignItems:"center",gap:3}}>
               <InlineEdit value={vehicle.osDiscountPct?fmtR2(vehicle.osDiscountPct):""} onSave={v=>{const val=Math.max(0,Math.min(100,parseFloat(v.replace(",","."))||0));onUpdateVehicle(vehicle.id,{osDiscountPct:val});}} placeholder="0" type="number"/>
@@ -3547,7 +3547,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           </div>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-              <span style={{fontSize:13}}>🚛</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
               <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Reboque</span>
               <button onClick={()=>{const tows=[...(vehicle.tows||[]),{origin:"",destination:"",value:0}];onUpdateVehicle(vehicle.id,{tows});}}
                 style={{marginLeft:"auto",background:`${B.blue}22`,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:B.blue,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
@@ -3646,11 +3646,11 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
           </div>
           :<>
             <div style={{fontWeight:700,fontSize:14,color:B.white}}>{employee.name}</div>
-            <div style={{fontSize:12,color:B.gray400,marginTop:2}}>{empV.length} veículo{empV.length!==1?"s":""} · {donT}/{totT} tarefas {totT>0&&donT===totT?<span style={{color:B.green,fontWeight:700}}>✓</span>:""}</div>
+            <div style={{fontSize:12,color:B.gray400,marginTop:2}}>{empV.length} veículo{empV.length!==1?"s":""} · {donT}/{totT} tarefas {totT>0&&donT===totT?<span style={{color:B.green,fontWeight:700,display:"flex",alignItems:"center"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>:""}</div>
             {employee.phone&&<div style={{fontSize:11,color:B.wa,marginTop:2,display:"flex",alignItems:"center",gap:4}}><IPhone s={11} c={B.wa}/>{employee.phone}</div>}
             {employee.division==="finishing"
-              ?<div style={{marginTop:2}}><span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>🎨 FINISHING</span></div>
-              :<div style={{marginTop:2}}><span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>⚙️ PERFORMANCE</span></div>}
+              ?<div style={{marginTop:2}}><span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>FINISHING</span></div>
+              :<div style={{marginTop:2}}><span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>PERFORMANCE</span></div>}
           </>}
       </div>
       <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
@@ -3662,7 +3662,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         {onUpdateDivision&&<button onClick={()=>onUpdateDivision(employee.id,employee.division==="finishing"?"performance":"finishing")}
           title="Alternar empresa"
           style={{padding:"5px 8px",borderRadius:8,border:`1px solid ${employee.division==="finishing"?FD.border:B.orange+"33"}`,cursor:"pointer",fontWeight:700,fontSize:10,background:employee.division==="finishing"?FD.bg:`${B.orange}12`,color:employee.division==="finishing"?FD.primary:B.orange}}>
-          {employee.division==="finishing"?"🎨":"⚙️"}
+          {employee.division==="finishing"?<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>:<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>}
         </button>}
         <button onClick={()=>onSendWA(employee)} style={{padding:"7px 11px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:4,background:employee.phone?B.wa:B.gray700,color:employee.phone?B.white:B.gray500}}>
           <IPhone s={13} c={employee.phone?B.white:B.gray500}/>{employee.phone?"WA":"Sem WA"}
@@ -4788,7 +4788,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
       {/* Vehicle data — inline editable — always visible */}
       <div style={{marginBottom:14,padding:"8px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8}}>
-        <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>🚗 Dados do veículo</div>
+        <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Dados do veículo</div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           <div style={{flex:"2 1 150px"}}>
             <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Modelo</div>
@@ -4862,7 +4862,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12.5,color:B.gray200,fontWeight:600}}>{t.label}</div>
                   {(t.materials||[]).length>0&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>
-                    {t.materials.map((m,i)=><span key={i} style={{marginRight:8}}>🔩 {m.name}{(m.qty||1)>1?` ×${m.qty}`:""}</span>)}
+                    {t.materials.map((m,i)=><span key={i} style={{marginRight:8}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{(m.qty||1)>1?` ×${m.qty}`:""}</span>)}
                   </div>}
                 </div>
                 {tc.total>0&&<span style={{fontSize:11,fontWeight:700,color:B.green,flexShrink:0}}>{fmtBRL(tc.total)}</span>}
@@ -4881,7 +4881,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       {/* Active OS status badges */}
       {(hasActiveOS||vehicle.enteredAtFinishing)&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
         {hasActiveOS&&<span style={{fontSize:11,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:6,padding:"3px 10px"}}>⚙️ Performance em andamento</span>}
-        {clientNotes.length>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"3px 10px"}}>⚠️ {clientNotes.length} nota{clientNotes.length!==1?"s":""} do cliente</span>}
+        {clientNotes.length>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"3px 10px"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""} do cliente</span>}
         {vehicle.enteredAtFinishing&&<span style={{fontSize:11,fontWeight:700,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:6,padding:"3px 10px"}}>🎨 Finishing em andamento</span>}
       </div>}
 
@@ -4917,7 +4917,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             navigator.clipboard?.writeText(url);
             toast_("Link do histórico copiado ✓");
           }} title="Copiar link do histórico para o cliente" style={{background:`${B.purple}18`,border:`1px solid ${B.purple}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.purple,fontSize:11,fontWeight:700,flexShrink:0,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
-            🔗 Link histórico
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Link histórico
           </button>
         </div>
         {sortedHistory.length>0&&showHistory&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -4939,10 +4939,10 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
                 <span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 7px",fontWeight:800,fontSize:11}}>{h.os_number?fmtOS(h.os_number):"OS-?"}</span>
                 {(h.division||"performance")==="finishing"
-                  ?<span style={{background:FD.bg,color:FD.primary,borderRadius:5,padding:"1px 6px",fontWeight:800,fontSize:9}}>🎨 FINISHING</span>
-                  :<span style={{background:`${B.orange}12`,color:B.orange,borderRadius:5,padding:"1px 6px",fontWeight:800,fontSize:9}}>⚙️ PERFORMANCE</span>}
-                {hClient&&<span style={{fontSize:11,color:B.blue}}>👤 {hClient.name}</span>}
-                {hMechs.length>0&&<span style={{fontSize:11,color:B.orange}}>🔧 {hMechs.join(", ")}</span>}
+                  ?<span style={{background:FD.bg,color:FD.primary,borderRadius:5,padding:"1px 6px",fontWeight:800,fontSize:9}}>FINISHING</span>
+                  :<span style={{background:`${B.orange}12`,color:B.orange,borderRadius:5,padding:"1px 6px",fontWeight:800,fontSize:9}}>PERFORMANCE</span>}
+                {hClient&&<span style={{fontSize:11,color:B.blue}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{hClient.name}</span>}
+                {hMechs.length>0&&<span style={{fontSize:11,color:B.orange}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{hMechs.join(", ")}</span>}
                 {h.total_value>0&&(()=>{
                   const hPaid=Math.round(payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0)*100)/100;
                   const hBalance=Math.round((h.total_value-hPaid)*100)/100;
@@ -4990,8 +4990,8 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
               {(Number(h.fuel_cost||0)>0||(h.tows||[]).length>0||Number(h.os_discount_pct||0)>0)&&
                 <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
                   {Number(h.fuel_cost||0)>0&&<span style={{fontSize:10,color:B.amber,background:`${B.amber}15`,border:`1px solid ${B.amber}33`,borderRadius:5,padding:"1px 7px"}}>⛽ {fmtBRL(h.fuel_cost)}</span>}
-                  {(h.tows||[]).map((t,i)=>Number(t.value||0)>0&&<span key={i} style={{fontSize:10,color:"#60a5fa",background:"#60a5fa15",border:"1px solid #60a5fa33",borderRadius:5,padding:"1px 7px"}}>🚛 {t.origin&&t.destination?`${t.origin}→${t.destination} · `:""}{fmtBRL(t.value)}</span>)}
-                  {Number(h.os_discount_pct||0)>0&&<span style={{fontSize:10,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:5,padding:"1px 7px"}}>🏷️ -{h.os_discount_pct}% m.o.</span>}
+                  {(h.tows||[]).map((t,i)=>Number(t.value||0)>0&&<span key={i} style={{fontSize:10,color:"#60a5fa",background:"#60a5fa15",border:"1px solid #60a5fa33",borderRadius:5,padding:"1px 7px"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> {t.origin&&t.destination?`${t.origin}→${t.destination} · `:""}{fmtBRL(t.value)}</span>)}
+                  {Number(h.os_discount_pct||0)>0&&<span style={{fontSize:10,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:5,padding:"1px 7px"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> -{h.os_discount_pct}% m.o.</span>}
                 </div>}
               {hTasks.length>0&&<div style={{display:"flex",flexDirection:"column",gap:3}}>
                 {hTasks.map((t,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 6px",background:t.done?B.greenBg:`${B.amber}11`,borderRadius:5}}>
@@ -5020,7 +5020,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       </div>
       {/* Client notes panel */}
       {showClientNotes&&clientNotes.length>0&&<div style={{padding:"12px 16px",background:`${B.amber}08`,borderTop:`1px solid ${B.amber}33`,marginTop:12}}>
-        <div style={{fontSize:11,fontWeight:700,color:B.amber,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>⚠️ Anotações do cliente</div>
+        <div style={{fontSize:11,fontWeight:700,color:B.amber,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anotações do cliente</div>
         {clientNotes.map(n=>(
           <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderBottom:`1px solid ${B.amber}22`}}>
             <div style={{flex:1}}>
@@ -5107,10 +5107,10 @@ function InvFormPanel({cat,form,setForm,editId,onSubmit,onCancel,hideCategoryTog
         </select>
         <select value={form.priority} onChange={e=>setForm(p=>({...p,priority:e.target.value}))}
           style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
-          <option value="1">🔴 Urgente</option>
-          <option value="2">🟠 Alta</option>
-          <option value="3">🟡 Média</option>
-          <option value="4">🟢 Baixa</option>
+          <option value="1">Urgente</option>
+          <option value="2">Alta</option>
+          <option value="3">Média</option>
+          <option value="4">Baixa</option>
           <option value="5">⚪ Futura</option>
         </select>
       </div>
@@ -5177,7 +5177,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
         <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
           {inv.category==="materiais"&&<span style={{fontSize:12,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:6,padding:"1px 8px"}}>Qtd: {inv.quantity||1}</span>}
           {inv.value>0&&<span style={{fontSize:12,color:B.white,fontWeight:700}}>{fmtBRL(total)}{inv.quantity>1&&inv.category!=="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({inv.quantity}× {fmtBRL(inv.value)})</span>:inv.quantity>1&&inv.category==="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({fmtBRL(inv.value)} cada)</span>:""}</span>}
-          {inv.link&&<a href={inv.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:B.blue,display:"flex",alignItems:"center",gap:3}}>🔗 Ver link</a>}
+          {inv.link&&<a href={inv.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:B.blue,display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Ver link</a>}
         </div>
       </div>
     </div>
@@ -5190,7 +5190,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
       </button>}
       {canBuy&&inv.status==="approved"&&<button onClick={()=>onUpdate(inv.id,{status:"bought"})}
         style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.purple}22`,border:`1px solid ${B.purple}44`,color:B.purple,fontSize:12,fontWeight:800,cursor:"pointer",minWidth:80}}>
-        🛒 Comprado
+        Comprado
       </button>}
       {canBuy&&inv.status==="bought"&&<button onClick={()=>onUpdate(inv.id,{status:"received"})}
         style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.green}22`,border:`1px solid ${B.green}44`,color:B.green,fontSize:12,fontWeight:800,cursor:"pointer",minWidth:80}}>
@@ -5415,7 +5415,7 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[]}) {
 
   return (<div style={{padding:"12px 14px",background:`${B.amber}08`,borderBottom:`1px solid ${B.amber}33`}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-      <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.5}}>🛒 Pedidos de peças</div>
+      <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.5}}>Pedidos de peças</div>
       {!adding&&<button onClick={()=>setAdding(true)} style={{padding:"4px 12px",borderRadius:7,background:`${B.amber}22`,border:`1px solid ${B.amber}55`,color:B.amber,fontWeight:700,fontSize:11,cursor:"pointer"}}>+ Novo pedido</button>}
     </div>
 
@@ -5625,7 +5625,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
     </div>
 
     {filtered.length===0&&<div style={{textAlign:"center",padding:"48px 0",color:B.gray400}}>
-      <div style={{fontSize:40,marginBottom:10}}>🛒</div>
+      <div style={{marginBottom:10,display:"flex",justifyContent:"center"}}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></div>
       <div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum pedido aqui</div>
     </div>}
 
@@ -5714,7 +5714,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
           </button>}
           {o.link&&<a href={o.link} target="_blank" rel="noreferrer"
             style={{padding:"6px 12px",borderRadius:8,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,color:B.blue,fontSize:11,fontWeight:700,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>
-            🔗 Abrir link
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Abrir link
           </a>}
           {(adminRole==="owner"||adminRole==="admin")&&o.status==="pending"&&<button onClick={()=>onDelete(o.id)}
             style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:4}}
@@ -6205,7 +6205,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           </div>
           {/* Notes */}
           {v.notes&&v.notes.trim()&&<div style={{marginTop:12,padding:"10px 12px",background:`${B.amber}10`,border:`1px solid ${B.amber}33`,borderRadius:8}}>
-            <div style={{fontSize:10,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>📝 Observações</div>
+            <div style={{fontSize:10,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Observações</div>
             <div style={{fontSize:13,color:B.gray200,lineHeight:1.5}}>{v.notes}</div>
           </div>}
         </div>
@@ -6479,7 +6479,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                       {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
                       {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
                         <div key={mi} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
-                          <span style={{fontSize:11,color:m.noCharge?B.red:B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
+                          <span style={{fontSize:11,color:m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
                           {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px",whiteSpace:"nowrap"}}>SEM COBRANÇA</span>}
                         </div>
                       ))}
@@ -6551,7 +6551,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {renderBreakdown(perfTasks)}
                     {fuelTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>⛽ Combustível</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(fuelTotal)}</span></div>}
-                    {towTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>🚛 Reboque</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(towTotal)}</span></div>}
+                    {towTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Reboque</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(towTotal)}</span></div>}
                     {perfDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(perfDiscount)}</span></div>}
                     <div style={{borderTop:`1px solid ${B.gray600}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
                       <span style={{fontSize:13,fontWeight:800,color:B.white}}>Subtotal</span>
@@ -6898,7 +6898,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.52";
+const APP_VERSION = "2026.08.11.54";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7129,7 +7129,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
                 <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600}}>{t.label}</div>
                 {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
                 {(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{color:m.estimated?"#eab308":m.noCharge?B.red:B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</span>
+                  <span style={{color:m.estimated?"#eab308":m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</span>
                   {m.estimated&&<span style={{fontSize:9,fontWeight:800,color:"#eab308",background:"#eab30820",border:"1px solid #eab30844",borderRadius:4,padding:"1px 5px",letterSpacing:.3}}>ESTIMADO</span>}
                   {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px"}}>SEM COBRANÇA</span>}
                 </div>)}
@@ -7235,7 +7235,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
                           {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
                           {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
                             <div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
-                              <span style={{color:m.noCharge?B.red:B.gray500}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
+                              <span style={{color:m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
                               {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px"}}>SEM COBRANÇA</span>}
                             </div>
                           ))}
@@ -10552,10 +10552,10 @@ export default function App() {
                   style={{width:70,flexShrink:0,padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
                 <select value={form.priority} onChange={e=>setForm(p=>({...p,priority:e.target.value}))}
                   style={{flex:"1 1 120px",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
-                  <option value="1">🔴 Urgente</option>
-                  <option value="2">🟠 Alta</option>
-                  <option value="3">🟡 Média</option>
-                  <option value="4">🟢 Baixa</option>
+                  <option value="1">Urgente</option>
+                  <option value="2">Alta</option>
+                  <option value="3">Média</option>
+                  <option value="4">Baixa</option>
                 </select>
               </div>
               <button onClick={submit} disabled={!form.name.trim()||saving}

@@ -7142,7 +7142,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.14";
+const APP_VERSION = "2026.08.17.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9778,6 +9778,18 @@ export default function App() {
     setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));
     try{
       await db.updateTask(id,patch);
+      // Auto-assign specialty mechanic when category matches
+      if(patch.category){
+        const t=tasks.find(x=>x.id===id);
+        const v=vehicles.find(x=>x.id===t?.vehicleId);
+        const specialistMech=employees.find(e=>e.specialty&&e.specialty===patch.category&&e.division!=="finishing");
+        if(specialistMech&&v&&!(v.mechanicIds||[]).includes(specialistMech.id)){
+          const newIds=[...(v.mechanicIds||[]),specialistMech.id];
+          setVeh(p=>p.map(x=>x.id===v.id?{...x,mechanicIds:newIds}:x));
+          await db.updateVehicle(v.id,{mechanicIds:newIds});
+          toast_(`${specialistMech.name} adicionado ao ${v.model} ✓`);
+        }
+      }
       // Notify client when a task update is published
       if(patch.updates){
         const t=tasks.find(x=>x.id===id);

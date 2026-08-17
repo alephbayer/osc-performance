@@ -5912,9 +5912,17 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
 
   // Filter by division
   const divTasks = tasks.filter(t=>(t.division||"performance")===finDiv);
-  const divPayments = payments.filter(p=>(p.division||"performance")===finDiv&&!p.osHistoryId);
-  const divPaymentsHistory = payments.filter(p=>(p.division||"performance")===finDiv&&!!p.osHistoryId);
-  const allDivPayments = payments.filter(p=>(p.division||"performance")===finDiv);
+  const inRange=(dateStr)=>{
+    if(!dateStr) return true;
+    const d=dateStr.slice(0,10);
+    if(from&&d<from) return false;
+    if(to&&d>to) return false;
+    return true;
+  };
+  const divPayments = payments.filter(p=>(p.division||"performance")===finDiv&&!p.osHistoryId&&inRange(p.paidAt));
+  const divPaymentsHistory = payments.filter(p=>(p.division||"performance")===finDiv&&!!p.osHistoryId&&inRange(p.paidAt));
+  const allDivPayments = payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt));
+  const filteredExpenses = expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&inRange(e.date));
 
   // Per-vehicle breakdown — vehicles with payments OR done tasks
   const vehicleRows=vehicles.map(v=>{
@@ -5991,7 +5999,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
       </div>}
 
     <ProductivityPanel employees={employees} vehicles={vehicles} tasks={tasks} defaultRate={defaultRate}/>
-    <ExpensesPanel expenses={expenses} onAdd={onAddExpense} onUpdate={onUpdateExpense} onDelete={onDeleteExpense}/>
+    <ExpensesPanel expenses={filteredExpenses} onAdd={onAddExpense} onUpdate={onUpdateExpense} onDelete={onDeleteExpense}/>
   </div>);
 }
 
@@ -6898,7 +6906,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.59";
+const APP_VERSION = "2026.08.11.60";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9606,15 +9614,14 @@ export default function App() {
   const recalcStockCost=async(stockId, allPurchases)=>{
     const itemPurchases=allPurchases.filter(p=>p.stockId===stockId);
     if(itemPurchases.length===0) return;
-    const totalQty=itemPurchases.reduce((s,p)=>s+Number(p.qty||0),0);
-    if(totalQty<=0) return;
-    const totalCost=itemPurchases.reduce((s,p)=>s+Number(p.qty||0)*Number(p.unitCost||0),0);
-    const avgCost=totalCost/totalQty;
+    // Use last purchase price (most recent by purchaseDate)
+    const sorted=[...itemPurchases].sort((a,b)=>new Date(b.purchaseDate||0)-new Date(a.purchaseDate||0));
+    const lastCost=Number(sorted[0].unitCost||0);
     const item=stock.find(s=>s.id===stockId);
     if(!item) return;
-    const newSalePrice=avgCost*(1+Number(item.markup||0)/100);
-    setStk(p=>p.map(s=>s.id===stockId?{...s,costPrice:avgCost,salePrice:newSalePrice}:s));
-    try{ await db.updateStock(stockId,{costPrice:avgCost,salePrice:newSalePrice}); }catch(e){}
+    const newSalePrice=lastCost*(1+Number(item.markup||0)/100);
+    setStk(p=>p.map(s=>s.id===stockId?{...s,costPrice:lastCost,salePrice:newSalePrice}:s));
+    try{ await db.updateStock(stockId,{costPrice:lastCost,salePrice:newSalePrice}); }catch(e){}
   };
 
   const addPurchase=async(purchase)=>{

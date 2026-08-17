@@ -5922,29 +5922,33 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
   const allDivPayments = payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt));
   const filteredExpenses = expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&inRange(e.date));
 
-  // Per-vehicle breakdown — active tasks + historical OS values
+  // ALL payments (no date filter) — for balance/receivable calculations
+  const allDivPaymentsGlobal = payments.filter(p=>(p.division||"performance")===finDiv);
+
+  // Per-vehicle breakdown — uses global payments for correct balance
   const vehicleRows=vehicles.map(v=>{
     const vts=divTasks.filter(t=>t.vehicleId===v.id&&t.done);
-    const paid=allDivPayments.filter(p=>p.vehicleId===v.id).reduce((s,p)=>s+Number(p.amount),0);
-    // Include value from delivered OS history (tasks deleted after delivery)
+    // All payments ever for this vehicle/division (no date filter)
+    const paidGlobal=Math.round(allDivPaymentsGlobal.filter(p=>p.vehicleId===v.id).reduce((s,p)=>s+Number(p.amount),0)*100)/100;
+    // Value from historical OS (delivered)
     const historyTotal=osHistory
       .filter(h=>h.vehicle_id===v.id&&(h.division||"performance")===finDiv)
       .reduce((s,h)=>s+Number(h.total_value||0),0);
     const activeTotal=vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
-    const total=activeTotal+historyTotal;
-    if(total===0&&paid===0) return null;
+    const total=Math.round((activeTotal+historyTotal)*100)/100;
+    if(total===0&&paidGlobal===0) return null;
     const cost=vts.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
     const cli=clients.find(c=>c.id===v.clientId);
     const mech=employees.find(e=>e.id===v.employeeId);
-    const balance=Math.round((total-paid)*100)/100;
-    return {v,cli,mech,revenue:paid,cost,profit:paid-cost,total,paid,balance};
+    const balance=Math.round((total-paidGlobal)*100)/100;
+    return {v,cli,mech,revenue:paidGlobal,cost,profit:paidGlobal-cost,total,paid:paidGlobal,balance};
   }).filter(Boolean);
 
-  // Summary totals based on payments
-  const totalRevenue=allDivPayments.reduce((s,p)=>s+Number(p.amount),0);
+  // Summary totals — revenue uses date filter, receivable is always global
+  const totalRevenue=allDivPayments.reduce((s,p)=>s+Number(p.amount),0); // date-filtered
   const totalCost=divTasks.filter(t=>t.done).reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
   const totalProfit=totalRevenue-totalCost;
-  const totalReceivable=vehicleRows.reduce((s,r)=>s+Math.max(0,r.balance),0);
+  const totalReceivable=vehicleRows.reduce((s,r)=>s+Math.max(0,r.balance),0); // always global
   const totalPaidAll=vehicleRows.reduce((s,r)=>s+r.paid,0);
 
   return (<div>
@@ -6909,7 +6913,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.65";
+const APP_VERSION = "2026.08.11.66";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

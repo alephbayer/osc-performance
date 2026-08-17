@@ -6643,25 +6643,39 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {(()=>{
         const parts=[...(v.partsList||[]),...(v.partsListFinishing||[])].filter(p=>p.name);
         if(!parts.length) return null;
+        // Check which parts are already used in tasks
+        const allMats=tasks.filter(t=>t.vehicleId===v.id).flatMap(t=>t.materials||[]);
+        const usedIds=new Set(allMats.map(m=>m.reservedPartId).filter(Boolean));
+        const usedPOIds=new Set(allMats.map(m=>m.purchaseOrderId).filter(Boolean));
+        const isUsed=(p)=>usedIds.has(p.id)||(p.purchaseOrderId&&usedPOIds.has(p.purchaseOrderId));
+        const usedCount=parts.filter(isUsed).length;
         return(<div style={{...S.card,marginBottom:20}}>
           <div style={{...S.pad,borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
             <span style={{fontWeight:800,fontSize:13,color:B.white}}>Peças reservadas</span>
             <span style={{fontSize:11,color:B.gray400}}>{parts.length} item{parts.length!==1?"s":""}</span>
+            {usedCount>0&&<span style={{fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",marginLeft:"auto"}}>{usedCount} instalada{usedCount!==1?"s":""}</span>}
           </div>
           <div style={{...S.pad,display:"flex",flexDirection:"column",gap:6}}>
-            {parts.map((p,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:B.gray800,borderRadius:9,border:`1px solid ${B.gray700}`}}>
-                <div style={{width:28,height:28,borderRadius:7,background:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+            {parts.map((p,i)=>{
+              const used=isUsed(p);
+              return(<div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:used?B.greenBg:B.gray800,borderRadius:9,border:`1px solid ${used?B.green+"44":B.gray700}`,opacity:used?0.85:1}}>
+                <div style={{width:28,height:28,borderRadius:7,background:used?`${B.green}22`:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  {used
+                    ?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    :<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                  }
                 </div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:13,color:B.white}}>{p.name}</div>
+                  <div style={{fontWeight:700,fontSize:13,color:used?B.green:B.white,textDecoration:used?"line-through":"none"}}>{p.name}</div>
                   {p.location&&<div style={{fontSize:11,color:B.gray400}}>{p.location}</div>}
                 </div>
-                {(p.qty||1)>1&&<span style={{fontSize:11,fontWeight:700,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"2px 7px",flexShrink:0}}>×{p.qty}</span>}
-              </div>
-            ))}
+                {used
+                  ?<span style={{fontSize:10,fontWeight:700,color:B.green,flexShrink:0}}>Instalada</span>
+                  :(p.qty||1)>1&&<span style={{fontSize:11,fontWeight:700,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"2px 7px",flexShrink:0}}>×{p.qty}</span>
+                }
+              </div>);
+            })}
           </div>
         </div>);
       })()}
@@ -7112,7 +7126,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.11";
+const APP_VERSION = "2026.08.17.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

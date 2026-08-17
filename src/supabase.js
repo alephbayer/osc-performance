@@ -899,6 +899,30 @@ export const db = {
     if (error) throw error;
   },
 
+  // ── Internal Transfers ──────────────────────────────────────────────────────
+  async loadInternalTransfers() {
+    const { data, error } = await supabase.from("internal_transfers").select("*").order("date",{ascending:false});
+    if (error) throw error;
+    return data || [];
+  },
+  async addInternalTransfer(t) {
+    const { data, error } = await supabase.from("internal_transfers").insert({
+      vehicle_id:    t.vehicleId   || null,
+      os_number:     t.osNumber    || null,
+      division_from: t.divisionFrom,
+      division_to:   t.divisionTo,
+      amount:        t.amount,
+      reason:        t.reason      || "",
+      date:          t.date        || new Date().toISOString().slice(0,10),
+    }).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteInternalTransfer(id) {
+    const { error } = await supabase.from("internal_transfers").delete().eq("id", id);
+    if (error) throw error;
+  },
+
   async deleteOsHistory(id) {
     const { error } = await supabase.from("os_history").delete().eq("id", id);
     if (error) throw error;

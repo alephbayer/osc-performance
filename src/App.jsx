@@ -5927,17 +5927,20 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
 
   // Per-vehicle breakdown — uses global payments for correct balance
   const vehicleRows=vehicles.map(v=>{
-    const vts=divTasks.filter(t=>t.vehicleId===v.id&&t.done);
+    // All tasks (done AND pending) for the OS value
+    const vtsAll=divTasks.filter(t=>t.vehicleId===v.id);
+    const vtsDone=vtsAll.filter(t=>t.done);
     // All payments ever for this vehicle/division (no date filter)
     const paidGlobal=Math.round(allDivPaymentsGlobal.filter(p=>p.vehicleId===v.id).reduce((s,p)=>s+Number(p.amount),0)*100)/100;
-    // Value from historical OS (delivered)
+    // Value from historical OS (delivered — tasks deleted)
     const historyTotal=osHistory
       .filter(h=>h.vehicle_id===v.id&&(h.division||"performance")===finDiv)
       .reduce((s,h)=>s+Number(h.total_value||0),0);
-    const activeTotal=vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+    // Active OS value uses ALL tasks (not just done)
+    const activeTotal=vtsAll.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
     const total=Math.round((activeTotal+historyTotal)*100)/100;
     if(total===0&&paidGlobal===0) return null;
-    const cost=vts.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+    const cost=vtsDone.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
     const cli=clients.find(c=>c.id===v.clientId);
     const mech=employees.find(e=>e.id===v.employeeId);
     const balance=Math.round((total-paidGlobal)*100)/100;
@@ -6913,7 +6916,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.66";
+const APP_VERSION = "2026.08.11.67";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -5925,7 +5925,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
   // Per-vehicle breakdown — vehicles with payments OR done tasks
   const vehicleRows=vehicles.map(v=>{
     const vts=divTasks.filter(t=>t.vehicleId===v.id&&t.done);
-    const paid=divPayments.filter(p=>p.vehicleId===v.id).reduce((s,p)=>s+Number(p.amount),0);
+    const paid=allDivPayments.filter(p=>p.vehicleId===v.id).reduce((s,p)=>s+Number(p.amount),0);
     if(vts.length===0&&paid===0) return null;
     const cost=vts.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
     const cli=clients.find(c=>c.id===v.clientId);
@@ -6904,7 +6904,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.63";
+const APP_VERSION = "2026.08.11.64";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -5903,7 +5903,7 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
   </div>);
 }
 
-function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expenses=[],onAddExpense,onUpdateExpense,onDeleteExpense}) {
+function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expenses=[],onAddExpense,onUpdateExpense,onDeleteExpense,osHistory=[]}) {
   const [finDiv,setFinDiv]=useState("performance"); // "performance" | "finishing"
   const [from,setFrom]=useState("");
   const [to,setTo]=useState("");
@@ -5922,16 +5922,21 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
   const allDivPayments = payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt));
   const filteredExpenses = expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&inRange(e.date));
 
-  // Per-vehicle breakdown — vehicles with payments OR done tasks
+  // Per-vehicle breakdown — active tasks + historical OS values
   const vehicleRows=vehicles.map(v=>{
     const vts=divTasks.filter(t=>t.vehicleId===v.id&&t.done);
     const paid=allDivPayments.filter(p=>p.vehicleId===v.id).reduce((s,p)=>s+Number(p.amount),0);
-    if(vts.length===0&&paid===0) return null;
+    // Include value from delivered OS history (tasks deleted after delivery)
+    const historyTotal=osHistory
+      .filter(h=>h.vehicle_id===v.id&&(h.division||"performance")===finDiv)
+      .reduce((s,h)=>s+Number(h.total_value||0),0);
+    const activeTotal=vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+    const total=activeTotal+historyTotal;
+    if(total===0&&paid===0) return null;
     const cost=vts.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
     const cli=clients.find(c=>c.id===v.clientId);
     const mech=employees.find(e=>e.id===v.employeeId);
-    const total=vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
-    const balance=total-paid;
+    const balance=Math.round((total-paid)*100)/100;
     return {v,cli,mech,revenue:paid,cost,profit:paid-cost,total,paid,balance};
   }).filter(Boolean);
 
@@ -6904,7 +6909,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.64";
+const APP_VERSION = "2026.08.11.65";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10186,7 +10191,7 @@ export default function App() {
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
-        <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses}
+        <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory}
           onAddExpense={async e=>{try{const r=await db.addExpense(e);setExpenses(p=>[...p,r]);}catch(err){errToast(err);}}}
           onUpdateExpense={async(id,patch)=>{try{await db.updateExpense(id,patch);setExpenses(p=>p.map(e=>e.id===id?{...e,...patch}:e));}catch(err){errToast(err);}}}
           onDeleteExpense={async id=>{try{await db.deleteExpense(id);setExpenses(p=>p.filter(e=>e.id!==id));}catch(err){errToast(err);}}}

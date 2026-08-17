@@ -7112,7 +7112,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.9";
+const APP_VERSION = "2026.08.17.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10251,8 +10251,8 @@ export default function App() {
             </>}
           </div>
           </div>
-          </div>
         </div>
+      </>}
 
       {/* ══ TAB CONTENT ══ */}
       {(navSection==="oficina"||navSection==="gestao"||navSection==="compras")&&<>

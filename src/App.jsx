@@ -6898,7 +6898,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.55";
+const APP_VERSION = "2026.08.11.56";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9639,9 +9639,14 @@ export default function App() {
     setStockPurchases(newPurchases);
     try{
       await db.updatePurchase(id,patch);
-      // Recalculate after edit
+      // Recalculate qty and cost after edit
       const affected=newPurchases.find(p=>p.id===id);
-      if(affected) await recalcStockCost(affected.stockId,newPurchases);
+      if(affected){
+        const newQty=newPurchases.filter(p=>p.stockId===affected.stockId).reduce((s,p)=>s+Number(p.qty||0),0);
+        setStk(p=>p.map(s=>s.id===affected.stockId?{...s,qty:newQty}:s));
+        await db.updateStock(affected.stockId,{qty:newQty});
+        await recalcStockCost(affected.stockId,newPurchases);
+      }
       toast_("Compra atualizada ✓");
     }catch(e){errToast(e);}
   };
@@ -9651,8 +9656,13 @@ export default function App() {
     setStockPurchases(newPurchases);
     try{
       await db.deletePurchase(id);
-      // Recalculate after deletion
-      if(affected) await recalcStockCost(affected.stockId,newPurchases);
+      if(affected){
+        // Recalculate qty from remaining purchases
+        const newQty=newPurchases.filter(p=>p.stockId===affected.stockId).reduce((s,p)=>s+Number(p.qty||0),0);
+        setStk(p=>p.map(s=>s.id===affected.stockId?{...s,qty:newQty}:s));
+        await db.updateStock(affected.stockId,{qty:newQty});
+        await recalcStockCost(affected.stockId,newPurchases);
+      }
       toast_("Compra excluída ✓");
     }catch(e){errToast(e);}
   };

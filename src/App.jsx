@@ -3607,7 +3607,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 }
 
 // ─── EmployeeCard ─────────────────────────────────────────────────────────────
-function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRate,onAddVehicle,onDeleteVehicle,onTransferMechanic,onTransferOwner,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onUpdateVehicle,onConsumeStock,onReturnStock,onDelete,onSendWA,onUpdatePhone,onUpdateName,onUpdateDivision,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,isOwner=false,purchaseOrders=[],onAddPurchaseOrder}) {
+function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRate,onAddVehicle,onDeleteVehicle,onTransferMechanic,onTransferOwner,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onUpdateVehicle,onConsumeStock,onReturnStock,onDelete,onSendWA,onUpdatePhone,onUpdateName,onUpdateDivision,onUpdateSpecialty,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,isOwner=false,purchaseOrders=[],onAddPurchaseOrder}) {
   const [open,setOpen]=useState(false);
   const [showF,setSF]=useState(false);
   const [showPicker,setShowPicker]=useState(false);
@@ -3651,7 +3651,10 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
             {employee.phone&&<div style={{fontSize:11,color:B.wa,marginTop:2,display:"flex",alignItems:"center",gap:4}}><IPhone s={11} c={B.wa}/>{employee.phone}</div>}
             {employee.division==="finishing"
               ?<div style={{marginTop:2}}><span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>FINISHING</span></div>
-              :<div style={{marginTop:2}}><span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>PERFORMANCE</span></div>}
+              :<div style={{marginTop:2,display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
+                <span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>PERFORMANCE</span>
+                {employee.specialty&&<span style={{fontSize:9,fontWeight:800,color:B.blue,background:`${B.blue}12`,border:`1px solid ${B.blue}33`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>{employee.specialty.toUpperCase()}</span>}
+              </div>}
           </>}
       </div>
       <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
@@ -3675,7 +3678,16 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
       </div>
     </div>
     {open&&<div style={{padding:"12px 16px"}}>
-      {empV.length===0&&!showF&&<p style={{fontSize:13,color:B.gray400,marginBottom:10}}>Nenhum veículo.</p>}
+      {/* Specialty selector — performance only, owner only */}
+      {isOwner&&employee.division!=="finishing"&&<div style={{marginBottom:12,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <span style={{fontSize:11,color:B.gray400,fontWeight:600}}>Especialidade:</span>
+        <select value={employee.specialty||""} onChange={e=>onUpdateSpecialty&&onUpdateSpecialty(employee.id,e.target.value||null)}
+          style={{padding:"4px 8px",borderRadius:7,border:`1px solid ${employee.specialty?B.blue+"66":B.gray600}`,background:B.gray800,color:employee.specialty?B.white:B.gray500,fontSize:11,outline:"none"}}>
+          <option value="">Sem especialidade (todas as tarefas)</option>
+          {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.id}</option>)}
+        </select>
+        {employee.specialty&&<span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,borderRadius:5,padding:"2px 8px"}}>Filtra: {employee.specialty}</span>}
+      </div>}
       {empV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
         onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
         onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
@@ -7007,9 +7019,13 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
     if(orderDiff!==0) return orderDiff;
     return (a.status==="paused"?1:0)-(b.status==="paused"?1:0);
   });
+  // If mechanic has a specialty, only show tasks of that category
+  const filteredTasks = employee.specialty
+    ? tasks.filter(t=>!t.category||t.category===employee.specialty||t.vehicleId===undefined)
+    : tasks;
   const div = isFD ? "finishing" : "performance";
-  const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&(t.division||"performance")===div).length;
-  const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&(t.division||"performance")===div&&t.done).length;
+  const totT=filteredTasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&(t.division||"performance")===div).length;
+  const donT=filteredTasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&(t.division||"performance")===div&&t.done).length;
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"0 18px",paddingTop:"env(safe-area-inset-top)",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",height:58,gap:12}}>
@@ -7037,7 +7053,7 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
         {totT>0&&<ProgressBar value={donT} max={totT}/>}
       </div>
       {empV.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>🔧</div><div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum veículo atribuído a você ainda</div></div>
-        :empV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={0} managerMode={false}
+        :empV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={filteredTasks} employees={employees} clients={clients} stock={stock} defaultRate={0} managerMode={false}
           onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask}
           onDeleteVehicle={()=>{}} onTransferMechanic={()=>{}} onTransferOwner={()=>{}} onUpdateVehicle={onUpdateVehicle}
           onConsumeStock={()=>{}} onReturnStock={()=>{}} hideManagerButtons division={div}
@@ -7126,7 +7142,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.13";
+const APP_VERSION = "2026.08.17.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10295,6 +10311,7 @@ export default function App() {
                 onConsumeStock={consumeStock} onReturnStock={returnStock}
                 onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}
                 onDelete={delEmp} onSendWA={sendMechWA} onUpdatePhone={updEmpP} onUpdateName={updEmpN} onUpdateDivision={updEmpDiv}
+                onUpdateSpecialty={async(id,specialty)=>{try{await db.updateEmployee(id,{specialty});setEmp(p=>p.map(e=>e.id===id?{...e,specialty}:e));toast_("Especialidade atualizada ✓");}catch(err){errToast(err);}}}
                 purchaseOrders={purchaseOrders} onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}}/>)}
           </>}
       </>}

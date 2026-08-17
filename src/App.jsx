@@ -5134,7 +5134,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
   const total=inv.value*(inv.quantity||1);
   const canEdit=adminRole==="owner"||adminRole==="admin"||adminRole==="supervisor";
   const canApprove=adminRole==="owner"||adminRole==="admin";
-  const canBuy=adminRole==="owner";
+  const canBuy=adminRole==="owner"||(adminRole==="admin"&&defaultCategory==="materiais");
   const canDelete=adminRole==="owner"||adminRole==="admin";
 
   const changePriority=(delta)=>{
@@ -5318,11 +5318,9 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
       onSubmit={submit} onCancel={()=>{setAdding(null);setEditId(null);resetForm();}}/>}
 
     {/* Materiais Sortidos — only shown in dedicated materiais tab */}
-    {defaultCategory==="materiais"&&(catFilter==="all"||catFilter==="materiais")&&<div style={{marginBottom:8}}>
-      {sectionHeader(materiais,B.amber,"box","Materiais Sortidos",openMateriais,setOpenMateriais)}
-      {openMateriais&&<div style={{border:`1px solid ${B.amber}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
-        {renderCat(materiais,B.amber,openMateriais,true)}
-      </div>}
+    {defaultCategory==="materiais"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {materiais.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray400}}>Nenhum material sortido ainda.</div>}
+      {renderCat(materiais,B.amber,true,true)}
     </div>}
 
     {/* Leves */}
@@ -6906,7 +6904,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.60";
+const APP_VERSION = "2026.08.11.61";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

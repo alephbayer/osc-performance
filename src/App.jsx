@@ -6904,7 +6904,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.62";
+const APP_VERSION = "2026.08.11.63";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9388,7 +9388,10 @@ export default function App() {
         ...x, osNumber, enteredAt,
         status:"active", pausedAt:null, totalPausedMs:0, priority:"medium",
         deliveredAt:null,
-        mechanicIds:employeeId?[employeeId]:[],
+        // Merge performance mechanic with existing mechanicIds — don't overwrite finishing mechanics
+        mechanicIds:employeeId
+          ? [...new Set([...(x.mechanicIds||[]),employeeId])]
+          : (x.mechanicIds||[]),
         photos:[],
       }:x));
       toast_(`OS ${fmtOS(osNumber)} aberta ✓`);
@@ -9407,7 +9410,10 @@ export default function App() {
         ...x,
         osNumberFinishing:osNumber, enteredAtFinishing:enteredAt,
         statusFinishing:"active", pausedAtFinishing:null, totalPausedMsFinishing:0,
-        mechanicIds:employeeId?[employeeId]:[],
+        // Merge finishing mechanic with existing mechanicIds — don't overwrite performance mechanics
+        mechanicIds:employeeId
+          ? [...new Set([...(x.mechanicIds||[]),employeeId])]
+          : (x.mechanicIds||[]),
         photosFinishing:[],
       }:x));
       toast_(`${fmtOSFD(osNumber)} Finishing aberta ✓`);

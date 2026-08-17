@@ -617,6 +617,16 @@ export const db = {
     const { error } = await supabase.from("payments").delete().eq("id", id);
     if (error) throw error;
   },
+  async updatePayment(id, patch) {
+    const map = {};
+    if (patch.amount   !== undefined) map.amount    = patch.amount;
+    if (patch.method   !== undefined) map.method    = patch.method;
+    if (patch.note     !== undefined) map.note      = patch.note;
+    if (patch.paidAt   !== undefined) map.paid_at   = patch.paidAt;
+    if (patch.division !== undefined) map.division  = patch.division;
+    const { error } = await supabase.from("payments").update(map).eq("id", id);
+    if (error) throw error;
+  },
   // Migrate existing vehicle payments to a specific OS history record
   async migratePaymentsToHistory(vehicleId, osHistoryId) {
     const { error } = await supabase.from("payments")

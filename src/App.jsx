@@ -3145,7 +3145,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
 }
 
 // ─── VehicleCard ──────────────────────────────────────────────────────────────
-function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null}) {
+function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null}) {
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
   useEffect(()=>{
@@ -3600,7 +3600,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       items={clients.filter(c=>c.id!==vehicle.clientId).map(c=>({id:c.id,label:c.name,sub:c.phone,icon:<IUser s={15} c={B.blue}/>}))}
       onPick={id=>{onTransferOwner(vehicle.id,id);setXfO(false);}} onClose={()=>setXfO(false)}/>}
     {showAccount&&<AccountModal vehicle={vehicle} tasks={tasks} payments={payments} defaultRate={defaultRate}
-      onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onClose={()=>setSA(false)}/>}
+      onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} onClose={()=>setSA(false)}/>}
     {confirmDelV&&<ConfirmModal title="Remover veículo?" message={<>Tem certeza que deseja remover <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b>? Todas as tarefas desta OS também serão removidas.</>} confirmLabel="Remover veículo" onConfirm={()=>{onDeleteVehicle(vehicle.id);setConfirmDelV(false);}} onCancel={()=>setConfirmDelV(false)}/>}
     {confirmDeliver&&<ConfirmModal title={isFD?"Encerrar OS Finishing?":"Confirmar entrega?"} danger={false} message={isFD?<>Encerrar a OS da <b style={{color:FD.primary}}>Finishing Division</b> para <b style={{color:B.white}}>{vehicle.model}</b>?</>:<>Registrar a entrega de <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b> ao cliente? O timer será encerrado.</>} confirmLabel={isFD?"Encerrar Finishing":"Confirmar entrega"} onConfirm={()=>{isFD?onDeliverFinishing&&onDeliverFinishing(vehicle.id):onDeliver&&onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
   </>);
@@ -3779,7 +3779,7 @@ function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,o
 
 // ─── StockTab ─────────────────────────────────────────────────────────────────
 // ─── Account Current Modal (conta corrente da OS) ─────────────────────────────
-function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeletePayment,onClose}) {
+function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeletePayment,onUpdatePayment,onClose}) {
   const perfTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(t.division||"performance")==="performance");
   const finTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&t.division==="finishing");
   const hasBoth=perfTasks.length>0&&finTasks.length>0;
@@ -3791,6 +3791,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const [date,setDate]=useState(new Date().toISOString().slice(0,10));
   const [note,setNote]=useState("");
   const [confirmDelPay,setConfirmDelPay]=useState(null);
+  const [editingPay,setEditingPay]=useState(null); // {id, amount, method, note, paidAt}
   const [payDiv,setPayDiv]=useState(hasPerformance?"performance":"finishing");
 
   const vPayments=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId).sort((a,b)=>a.paidAt<b.paidAt?1:-1);
@@ -3874,19 +3875,44 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
         {/* History */}
         <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Histórico de pagamentos</div>
         {vPayments.length===0?<div style={{textAlign:"center",padding:"16px 0",color:B.gray500,fontSize:13}}>Nenhum pagamento registrado ainda.</div>
-          :vPayments.map(p=>(<div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:B.gray700,borderRadius:9,marginBottom:6}}>
-            <div style={{width:34,height:34,borderRadius:8,background:B.greenBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ITrendUp s={15} c={B.green}/></div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:700,fontSize:13,color:B.white,display:"flex",alignItems:"center",gap:6}}>
-                {fmtBRL(p.amount)} <span style={{fontWeight:400,color:B.gray400,fontSize:11}}>· {p.method}</span>
-                {p.division==="finishing"
-                  ?<span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 5px"}}>🎨</span>
-                  :<span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 5px"}}>⚙️</span>}
+          :vPayments.map(p=>(<div key={p.id}>
+            <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:editingPay?.id===p.id?`${B.blue}15`:B.gray700,borderRadius:editingPay?.id===p.id?"9px 9px 0 0":9,marginBottom:editingPay?.id===p.id?0:6,border:editingPay?.id===p.id?`1px solid ${B.blue}44`:"none"}}>
+              <div style={{width:34,height:34,borderRadius:8,background:B.greenBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ITrendUp s={15} c={B.green}/></div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:13,color:B.white,display:"flex",alignItems:"center",gap:6}}>
+                  {fmtBRL(p.amount)} <span style={{fontWeight:400,color:B.gray400,fontSize:11}}>· {p.method}</span>
+                  {p.division==="finishing"
+                    ?<span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 5px"}}>FD</span>
+                    :<span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 5px"}}>OSC</span>}
+                </div>
+                <div style={{fontSize:11,color:B.gray400}}>{new Date(p.paidAt+"T00:00:00").toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</div>
               </div>
-              <div style={{fontSize:11,color:B.gray400}}>{new Date(p.paidAt+"T00:00:00").toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</div>
+              <button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:p.method,note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
+                style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:4,display:"flex",flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}>
+                <IEdit s={14}/>
+              </button>
+              <button onClick={()=>setConfirmDelPay(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><ITrash s={14}/></button>
             </div>
-            <button onClick={()=>setConfirmDelPay(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
-              onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><ITrash s={14}/></button>
+            {editingPay?.id===p.id&&<div style={{display:"flex",gap:7,flexWrap:"wrap",padding:"8px 12px",background:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderTop:"none",borderRadius:"0 0 9px 9px",marginBottom:6}}>
+              <input value={editingPay.amount} onChange={e=>setEditingPay(ep=>({...ep,amount:e.target.value}))} type="number" step="0.01" placeholder="Valor R$"
+                style={{flex:"1 1 100px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+              <select value={editingPay.method} onChange={e=>setEditingPay(ep=>({...ep,method:e.target.value}))}
+                style={{flex:"1 1 110px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
+                {["Pix","Dinheiro","Cartão débito","Cartão crédito","Transferência","Boleto","Outro"].map(m=><option key={m}>{m}</option>)}
+              </select>
+              <input type="date" value={editingPay.paidAt} onChange={e=>setEditingPay(ep=>({...ep,paidAt:e.target.value}))}
+                style={{flex:"1 1 120px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+              <input value={editingPay.note} onChange={e=>setEditingPay(ep=>({...ep,note:e.target.value}))} placeholder="Observação"
+                style={{flex:"1 1 120px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+              <button onClick={()=>{
+                if(!editingPay.amount) return;
+                onUpdatePayment&&onUpdatePayment(p.id,{amount:parseFloat(editingPay.amount),method:editingPay.method,note:editingPay.note,paidAt:editingPay.paidAt?new Date(editingPay.paidAt+"T12:00:00").toISOString():p.paidAt});
+                setEditingPay(null);
+              }} style={{padding:"6px 14px",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
+              <button onClick={()=>setEditingPay(null)} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
+            </div>}
           </div>))}
       </div>
     </div>
@@ -4308,7 +4334,7 @@ function PurchaseForm({stockId,onConfirm,onCancel}) {
 // ─── OS Grouped View — vehicles grouped by mechanic ──────────────────────────
 function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaultRate,company,
   addTask,toggleT,delTask,updTask,updVeh,delVeh,xferMech,xferOwn,consumeStock,returnStock,
-  payments,addPayment,deletePayment,addVehicleMechanic,removeVehicleMechanic,setVehicleStatus,deliverVehicle,deliverVehicleFinishing,adminRole,searching=false,division="performance",
+  payments,addPayment,deletePayment,updatePayment,addVehicleMechanic,removeVehicleMechanic,setVehicleStatus,deliverVehicle,deliverVehicleFinishing,adminRole,searching=false,division="performance",
   purchaseOrders=[],onAddPurchaseOrder,onOpenOS=null}) {
   const [collapsed,setCollapsed]=useState(()=>{
     const init={};
@@ -4343,7 +4369,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
             onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
             onTransferMechanic={xferMech} onTransferOwner={xferOwn}
             onConsumeStock={consumeStock} onReturnStock={returnStock}
-            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} company={company}
+            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company}
             onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"} division={division||"performance"}
             onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>)}
         </div>}
@@ -4529,7 +4555,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
       onCancel={()=>setConfirmDel(null)}/>}
   </div>);
 }
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
   const [search,setSearch]=useState("");
   const [osFilter,setOsFilter]=useState("all"); // all | active | available
   const [now,setNow]=useState(Date.now());
@@ -4599,7 +4625,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
       {sorted.map(v=>{
         const hasActiveOS=!!(v.enteredAt||v.enteredAtFinishing);
         return(<div key={v.id}>
-          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory} onDeleteVehicle={onDeleteVehicle}/>
+          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory} onDeleteVehicle={onDeleteVehicle}/>
         </div>);
       })}
     </div>}
@@ -4607,12 +4633,13 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
 }
 
 // ─── OS History Payment Panel ─────────────────────────────────────────────────
-function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
+function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpdatePayment}) {
   const [showForm,setShowForm]=useState(false);
   const [amount,setAmount]=useState("");
   const [method,setMethod]=useState("Dinheiro");
   const [note,setNote]=useState("");
   const [paidAt,setPaidAt]=useState(new Date().toISOString().slice(0,10));
+  const [editingPay,setEditingPay]=useState(null);
 
   const hPayments=payments.filter(p=>p.osHistoryId===h.id);
   const totalValue=Math.round(Number(h.total_value||0)*100)/100;
@@ -4647,15 +4674,38 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
     {/* Existing payments */}
     {hPayments.length>0&&<div style={{display:"flex",flexDirection:"column",gap:3,marginBottom:showForm?6:0}}>
       {hPayments.map(p=>(
-        <div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 8px",background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5}}>
-          <span style={{fontSize:10}}>💰</span>
-          <span style={{fontSize:11,color:B.green,fontWeight:700,flexShrink:0}}>{fmtBRL(p.amount)}</span>
-          <span style={{fontSize:10,color:B.gray400,flexShrink:0}}>{p.method}</span>
-          {p.note&&<span style={{fontSize:10,color:B.gray400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.note}</span>}
-          <span style={{fontSize:10,color:B.gray500,flexShrink:0,marginLeft:"auto"}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
-          {onDeletePayment&&<button onClick={()=>onDeletePayment(p.id)}
-            style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
-            onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={11}/></button>}
+        <div key={p.id}>
+          <div style={{display:"flex",alignItems:"center",gap:6,padding:"3px 8px",background:editingPay?.id===p.id?`${B.blue}15`:B.greenBg,border:`1px solid ${editingPay?.id===p.id?B.blue+"44":B.green+"33"}`,borderRadius:editingPay?.id===p.id?"5px 5px 0 0":5}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            <span style={{fontSize:11,color:B.green,fontWeight:700,flexShrink:0}}>{fmtBRL(p.amount)}</span>
+            <span style={{fontSize:10,color:B.gray400,flexShrink:0}}>{p.method}</span>
+            {p.note&&<span style={{fontSize:10,color:B.gray400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.note}</span>}
+            <span style={{fontSize:10,color:B.gray500,flexShrink:0,marginLeft:"auto"}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
+            {onUpdatePayment&&<button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:p.method,note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
+              style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:0,display:"flex"}}
+              onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}><IEdit s={11}/></button>}
+            {onDeletePayment&&<button onClick={()=>onDeletePayment(p.id)}
+              style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
+              onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={11}/></button>}
+          </div>
+          {editingPay?.id===p.id&&<div style={{display:"flex",gap:5,flexWrap:"wrap",padding:"7px 8px",background:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderTop:"none",borderRadius:"0 0 5px 5px"}}>
+            <input value={editingPay.amount} onChange={e=>setEditingPay(ep=>({...ep,amount:e.target.value}))} type="number" step="0.01" placeholder="Valor R$"
+              style={{flex:"1 1 90px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+            <select value={editingPay.method} onChange={e=>setEditingPay(ep=>({...ep,method:e.target.value}))}
+              style={{flex:"1 1 100px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}>
+              {["Dinheiro","Pix","Cartão Débito","Cartão Crédito","Transferência","Outro"].map(m=><option key={m}>{m}</option>)}
+            </select>
+            <input type="date" value={editingPay.paidAt} onChange={e=>setEditingPay(ep=>({...ep,paidAt:e.target.value}))}
+              style={{flex:"1 1 110px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+            <input value={editingPay.note} onChange={e=>setEditingPay(ep=>({...ep,note:e.target.value}))} placeholder="Observação"
+              style={{flex:"1 1 100px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+            <button onClick={()=>{
+              if(!editingPay.amount) return;
+              onUpdatePayment(p.id,{amount:parseFloat(editingPay.amount),method:editingPay.method,note:editingPay.note,paidAt:editingPay.paidAt?new Date(editingPay.paidAt+"T12:00:00").toISOString():p.paidAt});
+              setEditingPay(null);
+            }} style={{padding:"4px 10px",borderRadius:5,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer"}}>Salvar</button>
+            <button onClick={()=>setEditingPay(null)} style={{padding:"4px 7px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,fontSize:11,cursor:"pointer"}}>✕</button>
+          </div>}
         </div>
       ))}
     </div>}
@@ -4678,7 +4728,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment}) {
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
   const isFD = false;
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
@@ -5014,7 +5064,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 </div>
               </div>}
               {/* Financial panel */}
-              <OsHistoryPaymentPanel h={h} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment}/>
+              <OsHistoryPaymentPanel h={h} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment}/>
             </div>);
           })}
         </div>}
@@ -6917,7 +6967,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.2";
+const APP_VERSION = "2026.08.17.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9717,6 +9767,10 @@ export default function App() {
     setPay(prev=>prev.filter(p=>p.id!==id));
     try{ await db.deletePayment(id); toast_("Pagamento removido ✓"); }catch(e){errToast(e);}
   };
+  const updatePayment=async(id,patch)=>{
+    setPay(prev=>prev.map(p=>p.id===id?{...p,...patch}:p));
+    try{ await db.updatePayment(id,patch); toast_("Pagamento atualizado ✓"); }catch(e){errToast(e);}
+  };
 
   // ── WA
   const sendMechWA=emp=>setMod({title:`Enviar para ${emp.name}`,subtitle:"Mecânico",accentColor:B.orange,phone:emp.phone,text:waMechanic(emp,vehicles,tasks,clients)});
@@ -10130,7 +10184,7 @@ export default function App() {
             tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} company={company}
             addTask={addTask} toggleT={toggleT} delTask={delTask} updTask={updTask} updVeh={updVeh} delVeh={delVeh}
             xferMech={xferMech} xferOwn={xferOwn} consumeStock={consumeStock} returnStock={returnStock}
-            payments={payments} addPayment={addPayment} deletePayment={deletePayment}
+            payments={payments} addPayment={addPayment} deletePayment={deletePayment} updatePayment={updatePayment}
             addVehicleMechanic={addVehicleMechanic} removeVehicleMechanic={removeVehicleMechanic}
             setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} deliverVehicleFinishing={deliverVehicleFinishing} adminRole={adminRole}
             searching={!!osSearch} purchaseOrders={purchaseOrders} onOpenOS={openNewOS}
@@ -10169,7 +10223,7 @@ export default function App() {
               onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
               onTransferMechanic={xferMech} onTransferOwner={xferOwn}
               onConsumeStock={consumeStock} onReturnStock={returnStock}
-              payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} company={company}
+              payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company}
               onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
               onDeliver={deliverVehicleFinishing} onDeliverFinishing={deliverVehicleFinishing}
               isOwner={adminRole==="owner"} division="finishing"
@@ -10193,7 +10247,7 @@ export default function App() {
       </>}
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <TabHeader color={B.blue} title="Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
-        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} isOwner={adminRole==="owner"}
+        <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} isOwner={adminRole==="owner"}
           onDeleteVehicle={adminRole==="owner"?async(id)=>{try{await db.deleteVehicle(id);setVeh(p=>p.filter(v=>v.id!==id));toast_("Veículo removido ✓");}catch(e){errToast(e);}}:null}
           onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico ✓");}catch(e){errToast(e);}}}/>
       </>}

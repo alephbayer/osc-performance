@@ -960,6 +960,7 @@ const CATEGORIES=[
   {id:"Motor",          color:"#ef4444"},
   {id:"Pintura",        color:"#ec4899"},
   {id:"Powertrain",     color:"#f59e0b"},
+  {id:"Retífica",       color:"#b45309"},
   {id:"Suspensão",      color:"#d97706"},
 ];
 const CAT_MAP=Object.fromEntries(CATEGORIES.map(c=>[c.id,c.color]));
@@ -6916,7 +6917,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.1";
+const APP_VERSION = "2026.08.17.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

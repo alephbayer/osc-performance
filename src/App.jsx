@@ -5954,7 +5954,116 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
   </div>);
 }
 
-function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expenses=[],onAddExpense,onUpdateExpense,onDeleteExpense,osHistory=[]}) {
+// ─── InternalTransfersPanel ────────────────────────────────────────────────────
+function InternalTransfersPanel({transfers=[],vehicles=[],osHistory=[],onAdd,onDelete}) {
+  const [showForm,setShowForm]=useState(false);
+  const [form,setForm]=useState({vehicleId:"",divisionFrom:"performance",divisionTo:"finishing",amount:"",reason:"",date:new Date().toISOString().slice(0,10)});
+  const [confirmDel,setConfirmDel]=useState(null);
+
+  const vOsMap={}; // vehicleId → latest osNumber
+  [...osHistory].sort((a,b)=>new Date(b.delivered_at||0)-new Date(a.delivered_at||0)).forEach(h=>{
+    if(!vOsMap[h.vehicle_id]) vOsMap[h.vehicle_id]=h.os_number;
+  });
+  vehicles.forEach(v=>{ if(v.osNumber&&!vOsMap[v.id]) vOsMap[v.id]=v.osNumber; });
+
+  const save=async()=>{
+    const val=parseFloat(String(form.amount).replace(",","."))||0;
+    if(!val||!form.vehicleId) return;
+    const v=vehicles.find(x=>x.id===form.vehicleId);
+    await onAdd({
+      vehicleId:form.vehicleId,
+      osNumber:vOsMap[form.vehicleId]||null,
+      divisionFrom:form.divisionFrom,
+      divisionTo:form.divisionTo,
+      amount:val,
+      reason:form.reason,
+      date:form.date,
+    });
+    setForm({vehicleId:"",divisionFrom:"performance",divisionTo:"finishing",amount:"",reason:"",date:new Date().toISOString().slice(0,10)});
+    setShowForm(false);
+  };
+
+  const divLabel=(d)=>d==="finishing"?"Finishing":"Performance";
+  const divColor=(d)=>d==="finishing"?FD.primary:B.orange;
+
+  return(<div style={{background:B.gray900,borderRadius:14,border:`1px solid ${B.purple}33`,overflow:"hidden",marginTop:16}}>
+    <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:800,fontSize:14,color:B.white}}>Acertos Internos</div>
+        <div style={{fontSize:11,color:B.gray400}}>Transferências entre Performance e Finishing · Uso interno</div>
+      </div>
+      <button onClick={()=>setShowForm(f=>!f)} style={{background:`${B.purple}22`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"5px 12px",cursor:"pointer",color:B.purple,fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:4}}>
+        <IPlus s={11} c={B.purple}/>{showForm?"Fechar":"Novo acerto"}
+      </button>
+    </div>
+
+    {showForm&&<div style={{padding:"14px 16px",background:`${B.purple}08`,borderBottom:`1px solid ${B.gray700}`}}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+        <select value={form.vehicleId} onChange={e=>setForm(p=>({...p,vehicleId:e.target.value}))}
+          style={{flex:"2 1 160px",padding:"8px 10px",borderRadius:8,border:`1px solid ${form.vehicleId?B.purple:B.gray600}`,background:B.gray800,color:form.vehicleId?B.white:B.gray500,fontSize:12,outline:"none"}}>
+          <option value="">Selecione o veículo *</option>
+          {[...vehicles].sort((a,b)=>(a.model||"").localeCompare(b.model||"","pt-BR")).map(v=>{
+            const cli=vehicles&&v.clientId?null:null; // just model
+            const osN=vOsMap[v.id];
+            return <option key={v.id} value={v.id}>{v.model}{v.plate?` (${v.plate})`:""}{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</option>;
+          })}
+        </select>
+        <input value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} type="number" step="0.01" placeholder="Valor R$ *"
+          style={{flex:"1 1 110px",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        <input type="date" value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))}
+          style={{flex:"1 1 120px",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+        <div style={{flex:"1 1 200px",display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:B.gray800,borderRadius:8,border:`1px solid ${B.gray600}`}}>
+          <span style={{fontSize:11,color:B.gray400}}>De:</span>
+          {["performance","finishing"].map(d=>(
+            <button key={d} onClick={()=>setForm(p=>({...p,divisionFrom:d,divisionTo:d==="performance"?"finishing":"performance"}))}
+              style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${form.divisionFrom===d?divColor(d):B.gray600}`,background:form.divisionFrom===d?`${divColor(d)}22`:"none",color:form.divisionFrom===d?divColor(d):B.gray500,fontWeight:700,fontSize:11,cursor:"pointer"}}>
+              {divLabel(d)}
+            </button>
+          ))}
+          <span style={{fontSize:11,color:B.gray400,marginLeft:4}}>→ <b style={{color:divColor(form.divisionTo)}}>{divLabel(form.divisionTo)}</b></span>
+        </div>
+        <input value={form.reason} onChange={e=>setForm(p=>({...p,reason:e.target.value}))} placeholder="Motivo / descrição do acerto *"
+          style={{flex:"2 1 200px",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+      </div>
+      <button onClick={save} disabled={!form.vehicleId||!form.amount||!form.reason}
+        style={{padding:"8px 20px",borderRadius:8,background:form.vehicleId&&form.amount&&form.reason?B.purple:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:form.vehicleId&&form.amount&&form.reason?"pointer":"not-allowed"}}>
+        Registrar acerto
+      </button>
+    </div>}
+
+    {transfers.length===0&&!showForm&&<div style={{padding:"20px 16px",textAlign:"center",color:B.gray500,fontSize:13}}>Nenhum acerto registrado.</div>}
+    {transfers.length>0&&<div style={{padding:"10px 16px",display:"flex",flexDirection:"column",gap:6}}>
+      {transfers.map(t=>{
+        const v=vehicles.find(x=>x.id===t.vehicle_id);
+        const osNum=t.os_number?`OS-${String(t.os_number).padStart(3,"0")}`:null;
+        return(<div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:B.gray800,borderRadius:10,border:`1px solid ${B.gray700}`}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:3}}>
+              <span style={{fontWeight:800,fontSize:13,color:B.white}}>{fmtBRL(t.amount)}</span>
+              <span style={{fontSize:11,color:divColor(t.division_from),fontWeight:700}}>{divLabel(t.division_from)}</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={B.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              <span style={{fontSize:11,color:divColor(t.division_to),fontWeight:700}}>{divLabel(t.division_to)}</span>
+              {v&&<span style={{fontSize:10,color:B.gray400}}>· {v.model}{v.plate?` (${v.plate})`:""}</span>}
+              {osNum&&<span style={{fontSize:10,fontWeight:700,color:B.orange,background:`${B.orange}15`,borderRadius:4,padding:"1px 6px"}}>{osNum}</span>}
+            </div>
+            <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8}}>
+              <span>{new Date(t.date+"T12:00:00").toLocaleDateString("pt-BR")}</span>
+              {t.reason&&<span style={{color:B.gray300}}>· {t.reason}</span>}
+            </div>
+          </div>
+          <button onClick={()=>setConfirmDel(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
+            onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><ITrash s={14}/></button>
+        </div>);
+      })}
+    </div>}
+    {confirmDel&&<ConfirmModal title="Excluir acerto?" message="Remover este acerto interno permanentemente?" confirmLabel="Excluir" onConfirm={()=>{onDelete(confirmDel);setConfirmDel(null);}} onCancel={()=>setConfirmDel(null)}/>}
+  </div>);
+}
+
+function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expenses=[],onAddExpense,onUpdateExpense,onDeleteExpense,osHistory=[],internalTransfers=[],onAddTransfer,onDeleteTransfer,adminRole=""}) {
   const [finDiv,setFinDiv]=useState("performance"); // "performance" | "finishing"
   const [from,setFrom]=useState("");
   const [to,setTo]=useState("");
@@ -6006,6 +6115,15 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
   const totalPaidAll=vehicleRows.reduce((s,r)=>s+r.paid,0);
 
   return (<div>
+    {/* ── Acertos Internos — owner only, always visible ── */}
+    {adminRole==="owner"&&<InternalTransfersPanel
+      transfers={internalTransfers}
+      vehicles={vehicles}
+      osHistory={osHistory}
+      onAdd={onAddTransfer}
+      onDelete={onDeleteTransfer}
+    />}
+    <div style={{marginTop:adminRole==="owner"?16:0}}/>
     {/* Division sub-tabs */}
     <div style={{display:"flex",gap:6,marginBottom:16,justifyContent:"center"}}>
       {[{id:"performance",label:"Performance",color:B.orange},{id:"finishing",label:"Finishing",color:FD.primary}].map(d=>(
@@ -6967,7 +7085,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.3";
+const APP_VERSION = "2026.08.17.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -8976,6 +9094,7 @@ export default function App() {
   const [osHistory, setOsHistory]=useState([]);
   const [defaultRate,setDR]=useState(0);
   const [expenses,setExpenses]=useState([]);
+  const [internalTransfers,setInternalTransfers]=useState([]);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
@@ -9099,6 +9218,7 @@ export default function App() {
       setOsHistory(d.osHistory||[]);
       setLoading(false);
       db.loadExpenses().then(setExpenses).catch(()=>{});
+      db.loadInternalTransfers().then(setInternalTransfers).catch(()=>{});
       db.loadPurchaseOrders().then(setPurchaseOrders).catch(()=>{});
       db.loadInvestments().then(setInvestments).catch(()=>{});
       db.getShelfItems().then(setShelfItems).catch(()=>{});
@@ -10253,7 +10373,9 @@ export default function App() {
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
-        <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory}
+        <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory} internalTransfers={internalTransfers} adminRole={adminRole}
+          onAddTransfer={async t=>{try{const r=await db.addInternalTransfer(t);setInternalTransfers(p=>[r,...p]);}catch(e){errToast(e);}}}
+          onDeleteTransfer={async id=>{try{await db.deleteInternalTransfer(id);setInternalTransfers(p=>p.filter(t=>t.id!==id));}catch(e){errToast(e);}}}
           onAddExpense={async e=>{try{const r=await db.addExpense(e);setExpenses(p=>[...p,r]);}catch(err){errToast(err);}}}
           onUpdateExpense={async(id,patch)=>{try{await db.updateExpense(id,patch);setExpenses(p=>p.map(e=>e.id===id?{...e,...patch}:e));}catch(err){errToast(err);}}}
           onDeleteExpense={async id=>{try{await db.deleteExpense(id);setExpenses(p=>p.filter(e=>e.id!==id));}catch(err){errToast(err);}}}

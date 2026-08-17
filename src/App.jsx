@@ -5134,7 +5134,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
   const total=inv.value*(inv.quantity||1);
   const canEdit=adminRole==="owner"||adminRole==="admin"||adminRole==="supervisor";
   const canApprove=adminRole==="owner"||adminRole==="admin";
-  const canBuy=adminRole==="owner"||(adminRole==="admin"&&defaultCategory==="materiais");
+  const canBuy=adminRole==="owner"||adminRole==="admin";
   const canDelete=adminRole==="owner"||adminRole==="admin";
 
   const changePriority=(delta)=>{
@@ -6904,7 +6904,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.11.61";
+const APP_VERSION = "2026.08.11.62";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

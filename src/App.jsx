@@ -5805,6 +5805,11 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
               {o.costPrice!=null&&<div><span style={{fontSize:10,color:B.gray500}}>Custo: </span><span style={{fontSize:12,fontWeight:700,color:B.white}}>{fmtBRL(o.costPrice)}</span></div>}
               {o.notesAdmin&&<div><span style={{fontSize:10,color:B.gray500}}>Marca: </span><span style={{fontSize:12,fontWeight:700,color:B.white}}>{o.notesAdmin}</span></div>}
             </div>
+            {/* Invalid link alert for admin */}
+            {!o.link&&o.status==="approved"&&(o.notesAdmin||"").includes("Link inválido")&&<div style={{marginTop:8,padding:"6px 10px",background:`${B.red}12`,border:`1px solid ${B.red}44`,borderRadius:7,display:"flex",alignItems:"center",gap:6}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style={{fontSize:11,fontWeight:700,color:B.red}}>O gestor sinalizou que o link anterior estava inválido. Por favor insira um novo link.</span>
+            </div>}
           </div>
         )}
 
@@ -5830,6 +5835,13 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
             style={{padding:"6px 12px",borderRadius:8,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,color:B.blue,fontSize:11,fontWeight:700,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Abrir link
           </a>}
+          {/* Link inválido — owner sinaliza ao admin */}
+          {adminRole==="owner"&&o.link&&(o.status==="approved"||o.status==="ready_to_buy")&&<button
+            onClick={()=>onUpdate(o.id,{link:"",status:"approved",notesAdmin:(o.notesAdmin?o.notesAdmin+"\n":"")+"⚠ Link inválido — por favor substitua."})}
+            style={{padding:"6px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}44`,color:B.red,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Link inválido
+          </button>}
           {/* Alert: approved but no link yet — admin needs to add */}
           {o.status==="approved"&&!o.link&&<span style={{fontSize:10,fontWeight:700,color:B.amber,background:`${B.amber}12`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"2px 8px",display:"flex",alignItems:"center",gap:3}}>
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -7200,7 +7212,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.25";
+const APP_VERSION = "2026.08.18.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -5578,10 +5578,11 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[]}) {
 
 // ─── Purchase Orders Tab ──────────────────────────────────────────────────────
 const PO_STATUS = {
-  pending:       { label:"Pendente",          color:"#f59e0b", icon:"⏳", next:"ready_to_buy",  nextLabel:"Pronto p/ compra" },
-  ready_to_buy:  { label:"Aguardando compra", color:"#3b82f6", icon:"cart", next:"bought",         nextLabel:"Marcar comprado"  },
-  bought:        { label:"Comprado",          color:"#8b5cf6", icon:"box", next:"received",       nextLabel:"Marcar recebido"  },
-  received:      { label:"Recebido ✓",        color:"#22c55e", icon:"check", next:null,             nextLabel:null               },
+  pending:       { label:"Aguardando aprovação", color:"#f59e0b", icon:"⏳",   next:"approved",      nextLabel:"Aprovar pedido"    },
+  approved:      { label:"Aprovado",             color:"#3b82f6", icon:"check", next:"ready_to_buy",  nextLabel:"Pronto p/ compra"  },
+  ready_to_buy:  { label:"Pronto p/ compra",     color:"#6366f1", icon:"cart",  next:"bought",        nextLabel:"Marcar comprado"   },
+  bought:        { label:"Comprado",             color:"#8b5cf6", icon:"box",   next:"received",      nextLabel:"Marcar recebido"   },
+  received:      { label:"Recebido ✓",           color:"#22c55e", icon:"check", next:null,            nextLabel:null                },
 };
 
 function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,onDelete,onReserve}) {
@@ -5609,6 +5610,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
       })
     :byStatus;
   const pendingCount=orders.filter(o=>o.status==="pending").length;
+  const approvedCount=orders.filter(o=>o.status==="approved").length;
   const readyCount=orders.filter(o=>o.status==="ready_to_buy").length;
   const boughtCount=orders.filter(o=>o.status==="bought").length;
 
@@ -5631,7 +5633,15 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
   const advanceStatus=async(o)=>{
     const st=PO_STATUS[o.status];
     if(!st.next) return;
-    // Special case: before marking as received, ask what to do with the part
+    // Role checks
+    if(st.next==="approved"&&adminRole!=="owner") return;
+    if(st.next==="bought"&&adminRole!=="owner"&&adminRole!=="admin") return;
+    // Require link before marking ready to buy
+    if(st.next==="ready_to_buy"&&!o.link) {
+      alert("Adicione o link do produto antes de marcar como pronto para compra.");
+      return;
+    }
+    // Before marking as received, ask what to do with the part
     if(st.next==="received") { setReceiveModal(o); setLocation(""); return; }
     await onUpdate(o.id,{status:st.next});
   };
@@ -5651,14 +5661,11 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
   };
 
   const canEdit=(adminRole==="admin"||adminRole==="owner")&&true;
-  const canAdvanceToBuy=adminRole==="admin"||adminRole==="owner";
-  const canBuy=adminRole==="owner";
-  const canReceive=adminRole==="owner";
-
   const canAdvance=(o)=>{
-    if(o.status==="pending") return canAdvanceToBuy;
-    if(o.status==="ready_to_buy") return canBuy;
-    if(o.status==="bought") return canReceive;
+    if(o.status==="pending")      return adminRole==="owner"; // only owner approves
+    if(o.status==="approved")     return adminRole==="admin"||adminRole==="owner"; // admin adds link → ready
+    if(o.status==="ready_to_buy") return adminRole==="owner"||adminRole==="admin"; // owner/admin buys
+    if(o.status==="bought")       return adminRole==="owner"||adminRole==="admin"; // receive
     return false;
   };
 
@@ -5711,7 +5718,8 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
       {[
         {key:"all",label:`Todos (${orders.length})`,color:B.gray400},
         {key:"pending",label:`⏳ Pendentes (${pendingCount})`,color:"#f59e0b"},
-        {key:"ready_to_buy",label:`Aguardando (${readyCount})`,color:"#3b82f6"},
+        {key:"approved",label:`✓ Aprovados (${approvedCount})`,color:"#3b82f6"},
+        {key:"ready_to_buy",label:`Prontos (${readyCount})`,color:"#6366f1"},
         {key:"bought",label:`Comprados (${boughtCount})`,color:"#8b5cf6"},
         {key:"received",label:`Recebidos`,color:"#22c55e"},
       ].map(f=>(
@@ -5822,6 +5830,11 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
             style={{padding:"6px 12px",borderRadius:8,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,color:B.blue,fontSize:11,fontWeight:700,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Abrir link
           </a>}
+          {/* Alert: approved but no link yet — admin needs to add */}
+          {o.status==="approved"&&!o.link&&<span style={{fontSize:10,fontWeight:700,color:B.amber,background:`${B.amber}12`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"2px 8px",display:"flex",alignItems:"center",gap:3}}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Aguardando link do admin
+          </span>}
           {(adminRole==="owner"||adminRole==="admin")&&o.status==="pending"&&<button onClick={()=>onDelete(o.id)}
             style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:4}}
             onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}>
@@ -6669,8 +6682,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         if(!vPOs.length) return null;
         const statusCfgPO={
           pending:      {label:"Aguardando aprovação", color:B.gray400,  bg:B.gray800},
-          approved:     {label:"Aprovado",             color:B.blue,     bg:`${B.blue}15`},
-          ready_to_buy: {label:"Pronto para compra",   color:B.blue,     bg:`${B.blue}15`},
+          approved:     {label:"Aprovado — link em análise", color:B.blue,     bg:`${B.blue}15`},
+          ready_to_buy: {label:"Pronto para compra",   color:"#6366f1",  bg:"#6366f118"},
           bought:       {label:"Comprado",              color:B.purple,   bg:`${B.purple}15`},
           received:     {label:"Recebido",              color:B.green,    bg:B.greenBg},
         };
@@ -7187,7 +7200,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.24";
+const APP_VERSION = "2026.08.17.25";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

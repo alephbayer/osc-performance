@@ -7222,7 +7222,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.3";
+const APP_VERSION = "2026.08.18.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9935,7 +9935,9 @@ export default function App() {
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
     try{
       await db.updateTask(taskId,{materials:newMats});
-      toast_(quoteOnly?`${item.name} adicionado ao orçamento (sem descontar estoque) ✓`:`${item.name} descontado do estoque ✓`);
+      toast_(quoteOnly
+        ?`${item.name} adicionado ao orçamento (sem descontar estoque) ✓`
+        :`${item.name} lançado na OS e descontado do estoque · Saldo restante: ${Math.max(0,item.qty-matQty)} un. ✓`);
     }catch(e){errToast(e);}
   };
   // Removes one specific material (by index) from a task's list and returns its full quantity to stock if applicable

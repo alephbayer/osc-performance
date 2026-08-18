@@ -7144,7 +7144,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.18";
+const APP_VERSION = "2026.08.17.19";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9789,7 +9789,7 @@ export default function App() {
         if(specialistMech&&v&&!(v.mechanicIds||[]).includes(specialistMech.id)){
           const newIds=[...(v.mechanicIds||[]),specialistMech.id];
           setVeh(p=>p.map(x=>x.id===v.id?{...x,mechanicIds:newIds}:x));
-          await db.updateVehicle(v.id,{mechanicIds:newIds});
+          await db.addVehicleMechanic(v.id,specialistMech.id);
           toast_(`${specialistMech.name} adicionado ao ${v.model} ✓`);
         }
       }

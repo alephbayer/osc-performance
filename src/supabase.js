@@ -183,6 +183,7 @@ const mapStockIn = (s) => ({
   photo: s.photo,
   location: s.location || "",
   minQty: s.min_qty != null ? s.min_qty : 2,
+  orderLink: s.order_link || "",
 });
 const mapStockOut = (s) => ({
   name: s.name,
@@ -550,7 +551,7 @@ export const db = {
   },
   async updateStock(id, patch) {
     const dbPatch = {};
-    const map = { name:"name", brand:"brand", type:"type", qty:"qty", costPrice:"cost_price", markup:"markup", salePrice:"sale_price", photo:"photo", location:"location", minQty:"min_qty" };
+    const map = { name:"name", brand:"brand", type:"type", qty:"qty", costPrice:"cost_price", markup:"markup", salePrice:"sale_price", photo:"photo", location:"location", minQty:"min_qty", orderLink:"order_link" };
     Object.keys(patch).forEach((k) => { if (map[k]) dbPatch[map[k]] = patch[k]; });
     const { error } = await supabase.from("stock").update(dbPatch).eq("id", id);
     if (error) throw error;
@@ -795,6 +796,7 @@ export const db = {
       priority: i.priority||3, status: i.status||"pending",
       createdBy: i.created_by||"", createdAt: i.created_at,
       receivedAt: i.received_at||null,
+      stockItemId: i.stock_item_id||null,
     };
   },
   async loadInvestments() {
@@ -809,6 +811,7 @@ export const db = {
       quantity: inv.quantity||1, objective: inv.objective||"",
       division: inv.division||"performance", category: inv.category||"leve",
       priority: inv.priority||3, status: "pending", created_by: inv.createdBy||"",
+      stock_item_id: inv.stockItemId||null,
     }).select().single();
     if (error) throw error;
     return this._mapInvestment(data);

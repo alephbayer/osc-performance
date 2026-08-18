@@ -3934,7 +3934,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   </div>);
 }
 
-function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase}) {
+function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder}) {
   const emptyForm = {name:"",brand:"",type:"",location:"",minQty:"",costPrice:"",markup:"",photo:""};
   const [form,setForm]=useState(emptyForm);
   const [showAdd,setShowAdd]=useState(false);
@@ -4040,6 +4040,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       onAddPurchase={onAddPurchase}
       onUpdatePurchase={onUpdatePurchase}
       onDeletePurchase={onDeletePurchase}
+      onGenerateOrder={onGenerateOrder}
       onClose={()=>setOpenItem(null)}/>}
   </div>);
 }
@@ -4088,10 +4089,11 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
 }
 
 // ─── Stock product panel: product data + purchase history ─────────────────────
-function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose}) {
+function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder}) {
   const [form,setForm]=useState({
     name:item.name, brand:item.brand, type:item.type, location:item.location||"",
     minQty:String(item.minQty??2), costPrice:String(item.costPrice), markup:String(item.markup), photo:item.photo||"",
+    orderLink:item.orderLink||"",
   });
   const [showPurchaseForm,setShowPF]=useState(false);
   const [confirmDeleteProduct,setCDP]=useState(false);
@@ -4102,7 +4104,7 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
     onSave(item.id,{
       name:form.name.trim(), brand:form.brand.trim(), type:form.type.trim(), location:form.location.trim(),
       minQty:Math.max(0,Number(form.minQty||0)), costPrice:Number(form.costPrice||0), markup:Number(form.markup||0),
-      salePrice, photo:form.photo||null,
+      salePrice, photo:form.photo||null, orderLink:form.orderLink||"",
     });
   };
 
@@ -4180,6 +4182,30 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
             <button onClick={save} style={{flex:1,padding:"9px 0",borderRadius:9,background:B.purple,border:"none",color:B.white,fontWeight:800,cursor:"pointer",fontSize:13}}>Salvar dados do produto</button>
             <button onClick={()=>setCDP(true)} style={{padding:"9px 14px",borderRadius:9,background:"transparent",border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
               <ITrash s={13} c={B.red}/>Remover
+            </button>
+          </div>
+
+          {/* Order link + generate order */}
+          <div style={{marginTop:14,padding:"12px 14px",background:`${B.amber}08`,border:`1px solid ${B.amber}33`,borderRadius:10}}>
+            <div style={{fontSize:11,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Link de pedido</div>
+            <div style={{display:"flex",gap:6}}>
+              <input value={form.orderLink} onChange={e=>setForm(p=>({...p,orderLink:e.target.value}))}
+                placeholder="https://... (link do fornecedor)"
+                style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+              {form.orderLink&&<a href={form.orderLink} target="_blank" rel="noreferrer"
+                style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,display:"flex",alignItems:"center",fontSize:12,textDecoration:"none"}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+              </a>}
+            </div>
+            <button onClick={()=>{
+              save();
+              onGenerateOrder&&onGenerateOrder({
+                stockItemId:item.id, name:item.name, link:form.orderLink||item.orderLink||"",
+                quantity:item.minQty||1, category:"materiais",
+              });
+            }} style={{marginTop:8,width:"100%",padding:"8px 0",borderRadius:8,background:`${B.amber}22`,border:`1px solid ${B.amber}44`,color:B.amber,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+              Gerar pedido em Materiais Sortidos
             </button>
           </div>
 
@@ -7144,7 +7170,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.21";
+const APP_VERSION = "2026.08.17.22";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10455,7 +10481,14 @@ export default function App() {
       {/* ══ STOCK ══ */}
       {tab==="stock"&&allowedTabs.includes("stock")&&<>
         <TabHeader color={B.purple} title="Estoque" subtitle="Produtos, preços e quantidades · Vinculados às OSs"/>
-        <StockTab stock={stock} purchases={stockPurchases} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}/>
+        <StockTab stock={stock} purchases={stockPurchases} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
+          onGenerateOrder={async inv=>{
+            try{
+              const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});
+              setInvestments(p=>[...p,r]);
+              toast_(`Pedido gerado em Materiais Sortidos ✓`);
+            }catch(e){errToast(e);}
+          }}/>
       </>}
 
       {/* ══ FINANCE ══ */}
@@ -10555,6 +10588,16 @@ export default function App() {
                 const exp=await db.addExpense({description:`Mat. Sortido: ${inv.name}`,date:new Date().toISOString().slice(0,10),amount:total,category:"materiais",division:inv.division||"ambos",recurrent:false});
                 setExpenses(p=>[...p,exp]);
                 toast_(`💰 R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
+              }
+            }
+            // When received and linked to a stock item — add to purchase history and update qty
+            if(patch.status==="received"){
+              const inv=investments.find(i=>i.id===id);
+              if(inv?.stockItemId){
+                const qty=inv.quantity||1;
+                const unitCost=inv.value||0;
+                await addPurchase({stockId:inv.stockItemId,qty,unitCost,purchaseDate:new Date().toISOString().slice(0,10),supplier:"",note:`Pedido via Materiais Sortidos`});
+                toast_(`Estoque de "${inv.name}" atualizado ✓`);
               }
             }
           }catch(e){errToast(e);}}}

@@ -3209,7 +3209,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   };
 
   return (<>
-    <div style={{background:B.gray800,borderRadius:10,border:`1px solid ${B.gray700}`,overflow:"hidden",marginBottom:10}}>
+    <div style={{background:B.gray800,borderRadius:10,border:`1px solid ${vehicle.urgent?B.red+"66":B.gray700}`,overflow:"hidden",marginBottom:10,boxShadow:vehicle.urgent?`0 0 0 1px ${B.red}44,0 2px 12px ${B.red}22`:"none"}}>
       {/* header */}
       <div style={{display:"flex",alignItems:"center",gap:10,background:B.gray700,padding:"10px 14px",cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
         {/* Car photo thumb */}
@@ -3230,6 +3230,10 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Obs.</span>}
             {photos.length>0&&<span style={{color:B.purple,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>{photos.length}</span>}
             {managerMode&&clientNotes.length>0&&<span style={{color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""}</span>}
+            {vehicle.urgent&&<span style={{color:"#fff",background:B.red,borderRadius:5,padding:"0px 7px",fontWeight:800,fontSize:10,display:"inline-flex",alignItems:"center",gap:3,animation:"pulse 1.5s infinite"}}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              URGENTE
+            </span>}
           </div>
           {vts.length>0&&<ProgressBar value={done} max={vts.length}/>}
         </div>
@@ -3256,6 +3260,12 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           <button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{sortOrder:Number(vehicle.sortOrder||0)+1})} title="Mover para baixo"
             style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",color:B.gray200,fontSize:13,fontWeight:800,lineHeight:1}}>▼</button>
         </div>}
+        {/* Urgent toggle — gestor/admin/supervisor */}
+        {managerMode&&<button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{urgent:!vehicle.urgent})}
+          style={{background:vehicle.urgent?`${B.red}22`:"none",border:`1px solid ${vehicle.urgent?B.red:B.gray600}`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:vehicle.urgent?B.red:B.gray500,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill={vehicle.urgent?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          {vehicle.urgent?"Urgente":"Prioridade"}
+        </button>}
         {/* Row 1 */}
         {managerMode&&<button onClick={doPDF} disabled={pdfLoading} style={{background:pdfLoading?B.gray700:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:pdfLoading?"wait":"pointer",color:pdfLoading?B.gray400:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           <IFileText s={12} c={pdfLoading?B.gray400:B.amber}/>{pdfLoading?"Gerando…":"PDF"}
@@ -7142,7 +7152,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.15";
+const APP_VERSION = "2026.08.17.16";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9127,6 +9137,7 @@ export default function App() {
         .osc-vhc-timer { width: 100% !important; text-align: left !important; }
         .osc-vhc-timer > div { display: flex !important; align-items: center !important; gap: 8px !important; }
         .osc-vhc-summary { width: 100% !important; text-align: left !important; flex-direction: row !important; gap: 12px !important; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
         .osc-tab-btn span.tab-label { display: none; }
       }
     `;
@@ -10362,7 +10373,11 @@ export default function App() {
           });
           const unassigned=activeVehicles.filter(v=>!assignedVehicleIds.has(v.id));
           if(unassigned.length>0) groups.push({emp:null,vehicles:unassigned});
-          const sortVehicles=vs=>[...vs].sort((a,b)=>Number(a.sortOrder||0)-Number(b.sortOrder||0));
+          const sortVehicles=vs=>[...vs].sort((a,b)=>{
+            if(b.urgent&&!a.urgent) return 1;
+            if(a.urgent&&!b.urgent) return -1;
+            return Number(a.sortOrder||0)-Number(b.sortOrder||0);
+          });
           return <><div style={{position:"relative",marginBottom:14}}>
             <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder="Buscar veículo, cliente, mecânico ou tarefa…"
               style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>

@@ -4097,6 +4097,7 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
   });
   const [showPurchaseForm,setShowPF]=useState(false);
   const [confirmDeleteProduct,setCDP]=useState(false);
+  const [orderQty,setOrderQty]=useState(String(item.minQty||1));
   const salePrice=Number(form.costPrice||0)*(1+Number(form.markup||0)/100);
 
   const save=()=>{
@@ -4186,28 +4187,34 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
           </div>
 
           {/* Order link + generate order */}
-          <div style={{marginTop:14,padding:"12px 14px",background:`${B.amber}08`,border:`1px solid ${B.amber}33`,borderRadius:10}}>
-            <div style={{fontSize:11,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Link de pedido</div>
-            <div style={{display:"flex",gap:6}}>
-              <input value={form.orderLink} onChange={e=>setForm(p=>({...p,orderLink:e.target.value}))}
-                placeholder="https://... (link do fornecedor)"
-                style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-              {form.orderLink&&<a href={form.orderLink} target="_blank" rel="noreferrer"
-                style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,display:"flex",alignItems:"center",fontSize:12,textDecoration:"none"}}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-              </a>}
-            </div>
-            <button onClick={()=>{
-              save();
-              onGenerateOrder&&onGenerateOrder({
-                stockItemId:item.id, name:item.name, link:form.orderLink||item.orderLink||"",
-                quantity:item.minQty||1, category:"materiais",
-              });
-            }} style={{marginTop:8,width:"100%",padding:"8px 0",borderRadius:8,background:`${B.amber}22`,border:`1px solid ${B.amber}44`,color:B.amber,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
-              Gerar pedido em Materiais Sortidos
-            </button>
-          </div>
+          {(()=>{const canOrder=!!form.orderLink.trim();return(<div style={{marginTop:14,padding:"12px 14px",background:`${B.amber}08`,border:`1px solid ${B.amber}33`,borderRadius:10}}>
+              <div style={{fontSize:11,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Link de pedido</div>
+              <div style={{display:"flex",gap:6,marginBottom:6}}>
+                <input value={form.orderLink} onChange={e=>setForm(p=>({...p,orderLink:e.target.value}))}
+                  placeholder="https://... (link do fornecedor) *"
+                  style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${form.orderLink?B.gray600:B.amber+"66"}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+                {form.orderLink&&<a href={form.orderLink} target="_blank" rel="noreferrer"
+                  style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,display:"flex",alignItems:"center",fontSize:12,textDecoration:"none"}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                </a>}
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
+                <span style={{fontSize:12,color:B.gray400,whiteSpace:"nowrap"}}>Quantidade:</span>
+                <input value={orderQty} onChange={e=>setOrderQty(e.target.value)} type="number" min="1" step="1"
+                  style={{width:70,padding:"6px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+                {!form.orderLink&&<span style={{fontSize:11,color:B.amber,flex:1}}>⚠ Insira um link para gerar o pedido</span>}
+              </div>
+              <button disabled={!canOrder} onClick={()=>{
+                save();
+                onGenerateOrder&&onGenerateOrder({
+                  stockItemId:item.id, name:item.name, link:form.orderLink,
+                  quantity:parseInt(orderQty)||item.minQty||1, category:"materiais",
+                });
+              }} style={{width:"100%",padding:"8px 0",borderRadius:8,background:canOrder?`${B.amber}22`:`${B.gray700}`,border:`1px solid ${canOrder?B.amber+"44":B.gray600}`,color:canOrder?B.amber:B.gray500,fontWeight:700,fontSize:12,cursor:canOrder?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+                Gerar pedido em Pedidos de Compras
+              </button>
+          </div>)})()}
 
           {/* Purchase history */}
           <div style={{marginTop:24,paddingTop:18,borderTop:`1px solid ${B.gray700}`}}>
@@ -5269,6 +5276,16 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
           {inv.category==="materiais"&&<span style={{fontSize:12,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:6,padding:"1px 8px"}}>Qtd: {inv.quantity||1}</span>}
           {inv.value>0&&<span style={{fontSize:12,color:B.white,fontWeight:700}}>{fmtBRL(total)}{inv.quantity>1&&inv.category!=="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({inv.quantity}× {fmtBRL(inv.value)})</span>:inv.quantity>1&&inv.category==="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({fmtBRL(inv.value)} cada)</span>:""}</span>}
           {inv.link&&<a href={inv.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:B.blue,display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Ver link</a>}
+          {inv.stockItemId&&inv.status==="pending"&&!inv.link&&<span style={{fontSize:10,fontWeight:700,color:B.red,background:`${B.red}12`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Link inválido
+          </span>}
+          {inv.stockItemId&&inv.status==="pending"&&(adminRole==="owner"||adminRole==="admin")&&<button
+            onClick={()=>{const url=prompt("Cole o novo link do pedido:");if(url?.trim()) onUpdate(inv.id,{link:url.trim()});}}
+            style={{fontSize:10,fontWeight:700,color:B.amber,background:`${B.amber}12`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Gerar novo link
+          </button>}
         </div>
       </div>
     </div>
@@ -7170,7 +7187,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.23";
+const APP_VERSION = "2026.08.17.24";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

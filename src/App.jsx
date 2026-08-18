@@ -7144,7 +7144,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.17";
+const APP_VERSION = "2026.08.17.18";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

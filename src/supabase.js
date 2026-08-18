@@ -94,6 +94,7 @@ const mapVehicleIn = (v) => ({
   totalPausedMs: Number(v.total_paused_ms || 0),
   priority: v.priority || "medium",
   sortOrder: Number(v.sort_order || 0),
+  urgent: v.urgent || false,
   fuelCost: Number(v.fuel_cost || 0),
   fuels: Array.isArray(v.fuels) ? v.fuels : (v.fuels ? JSON.parse(v.fuels) : []),
   checklist: Array.isArray(v.checklist) ? v.checklist : (v.checklist ? JSON.parse(v.checklist) : []),
@@ -356,6 +357,7 @@ export const db = {
     if ("status"                 in patch) dbPatch.status                   = patch.status;
     if ("priority"               in patch) dbPatch.priority                 = patch.priority;
     if ("sortOrder"              in patch) dbPatch.sort_order               = patch.sortOrder;
+    if ("urgent"                 in patch) dbPatch.urgent                   = patch.urgent;
     if ("fuelCost"               in patch) dbPatch.fuel_cost                = patch.fuelCost;
     if ("fuels"                  in patch) dbPatch.fuels                    = patch.fuels;
     if ("tows"                   in patch) dbPatch.tows                     = patch.tows;

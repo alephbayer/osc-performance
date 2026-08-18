@@ -5276,6 +5276,16 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
           {inv.category==="materiais"&&<span style={{fontSize:12,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:6,padding:"1px 8px"}}>Qtd: {inv.quantity||1}</span>}
           {inv.value>0&&<span style={{fontSize:12,color:B.white,fontWeight:700}}>{fmtBRL(total)}{inv.quantity>1&&inv.category!=="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({inv.quantity}× {fmtBRL(inv.value)})</span>:inv.quantity>1&&inv.category==="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({fmtBRL(inv.value)} cada)</span>:""}</span>}
           {inv.link&&<a href={inv.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:B.blue,display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Ver link</a>}
+          {adminRole==="owner"&&inv.link&&inv.status!=="received"&&inv.status!=="bought"&&<button
+            onClick={()=>onUpdate(inv.id,{link:"",status:"pending",objective:(inv.objective?inv.objective+"\n":"")+"⚠ Link inválido — por favor substitua."})}
+            style={{fontSize:10,fontWeight:700,color:B.red,background:`${B.red}12`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Link inválido
+          </button>}
+          {!inv.link&&(inv.objective||"").includes("Link inválido")&&<span style={{fontSize:10,fontWeight:700,color:B.red,background:`${B.red}12`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",display:"flex",alignItems:"center",gap:3}}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Insira novo link
+          </span>}
           {inv.stockItemId&&inv.status==="pending"&&!inv.link&&<span style={{fontSize:10,fontWeight:700,color:B.red,background:`${B.red}12`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}>
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Link inválido
@@ -7212,7 +7222,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.1";
+const APP_VERSION = "2026.08.18.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

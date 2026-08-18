@@ -7222,7 +7222,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.2";
+const APP_VERSION = "2026.08.18.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9923,7 +9923,14 @@ export default function App() {
     if(!quoteOnly){
       const newQty=Math.max(0,Number((item.qty-matQty).toFixed(4)));
       setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));
-      try{ await db.updateStock(item.id,{qty:newQty}); }catch(e){errToast(e);}
+      try{
+        await db.updateStock(item.id,{qty:newQty});
+      }catch(e){
+        errToast(e);
+        // Revert local state if DB update failed
+        setStk(p=>p.map(s=>s.id===item.id?{...s,qty:item.qty}:s));
+        return;
+      }
     }
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
     try{

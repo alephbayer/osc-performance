@@ -7144,7 +7144,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.19";
+const APP_VERSION = "2026.08.17.20";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9478,6 +9478,14 @@ export default function App() {
         const div="photosFinishing" in patch?"Finishing":"Performance";
         db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});
       }
+      // Notify mechanics when vehicle is marked urgent
+      if("urgent" in patch&&patch.urgent){
+        const v=vehicles.find(x=>x.id===id);
+        const vModel=v?.model||v?.plate||"Veículo";
+        (v?.mechanicIds||[]).forEach(eid=>{
+          db.sendPushToEmployee(eid,`⚡ Prioridade — ${vModel}`,"Este veículo foi marcado como urgente.","/?portal=mecanico").catch(()=>{});
+        });
+      }
     }catch(e){errToast(e);}
   };
   // Add a mechanic to a vehicle (multi-mechanic)
@@ -9729,6 +9737,21 @@ export default function App() {
         db.sendPushToAdmins(`✅ ${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});
         const v2=vehicles.find(x=>x.id===t.vehicleId);
         if(v2?.clientId) db.sendPushToClient(v2.clientId,`✅ ${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
+        // Auto-remove specialist mechanic if all their specialty tasks are done
+        if(t.category){
+          const specialist=employees.find(e=>e.specialty===t.category&&e.division!=="finishing");
+          if(specialist&&(v?.mechanicIds||[]).includes(specialist.id)){
+            // Check if ALL tasks of this category on this vehicle are now done
+            const updatedTasks=tasks.map(x=>x.id===id?{...x,done:true}:x);
+            const catTasks=updatedTasks.filter(x=>x.vehicleId===t.vehicleId&&x.category===t.category&&!x.warranty);
+            const allDone=catTasks.length>0&&catTasks.every(x=>x.done);
+            if(allDone){
+              setVeh(p=>p.map(x=>x.id===t.vehicleId?{...x,mechanicIds:(x.mechanicIds||[]).filter(mid=>mid!==specialist.id)}:x));
+              await db.removeVehicleMechanic(t.vehicleId,specialist.id);
+              toast_(`${specialist.name} removido do veículo — todas as tarefas de ${t.category} concluídas ✓`);
+            }
+          }
+        }
       } else {
         pushToVehicleMechs(t.vehicleId,`↩ Tarefa reaberta — ${vModel}`,t.label,t.division);
         db.sendPushToAdmins(`↩ ${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});

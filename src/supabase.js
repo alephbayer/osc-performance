@@ -794,6 +794,7 @@ export const db = {
       division: i.division||"performance", category: i.category||"leve",
       priority: i.priority||3, status: i.status||"pending",
       createdBy: i.created_by||"", createdAt: i.created_at,
+      receivedAt: i.received_at||null,
     };
   },
   async loadInvestments() {
@@ -823,6 +824,7 @@ export const db = {
     if(patch.category!==undefined) map.category=patch.category;
     if(patch.priority!==undefined) map.priority=patch.priority;
     if(patch.status!==undefined) map.status=patch.status;
+    if(patch.status==="received") map.received_at=new Date().toISOString();
     const { data, error } = await supabase.from("investments").update(map).eq("id",id).select().single();
     if (error) throw error;
     return this._mapInvestment(data);

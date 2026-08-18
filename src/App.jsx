@@ -5236,7 +5236,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
           <span style={{fontWeight:800,fontSize:14,color:B.white}}>{inv.name}</span>
           {inv.status==="pending"&&<span style={{fontSize:10,color:prColor,background:`${prColor}18`,border:`1px solid ${prColor}33`,borderRadius:5,padding:"1px 7px",fontWeight:700}}>{PRIORITY_LABELS[inv.priority]}</span>}
           <span style={{fontSize:10,color:B.gray400}}>{divLabel}</span>
-          <span style={{fontSize:10,fontWeight:700,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}33`,borderRadius:5,padding:"1px 7px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}</span>
+          <span style={{fontSize:10,fontWeight:700,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}33`,borderRadius:5,padding:"1px 7px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}{inv.receivedAt&&inv.status==="received"?` · ${new Date(inv.receivedAt).toLocaleDateString("pt-BR")}`:""}</span>
         </div>
         {inv.objective&&<div style={{fontSize:12,color:B.gray400,marginBottom:4,lineHeight:1.4}}>{inv.objective}</div>}
         <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
@@ -5718,7 +5718,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
             </div>
           </div>
           <div style={{textAlign:"right",flexShrink:0}}>
-            <div style={{fontSize:11,fontWeight:800,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}44`,borderRadius:6,padding:"2px 8px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}</div>
+            <div style={{fontSize:11,fontWeight:800,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}44`,borderRadius:6,padding:"2px 8px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}{o.receivedAt&&o.status==="received"?` · ${new Date(o.receivedAt).toLocaleDateString("pt-BR")}`:""}</div>
             {isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>✓ Instalada</div>}
             {isReserved&&!isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.purple,background:`${B.purple}18`,border:`1px solid ${B.purple}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>📦 Armazenada</div>}
             <div style={{fontSize:10,color:B.gray500,marginTop:4}}>{new Date(o.createdAt).toLocaleDateString("pt-BR")}</div>
@@ -7144,7 +7144,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.20";
+const APP_VERSION = "2026.08.17.21";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

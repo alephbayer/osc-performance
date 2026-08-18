@@ -3252,14 +3252,6 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 
       {/* Button bar — 4 per row, always visible */}
       <div style={{padding:"6px 10px",background:B.gray800,borderBottom:`1px solid ${B.gray700}66`,display:"flex",flexWrap:"wrap",gap:4}} onClick={e=>e.stopPropagation()}>
-        {/* Sort order buttons */}
-        {managerMode&&<div style={{display:"flex",alignItems:"center",gap:2,background:B.gray700,borderRadius:6,padding:"2px",flex:"0 0 auto"}}>
-          <button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{sortOrder:Math.max(0,Number(vehicle.sortOrder||0)-1)})} title="Mover para cima"
-            style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",color:B.gray200,fontSize:13,fontWeight:800,lineHeight:1}}>▲</button>
-          <span style={{fontSize:10,color:B.gray400,fontWeight:700,minWidth:20,textAlign:"center"}}>{Number(vehicle.sortOrder||0)+1}</span>
-          <button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{sortOrder:Number(vehicle.sortOrder||0)+1})} title="Mover para baixo"
-            style={{background:"none",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",color:B.gray200,fontSize:13,fontWeight:800,lineHeight:1}}>▼</button>
-        </div>}
         {/* Urgent toggle — gestor/admin/supervisor */}
         {managerMode&&<button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{urgent:!vehicle.urgent})}
           style={{background:vehicle.urgent?`${B.red}22`:"none",border:`1px solid ${vehicle.urgent?B.red:B.gray600}`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:vehicle.urgent?B.red:B.gray500,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
@@ -7152,7 +7144,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.16";
+const APP_VERSION = "2026.08.17.17";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

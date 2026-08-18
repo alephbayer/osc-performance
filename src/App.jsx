@@ -7170,7 +7170,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.17.22";
+const APP_VERSION = "2026.08.17.23";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10057,7 +10057,7 @@ export default function App() {
   // Tab grouping by nav section
   const OFICINA_TABS=["clients","finishing","vehicles","clientsMonitor","mechanics"];
   const GESTAO_TABS=["finance","investments","sales","presenca"];
-  const COMPRAS_TABS=["purchases","stock","materiais"];
+  const COMPRAS_TABS=["stock","materiais","purchases"];
 
   const goSection=(section,tab)=>{
     setNavSection(section);
@@ -10282,7 +10282,7 @@ export default function App() {
           setNavSection(item.id);
           if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
           if(item.id==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
-          if(item.id==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("purchases")?"purchases":allowedTabs.includes("stock")?"stock":"materiais");
+          if(item.id==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");
           mainScrollRef.current?.scrollTo({top:0});
         }} style={{
           display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,
@@ -10338,9 +10338,9 @@ export default function App() {
               {allowedTabs.includes("presenca")&&tabBtn("presenca","Presenças",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,B.blue)}
             </>}
             {navSection==="compras"&&<>
-              {allowedTabs.includes("purchases")&&tabBtn("purchases","Pedidos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
               {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
-              {tabBtn("materiais","Mat. Sortidos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 8v10a1 1 0 0 0 1 1h4M19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 8v10"/></svg>,B.orange)}
+              {tabBtn("materiais","Ped. Compras",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 8v10a1 1 0 0 0 1 1h4M19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 8v10"/></svg>,B.orange)}
+              {allowedTabs.includes("purchases")&&tabBtn("purchases","Ped. Veículos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
             </>}
           </div>
         </div>
@@ -10515,7 +10515,7 @@ export default function App() {
         />
       </>}
       {tab==="purchases"&&allowedTabs.includes("purchases")&&<>
-        <TabHeader color={B.amber} title="Pedidos de Compras" subtitle="Pedidos dos mecânicos · Aprovação e compra pelo gestor"/>
+        <TabHeader color={B.amber} title="Pedidos de Veículos" subtitle="Pedidos dos mecânicos · Aprovação e compra pelo gestor"/>
         <PurchaseOrdersTab orders={purchaseOrders} vehicles={vehicles} employees={employees} tasks={tasks} adminRole={adminRole}
           onUpdate={async(id,patch)=>{
             try{
@@ -10575,7 +10575,7 @@ export default function App() {
       </>}
 
       {tab==="materiais"&&<>
-        <TabHeader color={B.orange} title="Materiais Sortidos" subtitle="Peças e materiais avulsos para estoque da oficina"/>
+        <TabHeader color={B.orange} title="Pedidos de Compras" subtitle="Peças e materiais avulsos para estoque da oficina"/>
         <InvestmentsTab investments={investments.filter(i=>i.category==="materiais")} adminRole={adminRole} defaultCategory="materiais"
           onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
@@ -10925,7 +10925,7 @@ export default function App() {
       setNavSection(s);
       if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
       if(s==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
-      if(s==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("purchases")?"purchases":allowedTabs.includes("stock")?"stock":"materiais");
+      if(s==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");
       mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});
     }}/>
     </div>{/* end main content */}

@@ -7225,7 +7225,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.13";
+const APP_VERSION = "2026.08.18.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10508,7 +10508,8 @@ export default function App() {
                 </div>
                 <div style={{flex:1,height:1,background:`linear-gradient(270deg,${B.green}44,transparent)`}}/>
               </div>
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <style>{`@media(min-width:640px){.test-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}}`}</style>
+              <div className="test-grid" style={{display:"flex",flexDirection:"column",gap:10}}>
                 {testVehicles.map(v=>{
                   const cli=clients.find(c=>c.id===v.clientId);
                   const mechs=employees.filter(e=>(v.mechanicIds||[]).includes(e.id));

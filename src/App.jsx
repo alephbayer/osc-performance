@@ -375,7 +375,7 @@ function PixPaymentBox() {
   );
 }
 
-function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout}) {
+function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[]}) {
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
   const [showDebtPopup,setShowDebtPopup]=useState(false);
@@ -415,6 +415,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   const cliVehicles=vehicles.filter(v=>v.clientId===client.id);
   const activeVehicles=cliVehicles.filter(v=>v.enteredAt||v.enteredAtFinishing||tasks.some(t=>t.vehicleId===v.id&&!t.done));
   const cliVehicleIds=new Set(cliVehicles.map(v=>v.id));
+  const cliAppts=appointments.filter(a=>cliVehicleIds.has(a.vehicleId)&&a.status==="open");
   const cliHistory=osHistory
     .filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id))
     .sort((a,b)=>new Date(b.delivered_at||b.deliveredAt||0)-new Date(a.delivered_at||a.deliveredAt||0));
@@ -476,6 +477,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         {tabBtn("active","Em andamento",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>)}
         {tabBtn("history","Histórico",<IFileText s={15}/>)}
         {tabBtn("account","Conta",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>)}
+        {cliAppts.length>0&&tabBtn("appts","Agendamentos",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>)}
         {tabBtn("notes","Anotações",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>)}
       </div>
     </div>
@@ -723,6 +725,59 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
             <div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhuma conta ainda</div>
           </div>}
+      </>}
+
+      {tab==="appts"&&<>
+        <div style={{fontSize:13,fontWeight:800,color:B.white,marginBottom:14}}>Agendamentos</div>
+        {cliAppts.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray400}}>Nenhum agendamento em aberto.</div>}
+        {cliAppts.map(a=>{
+          const v=vehicles.find(x=>x.id===a.vehicleId);
+          const totalSvc=a.services.reduce((s,sv)=>s+sv.estimatedValue,0);
+          const totalEst=totalSvc||a.estimatedValue;
+          const totalPaid=a.payments.reduce((s,p)=>s+p.amount,0);
+          const balance=Math.max(0,totalEst-totalPaid);
+          return(<div key={a.id} style={{background:B.gray900,borderRadius:14,marginBottom:12,border:`1px solid ${B.blue}22`,overflow:"hidden"}}>
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
+              {v?.photo&&<img src={v.photo} alt="" style={{width:36,height:36,borderRadius:8,objectFit:"cover",flexShrink:0}}/>}
+              <div style={{flex:1}}>
+                <div style={{fontWeight:800,fontSize:14,color:B.white}}>{a.title}</div>
+                {v&&<div style={{fontSize:11,color:B.gray400}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>}
+              </div>
+              {totalEst>0&&<div style={{textAlign:"right"}}>
+                <div style={{fontSize:10,color:B.gray500}}>Estimado</div>
+                <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(totalEst)}</div>
+              </div>}
+            </div>
+            {a.services.length>0&&<div style={{padding:"10px 16px",display:"flex",flexDirection:"column",gap:5}}>
+              {a.services.map((sv,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                  <div style={{width:6,height:6,borderRadius:99,background:sv.division==="finishing"?FD.primary:B.orange,flexShrink:0,marginTop:4}}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</div>
+                    {(sv.materials||[]).length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:3}}>
+                      {(sv.materials||[]).map((m,mi)=>(
+                        <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 5px"}}>{m.name}×{m.qty}</span>
+                      ))}
+                    </div>}
+                  </div>
+                  {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700,flexShrink:0}}>{fmtBRL(sv.estimatedValue)}</span>}
+                </div>
+              ))}
+            </div>}
+            <div style={{padding:"10px 16px",borderTop:`1px solid ${B.gray700}`,display:"flex",flexDirection:"column",gap:4}}>
+              {totalPaid>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
+                <span style={{color:B.green}}>Sinal pago</span>
+                <span style={{color:B.green,fontWeight:700}}>{fmtBRL(totalPaid)}</span>
+              </div>}
+              {balance>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:800}}>
+                <span style={{color:B.amber}}>Saldo estimado</span>
+                <span style={{color:B.amber}}>{fmtBRL(balance)}</span>
+              </div>}
+              {balance===0&&totalPaid>0&&<div style={{fontSize:12,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:4}}><ICheck s={11} c={B.green}/>Pré-pagamento quitado</div>}
+            </div>
+            {a.notes&&<div style={{padding:"8px 16px",borderTop:`1px solid ${B.gray700}`,fontSize:11,color:B.gray400,whiteSpace:"pre-wrap"}}>{a.notes}</div>}
+          </div>);
+        })}
       </>}
 
       {/* ── Notes ── */}
@@ -4753,7 +4808,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
           {/* Client notes — pull as service */}
           {(()=>{
             const v=vehicles.find(x=>x.id===a.vehicleId);
-            const notes=(clientNotes||[]).filter(n=>n.vehicleId===a.vehicleId||n.clientId===v?.clientId);
+            const notes=(clientNotes||[]).filter(n=>n.vehicleId===a.vehicleId);
             if(!notes.length) return null;
             return(<div style={{background:`${B.amber}08`,border:`1px solid ${B.amber}33`,borderRadius:8,padding:"8px 12px"}}>
               <div style={{fontSize:10,fontWeight:700,color:B.amber,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Anotações do cliente</div>
@@ -4789,7 +4844,10 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                 </div>
                 {(sv.materials||[]).length>0&&<div style={{paddingLeft:14,display:"flex",flexWrap:"wrap",gap:4}}>
                   {(sv.materials||[]).map((m,mi)=>(
-                    <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 6px"}}>{m.name}×{m.qty}</span>
+                    <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 6px",display:"inline-flex",alignItems:"center",gap:3}}>
+                      {m.name}×{m.qty}
+                      {m.cost>0&&<span style={{color:B.amber,marginLeft:2}}>{fmtBRL(m.cost*m.qty)}</span>}
+                    </span>
                   ))}
                 </div>}
               </div>
@@ -4903,11 +4961,32 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
           </div>
 
           {/* Summary */}
-          {(totalSvc>0||totalPaid>0)&&<div style={{display:"flex",gap:8,padding:"8px 12px",background:B.gray800,borderRadius:8,fontSize:12,flexWrap:"wrap"}}>
-            {totalSvc>0&&<span style={{color:B.amber}}>Estimado: <b>{fmtBRL(totalSvc)}</b></span>}
-            {totalPaid>0&&<span style={{color:B.green}}>Pago: <b>{fmtBRL(totalPaid)}</b></span>}
-            {balance>0&&<span style={{color:B.red}}>Pendente: <b>{fmtBRL(balance)}</b></span>}
-          </div>}
+          {(()=>{
+            const svcTotal=a.services.reduce((s,sv)=>s+sv.estimatedValue,0);
+            const matTotal=a.services.reduce((s,sv)=>s+(sv.materials||[]).reduce((ms,m)=>ms+m.cost*m.qty,0),0);
+            const totalEst=svcTotal||a.estimatedValue;
+            const totalPaidAmt=a.payments.reduce((s,p)=>s+p.amount,0);
+            const balance=Math.max(0,totalEst-totalPaidAmt);
+            if(totalEst===0&&totalPaidAmt===0) return null;
+            return(<div style={{background:B.gray800,borderRadius:10,padding:"10px 14px",display:"flex",flexDirection:"column",gap:5}}>
+              {svcTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
+                <span style={{color:B.gray400}}>Serviços</span>
+                <span style={{color:B.white,fontWeight:700}}>{fmtBRL(svcTotal)}</span>
+              </div>}
+              {matTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
+                <span style={{color:B.gray400}}>Materiais</span>
+                <span style={{color:B.purple,fontWeight:700}}>{fmtBRL(matTotal)}</span>
+              </div>}
+              {totalPaidAmt>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,borderTop:`1px solid ${B.gray700}`,paddingTop:5}}>
+                <span style={{color:B.green}}>Pago (sinal)</span>
+                <span style={{color:B.green,fontWeight:700}}>− {fmtBRL(totalPaidAmt)}</span>
+              </div>}
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,borderTop:`1px solid ${B.gray700}`,paddingTop:5}}>
+                <span style={{color:balance>0?B.amber:B.green,fontWeight:800}}>{balance>0?"Saldo estimado":"Quitado"}</span>
+                <span style={{color:balance>0?B.amber:B.green,fontWeight:900}}>{balance>0?fmtBRL(balance):"✓"}</span>
+              </div>
+            </div>);
+          })()}
 
           {/* Actions */}
           {canManage&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -7578,7 +7657,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.8";
+const APP_VERSION = "2026.08.19.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9808,7 +9887,7 @@ export default function App() {
           : clients.find(c=>c.id===clientSession.id)||clientSession)
       : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
+    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──

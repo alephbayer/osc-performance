@@ -7222,7 +7222,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.8";
+const APP_VERSION = "2026.08.18.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10540,6 +10540,17 @@ export default function App() {
                         <div style={{fontSize:11,color:B.gray500}}>Em teste há</div>
                         <div style={{fontSize:13,fontWeight:800,color:B.green}}>{daysSince!==null?`${daysSince}d`:"—"}</div>
                         {lastCompleted&&<div style={{fontSize:10,color:B.gray500}}>{new Date(lastCompleted.completedAt).toLocaleDateString("pt-BR")}</div>}
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:6,flexShrink:0}}>
+                        {v.status!=="ready"&&<button onClick={()=>setVehicleStatus(v.id,"ready")}
+                          style={{padding:"6px 12px",borderRadius:8,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                          <ICheck s={12} c={B.blue}/>Pronto
+                        </button>}
+                        {v.status==="ready"&&(adminRole==="owner")&&<button onClick={()=>deliverVehicle(v.id)}
+                          style={{padding:"6px 12px",borderRadius:8,background:`${B.green}22`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:800,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                          <ICar2 s={12} c={B.green}/>Entregar
+                        </button>}
+                        {v.status==="ready"&&adminRole!=="owner"&&<span style={{fontSize:10,color:B.green,fontWeight:700}}>Pronto ✓</span>}
                       </div>
                     </div>
                   </div>);

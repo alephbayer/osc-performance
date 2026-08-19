@@ -7225,7 +7225,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.11";
+const APP_VERSION = "2026.08.18.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10520,37 +10520,38 @@ export default function App() {
                   // First photo url
                   return(<div key={v.id} style={{background:`linear-gradient(135deg,${B.gray900} 0%,${B.green}08 100%)`,borderRadius:14,border:`1px solid ${B.green}33`,overflow:"hidden",boxShadow:`0 0 20px ${B.green}0a`,position:"relative"}}>
                     <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:`linear-gradient(180deg,${B.green},${B.blue})`}}/>
-                    <div style={{padding:"12px 16px 12px 20px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                      {v.photo&&<img src={v.photo} alt="" style={{width:48,height:48,borderRadius:10,objectFit:"cover",border:`1px solid ${B.green}33`,flexShrink:0}}/>}
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
-                          <span style={{fontWeight:900,fontSize:15,color:B.white}}>{v.model}</span>
-                          {v.plate&&<span style={{fontSize:11,color:B.gray400}}>{v.plate}</span>}
-                          {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,background:`${B.orange}18`,borderRadius:5,padding:"1px 7px"}}>{fmtOS(v.osNumber)}</span>}
-                          <span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}>
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                            100% concluído
-                          </span>
-                          {v.urgent&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill={B.red} stroke={B.red} strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>URGENTE</span>}
-                        </div>
-                        <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:B.gray400}}>
-                          {cli&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
-                          {mechs.length>0&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
-                          {totalVal>0&&<span style={{color:B.amber,fontWeight:700}}>{fmtBRL(totalVal)}</span>}
-                        </div>
+                    {/* First row: model name full width */}
+                    <div style={{padding:"12px 20px 8px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${B.green}11`}}>
+                      {v.photo&&<img src={v.photo} alt="" style={{width:32,height:32,borderRadius:7,objectFit:"cover",border:`1px solid ${B.green}33`,flexShrink:0}}/>}
+                      <span style={{fontWeight:900,fontSize:16,color:B.white,flex:1}}>{v.model}</span>
+                      {v.plate&&<span style={{fontSize:11,color:B.gray400}}>{v.plate}</span>}
+                      {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,background:`${B.orange}18`,borderRadius:5,padding:"1px 7px"}}>{fmtOS(v.osNumber)}</span>}
+                      <span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        100% concluído
+                      </span>
+                      {v.urgent&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill={B.red} stroke={B.red} strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>URGENTE</span>}
+                    </div>
+                    {/* Second row: info + date + buttons */}
+                    <div style={{padding:"10px 20px 12px 20px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                      <div style={{flex:1,minWidth:0,display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:B.gray400}}>
+                        {cli&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
+                        {mechs.length>0&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
+                        {totalVal>0&&<span style={{color:B.amber,fontWeight:700}}>{fmtBRL(totalVal)}</span>}
                       </div>
-                      <div style={{textAlign:"right",flexShrink:0}}>
-                        <div style={{fontSize:11,color:B.gray500}}>Em teste há</div>
-                        <div style={{fontSize:13,fontWeight:800,color:B.green}}>{daysSince!==null?`${daysSince}d`:"—"}</div>
-                        {lastCompleted&&<div style={{fontSize:10,color:B.gray500}}>{new Date(lastCompleted.completedAt).toLocaleDateString("pt-BR")}</div>}
-                      </div>
-                      <div style={{display:"flex",flexDirection:"column",gap:6,flexShrink:0}}>
+                      {/* Date + buttons column */}
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
+                        <div style={{textAlign:"right"}}>
+                          <div style={{fontSize:11,color:B.gray500}}>Em teste há</div>
+                          <div style={{fontSize:13,fontWeight:800,color:B.green}}>{daysSince!==null?`${daysSince}d`:"—"}</div>
+                          {lastCompleted&&<div style={{fontSize:10,color:B.gray500}}>{new Date(lastCompleted.completedAt).toLocaleDateString("pt-BR")}</div>}
+                        </div>
                         {v.status!=="ready"&&<button onClick={()=>setVehicleStatus(v.id,"ready")}
-                          style={{padding:"6px 12px",borderRadius:8,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                          style={{padding:"6px 14px",borderRadius:8,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                           <ICheck s={12} c={B.blue}/>Pronto
                         </button>}
                         {v.status==="ready"&&(adminRole==="owner")&&<button onClick={()=>deliverVehicle(v.id)}
-                          style={{padding:"6px 12px",borderRadius:8,background:`${B.green}22`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:800,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                          style={{padding:"6px 14px",borderRadius:8,background:`${B.green}22`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:800,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                           <ICar2 s={12} c={B.green}/>Entregar
                         </button>}
                         {v.status==="ready"&&adminRole!=="owner"&&<span style={{fontSize:10,color:B.green,fontWeight:700}}>Pronto ✓</span>}

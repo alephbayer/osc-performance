@@ -7456,7 +7456,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.4";
+const APP_VERSION = "2026.08.19.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9468,7 +9468,6 @@ export default function App() {
   const [expenses,setExpenses]=useState([]);
   const [internalTransfers,setInternalTransfers]=useState([]);
   const [appointments,setAppts]=useState([]);
-  const [appointments,setAppointments]=useState([]);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
@@ -9596,7 +9595,6 @@ export default function App() {
       db.loadExpenses().then(setExpenses).catch(()=>{});
       db.loadInternalTransfers().then(setInternalTransfers).catch(()=>{});
       db.loadAppointments().then(setAppts).catch(()=>{});
-      db.loadAppointments().then(setAppointments).catch(()=>{});
       db.loadPurchaseOrders().then(setPurchaseOrders).catch(()=>{});
       db.loadInvestments().then(setInvestments).catch(()=>{});
       db.getShelfItems().then(setShelfItems).catch(()=>{});

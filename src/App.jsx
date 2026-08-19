@@ -7225,7 +7225,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.2";
+const APP_VERSION = "2026.08.19.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9319,6 +9319,8 @@ export default function App() {
   const [mechSearch,setMechSearch]=useState("");
   const [osSearch,setOsSearch]=useState("");
   const [finSearch,setFinSearch]=useState("");
+  const [testOpen,setTestOpen]=useState(true);
+  const [confirmReadyId,setConfirmReadyId]=useState(null);
   const [cN,setCN]=useState(""); const [cP,setCP]=useState(""); const [cE,setCE]=useState("");
 
   const toast_=useCallback(m=>{setTst(null);setTimeout(()=>setTst(m),10);},[]);
@@ -10499,15 +10501,27 @@ export default function App() {
             });
             if(!testVehicles.length) return null;
             return(<div style={{marginBottom:24,marginTop:20}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                <div style={{flex:1,height:1,background:`linear-gradient(90deg,${B.green}44,transparent)`}}/>
-                <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px",borderRadius:99,background:`linear-gradient(135deg,${B.green}18,${B.blue}12)`,border:`1px solid ${B.green}44`}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  <span style={{fontWeight:800,fontSize:12,color:B.green,letterSpacing:.5}}>VEÍCULOS EM TESTE</span>
-                  <span style={{fontWeight:700,fontSize:11,color:B.green,opacity:.7}}>{testVehicles.length}</span>
+              {/* Collapsible header */}
+              <button onClick={()=>setTestOpen(o=>!o)} style={{width:"100%",background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:testOpen?12:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1,height:1,background:`linear-gradient(90deg,${B.green}44,transparent)`}}/>
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px",borderRadius:99,background:`linear-gradient(135deg,${B.green}18,${B.blue}12)`,border:`1px solid ${B.green}44`}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span style={{fontWeight:800,fontSize:12,color:B.green,letterSpacing:.5}}>VEÍCULOS EM TESTE</span>
+                    <span style={{fontWeight:700,fontSize:11,color:B.green,opacity:.7}}>{testVehicles.length}</span>
+                    <span style={{fontSize:10,color:B.green,opacity:.6}}>{testOpen?"▲":"▼"}</span>
+                  </div>
+                  <div style={{flex:1,height:1,background:`linear-gradient(270deg,${B.green}44,transparent)`}}/>
                 </div>
-                <div style={{flex:1,height:1,background:`linear-gradient(270deg,${B.green}44,transparent)`}}/>
-              </div>
+              </button>
+              {/* Confirm Pronto modal */}
+              {confirmReadyId&&<ConfirmModal
+                title="Marcar como Pronto?"
+                message="Confirma que o veículo passou nos testes e está pronto para entrega?"
+                confirmLabel="Sim, marcar Pronto"
+                onConfirm={()=>{setVehicleStatus(confirmReadyId,"ready");setConfirmReadyId(null);}}
+                onCancel={()=>setConfirmReadyId(null)}/>}
+              {testOpen&&<>
               <style>{`@media(min-width:640px){.test-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;}}.test-grid{display:flex;flex-direction:column;gap:10px;}`}</style>
               <div className="test-grid">
                 {testVehicles.map(v=>{
@@ -10552,7 +10566,7 @@ export default function App() {
                           <div style={{fontSize:15,fontWeight:900,color:B.green,lineHeight:1.1}}>{daysSince!==null?`${daysSince}d`:"—"}</div>
                           {lastCompleted&&<div style={{fontSize:10,color:B.gray500}}>{new Date(lastCompleted.completedAt).toLocaleDateString("pt-BR")}</div>}
                         </div>
-                        {v.status!=="ready"&&<button onClick={()=>setVehicleStatus(v.id,"ready")}
+                        {v.status!=="ready"&&<button onClick={()=>setConfirmReadyId(v.id)}
                           style={{padding:"7px 16px",borderRadius:8,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                           <ICheck s={12} c={B.blue}/>Pronto
                         </button>}
@@ -10566,6 +10580,7 @@ export default function App() {
                   </div>);
                 })}
               </div>
+              </>}
             </div>);
           })()}
 

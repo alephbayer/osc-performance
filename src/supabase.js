@@ -684,6 +684,13 @@ export const db = {
     if (error) console.warn("Client push error:", error);
   },
 
+  async loadAllClientVehicleNotes() {
+    const { data, error } = await supabase.from("client_vehicle_notes")
+      .select("*").eq("resolved", false).order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data||[]).map(n=>({id:n.id,vehicleId:n.vehicle_id,clientId:n.client_id,note:n.note,createdAt:n.created_at}));
+  },
+
   async getClientVehicleNotes(vehicleId) {
     const { data, error } = await supabase.from("client_vehicle_notes")
       .select("*").eq("vehicle_id", vehicleId).order("created_at", { ascending: false });

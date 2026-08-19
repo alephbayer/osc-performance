@@ -4680,9 +4680,9 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
         </div>
         {/* Client notes — shown when vehicle with client is selected */}
         {(()=>{
-          if(!form.vehicleId) return null;
+          if(!form.vehicleId||!clientNotes?.length) return null;
           const v=vehicles.find(x=>x.id===form.vehicleId);
-          const notes=clientNotes.filter(n=>n.vehicleId===form.vehicleId||n.clientId===v?.clientId);
+          const notes=(clientNotes||[]).filter(n=>n.vehicleId===form.vehicleId||n.clientId===v?.clientId);
           if(!notes.length) return null;
           return(<div style={{background:`${B.amber}08`,border:`1px solid ${B.amber}33`,borderRadius:8,padding:"8px 12px"}}>
             <div style={{fontSize:10,fontWeight:700,color:B.amber,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Anotações do cliente</div>
@@ -7559,7 +7559,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.6";
+const APP_VERSION = "2026.08.19.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9571,6 +9571,7 @@ export default function App() {
   const [expenses,setExpenses]=useState([]);
   const [internalTransfers,setInternalTransfers]=useState([]);
   const [appointments,setAppts]=useState([]);
+  const [allClientNotes,setAllClientNotes]=useState([]);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
@@ -9698,6 +9699,7 @@ export default function App() {
       db.loadExpenses().then(setExpenses).catch(()=>{});
       db.loadInternalTransfers().then(setInternalTransfers).catch(()=>{});
       db.loadAppointments().then(setAppts).catch(()=>{});
+      db.loadAllClientVehicleNotes().then(setAllClientNotes).catch(()=>{});
       db.loadPurchaseOrders().then(setPurchaseOrders).catch(()=>{});
       db.loadInvestments().then(setInvestments).catch(()=>{});
       db.getShelfItems().then(setShelfItems).catch(()=>{});
@@ -11016,7 +11018,7 @@ export default function App() {
         <AppointmentsTab
           appointments={appointments} vehicles={vehicles} clients={clients}
           employees={employees} adminRole={adminRole}
-          stock={stock} clientNotes={clientNotes}
+          stock={stock} clientNotes={allClientNotes}
           onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));}catch(e){errToast(e);}}}
           onDelete={async id=>{try{await db.deleteAppointment(id);setAppts(p=>p.filter(a=>a.id!==id));toast_("Agendamento removido ✓");}catch(e){errToast(e);}}}

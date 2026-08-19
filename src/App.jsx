@@ -1498,6 +1498,47 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
   y += boxH_inner + 10;
 
+  // ── Aportes realizados + Saldo a pagar ───────────────────────────────────────
+  const paidPayments = (payments||[]).filter(p=>Number(p.amount)>0);
+  const totalPaid = paidPayments.reduce((s,p)=>s+Number(p.amount),0);
+  const balance = Math.max(0, grandTotal - totalPaid);
+
+  if (paidPayments.length > 0) {
+    if (y + 30 > 282) { doc.addPage(); y = 16; }
+    doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+    doc.line(marginX, y, pageW - marginX, y);
+    y += 6;
+
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...black);
+    doc.text("APORTES REALIZADOS", marginX, y);
+    y += 6;
+
+    paidPayments.forEach(p => {
+      checkPageBreak(7);
+      doc.setFillColor(240, 253, 244);
+      doc.setDrawColor(220,220,220);
+      doc.rect(marginX, y, contentW, 7, "FD");
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+      const pDate = p.paidAt ? new Date(p.paidAt).toLocaleDateString("pt-BR") : "";
+      const pLabel = [p.method, pDate, p.note].filter(Boolean).join(" · ");
+      doc.text(pLabel, marginX + 3, y + 4.8);
+      doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74);
+      doc.text(`- ${fmtBRL(Number(p.amount))}`, cTotal, y + 4.8, { align: "right" });
+      y += 8;
+    });
+
+    // Saldo box
+    checkPageBreak(14);
+    y += 2;
+    const saldoColor = balance > 0 ? [220,38,38] : [22,163,74];
+    doc.setFillColor(...saldoColor);
+    doc.roundedRect(pageW - marginX - 85, y, 85, 12, 2, 2, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(255,255,255);
+    doc.text(balance > 0 ? "SALDO A PAGAR" : "QUITADO", pageW - marginX - 80, y + 8);
+    doc.text(balance > 0 ? fmtBRL(balance) : "R$ 0,00", pageW - marginX - 5, y + 8, { align: "right" });
+    y += 16;
+  }
+
   // ── Payment methods ───────────────────────────────────────────────────────────
   // Plain page break — no table header after payments section
   if (y + 60 > 282) { doc.addPage(); y = 16; }
@@ -7659,7 +7700,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.10";
+const APP_VERSION = "2026.08.19.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

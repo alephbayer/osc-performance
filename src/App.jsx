@@ -4602,6 +4602,237 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
       onCancel={()=>setConfirmDel(null)}/>}
   </div>);
 }
+// ─── AppointmentsTab ──────────────────────────────────────────────────────────
+function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,
+  onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
+  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense}) {
+
+  const [showNew,setShowNew]=useState(false);
+  const [expanded,setExpanded]=useState(null);
+  const [form,setForm]=useState({vehicleId:"",title:"",notes:"",estimatedValue:""});
+  const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance"});
+  const [showSvcForm,setShowSvcForm]=useState(null);
+  const [payForm,setPayForm]=useState({amount:"",method:"Pix",note:""});
+  const [showPayForm,setShowPayForm]=useState(null);
+  const [confirmConvert,setConfirmConvert]=useState(null);
+  const [confirmDel,setConfirmDel]=useState(null);
+
+  const canManage=adminRole==="owner"||adminRole==="admin";
+  const openAppts=appointments.filter(a=>a.status==="open");
+  const closedAppts=appointments.filter(a=>a.status!=="open");
+
+  const DIV_COLOR={performance:B.orange,finishing:FD.primary};
+  const DIV_LABEL={performance:"Performance",finishing:"Finishing"};
+
+  const save=async()=>{
+    if(!form.vehicleId||!form.title.trim()) return;
+    const v=vehicles.find(x=>x.id===form.vehicleId);
+    await onAdd({vehicleId:form.vehicleId,clientId:v?.clientId||null,title:form.title.trim(),notes:form.notes,estimatedValue:parseFloat(form.estimatedValue)||0});
+    setForm({vehicleId:"",title:"",notes:"",estimatedValue:""});
+    setShowNew(false);
+  };
+
+  return(<div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+      <div style={{fontSize:13,color:B.gray400}}>{openAppts.length} em aberto</div>
+      {canManage&&<button onClick={()=>setShowNew(s=>!s)} style={{padding:"7px 14px",borderRadius:9,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+        <IPlus s={12} c={B.blue}/>Novo agendamento
+      </button>}
+    </div>
+
+    {/* New appointment form */}
+    {showNew&&canManage&&<div style={{background:B.gray900,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${B.blue}44`}}>
+      <div style={{fontWeight:700,fontSize:13,color:B.blue,marginBottom:12}}>Novo Agendamento</div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <select value={form.vehicleId} onChange={e=>setForm(p=>({...p,vehicleId:e.target.value}))}
+          style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:form.vehicleId?B.white:B.gray500,fontSize:12,outline:"none"}}>
+          <option value="">Selecione o veículo *</option>
+          {[...vehicles].sort((a,b)=>(a.model||"").localeCompare(b.model||"","pt-BR")).map(v=>{
+            const cli=clients.find(c=>c.id===v.clientId);
+            return <option key={v.id} value={v.id}>{v.model}{v.plate?` (${v.plate})`:""}{cli?` — ${cli.name}`:""}</option>;
+          })}
+        </select>
+        <input value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="Título do agendamento *"
+          style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        <textarea value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Observações / contexto" rows={2}
+          style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
+        <input value={form.estimatedValue} onChange={e=>setForm(p=>({...p,estimatedValue:e.target.value}))} type="number" placeholder="Valor estimado (opcional)"
+          style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={save} disabled={!form.vehicleId||!form.title.trim()}
+            style={{flex:1,padding:"8px 0",borderRadius:8,background:form.vehicleId&&form.title.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:form.vehicleId&&form.title.trim()?"pointer":"not-allowed"}}>
+            Criar agendamento
+          </button>
+          <button onClick={()=>setShowNew(false)} style={{padding:"8px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray400,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
+
+    {openAppts.length===0&&!showNew&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray400}}>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={B.gray600} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{margin:"0 auto 10px",display:"block"}}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Nenhum agendamento em aberto
+    </div>}
+
+    {/* Open appointments */}
+    {openAppts.map(a=>{
+      const v=vehicles.find(x=>x.id===a.vehicleId);
+      const cli=clients.find(x=>x.id===a.clientId);
+      const isExp=expanded===a.id;
+      const totalPaid=a.payments.reduce((s,p)=>s+p.amount,0);
+      const totalSvc=a.services.reduce((s,sv)=>s+sv.estimatedValue,0);
+      const balance=Math.max(0,(totalSvc||a.estimatedValue)-totalPaid);
+      return(<div key={a.id} style={{background:B.gray900,borderRadius:14,marginBottom:10,border:`1px solid ${B.blue}22`,overflow:"hidden"}}>
+        {/* Header */}
+        <div onClick={()=>setExpanded(isExp?null:a.id)} style={{padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+          {v?.photo&&<img src={v.photo} alt="" style={{width:38,height:38,borderRadius:8,objectFit:"cover",flexShrink:0}}/>}
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:800,fontSize:14,color:B.white}}>{a.title}</div>
+            <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",marginTop:2}}>
+              {v&&<span>{v.model}{v.plate?` · ${v.plate}`:""}</span>}
+              {cli&&<span style={{color:B.blue}}>{cli.name}</span>}
+              {a.services.length>0&&<span>{a.services.length} serviço{a.services.length!==1?"s":""}</span>}
+            </div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0}}>
+            {totalPaid>0&&<div style={{fontSize:11,color:B.green,fontWeight:700}}>{fmtBRL(totalPaid)} pago</div>}
+            {balance>0&&<div style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(balance)} pendente</div>}
+            {balance===0&&totalPaid>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}>Quitado</div>}
+          </div>
+          <span style={{color:B.gray500,fontSize:14,marginLeft:4}}>{isExp?"▲":"▼"}</span>
+        </div>
+
+        {isExp&&<div style={{borderTop:`1px solid ${B.gray700}`,padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
+          {/* Notes */}
+          {a.notes&&<div style={{fontSize:12,color:B.gray300,background:B.gray800,borderRadius:8,padding:"8px 12px",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{a.notes}</div>}
+
+          {/* Services */}
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{fontSize:11,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Serviços planejados</span>
+              {canManage&&<button onClick={()=>setShowSvcForm(a.id)} style={{fontSize:11,color:B.blue,background:"none",border:`1px solid ${B.blue}44`,borderRadius:6,padding:"2px 8px",cursor:"pointer",fontWeight:600}}>+ Serviço</button>}
+            </div>
+            {a.services.map(sv=>(
+              <div key={sv.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:B.gray800,borderRadius:8,marginBottom:5,border:`1px solid ${B.gray700}`}}>
+                <div style={{width:6,height:6,borderRadius:99,background:DIV_COLOR[sv.division]||B.orange,flexShrink:0}}/>
+                <span style={{flex:1,fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</span>
+                <span style={{fontSize:10,color:DIV_COLOR[sv.division]||B.orange,fontWeight:700}}>{DIV_LABEL[sv.division]}</span>
+                {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(sv.estimatedValue)}</span>}
+                {canManage&&<button onClick={()=>onUpdateService(sv.id,{...sv,done:!sv.done})} style={{background:"none",border:"none",cursor:"pointer",color:sv.done?B.green:B.gray600,padding:2}}>
+                  <ICheck s={12} c={sv.done?B.green:B.gray600}/>
+                </button>}
+                {canManage&&<button onClick={()=>onDeleteService(sv.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2}}><ITrash s={11}/></button>}
+              </div>
+            ))}
+            {a.services.length===0&&<div style={{fontSize:11,color:B.gray500,textAlign:"center",padding:"8px 0"}}>Nenhum serviço planejado</div>}
+            {showSvcForm===a.id&&<div style={{background:B.gray800,borderRadius:8,padding:10,marginTop:6,display:"flex",flexDirection:"column",gap:6}}>
+              <input value={svcForm.label} onChange={e=>setSvcForm(p=>({...p,label:e.target.value}))} placeholder="Nome do serviço *"
+                style={{padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+              <div style={{display:"flex",gap:6}}>
+                <input value={svcForm.estimatedValue} onChange={e=>setSvcForm(p=>({...p,estimatedValue:e.target.value}))} type="number" placeholder="Valor estimado"
+                  style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+                <select value={svcForm.division} onChange={e=>setSvcForm(p=>({...p,division:e.target.value}))}
+                  style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}>
+                  <option value="performance">Performance</option>
+                  <option value="finishing">Finishing</option>
+                </select>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={async()=>{if(!svcForm.label.trim()) return;await onAddService({appointmentId:a.id,label:svcForm.label.trim(),estimatedValue:parseFloat(svcForm.estimatedValue)||0,division:svcForm.division});setSvcForm({label:"",estimatedValue:"",division:"performance"});setShowSvcForm(null);}}
+                  style={{flex:1,padding:"6px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Adicionar</button>
+                <button onClick={()=>setShowSvcForm(null)} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
+              </div>
+            </div>}
+          </div>
+
+          {/* Payments */}
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{fontSize:11,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Sinais / Abonos</span>
+              {canManage&&<button onClick={()=>setShowPayForm(a.id)} style={{fontSize:11,color:B.green,background:"none",border:`1px solid ${B.green}44`,borderRadius:6,padding:"2px 8px",cursor:"pointer",fontWeight:600}}>+ Pagamento</button>}
+            </div>
+            {a.payments.map(p=>(
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:B.greenBg,borderRadius:7,marginBottom:4,border:`1px solid ${B.green}33`}}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                <span style={{fontWeight:700,fontSize:12,color:B.green}}>{fmtBRL(p.amount)}</span>
+                <span style={{fontSize:11,color:B.gray400}}>{p.method}</span>
+                {p.note&&<span style={{fontSize:11,color:B.gray400,flex:1}}>{p.note}</span>}
+                <span style={{fontSize:10,color:B.gray500,marginLeft:"auto"}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
+                {canManage&&<button onClick={()=>onDeletePayment(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2}}><ITrash s={11}/></button>}
+              </div>
+            ))}
+            {a.payments.length===0&&<div style={{fontSize:11,color:B.gray500,textAlign:"center",padding:"8px 0"}}>Nenhum pagamento registrado</div>}
+            {showPayForm===a.id&&<div style={{background:B.gray800,borderRadius:8,padding:10,marginTop:6,display:"flex",flexDirection:"column",gap:6}}>
+              <div style={{display:"flex",gap:6}}>
+                <input value={payForm.amount} onChange={e=>setPayForm(p=>({...p,amount:e.target.value}))} type="number" placeholder="Valor R$ *"
+                  style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+                <select value={payForm.method} onChange={e=>setPayForm(p=>({...p,method:e.target.value}))}
+                  style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}>
+                  {["Pix","Dinheiro","Cartão débito","Cartão crédito","Transferência"].map(m=><option key={m}>{m}</option>)}
+                </select>
+              </div>
+              <input value={payForm.note} onChange={e=>setPayForm(p=>({...p,note:e.target.value}))} placeholder="Observação"
+                style={{padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={async()=>{if(!payForm.amount) return;await onAddPayment({appointmentId:a.id,amount:parseFloat(payForm.amount),method:payForm.method,note:payForm.note});setPayForm({amount:"",method:"Pix",note:""});setShowPayForm(null);}}
+                  style={{flex:1,padding:"6px 0",borderRadius:7,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Registrar</button>
+                <button onClick={()=>setShowPayForm(null)} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
+              </div>
+            </div>}
+          </div>
+
+          {/* Summary */}
+          {(totalSvc>0||totalPaid>0)&&<div style={{display:"flex",gap:8,padding:"8px 12px",background:B.gray800,borderRadius:8,fontSize:12,flexWrap:"wrap"}}>
+            {totalSvc>0&&<span style={{color:B.amber}}>Estimado: <b>{fmtBRL(totalSvc)}</b></span>}
+            {totalPaid>0&&<span style={{color:B.green}}>Pago: <b>{fmtBRL(totalPaid)}</b></span>}
+            {balance>0&&<span style={{color:B.red}}>Pendente: <b>{fmtBRL(balance)}</b></span>}
+          </div>}
+
+          {/* Actions */}
+          {canManage&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button onClick={()=>setConfirmConvert(a)} style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              <IWrench s={13} c={B.orange}/>Converter em OS
+            </button>
+            <button onClick={()=>setConfirmDel(a.id)} style={{padding:"9px 14px",borderRadius:9,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,fontWeight:600,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              <ITrash s={12}/>Cancelar
+            </button>
+          </div>}
+        </div>}
+      </div>);
+    })}
+
+    {/* Closed/converted */}
+    {closedAppts.length>0&&<div style={{marginTop:20}}>
+      <div style={{fontSize:11,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Encerrados</div>
+      {closedAppts.map(a=>{
+        const v=vehicles.find(x=>x.id===a.vehicleId);
+        const cli=clients.find(x=>x.id===a.clientId);
+        return(<div key={a.id} style={{padding:"10px 14px",background:B.gray900,borderRadius:10,marginBottom:6,border:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,opacity:.7}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:B.gray300}}>{a.title}</div>
+            <div style={{fontSize:11,color:B.gray500}}>{v?.model}{cli?` · ${cli.name}`:""} · {a.status==="converted"?"Convertido em OS":"Cancelado"}</div>
+          </div>
+          {a.status==="converted"&&<span style={{fontSize:10,color:B.green,fontWeight:700,background:B.greenBg,borderRadius:5,padding:"2px 7px"}}>OS gerada</span>}
+          {a.status==="cancelled"&&<span style={{fontSize:10,color:B.red,background:`${B.red}12`,borderRadius:5,padding:"2px 7px"}}>Cancelado</span>}
+        </div>);
+      })}
+    </div>}
+
+    {/* Confirm convert */}
+    {confirmConvert&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:380,width:"100%",border:`1px solid ${B.orange}44`}}>
+        <div style={{fontWeight:800,fontSize:16,color:B.white,marginBottom:8}}>Converter em OS</div>
+        <div style={{fontSize:13,color:B.gray300,marginBottom:16}}>O agendamento <b style={{color:B.white}}>{confirmConvert.title}</b> será convertido. Os sinais pagos serão transferidos como pagamentos da OS.</div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={async()=>{await onConvertToOS(confirmConvert);setConfirmConvert(null);}} style={{flex:1,padding:"9px 0",borderRadius:9,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:"pointer"}}>Converter</button>
+          <button onClick={()=>setConfirmConvert(null)} style={{padding:"9px 14px",borderRadius:9,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,fontSize:13,cursor:"pointer"}}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
+
+    {confirmDel&&<ConfirmModal title="Cancelar agendamento?" message="O agendamento e todos os dados serão removidos." confirmLabel="Cancelar agendamento" onConfirm={async()=>{await onDelete(confirmDel);setConfirmDel(null);}} onCancel={()=>setConfirmDel(null)}/>}
+  </div>);
+}
+
 function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
   const [search,setSearch]=useState("");
   const [osFilter,setOsFilter]=useState("all"); // all | active | available
@@ -7152,8 +7383,8 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca"],           envVar:"VITE_ADMIN_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments"], envVar:"VITE_OWNER_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments"],           envVar:"VITE_ADMIN_PASSWORD" },
   supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
 // Hash a string with SHA-256 — used to avoid storing plain passwords in memory
@@ -7225,7 +7456,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.3";
+const APP_VERSION = "2026.08.19.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9236,6 +9467,8 @@ export default function App() {
   const [defaultRate,setDR]=useState(0);
   const [expenses,setExpenses]=useState([]);
   const [internalTransfers,setInternalTransfers]=useState([]);
+  const [appointments,setAppts]=useState([]);
+  const [appointments,setAppointments]=useState([]);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
@@ -9362,6 +9595,8 @@ export default function App() {
       setLoading(false);
       db.loadExpenses().then(setExpenses).catch(()=>{});
       db.loadInternalTransfers().then(setInternalTransfers).catch(()=>{});
+      db.loadAppointments().then(setAppts).catch(()=>{});
+      db.loadAppointments().then(setAppointments).catch(()=>{});
       db.loadPurchaseOrders().then(setPurchaseOrders).catch(()=>{});
       db.loadInvestments().then(setInvestments).catch(()=>{});
       db.getShelfItems().then(setShelfItems).catch(()=>{});
@@ -10121,7 +10356,7 @@ export default function App() {
   const navItems=NAV_ITEMS_BY_ROLE[adminRole]||NAV_ITEMS_BY_ROLE.owner;
 
   // Tab grouping by nav section
-  const OFICINA_TABS=["clients","finishing","vehicles","clientsMonitor","mechanics"];
+  const OFICINA_TABS=["clients","finishing","appointments","vehicles","clientsMonitor","mechanics"];
   const GESTAO_TABS=["finance","investments","sales","presenca"];
   const COMPRAS_TABS=["stock","materiais","purchases"];
 
@@ -10393,6 +10628,7 @@ export default function App() {
             {navSection==="oficina"&&<>
               {allowedTabs.includes("clients")&&tabBtn("clients","OSC Performance",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,B.orange)}
               {allowedTabs.includes("finishing")&&tabBtn("finishing","OSC Finishing Division",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>,FD.primary)}
+              {allowedTabs.includes("appointments")&&tabBtn("appointments","Agendamentos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,"#8b5cf6")}
               {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos Cadastrados",<ICar s={13}/>,B.blue)}
               {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
               {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
@@ -10674,6 +10910,38 @@ export default function App() {
           onUpdateName={updCliN} onUpdatePhone={updCliP} onUpdateEmail={updCliE} onDelete={delCli}
           osHistory={osHistory} payments={payments} onAddClient={addCliDirect} isOwner={adminRole==="owner"}/>
       </>}
+      {tab==="appointments"&&allowedTabs.includes("appointments")&&<>
+        <TabHeader color="#8b5cf6" title="Agendamentos" subtitle="Pré-OS · Serviços planejados · Sinais e abonos"/>
+        <AppointmentsTab
+          appointments={appointments} vehicles={vehicles} clients={clients}
+          employees={employees} adminRole={adminRole}
+          onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);}catch(e){errToast(e);}}}
+          onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));}catch(e){errToast(e);}}}
+          onDelete={async id=>{try{await db.deleteAppointment(id);setAppts(p=>p.filter(a=>a.id!==id));toast_("Agendamento removido ✓");}catch(e){errToast(e);}}}
+          onAddService={async s=>{try{const r=await db.addAppointmentService(s);setAppts(p=>p.map(a=>a.id===s.appointmentId?{...a,services:[...a.services,r]}:a));}catch(e){errToast(e);}}}
+          onUpdateService={async(id,patch)=>{try{await db.updateAppointmentService(id,patch);setAppts(p=>p.map(a=>({...a,services:a.services.map(s=>s.id===id?{...s,...patch}:s)})));}catch(e){errToast(e);}}}
+          onDeleteService={async id=>{try{await db.deleteAppointmentService(id);setAppts(p=>p.map(a=>({...a,services:a.services.filter(s=>s.id!==id)})));}catch(e){errToast(e);}}}
+          onAddPayment={async p=>{try{const r=await db.addAppointmentPayment(p);setAppts(prev=>prev.map(a=>a.id===p.appointmentId?{...a,payments:[...a.payments,r]}:a));toast_(`${fmtBRL(p.amount)} registrado ✓`);}catch(e){errToast(e);}}}
+          onDeletePayment={async id=>{try{await db.deleteAppointmentPayment(id);setAppts(p=>p.map(a=>({...a,payments:a.payments.filter(pay=>pay.id!==id)})));}catch(e){errToast(e);}}}
+          onConvertToOS={async a=>{
+            try{
+              const v=vehicles.find(x=>x.id===a.vehicleId);
+              if(!v) return;
+              // Open OS for performance services
+              const perfSvcs=a.services.filter(s=>s.division==="performance");
+              const finSvcs=a.services.filter(s=>s.division==="finishing");
+              if(perfSvcs.length>0||a.services.length===0) await openNewOS(v.id,null,null);
+              if(finSvcs.length>0) await openNewOSFinishing(v.id,null,null);
+              // Mark as converted
+              await db.updateAppointment(a.id,{status:"converted",convertedAt:new Date().toISOString()});
+              setAppts(p=>p.map(x=>x.id===a.id?{...x,status:"converted",convertedAt:new Date().toISOString()}:x));
+              toast_(`OS aberta para ${v.model} ✓ — sinais migrados`);
+              setTab("clients");
+            }catch(e){errToast(e);}
+          }}
+        />
+      </>}
+
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <TabHeader color={B.blue} title="Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
         <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} isOwner={adminRole==="owner"}

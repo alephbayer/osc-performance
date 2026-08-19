@@ -930,6 +930,154 @@ export const db = {
     if (error) throw error;
   },
 
+  // ── Appointments ─────────────────────────────────────────────────────────────
+  async loadAppointments() {
+    const [apt,svc,pay]=await Promise.all([
+      supabase.from("appointments").select("*").order("created_at",{ascending:false}),
+      supabase.from("appointment_services").select("*").order("created_at"),
+      supabase.from("appointment_payments").select("*").order("paid_at"),
+    ]);
+    if(apt.error) throw apt.error;
+    return (apt.data||[]).map(a=>({
+      id:a.id, vehicleId:a.vehicle_id, clientId:a.client_id,
+      status:a.status, notes:a.notes||"", createdAt:a.created_at,
+      services:(svc.data||[]).filter(s=>s.appointment_id===a.id).map(s=>({
+        id:s.id, appointmentId:s.appointment_id, label:s.label,
+        category:s.category||null, division:s.division||"performance",
+        estimatedValue:Number(s.estimated_value||0), notes:s.notes||"",
+      })),
+      payments:(pay.data||[]).filter(p=>p.appointment_id===a.id).map(p=>({
+        id:p.id, appointmentId:p.appointment_id, amount:Number(p.amount),
+        method:p.method, note:p.note||"", paidAt:p.paid_at,
+      })),
+    }));
+  },
+  async addAppointment(a) {
+    const {data,error}=await supabase.from("appointments").insert({
+      vehicle_id:a.vehicleId, client_id:a.clientId||null,
+      status:"open", notes:a.notes||"",
+    }).select().single();
+    if(error) throw error;
+    return {...data,vehicleId:data.vehicle_id,clientId:data.client_id,createdAt:data.created_at,services:[],payments:[]};
+  },
+  async updateAppointment(id,patch) {
+    const map={notes:"notes",status:"status"};
+    const dbp={};
+    Object.keys(patch).forEach(k=>{if(map[k])dbp[map[k]]=patch[k];});
+    dbp.updated_at=new Date().toISOString();
+    const {error}=await supabase.from("appointments").update(dbp).eq("id",id);
+    if(error) throw error;
+  },
+  async deleteAppointment(id) {
+    const {error}=await supabase.from("appointments").delete().eq("id",id);
+    if(error) throw error;
+  },
+  async addAppointmentService(s) {
+    const {data,error}=await supabase.from("appointment_services").insert({
+      appointment_id:s.appointmentId, label:s.label, category:s.category||null,
+      division:s.division||"performance", estimated_value:s.estimatedValue||0, notes:s.notes||"",
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,appointmentId:data.appointment_id,label:data.label,category:data.category,division:data.division,estimatedValue:Number(data.estimated_value),notes:data.notes||""};
+  },
+  async updateAppointmentService(id,patch) {
+    const map={label:"label",category:"category",division:"division",estimatedValue:"estimated_value",notes:"notes"};
+    const dbp={};
+    Object.keys(patch).forEach(k=>{if(map[k])dbp[map[k]]=patch[k];});
+    const {error}=await supabase.from("appointment_services").update(dbp).eq("id",id);
+    if(error) throw error;
+  },
+  async deleteAppointmentService(id) {
+    const {error}=await supabase.from("appointment_services").delete().eq("id",id);
+    if(error) throw error;
+  },
+  async addAppointmentPayment(p) {
+    const {data,error}=await supabase.from("appointment_payments").insert({
+      appointment_id:p.appointmentId, amount:p.amount, method:p.method||"Pix",
+      note:p.note||"", paid_at:p.paidAt||new Date().toISOString(),
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,appointmentId:data.appointment_id,amount:Number(data.amount),method:data.method,note:data.note||"",paidAt:data.paid_at};
+  },
+  async deleteAppointmentPayment(id) {
+    const {error}=await supabase.from("appointment_payments").delete().eq("id",id);
+    if(error) throw error;
+  },
+
+  // ── Appointments ────────────────────────────────────────────────────────────
+  async loadAppointments() {
+    const [appt,svcs,pays] = await Promise.all([
+      supabase.from("appointments").select("*").order("created_at",{ascending:false}),
+      supabase.from("appointment_services").select("*").order("created_at"),
+      supabase.from("appointment_payments").select("*").order("paid_at"),
+    ]);
+    if(appt.error) throw appt.error;
+    return (appt.data||[]).map(a=>({
+      id:a.id, vehicleId:a.vehicle_id, clientId:a.client_id,
+      title:a.title, notes:a.notes, status:a.status,
+      estimatedValue:Number(a.estimated_value||0),
+      createdAt:a.created_at, convertedAt:a.converted_at,
+      services:(svcs.data||[]).filter(s=>s.appointment_id===a.id).map(s=>({
+        id:s.id, appointmentId:s.appointment_id, label:s.label,
+        estimatedValue:Number(s.estimated_value||0),
+        division:s.division||"performance", done:s.done, createdAt:s.created_at,
+      })),
+      payments:(pays.data||[]).filter(p=>p.appointment_id===a.id).map(p=>({
+        id:p.id, appointmentId:p.appointment_id, amount:Number(p.amount||0),
+        method:p.method, note:p.note, paidAt:p.paid_at,
+      })),
+    }));
+  },
+  async addAppointment(a) {
+    const {data,error}=await supabase.from("appointments").insert({
+      vehicle_id:a.vehicleId||null, client_id:a.clientId||null,
+      title:a.title||"", notes:a.notes||"",
+      estimated_value:a.estimatedValue||0, status:"open",
+    }).select().single();
+    if(error) throw error;
+    return {...data,vehicleId:data.vehicle_id,clientId:data.client_id,estimatedValue:Number(data.estimated_value||0),createdAt:data.created_at,convertedAt:null,services:[],payments:[]};
+  },
+  async updateAppointment(id,patch) {
+    const map={title:"title",notes:"notes",status:"status",estimatedValue:"estimated_value",convertedAt:"converted_at"};
+    const dbp={};
+    Object.keys(patch).forEach(k=>{if(map[k]) dbp[map[k]]=patch[k];});
+    const {error}=await supabase.from("appointments").update(dbp).eq("id",id);
+    if(error) throw error;
+  },
+  async deleteAppointment(id) {
+    const {error}=await supabase.from("appointments").delete().eq("id",id);
+    if(error) throw error;
+  },
+  async addAppointmentService(s) {
+    const {data,error}=await supabase.from("appointment_services").insert({
+      appointment_id:s.appointmentId, label:s.label, estimated_value:s.estimatedValue||0,
+      division:s.division||"performance", done:false,
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,appointmentId:data.appointment_id,label:data.label,estimatedValue:Number(data.estimated_value||0),division:data.division,done:data.done,createdAt:data.created_at};
+  },
+  async updateAppointmentService(id,patch) {
+    const {error}=await supabase.from("appointment_services").update({label:patch.label,estimated_value:patch.estimatedValue,division:patch.division,done:patch.done}).eq("id",id);
+    if(error) throw error;
+  },
+  async deleteAppointmentService(id) {
+    const {error}=await supabase.from("appointment_services").delete().eq("id",id);
+    if(error) throw error;
+  },
+  async addAppointmentPayment(p) {
+    const {data,error}=await supabase.from("appointment_payments").insert({
+      appointment_id:p.appointmentId, amount:p.amount,
+      method:p.method||"Pix", note:p.note||"",
+      paid_at:p.paidAt||new Date().toISOString(),
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,appointmentId:data.appointment_id,amount:Number(data.amount),method:data.method,note:data.note,paidAt:data.paid_at};
+  },
+  async deleteAppointmentPayment(id) {
+    const {error}=await supabase.from("appointment_payments").delete().eq("id",id);
+    if(error) throw error;
+  },
+
   async deleteOsHistory(id) {
     const { error } = await supabase.from("os_history").delete().eq("id", id);
     if (error) throw error;

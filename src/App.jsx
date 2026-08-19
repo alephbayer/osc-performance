@@ -6406,7 +6406,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     paused:{label:"Pausado — Finishing",      icon:"paused",  color:B.amber,   bg:`${B.amber}18`},
     ready: {label:"Acabamento pronto!",       icon:"ready",   color:B.green,   bg:B.greenBg},
   };
-  const sc=statusCfg[v.status||"active"];
+  const allPerfDone=regularTs.length>0&&regularTs.every(t=>t.done);
+  const sc=allPerfDone&&(v.status||"active")==="active"
+    ?{label:"Em teste",icon:"ready",color:B.green,bg:B.greenBg}
+    :statusCfg[v.status||"active"];
 
   const S={
     card:{background:B.gray800,borderRadius:16,overflow:"hidden",marginBottom:20,border:`1px solid ${B.gray700}`},
@@ -7222,7 +7225,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.9";
+const APP_VERSION = "2026.08.18.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

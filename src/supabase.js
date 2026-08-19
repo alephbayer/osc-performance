@@ -1021,6 +1021,7 @@ export const db = {
         id:s.id, appointmentId:s.appointment_id, label:s.label,
         estimatedValue:Number(s.estimated_value||0),
         division:s.division||"performance", done:s.done, createdAt:s.created_at,
+        materials:s.materials||[],
       })),
       payments:(pays.data||[]).filter(p=>p.appointment_id===a.id).map(p=>({
         id:p.id, appointmentId:p.appointment_id, amount:Number(p.amount||0),
@@ -1051,13 +1052,15 @@ export const db = {
   async addAppointmentService(s) {
     const {data,error}=await supabase.from("appointment_services").insert({
       appointment_id:s.appointmentId, label:s.label, estimated_value:s.estimatedValue||0,
-      division:s.division||"performance", done:false,
+      division:s.division||"performance", done:false, materials:s.materials||[],
     }).select().single();
     if(error) throw error;
-    return {id:data.id,appointmentId:data.appointment_id,label:data.label,estimatedValue:Number(data.estimated_value||0),division:data.division,done:data.done,createdAt:data.created_at};
+    return {id:data.id,appointmentId:data.appointment_id,label:data.label,estimatedValue:Number(data.estimated_value||0),division:data.division,done:data.done,createdAt:data.created_at,materials:data.materials||[]};
   },
   async updateAppointmentService(id,patch) {
-    const {error}=await supabase.from("appointment_services").update({label:patch.label,estimated_value:patch.estimatedValue,division:patch.division,done:patch.done}).eq("id",id);
+    const dbp={label:patch.label,estimated_value:patch.estimatedValue,division:patch.division,done:patch.done};
+    if(patch.materials!==undefined) dbp.materials=patch.materials;
+    const {error}=await supabase.from("appointment_services").update(dbp).eq("id",id);
     if(error) throw error;
   },
   async deleteAppointmentService(id) {

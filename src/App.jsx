@@ -4605,12 +4605,15 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 // ─── AppointmentsTab ──────────────────────────────────────────────────────────
 function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,
   onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
-  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense}) {
+  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[]}) {
 
   const [showNew,setShowNew]=useState(false);
   const [expanded,setExpanded]=useState(null);
   const [form,setForm]=useState({vehicleId:"",title:"",notes:"",estimatedValue:""});
-  const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance"});
+  const [vSearch,setVSearch]=useState("");
+  const [showVList,setShowVList]=useState(false);
+  const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance",materials:[]});
+  const [svcMatSearch,setSvcMatSearch]=useState("");
   const [showSvcForm,setShowSvcForm]=useState(null);
   const [payForm,setPayForm]=useState({amount:"",method:"Pix",note:""});
   const [showPayForm,setShowPayForm]=useState(null);
@@ -4644,14 +4647,56 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
     {showNew&&canManage&&<div style={{background:B.gray900,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${B.blue}44`}}>
       <div style={{fontWeight:700,fontSize:13,color:B.blue,marginBottom:12}}>Novo Agendamento</div>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        <select value={form.vehicleId} onChange={e=>setForm(p=>({...p,vehicleId:e.target.value}))}
-          style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:form.vehicleId?B.white:B.gray500,fontSize:12,outline:"none"}}>
-          <option value="">Selecione o veículo *</option>
-          {[...vehicles].sort((a,b)=>(a.model||"").localeCompare(b.model||"","pt-BR")).map(v=>{
-            const cli=clients.find(c=>c.id===v.clientId);
-            return <option key={v.id} value={v.id}>{v.model}{v.plate?` (${v.plate})`:""}{cli?` — ${cli.name}`:""}</option>;
-          })}
-        </select>
+        {/* Vehicle search */}
+        <div style={{position:"relative"}}>
+          <input value={vSearch} onChange={e=>{setVSearch(e.target.value);setForm(p=>({...p,vehicleId:""}));setShowVList(true);}}
+            onFocus={()=>setShowVList(true)}
+            placeholder="Buscar veículo por modelo, placa ou cliente *"
+            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${form.vehicleId?B.green:B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+          {form.vehicleId&&<span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",color:B.green,fontSize:11}}>✓</span>}
+          {showVList&&vSearch.length>=1&&(()=>{
+            const q=vSearch.toLowerCase();
+            const hits=vehicles.filter(v=>{
+              const cli=clients.find(c=>c.id===v.clientId);
+              return (v.model||"").toLowerCase().includes(q)||(v.plate||"").toLowerCase().includes(q)||(cli?.name||"").toLowerCase().includes(q);
+            }).slice(0,8);
+            if(!hits.length) return null;
+            return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,borderRadius:8,border:`1px solid ${B.gray600}`,zIndex:50,overflow:"hidden",marginTop:2}}>
+              {hits.map(v=>{
+                const cli=clients.find(c=>c.id===v.clientId);
+                return(<div key={v.id} onClick={()=>{setForm(p=>({...p,vehicleId:v.id}));setVSearch(`${v.model}${v.plate?` (${v.plate})`:""}`);setShowVList(false);}}
+                  style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}
+                  onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+                  onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                  {v.photo&&<img src={v.photo} alt="" style={{width:28,height:28,borderRadius:5,objectFit:"cover",flexShrink:0}}/>}
+                  <div>
+                    <div style={{fontSize:12,fontWeight:700,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+                    {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
+                  </div>
+                </div>);
+              })}
+            </div>);
+          })()}
+        </div>
+        {/* Client notes — shown when vehicle with client is selected */}
+        {(()=>{
+          if(!form.vehicleId) return null;
+          const v=vehicles.find(x=>x.id===form.vehicleId);
+          const notes=clientNotes.filter(n=>n.vehicleId===form.vehicleId||n.clientId===v?.clientId);
+          if(!notes.length) return null;
+          return(<div style={{background:`${B.amber}08`,border:`1px solid ${B.amber}33`,borderRadius:8,padding:"8px 12px"}}>
+            <div style={{fontSize:10,fontWeight:700,color:B.amber,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Anotações do cliente</div>
+            {notes.map((n,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:4}}>
+                <div style={{fontSize:11,color:B.gray200,flex:1,whiteSpace:"pre-wrap"}}>{n.note}</div>
+                <button onClick={()=>setSvcForm(p=>({...p,label:n.note.slice(0,60)}))}
+                  style={{fontSize:10,color:B.amber,background:"none",border:`1px solid ${B.amber}44`,borderRadius:5,padding:"1px 7px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+                  + Serviço
+                </button>
+              </div>
+            ))}
+          </div>);
+        })()}
         <input value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="Título do agendamento *"
           style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
         <textarea value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Observações / contexto" rows={2}
@@ -4663,7 +4708,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
             style={{flex:1,padding:"8px 0",borderRadius:8,background:form.vehicleId&&form.title.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:form.vehicleId&&form.title.trim()?"pointer":"not-allowed"}}>
             Criar agendamento
           </button>
-          <button onClick={()=>setShowNew(false)} style={{padding:"8px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray400,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+          <button onClick={()=>{setShowNew(false);setVSearch("");setForm({vehicleId:"",title:"",notes:"",estimatedValue:""}); }} style={{padding:"8px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray400,fontSize:12,cursor:"pointer"}}>Cancelar</button>
         </div>
       </div>
     </div>}
@@ -4712,15 +4757,22 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
               {canManage&&<button onClick={()=>setShowSvcForm(a.id)} style={{fontSize:11,color:B.blue,background:"none",border:`1px solid ${B.blue}44`,borderRadius:6,padding:"2px 8px",cursor:"pointer",fontWeight:600}}>+ Serviço</button>}
             </div>
             {a.services.map(sv=>(
-              <div key={sv.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:B.gray800,borderRadius:8,marginBottom:5,border:`1px solid ${B.gray700}`}}>
-                <div style={{width:6,height:6,borderRadius:99,background:DIV_COLOR[sv.division]||B.orange,flexShrink:0}}/>
-                <span style={{flex:1,fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</span>
-                <span style={{fontSize:10,color:DIV_COLOR[sv.division]||B.orange,fontWeight:700}}>{DIV_LABEL[sv.division]}</span>
-                {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(sv.estimatedValue)}</span>}
-                {canManage&&<button onClick={()=>onUpdateService(sv.id,{...sv,done:!sv.done})} style={{background:"none",border:"none",cursor:"pointer",color:sv.done?B.green:B.gray600,padding:2}}>
-                  <ICheck s={12} c={sv.done?B.green:B.gray600}/>
-                </button>}
-                {canManage&&<button onClick={()=>onDeleteService(sv.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2}}><ITrash s={11}/></button>}
+              <div key={sv.id} style={{display:"flex",flexDirection:"column",gap:3,padding:"7px 10px",background:B.gray800,borderRadius:8,marginBottom:5,border:`1px solid ${B.gray700}`}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:6,height:6,borderRadius:99,background:DIV_COLOR[sv.division]||B.orange,flexShrink:0}}/>
+                  <span style={{flex:1,fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</span>
+                  <span style={{fontSize:10,color:DIV_COLOR[sv.division]||B.orange,fontWeight:700}}>{DIV_LABEL[sv.division]}</span>
+                  {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(sv.estimatedValue)}</span>}
+                  {canManage&&<button onClick={()=>onUpdateService(sv.id,{...sv,done:!sv.done})} style={{background:"none",border:"none",cursor:"pointer",color:sv.done?B.green:B.gray600,padding:2}}>
+                    <ICheck s={12} c={sv.done?B.green:B.gray600}/>
+                  </button>}
+                  {canManage&&<button onClick={()=>onDeleteService(sv.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2}}><ITrash s={11}/></button>}
+                </div>
+                {(sv.materials||[]).length>0&&<div style={{paddingLeft:14,display:"flex",flexWrap:"wrap",gap:4}}>
+                  {(sv.materials||[]).map((m,mi)=>(
+                    <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 6px"}}>{m.name}×{m.qty}</span>
+                  ))}
+                </div>}
               </div>
             ))}
             {a.services.length===0&&<div style={{fontSize:11,color:B.gray500,textAlign:"center",padding:"8px 0"}}>Nenhum serviço planejado</div>}
@@ -4736,10 +4788,61 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   <option value="finishing">Finishing</option>
                 </select>
               </div>
+              {/* Materials from stock */}
+              <div>
+                <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Materiais do estoque (opcional)</div>
+                <div style={{position:"relative"}}>
+                  <input value={svcMatSearch} onChange={e=>setSvcMatSearch(e.target.value)} placeholder="Buscar peça ou material..."
+                    style={{width:"100%",padding:"5px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none",boxSizing:"border-box"}}/>
+                  {svcMatSearch.length>=1&&(()=>{
+                    const q=svcMatSearch.toLowerCase();
+                    const hits=stock.filter(s=>(s.name||"").toLowerCase().includes(q)||(s.brand||"").toLowerCase().includes(q)).slice(0,6);
+                    if(!hits.length) return null;
+                    return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,borderRadius:7,border:`1px solid ${B.gray600}`,zIndex:50,marginTop:2}}>
+                      {hits.map(s=>(
+                        <div key={s.id} onClick={()=>{setSvcForm(p=>({...p,materials:[...(p.materials||[]),{name:s.name,qty:1,stockId:s.id,cost:s.salePrice||0}]}));setSvcMatSearch("");}}
+                          style={{padding:"6px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}
+                          onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+                          onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                          <span style={{flex:1,fontSize:11,color:B.white}}>{s.name}{s.brand?` · ${s.brand}`:""}</span>
+                          <span style={{fontSize:10,color:B.gray400}}>Estoque: {s.qty}</span>
+                          {s.salePrice>0&&<span style={{fontSize:10,color:B.amber,fontWeight:700}}>{fmtBRL(s.salePrice)}</span>}
+                        </div>
+                      ))}
+                    </div>);
+                  })()}
+                </div>
+                {/* Also allow manual material */}
+                {svcMatSearch.length>=1&&!stock.find(s=>s.name.toLowerCase()===svcMatSearch.toLowerCase())&&<button
+                  onClick={()=>{setSvcForm(p=>({...p,materials:[...(p.materials||[]),{name:svcMatSearch,qty:1,stockId:null,cost:0}]}));setSvcMatSearch("");}}
+                  style={{marginTop:4,fontSize:10,color:B.purple,background:"none",border:`1px solid ${B.purple}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer"}}>
+                  + Adicionar "{svcMatSearch}" manualmente
+                </button>}
+                {/* Selected materials */}
+                {(svcForm.materials||[]).length>0&&<div style={{marginTop:4,display:"flex",flexDirection:"column",gap:3}}>
+                  {(svcForm.materials||[]).map((m,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 8px",background:B.gray900,borderRadius:5,border:`1px solid ${B.gray700}`}}>
+                      <span style={{flex:1,fontSize:11,color:B.white}}>{m.name}</span>
+                      <span style={{fontSize:10,color:B.gray400}}>×</span>
+                      <input value={m.qty} onChange={e=>setSvcForm(p=>({...p,materials:p.materials.map((x,j)=>j===i?{...x,qty:parseInt(e.target.value)||1}:x)}))}
+                        type="number" min="1" style={{width:36,padding:"1px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                      {m.cost>0&&<span style={{fontSize:10,color:B.amber}}>{fmtBRL(m.cost*m.qty)}</span>}
+                      <button onClick={()=>setSvcForm(p=>({...p,materials:p.materials.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0}}><IX s={10}/></button>
+                    </div>
+                  ))}
+                </div>}
+              </div>
               <div style={{display:"flex",gap:6}}>
-                <button onClick={async()=>{if(!svcForm.label.trim()) return;await onAddService({appointmentId:a.id,label:svcForm.label.trim(),estimatedValue:parseFloat(svcForm.estimatedValue)||0,division:svcForm.division});setSvcForm({label:"",estimatedValue:"",division:"performance"});setShowSvcForm(null);}}
-                  style={{flex:1,padding:"6px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Adicionar</button>
-                <button onClick={()=>setShowSvcForm(null)} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
+                <button onClick={async()=>{
+                  if(!svcForm.label.trim()) return;
+                  const matCost=(svcForm.materials||[]).reduce((s,m)=>s+m.cost*m.qty,0);
+                  const est=parseFloat(svcForm.estimatedValue)||matCost;
+                  await onAddService({appointmentId:a.id,label:svcForm.label.trim(),estimatedValue:est,division:svcForm.division,materials:svcForm.materials||[]});
+                  setSvcForm({label:"",estimatedValue:"",division:"performance",materials:[]});
+                  setSvcMatSearch("");
+                  setShowSvcForm(null);
+                }} style={{flex:1,padding:"6px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Adicionar</button>
+                <button onClick={()=>{setShowSvcForm(null);setSvcForm({label:"",estimatedValue:"",division:"performance",materials:[]});setSvcMatSearch("");}} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
               </div>
             </div>}
           </div>
@@ -7456,7 +7559,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.5";
+const APP_VERSION = "2026.08.19.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10913,6 +11016,7 @@ export default function App() {
         <AppointmentsTab
           appointments={appointments} vehicles={vehicles} clients={clients}
           employees={employees} adminRole={adminRole}
+          stock={stock} clientNotes={clientNotes}
           onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));}catch(e){errToast(e);}}}
           onDelete={async id=>{try{await db.deleteAppointment(id);setAppts(p=>p.filter(a=>a.id!==id));toast_("Agendamento removido ✓");}catch(e){errToast(e);}}}

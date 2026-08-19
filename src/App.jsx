@@ -2845,11 +2845,11 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
         {signer&&task.done&&<div style={{marginTop:2}}>
           <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
         </div>}
-        {/* Updates feed button */}
-        {(task.updates||[]).length>0&&<button onClick={()=>setShowUpdates(u=>!u)} style={{marginTop:4,background:"none",border:"none",cursor:"pointer",color:B.blue,fontSize:10,fontWeight:700,padding:0,display:"flex",alignItems:"center",gap:3}}>
+        {/* Updates feed button — always visible for mechanic */}
+        <button onClick={()=>setShowUpdates(u=>!u)} style={{marginTop:4,background:"none",border:`1px solid ${showUpdates?B.blue:B.gray700}`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:showUpdates?B.blue:B.gray500,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3}}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-          {(task.updates||[]).length} atualização{(task.updates||[]).length!==1?"s":""} {showUpdates?"▲":"▼"}
-        </button>}
+          {(task.updates||[]).length>0?`${(task.updates||[]).length} update${(task.updates||[]).length!==1?"s":""}  ${showUpdates?"▲":"▼"}`:"Adicionar update"}
+        </button>
       </div>
       <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2,display:"flex",flexShrink:0,marginTop:1}}
         onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}><ITrash s={14}/></button>
@@ -7222,7 +7222,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.4";
+const APP_VERSION = "2026.08.18.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

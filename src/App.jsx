@@ -7222,7 +7222,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.7";
+const APP_VERSION = "2026.08.18.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10515,12 +10515,10 @@ export default function App() {
                   const lastCompleted=vts.filter(t=>t.completedAt).sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt))[0];
                   const daysSince=lastCompleted?Math.floor((Date.now()-new Date(lastCompleted.completedAt))/(1000*3600*24)):null;
                   // First photo url
-                  const photoUrl=(v.photos||[]).find(p=>p?.url||typeof p==="string");
-                  const photoSrc=photoUrl?.url||photoUrl||null;
                   return(<div key={v.id} style={{background:`linear-gradient(135deg,${B.gray900} 0%,${B.green}08 100%)`,borderRadius:14,border:`1px solid ${B.green}33`,overflow:"hidden",boxShadow:`0 0 20px ${B.green}0a`,position:"relative"}}>
                     <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:`linear-gradient(180deg,${B.green},${B.blue})`}}/>
                     <div style={{padding:"12px 16px 12px 20px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                      {photoSrc&&<img src={photoSrc} alt="" style={{width:48,height:48,borderRadius:10,objectFit:"cover",border:`1px solid ${B.green}33`,flexShrink:0}}/>}
+                      {v.photo&&<img src={v.photo} alt="" style={{width:48,height:48,borderRadius:10,objectFit:"cover",border:`1px solid ${B.green}33`,flexShrink:0}}/>}
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
                           <span style={{fontWeight:900,fontSize:15,color:B.white}}>{v.model}</span>

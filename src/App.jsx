@@ -7225,7 +7225,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.10";
+const APP_VERSION = "2026.08.18.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10498,7 +10498,7 @@ export default function App() {
               return vts.length>0&&vts.every(t=>t.done)&&v.status!=="ready";
             });
             if(!testVehicles.length) return null;
-            return(<div style={{marginBottom:24}}>
+            return(<div style={{marginBottom:24,marginTop:20}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
                 <div style={{flex:1,height:1,background:`linear-gradient(90deg,${B.green}44,transparent)`}}/>
                 <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px",borderRadius:99,background:`linear-gradient(135deg,${B.green}18,${B.blue}12)`,border:`1px solid ${B.green}44`}}>

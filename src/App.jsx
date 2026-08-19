@@ -5494,7 +5494,9 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 <button disabled={pdfLoading===h.id} onClick={async()=>{
                   setPdfLoading(h.id);
                   try{
-                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model,fuelCost:h.fuel_cost||0,tows:h.tows||[],osDiscountPct:h.os_discount_pct||0};
+                    const rawFuels=Array.isArray(h.fuels)?h.fuels:(h.fuels?JSON.parse(JSON.stringify(h.fuels)):[]);
+                    const rawTows=Array.isArray(h.tows)?h.tows:(h.tows?JSON.parse(JSON.stringify(h.tows)):[]);
+                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model,fuelCost:Number(h.fuel_cost||0),fuels:rawFuels,tows:rawTows,osDiscountPct:Number(h.os_discount_pct||0)};
                     const hEmployee=employees.find(e=>(h.mechanic_ids||[]).includes(e.id))||null;
                     await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks,payments.filter(p=>p.osHistoryId===h.id));
                   }catch(err){alert("Erro ao gerar PDF: "+err.message);}
@@ -7657,7 +7659,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.9";
+const APP_VERSION = "2026.08.19.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

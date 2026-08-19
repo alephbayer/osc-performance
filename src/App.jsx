@@ -7222,7 +7222,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.6";
+const APP_VERSION = "2026.08.18.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10511,11 +10511,16 @@ export default function App() {
                   const mechs=employees.filter(e=>(v.mechanicIds||[]).includes(e.id));
                   const vts=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"&&!t.warranty);
                   const totalVal=vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+                  // Last completed task date
+                  const lastCompleted=vts.filter(t=>t.completedAt).sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt))[0];
+                  const daysSince=lastCompleted?Math.floor((Date.now()-new Date(lastCompleted.completedAt))/(1000*3600*24)):null;
+                  // First photo url
+                  const photoUrl=(v.photos||[]).find(p=>p?.url||typeof p==="string");
+                  const photoSrc=photoUrl?.url||photoUrl||null;
                   return(<div key={v.id} style={{background:`linear-gradient(135deg,${B.gray900} 0%,${B.green}08 100%)`,borderRadius:14,border:`1px solid ${B.green}33`,overflow:"hidden",boxShadow:`0 0 20px ${B.green}0a`,position:"relative"}}>
-                    {/* Green accent bar */}
                     <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:`linear-gradient(180deg,${B.green},${B.blue})`}}/>
                     <div style={{padding:"12px 16px 12px 20px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                      {v.photos?.[0]&&<img src={v.photos[0]} alt="" style={{width:48,height:48,borderRadius:10,objectFit:"cover",border:`1px solid ${B.green}33`,flexShrink:0}}/>}
+                      {photoSrc&&<img src={photoSrc} alt="" style={{width:48,height:48,borderRadius:10,objectFit:"cover",border:`1px solid ${B.green}33`,flexShrink:0}}/>}
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
                           <span style={{fontWeight:900,fontSize:15,color:B.white}}>{v.model}</span>
@@ -10525,22 +10530,41 @@ export default function App() {
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                             100% concluído
                           </span>
+                          {v.urgent&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill={B.red} stroke={B.red} strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>URGENTE</span>}
                         </div>
                         <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:B.gray400}}>
                           {cli&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
                           {mechs.length>0&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
                           {totalVal>0&&<span style={{color:B.amber,fontWeight:700}}>{fmtBRL(totalVal)}</span>}
-                          {v.urgent&&<span style={{color:B.red,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill={B.red} stroke={B.red} strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>URGENTE</span>}
                         </div>
                       </div>
                       <div style={{textAlign:"right",flexShrink:0}}>
-                        <div style={{fontSize:11,color:B.gray500}}>Em teste desde</div>
-                        <div style={{fontSize:12,fontWeight:700,color:B.green}}>{v.enteredAt?`${Math.floor((Date.now()-new Date(v.enteredAt))/(1000*3600*24))}d na oficina`:""}</div>
+                        <div style={{fontSize:11,color:B.gray500}}>Em teste há</div>
+                        <div style={{fontSize:13,fontWeight:800,color:B.green}}>{daysSince!==null?`${daysSince}d`:"—"}</div>
+                        {lastCompleted&&<div style={{fontSize:10,color:B.gray500}}>{new Date(lastCompleted.completedAt).toLocaleDateString("pt-BR")}</div>}
                       </div>
                     </div>
                   </div>);
                 })}
               </div>
+            </div>);
+          })()}
+
+          {/* ── Veículos em Serviço ── */}
+          {(()=>{
+            const inService=activeVehicles.filter(v=>{
+              const vts=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"&&!t.warranty);
+              return vts.length===0||!vts.every(t=>t.done);
+            });
+            if(!inService.length) return null;
+            return(<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+              <div style={{flex:1,height:1,background:`linear-gradient(90deg,${B.orange}44,transparent)`}}/>
+              <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px",borderRadius:99,background:`linear-gradient(135deg,${B.orange}18,${B.amber}12)`,border:`1px solid ${B.orange}44`}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                <span style={{fontWeight:800,fontSize:12,color:B.orange,letterSpacing:.5}}>VEÍCULOS EM SERVIÇO</span>
+                <span style={{fontWeight:700,fontSize:11,color:B.orange,opacity:.7}}>{inService.length}</span>
+              </div>
+              <div style={{flex:1,height:1,background:`linear-gradient(270deg,${B.orange}44,transparent)`}}/>
             </div>);
           })()}
 

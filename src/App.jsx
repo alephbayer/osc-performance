@@ -4689,9 +4689,9 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
             {notes.map((n,i)=>(
               <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:4}}>
                 <div style={{fontSize:11,color:B.gray200,flex:1,whiteSpace:"pre-wrap"}}>{n.note}</div>
-                <button onClick={()=>setSvcForm(p=>({...p,label:n.note.slice(0,60)}))}
+                <button onClick={()=>setSvcForm(p=>({...p,label:n.note.slice(0,80)}))}
                   style={{fontSize:10,color:B.amber,background:"none",border:`1px solid ${B.amber}44`,borderRadius:5,padding:"1px 7px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
-                  + Serviço
+                  Usar como serviço
                 </button>
               </div>
             ))}
@@ -4749,6 +4749,25 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
         {isExp&&<div style={{borderTop:`1px solid ${B.gray700}`,padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
           {/* Notes */}
           {a.notes&&<div style={{fontSize:12,color:B.gray300,background:B.gray800,borderRadius:8,padding:"8px 12px",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{a.notes}</div>}
+
+          {/* Client notes — pull as service */}
+          {(()=>{
+            const v=vehicles.find(x=>x.id===a.vehicleId);
+            const notes=(clientNotes||[]).filter(n=>n.vehicleId===a.vehicleId||n.clientId===v?.clientId);
+            if(!notes.length) return null;
+            return(<div style={{background:`${B.amber}08`,border:`1px solid ${B.amber}33`,borderRadius:8,padding:"8px 12px"}}>
+              <div style={{fontSize:10,fontWeight:700,color:B.amber,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Anotações do cliente</div>
+              {notes.map((n,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:4}}>
+                  <div style={{fontSize:11,color:B.gray200,flex:1,whiteSpace:"pre-wrap"}}>{n.note}</div>
+                  <button onClick={()=>{setSvcForm(p=>({...p,label:n.note.slice(0,80)}));setShowSvcForm(a.id);}}
+                    style={{fontSize:10,color:B.amber,background:"none",border:`1px solid ${B.amber}44`,borderRadius:5,padding:"1px 7px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+                    + Serviço
+                  </button>
+                </div>
+              ))}
+            </div>);
+          })()}
 
           {/* Services */}
           <div>
@@ -7559,7 +7578,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.7";
+const APP_VERSION = "2026.08.19.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

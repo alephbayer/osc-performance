@@ -7222,7 +7222,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.18.5";
+const APP_VERSION = "2026.08.18.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10487,6 +10487,63 @@ export default function App() {
             {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
           </div>
           {activeVehicles.length===0&&osSearch&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray400,fontSize:13}}>Nenhum resultado para "<b style={{color:B.white}}>{osSearch}</b>"</div>}
+
+          {/* ── Veículos em Teste ── */}
+          {(()=>{
+            const testVehicles=activeVehicles.filter(v=>{
+              const vts=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"&&!t.warranty);
+              return vts.length>0&&vts.every(t=>t.done)&&v.status!=="ready";
+            });
+            if(!testVehicles.length) return null;
+            return(<div style={{marginBottom:24}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <div style={{flex:1,height:1,background:`linear-gradient(90deg,${B.green}44,transparent)`}}/>
+                <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px",borderRadius:99,background:`linear-gradient(135deg,${B.green}18,${B.blue}12)`,border:`1px solid ${B.green}44`}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span style={{fontWeight:800,fontSize:12,color:B.green,letterSpacing:.5}}>VEÍCULOS EM TESTE</span>
+                  <span style={{fontWeight:700,fontSize:11,color:B.green,opacity:.7}}>{testVehicles.length}</span>
+                </div>
+                <div style={{flex:1,height:1,background:`linear-gradient(270deg,${B.green}44,transparent)`}}/>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {testVehicles.map(v=>{
+                  const cli=clients.find(c=>c.id===v.clientId);
+                  const mechs=employees.filter(e=>(v.mechanicIds||[]).includes(e.id));
+                  const vts=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"&&!t.warranty);
+                  const totalVal=vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+                  return(<div key={v.id} style={{background:`linear-gradient(135deg,${B.gray900} 0%,${B.green}08 100%)`,borderRadius:14,border:`1px solid ${B.green}33`,overflow:"hidden",boxShadow:`0 0 20px ${B.green}0a`,position:"relative"}}>
+                    {/* Green accent bar */}
+                    <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:`linear-gradient(180deg,${B.green},${B.blue})`}}/>
+                    <div style={{padding:"12px 16px 12px 20px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                      {v.photos?.[0]&&<img src={v.photos[0]} alt="" style={{width:48,height:48,borderRadius:10,objectFit:"cover",border:`1px solid ${B.green}33`,flexShrink:0}}/>}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                          <span style={{fontWeight:900,fontSize:15,color:B.white}}>{v.model}</span>
+                          {v.plate&&<span style={{fontSize:11,color:B.gray400}}>{v.plate}</span>}
+                          {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,background:`${B.orange}18`,borderRadius:5,padding:"1px 7px"}}>{fmtOS(v.osNumber)}</span>}
+                          <span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                            100% concluído
+                          </span>
+                        </div>
+                        <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:B.gray400}}>
+                          {cli&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
+                          {mechs.length>0&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
+                          {totalVal>0&&<span style={{color:B.amber,fontWeight:700}}>{fmtBRL(totalVal)}</span>}
+                          {v.urgent&&<span style={{color:B.red,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill={B.red} stroke={B.red} strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>URGENTE</span>}
+                        </div>
+                      </div>
+                      <div style={{textAlign:"right",flexShrink:0}}>
+                        <div style={{fontSize:11,color:B.gray500}}>Em teste desde</div>
+                        <div style={{fontSize:12,fontWeight:700,color:B.green}}>{v.enteredAt?`${Math.floor((Date.now()-new Date(v.enteredAt))/(1000*3600*24))}d na oficina`:""}</div>
+                      </div>
+                    </div>
+                  </div>);
+                })}
+              </div>
+            </div>);
+          })()}
+
           {activeVehicles.length>0&&<OsGroupedView groups={groups} sortVehicles={sortVehicles}
             tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} company={company}
             addTask={addTask} toggleT={toggleT} delTask={delTask} updTask={updTask} updVeh={updVeh} delVeh={delVeh}

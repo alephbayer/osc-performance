@@ -7410,6 +7410,26 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 <span style={{fontSize:13,fontWeight:700,color:activeBalance>0?B.red:B.green}}>{activeBalance>0?"⚠ Saldo em aberto":"✅ Quitado"}</span>
                 {activeBalance>0&&<span style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(activeBalance)}</span>}
               </div>}
+              {/* Pix info */}
+              {activeBalance>0&&<div style={{marginTop:10,background:`#6366f115`,border:`1px solid #6366f144`,borderRadius:10,padding:"12px 14px"}}>
+                <div style={{fontSize:11,fontWeight:800,color:"#818cf8",textTransform:"uppercase",letterSpacing:.5,marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Formas de pagamento
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6,fontSize:12}}>
+                  <div style={{background:`#6366f110`,borderRadius:7,padding:"8px 10px"}}>
+                    <div style={{fontWeight:700,color:"#818cf8",marginBottom:2}}>Pix</div>
+                    <div style={{color:B.gray300}}>Chave (CNPJ): <span style={{fontWeight:700,color:B.white,userSelect:"all"}}>23.783.927/0001-40</span></div>
+                    <div style={{color:B.gray400,fontSize:11}}>Beneficiário: OSC Old School Customs</div>
+                  </div>
+                  <div style={{background:`${B.blue}10`,borderRadius:7,padding:"8px 10px"}}>
+                    <div style={{fontWeight:700,color:B.blue,marginBottom:2}}>TED / DOC — Itaú</div>
+                    <div style={{color:B.gray300}}>Ag: <span style={{fontWeight:700,color:B.white}}>6541</span> · CC: <span style={{fontWeight:700,color:B.white}}>98991-6</span></div>
+                    <div style={{color:B.gray400,fontSize:11}}>Beneficiário: OSC Enterprise Custom</div>
+                  </div>
+                  <div style={{color:B.gray500,fontSize:10,textAlign:"center"}}>Cartão disponível presencialmente</div>
+                </div>
+              </div>}
             </div>}
             {totalOwedPast>0&&<div>
               <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OS anteriores</div>
@@ -7704,7 +7724,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.12";
+const APP_VERSION = "2026.08.19.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -7419,7 +7419,13 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 <div style={{display:"flex",flexDirection:"column",gap:6,fontSize:12}}>
                   <div style={{background:`#6366f110`,borderRadius:7,padding:"8px 10px"}}>
                     <div style={{fontWeight:700,color:"#818cf8",marginBottom:2}}>Pix</div>
-                    <div style={{color:B.gray300}}>Chave (CNPJ): <span style={{fontWeight:700,color:B.white,userSelect:"all"}}>23.783.927/0001-40</span></div>
+                    <div style={{color:B.gray300,display:"flex",alignItems:"center",gap:6}}>Chave (CNPJ): <span style={{fontWeight:700,color:B.white,userSelect:"all"}}>23.783.927/0001-40</span>
+                      <button onClick={()=>navigator.clipboard.writeText("23.783.927/0001-40").then(()=>alert("Chave copiada!"))}
+                        style={{background:`#6366f122`,border:`1px solid #6366f144`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:"#818cf8",fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",gap:3}}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copiar
+                      </button>
+                    </div>
                     <div style={{color:B.gray400,fontSize:11}}>Beneficiário: OSC Old School Customs</div>
                   </div>
                   <div style={{background:`${B.blue}10`,borderRadius:7,padding:"8px 10px"}}>
@@ -7724,7 +7730,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.13";
+const APP_VERSION = "2026.08.19.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

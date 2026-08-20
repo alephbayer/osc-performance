@@ -3297,7 +3297,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         const finPayments=payments.filter(p=>p.division==="finishing");
         await generateFinishingPDF(vehicle,tasks,cli,mech,defaultRate,finPayments,company);
       } else {
-        await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate,undefined,payments);
+        await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate,undefined,payments.filter(p=>p.vehicleId===vehicle.id));
       }
     }
     catch(err){ alert("Erro ao gerar PDF: "+err.message); }
@@ -7730,7 +7730,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.14";
+const APP_VERSION = "2026.08.19.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

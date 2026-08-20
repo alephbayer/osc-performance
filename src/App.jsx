@@ -6983,7 +6983,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             </div>
             <span style={{fontSize:18,fontWeight:900,color:progPct===100?B.green:B.orange,minWidth:50,textAlign:"right"}}>{progPct}%</span>
           </div>
-          {progPct===100&&<div style={{background:B.greenBg,border:`1px solid ${B.green}55`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,fontWeight:700,color:B.green,textAlign:"center"}}>
+          {progPct===100&&v.status!=="ready"&&<div style={{background:`${B.green}12`,border:`1px solid ${B.green}44`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,fontWeight:700,color:B.green,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Serviços concluídos — veículo em fase de testes
+          </div>}
+          {progPct===100&&v.status==="ready"&&<div style={{background:B.greenBg,border:`1px solid ${B.green}55`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,fontWeight:700,color:B.green,textAlign:"center"}}>
             🎉 Seu veículo está pronto para retirada!
           </div>}
 
@@ -7700,7 +7704,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.11";
+const APP_VERSION = "2026.08.19.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

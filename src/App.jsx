@@ -4195,6 +4195,8 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
   const [showPurchaseForm,setShowPF]=useState(false);
   const [confirmDeleteProduct,setCDP]=useState(false);
   const [orderQty,setOrderQty]=useState(String(item.minQty||1));
+  const [showAdjust,setShowAdjust]=useState(false);
+  const [adjustQty,setAdjustQty]=useState(String(item.qty||0));
   const salePrice=Number(form.costPrice||0)*(1+Number(form.markup||0)/100);
 
   const save=()=>{
@@ -4281,6 +4283,27 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
             <button onClick={()=>setCDP(true)} style={{padding:"9px 14px",borderRadius:9,background:"transparent",border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
               <ITrash s={13} c={B.red}/>Remover
             </button>
+          </div>
+
+          {/* ── Ajuste de saldo (temporário) ── */}
+          <div style={{marginTop:10,borderRadius:9,border:`1px solid ${B.amber}44`,overflow:"hidden"}}>
+            <button onClick={()=>setShowAdjust(s=>!s)} style={{width:"100%",padding:"8px 12px",background:`${B.amber}10`,border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,textAlign:"left"}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={B.amber} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span style={{fontSize:12,fontWeight:700,color:B.amber}}>Ajustar saldo em estoque</span>
+              <span style={{fontSize:10,color:B.amber,opacity:.7,marginLeft:"auto"}}>Atual: {item.qty} un.</span>
+            </button>
+            {showAdjust&&<div style={{padding:"10px 12px",background:`${B.amber}08`,display:"flex",gap:8,alignItems:"center"}}>
+              <input value={adjustQty} onChange={e=>setAdjustQty(e.target.value)} type="number" min="0" step="0.01" placeholder="Nova quantidade"
+                style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.amber}44`,background:B.gray800,color:B.white,fontSize:13,fontWeight:700,outline:"none"}}/>
+              <span style={{fontSize:11,color:B.gray400}}>un.</span>
+              <button onClick={()=>{
+                const newQty=Math.max(0,parseFloat(adjustQty)||0);
+                onSave(item.id,{qty:newQty});
+                setShowAdjust(false);
+              }} style={{padding:"7px 14px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:12,cursor:"pointer"}}>
+                Confirmar
+              </button>
+            </div>}
           </div>
 
           {/* Order link + generate order */}
@@ -7737,7 +7760,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.4";
+const APP_VERSION = "2026.08.21.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

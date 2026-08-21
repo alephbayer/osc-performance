@@ -7730,7 +7730,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.1";
+const APP_VERSION = "2026.08.21.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10690,9 +10690,9 @@ export default function App() {
       );
       return(<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.gray700}`}}>
         {hasPurchases&&<DashAlert color={B.amber} icon={iconCart} label={`${pendingPurchaseCount} pedido${pendingPurchaseCount!==1?"s":""} de peça aguardando compra`} sub="Pedidos de Compras" onClick={()=>goSection("gestao","purchases")}/>}
-        {pendingMateriais>0&&<DashAlert color={B.blue} icon={iconBox} label={`${pendingMateriais} material${pendingMateriais!==1?"is":""} sortido${pendingMateriais!==1?"s":""} para aprovar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
-        {approvedMateriais>0&&<DashAlert color={B.amber} icon={iconBox} label={`${approvedMateriais} material${approvedMateriais!==1?"is":""} sortido${approvedMateriais!==1?"s":""} para comprar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
-        {boughtMateriais>0&&<DashAlert color={B.green} icon={iconBox} label={`${boughtMateriais} material${boughtMateriais!==1?"is":""} sortido${boughtMateriais!==1?"s":""} para receber`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
+        {pendingMateriais>0&&<DashAlert color={B.blue} icon={iconBox} label={`${pendingMateriais} ${pendingMateriais!==1?"materiais sortidos":"material sortido"} para aprovar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
+        {approvedMateriais>0&&<DashAlert color={B.amber} icon={iconBox} label={`${approvedMateriais} ${approvedMateriais!==1?"materiais sortidos":"material sortido"} para comprar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
+        {boughtMateriais>0&&<DashAlert color={B.green} icon={iconBox} label={`${boughtMateriais} ${boughtMateriais!==1?"materiais sortidos":"material sortido"} para receber`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
         {hasNotes&&<DashAlert color={B.orange} icon={iconBell} label={`${pendingNotesCount} anotaç${pendingNotesCount!==1?"ões":"ão"} de cliente pendente${pendingNotesCount!==1?"s":""}`} sub="Aba Veículos" onClick={()=>goSection("oficina","vehicles")}/>}
         {lowStock>0&&<DashAlert color={B.red} icon={iconBox} label={`${lowStock} item${lowStock!==1?"s":""} com estoque baixo`} sub="Estoque" onClick={()=>goSection("gestao","stock")}/>}
         {hasInvest&&<DashAlert color={B.blue} icon={iconStar} label={`${pendingInvestmentCount} investimento${pendingInvestmentCount!==1?"s":""} para aprovar`} sub="Investimentos" onClick={()=>goSection("gestao","investments")}/>}

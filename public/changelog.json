@@ -1,168 +1,47 @@
 [
   {
-    "version": "2026.08.02.2",
-    "date": "2026-08-02",
+    "date": "2026-08-19",
     "changes": [
-      "Dashboard com data, seção Operação Atual e Resumo do Mês",
-      "Alertas: pedidos de peça, anotações de clientes, estoque baixo, investimentos",
-      "Aba Mais: configurações, portais, tema, logout",
-      "Ações rápidas corrigidas (pag. funcionando, sem desconto/reboque)",
-      "Cabeçalho removido no dashboard e aba Mais"
+      { "type": "feat", "text": "Agendamentos (pré-OS): planejamento de serviços, sinais e portal do cliente" },
+      { "type": "feat", "text": "Veículos em Teste: seção visual destacada acima dos mecânicos com botão Pronto" },
+      { "type": "feat", "text": "Veículos em Serviço: separador visual entre seções" },
+      { "type": "feat", "text": "Link de acompanhamento: status 'Em teste' antes de marcar Pronto" },
+      { "type": "feat", "text": "Link de acompanhamento: Pix com botão copiar e info de pagamento" },
+      { "type": "fix", "text": "PDF: aportes filtrados por veículo (não mais misturava pagamentos de outros clientes)" },
+      { "type": "fix", "text": "PDF: fuels e tows incluídos corretamente no histórico" }
     ]
   },
   {
-    "version": "2026.08.02.1",
-    "date": "2026-08-02",
+    "date": "2026-08-18",
     "changes": [
-      "Nova navegação: Dashboard inicial + nav inferior Liquid Glass",
-      "Dashboard do Gestor com receita, OSs ativas e alertas",
-      "Dashboard do Administrativo sem dados financeiros",
-      "Dashboard do Chefe de Oficina com progresso da equipe",
-      "Ações rápidas em bottom sheet (só para o Gestor)",
-      "Oficina e Gestão como seções separadas com sub-abas"
+      { "type": "feat", "text": "Urgência de veículo: badge pulsando, borda vermelha e notificação push aos mecânicos" },
+      { "type": "feat", "text": "Especialidade de mecânico: auto-atribuição e remoção automática por categoria" },
+      { "type": "feat", "text": "Pedidos de veículos: etapa de aprovação pelo gestor antes do admin colocar link" },
+      { "type": "feat", "text": "Sinalizar link inválido nos pedidos de compras e veículos" },
+      { "type": "feat", "text": "Pedido de reposição de estoque com link e quantidade" },
+      { "type": "feat", "text": "Data de recebimento em materiais sortidos e pedidos" },
+      { "type": "feat", "text": "Editar pagamento inline no Conta e no histórico de OSs" },
+      { "type": "fix", "text": "Mecânicos não são mais removidos ao abrir OS de outra divisão" }
     ]
   },
   {
-    "version": "2026.07.31.20",
-    "date": "2026-07-31",
+    "date": "2026-08-17",
     "changes": [
-      "Nova aba: Investimentos — pesados (maquinário) e leves (ferramentas pequenas)",
-      "Prioridade configurável: Urgente, Alta, Média, Baixa, Futura",
-      "Filtro por categoria, empresa e busca por nome/objetivo",
-      "Fluxo de aprovação: Pendente → Aprovado → Comprado",
-      "Disponível para Chefes, Administrativo e Gestor"
+      { "type": "feat", "text": "Acertos internos entre Performance e Finishing (visível só para o gestor)" },
+      { "type": "feat", "text": "Categoria Retífica adicionada nos serviços da Performance" },
+      { "type": "feat", "text": "Peças reservadas no link de acompanhamento com indicação de instalada/pendente" },
+      { "type": "feat", "text": "Renomear abas: Pedidos de Compras e Pedidos de Veículos" },
+      { "type": "fix", "text": "Financeiro Finishing: saldo e totais corrigidos incluindo histórico de OSs" }
     ]
   },
   {
-    "version": "2026.07.31.18",
-    "date": "2026-07-31",
+    "date": "2026-08-11",
     "changes": [
-      "Pedidos: opção ↩ Devolver ao marcar recebimento (item incorreto)",
-      "Pedidos: botão ↩ Devolver disponível após recebimento ou compra",
-      "Devolução reinicia o pedido para pendente com aviso ao administrativo",
-      "Mecânico recebe push ao item ser devolvido"
-    ]
-  },
-  {
-    "version": "2026.07.31.17",
-    "date": "2026-07-31",
-    "changes": [
-      "Peças Reservadas: badge ✓ Instalada quando usada em tarefa",
-      "Pedidos de Compras: badge ✓ Instalada ou 📦 Armazenada conforme o caso"
-    ]
-  },
-  {
-    "version": "2026.07.31.15",
-    "date": "2026-07-31",
-    "changes": [
-      "Ao marcar peça recebida: escolha entre instalar agora ou reservar com localização",
-      "Peças reservadas aparecem no picker de peças das tarefas",
-      "Peças reservadas mostram localização onde foram guardadas"
-    ]
-  },
-  {
-    "version": "2026.07.31.13",
-    "date": "2026-07-31",
-    "changes": [
-      "Correção: > perdido no final da aba OSC Performance",
-      "Pedidos: campo Marca adicionado, Markup removido (calculado automaticamente)",
-      "Peças recebidas somem do picker quando toda quantidade já foi alocada"
-    ]
-  },
-  {
-    "version": "2026.07.31.12",
-    "date": "2026-07-31",
-    "changes": [
-      "Botão 🛒 Peças nas tarefas — insere peças recebidas diretamente nos materiais da tarefa",
-      "Peças recebidas ficam disponíveis para seleção com preço de venda calculado automaticamente"
-    ]
-  },
-  {
-    "version": "2026.07.31.10",
-    "date": "2026-07-31",
-    "changes": [
-      "Correção: botão 🛒 Pedidos agora aparece também na aba OSC Finishing Division"
-    ]
-  },
-  {
-    "version": "2026.07.31.9",
-    "date": "2026-07-31",
-    "changes": [
-      "Correção: botão 🛒 Pedidos agora aparece na aba Mecânicos"
-    ]
-  },
-  {
-    "version": "2026.07.31.8",
-    "date": "2026-07-31",
-    "changes": [
-      "Correção: variável purchaseOrders não encontrada ao abrir card de veículo",
-      "Correção: botão de pedido de peças não aparecia no portal do mecânico"
-    ]
-  },
-  {
-    "version": "2026.07.31.7",
-    "date": "2026-07-31",
-    "changes": [
-      "Nova aba: Pedidos de Compras — fluxo completo de pedido de peças",
-      "Mecânicos podem solicitar peças diretamente no card do veículo",
-      "Administrativo insere link, preço de custo e markup",
-      "Gestor marca como comprado e recebido",
-      "Ao marcar recebido, peça é inserida automaticamente nos materiais da tarefa",
-      "Notificações push para mecânico a cada atualização do pedido"
-    ]
-  },
-  {
-    "version": "2026.07.31.6",
-    "date": "2026-07-31",
-    "changes": [
-      "Edição de nome e telefone dos mecânicos diretamente na aba Mecânicos",
-      "Botão de lápis ✏️ em cada card de mecânico para edição inline"
-    ]
-  },
-  {
-    "version": "2026.07.31.5",
-    "date": "2026-07-31",
-    "changes": [
-      "Checklist avançado — adicionados: Batentes de suspensão (dianteiros e traseiros)",
-      "Checklist avançado — adicionados: Coifas de homocinética",
-      "Checklist avançado — adicionados: Coxins de suspensão (strut mount)",
-      "Checklist avançado — adicionados: Coifa de direção (cremalheira)"
-    ]
-  },
-  {
-    "version": "2026.07.31.4",
-    "date": "2026-07-31",
-    "changes": [
-      "Correção: veículo some imediatamente do portal do mecânico ao marcar como pronto",
-      "Correção: Realtime não restaura veículo entregue ao receber update do banco"
-    ]
-  },
-  {
-    "version": "2026.07.31.3",
-    "date": "2026-07-31",
-    "changes": [
-      "Notificação para mecânico e gestor ao abrir nova OS (Performance e Finishing)",
-      "Notificação para gestor ao criar ou deletar tarefa",
-      "Despesas fixas no financeiro (salários, aluguel, serviços)"
-    ]
-  },
-  {
-    "version": "2026.07.31.2",
-    "date": "2026-07-31",
-    "changes": [
-      "Financeiro — painel de despesas fixas (salários, aluguel, serviços)",
-      "Categorias de despesa por empresa (Performance, Finishing ou ambas)",
-      "Total mensal de despesas visível no financeiro"
-    ]
-  },
-  {
-    "version": "2026.07.31.1",
-    "date": "2026-07-31",
-    "changes": [
-      "Portal do cliente com histórico, conta, anotações e notificações push",
-      "Tema Automático — segue o tema do dispositivo em tempo real",
-      "Detecção automática de nova versão",
-      "Changelog automático para o gestor a cada nova versão"
+      { "type": "feat", "text": "Updates de tarefas no portal do mecânico sempre visíveis" },
+      { "type": "feat", "text": "Portal do mecânico: filtro por especialidade de categoria" },
+      { "type": "feat", "text": "PDF: seção de aportes realizados e saldo a pagar" },
+      { "type": "feat", "text": "Notificações push ao marcar veículo como urgente" },
+      { "type": "fix", "text": "Saldo a receber no financeiro agora é global (sem filtro de data)" }
     ]
   }
 ]

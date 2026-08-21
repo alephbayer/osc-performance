@@ -7730,7 +7730,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.19.16";
+const APP_VERSION = "2026.08.19.17";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -7754,8 +7754,8 @@ function ChangelogModal({onClose}) {
             <div style={{fontSize:11,color:B.gray500,marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>{new Date(e.date).toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}</div>
             {e.changes.map((c,j)=>(
               <div key={j} style={{display:"flex",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.gray700}`}}>
-                <span style={{color:B.orange,flexShrink:0,marginTop:1}}>→</span>
-                <span style={{fontSize:13,color:B.gray200,lineHeight:1.4}}>{c}</span>
+                <span style={{color:c?.type==="fix"?B.blue:c?.type==="feat"?B.green:B.orange,flexShrink:0,marginTop:1}}>{c?.type==="fix"?"🔧":c?.type==="feat"?"✨":"→"}</span>
+                <span style={{fontSize:13,color:B.gray200,lineHeight:1.4}}>{typeof c==="string"?c:c?.text||""}</span>
               </div>
             ))}
           </div>

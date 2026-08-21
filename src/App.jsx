@@ -7760,7 +7760,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.5";
+const APP_VERSION = "2026.08.21.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -9944,6 +9944,52 @@ export default function App() {
         if(eventType==="INSERT") setStk(p=>[...p.filter(s=>s.id!==rec.id), db._mapStock(rec)]);
         if(eventType==="UPDATE") setStk(p=>p.map(s=>s.id===id?db._mapStock(rec):s));
         if(eventType==="DELETE") setStk(p=>p.filter(s=>s.id!==id));
+      }
+      if(table==="investments"){
+        if(eventType==="INSERT") setInvestments(p=>[...p.filter(x=>x.id!==rec.id), db._mapInvestment(rec)]);
+        if(eventType==="UPDATE") setInvestments(p=>p.map(x=>x.id===id?db._mapInvestment(rec):x));
+        if(eventType==="DELETE") setInvestments(p=>p.filter(x=>x.id!==id));
+      }
+      if(table==="purchase_orders"){
+        if(eventType==="INSERT") setPurchaseOrders(p=>[...p.filter(x=>x.id!==rec.id), db._mapPurchaseOrder(rec)]);
+        if(eventType==="UPDATE") setPurchaseOrders(p=>p.map(x=>x.id===id?db._mapPurchaseOrder(rec):x));
+        if(eventType==="DELETE") setPurchaseOrders(p=>p.filter(x=>x.id!==id));
+      }
+      if(table==="expenses"){
+        if(eventType==="INSERT") setExpenses(p=>[...p.filter(x=>x.id!==rec.id), rec]);
+        if(eventType==="UPDATE") setExpenses(p=>p.map(x=>x.id===id?rec:x));
+        if(eventType==="DELETE") setExpenses(p=>p.filter(x=>x.id!==id));
+      }
+      if(table==="internal_transfers"){
+        if(eventType==="INSERT") setInternalTransfers(p=>[...p.filter(x=>x.id!==rec.id), rec]);
+        if(eventType==="UPDATE") setInternalTransfers(p=>p.map(x=>x.id===id?rec:x));
+        if(eventType==="DELETE") setInternalTransfers(p=>p.filter(x=>x.id!==id));
+      }
+      if(table==="clients"){
+        if(eventType==="INSERT") setClients(p=>[...p.filter(x=>x.id!==rec.id), rec]);
+        if(eventType==="UPDATE") setClients(p=>p.map(x=>x.id===id?rec:x));
+        if(eventType==="DELETE") setClients(p=>p.filter(x=>x.id!==id));
+      }
+      if(table==="os_history"){
+        if(eventType==="INSERT") setOsHistory(p=>[...p.filter(x=>x.id!==rec.id), rec]);
+        if(eventType==="UPDATE") setOsHistory(p=>p.map(x=>x.id===id?rec:x));
+        if(eventType==="DELETE") setOsHistory(p=>p.filter(x=>x.id!==id));
+      }
+      if(table==="appointments"){
+        if(eventType==="INSERT") setAppts(p=>[...p.filter(x=>x.id!==rec.id), {...rec,vehicleId:rec.vehicle_id,clientId:rec.client_id,estimatedValue:Number(rec.estimated_value||0),createdAt:rec.created_at,convertedAt:rec.converted_at,services:[],payments:[]}]);
+        if(eventType==="UPDATE") setAppts(p=>p.map(x=>x.id===id?{...x,title:rec.title,notes:rec.notes,status:rec.status,estimatedValue:Number(rec.estimated_value||0)}:x));
+        if(eventType==="DELETE") setAppts(p=>p.filter(x=>x.id!==id));
+      }
+      if(table==="appointment_services"){
+        const apptId=rec?.appointment_id||oldRec?.appointment_id;
+        if(eventType==="INSERT") setAppts(p=>p.map(a=>a.id===apptId?{...a,services:[...a.services.filter(s=>s.id!==rec.id),{id:rec.id,appointmentId:rec.appointment_id,label:rec.label,estimatedValue:Number(rec.estimated_value||0),division:rec.division,done:rec.done,materials:rec.materials||[],category:rec.category||null}]}:a));
+        if(eventType==="UPDATE") setAppts(p=>p.map(a=>a.id===apptId?{...a,services:a.services.map(s=>s.id===id?{...s,label:rec.label,estimatedValue:Number(rec.estimated_value||0),division:rec.division,done:rec.done,materials:rec.materials||[],category:rec.category||null}:s)}:a));
+        if(eventType==="DELETE") setAppts(p=>p.map(a=>({...a,services:a.services.filter(s=>s.id!==id)})));
+      }
+      if(table==="appointment_payments"){
+        const apptId=rec?.appointment_id||oldRec?.appointment_id;
+        if(eventType==="INSERT") setAppts(p=>p.map(a=>a.id===apptId?{...a,payments:[...a.payments.filter(x=>x.id!==rec.id),{id:rec.id,appointmentId:rec.appointment_id,amount:Number(rec.amount),method:rec.method,note:rec.note,paidAt:rec.paid_at}]}:a));
+        if(eventType==="DELETE") setAppts(p=>p.map(a=>({...a,payments:a.payments.filter(x=>x.id!==id)})));
       }
     });
     return unsub;

@@ -21,6 +21,24 @@ export function subscribeToChanges(onEvent) {
       (payload) => onEvent({ table: "employees", ...payload }))
     .on("postgres_changes", { event: "*", schema: "public", table: "stock" },
       (payload) => onEvent({ table: "stock", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "investments" },
+      (payload) => onEvent({ table: "investments", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "purchase_orders" },
+      (payload) => onEvent({ table: "purchase_orders", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "expenses" },
+      (payload) => onEvent({ table: "expenses", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "internal_transfers" },
+      (payload) => onEvent({ table: "internal_transfers", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "appointments" },
+      (payload) => onEvent({ table: "appointments", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "appointment_services" },
+      (payload) => onEvent({ table: "appointment_services", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "appointment_payments" },
+      (payload) => onEvent({ table: "appointment_payments", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "os_history" },
+      (payload) => onEvent({ table: "os_history", ...payload }))
+    .on("postgres_changes", { event: "*", schema: "public", table: "clients" },
+      (payload) => onEvent({ table: "clients", ...payload }))
     .subscribe();
   return () => supabase.removeChannel(channel);
 }
@@ -1103,5 +1121,11 @@ export const db = {
   _mapVehicle: mapVehicleIn,
   _mapPayment: mapPaymentIn,
   _mapStock: mapStockIn,
+  _mapPurchaseOrder: (o) => ({
+    id:o.id, vehicleId:o.vehicle_id, partName:o.part_name, notesAdmin:o.notes_admin||"",
+    link:o.link||"", quantity:o.quantity||1, costPrice:Number(o.cost_price||0),
+    status:o.status||"pending", employeeId:o.employee_id, createdAt:o.created_at,
+    receivedAt:o.received_at||null, receivedLocation:o.received_location||"",
+  }),
   _mapEmployee: (e) => e,
 };

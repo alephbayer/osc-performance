@@ -754,11 +754,12 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                   <div style={{width:6,height:6,borderRadius:99,background:sv.division==="finishing"?FD.primary:B.orange,flexShrink:0,marginTop:4}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</div>
-                    {(sv.materials||[]).length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:3}}>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:3}}>
+                      {sv.category&&<span style={{fontSize:9,fontWeight:700,color:CAT_MAP[sv.category]||B.gray400,background:`${CAT_MAP[sv.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px"}}>{sv.category}</span>}
                       {(sv.materials||[]).map((m,mi)=>(
                         <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 5px"}}>{m.name}×{m.qty}</span>
                       ))}
-                    </div>}
+                    </div>
                   </div>
                   {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700,flexShrink:0}}>{fmtBRL(sv.estimatedValue)}</span>}
                 </div>
@@ -4708,7 +4709,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   const [form,setForm]=useState({vehicleId:"",title:"",notes:"",estimatedValue:""});
   const [vSearch,setVSearch]=useState("");
   const [showVList,setShowVList]=useState(false);
-  const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance",materials:[]});
+  const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance",category:"",materials:[]});
   const [svcMatSearch,setSvcMatSearch]=useState("");
   const [showSvcForm,setShowSvcForm]=useState(null);
   const [payForm,setPayForm]=useState({amount:"",method:"Pix",note:""});
@@ -4898,15 +4899,21 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
               <input value={svcForm.label} onChange={e=>setSvcForm(p=>({...p,label:e.target.value}))} placeholder="Nome do serviço *"
                 style={{padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
               <div style={{display:"flex",gap:6}}>
-                <input value={svcForm.estimatedValue} onChange={e=>setSvcForm(p=>({...p,estimatedValue:e.target.value}))} type="number" placeholder="Valor estimado"
-                  style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
                 <select value={svcForm.division} onChange={e=>setSvcForm(p=>({...p,division:e.target.value}))}
                   style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}>
                   <option value="performance">Performance</option>
                   <option value="finishing">Finishing</option>
                 </select>
+                <select value={svcForm.category} onChange={e=>setSvcForm(p=>({...p,category:e.target.value}))}
+                  style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:svcForm.category?B.white:B.gray500,fontSize:12,outline:"none"}}>
+                  <option value="">Categoria (opcional)</option>
+                  {(svcForm.division==="finishing"?CATEGORIES_FD:CATEGORIES).map(c=>(
+                    <option key={c.id} value={c.id}>{c.id}</option>
+                  ))}
+                </select>
               </div>
-              {/* Materials from stock */}
+              <input value={svcForm.estimatedValue} onChange={e=>setSvcForm(p=>({...p,estimatedValue:e.target.value}))} type="number" placeholder="Valor estimado"
+                style={{padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
               <div>
                 <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Materiais do estoque (opcional)</div>
                 <div style={{position:"relative"}}>
@@ -4955,12 +4962,12 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   if(!svcForm.label.trim()) return;
                   const matCost=(svcForm.materials||[]).reduce((s,m)=>s+m.cost*m.qty,0);
                   const est=parseFloat(svcForm.estimatedValue)||matCost;
-                  await onAddService({appointmentId:a.id,label:svcForm.label.trim(),estimatedValue:est,division:svcForm.division,materials:svcForm.materials||[]});
-                  setSvcForm({label:"",estimatedValue:"",division:"performance",materials:[]});
+                  await onAddService({appointmentId:a.id,label:svcForm.label.trim(),estimatedValue:est,division:svcForm.division,category:svcForm.category||null,materials:svcForm.materials||[]});
+                  setSvcForm({label:"",estimatedValue:"",division:"performance",category:"",materials:[]});
                   setSvcMatSearch("");
                   setShowSvcForm(null);
                 }} style={{flex:1,padding:"6px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Adicionar</button>
-                <button onClick={()=>{setShowSvcForm(null);setSvcForm({label:"",estimatedValue:"",division:"performance",materials:[]});setSvcMatSearch("");}} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
+                <button onClick={()=>{setShowSvcForm(null);setSvcForm({label:"",estimatedValue:"",division:"performance",category:"",materials:[]});setSvcMatSearch("");}} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
               </div>
             </div>}
           </div>
@@ -7730,7 +7737,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.2";
+const APP_VERSION = "2026.08.21.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

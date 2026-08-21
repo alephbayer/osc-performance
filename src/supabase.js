@@ -1028,7 +1028,7 @@ export const db = {
         id:s.id, appointmentId:s.appointment_id, label:s.label,
         estimatedValue:Number(s.estimated_value||0),
         division:s.division||"performance", done:s.done, createdAt:s.created_at,
-        materials:s.materials||[],
+        materials:s.materials||[], category:s.category||null,
       })),
       payments:(pays.data||[]).filter(p=>p.appointment_id===a.id).map(p=>({
         id:p.id, appointmentId:p.appointment_id, amount:Number(p.amount||0),
@@ -1059,7 +1059,7 @@ export const db = {
   async addAppointmentService(s) {
     const {data,error}=await supabase.from("appointment_services").insert({
       appointment_id:s.appointmentId, label:s.label, estimated_value:s.estimatedValue||0,
-      division:s.division||"performance", done:false, materials:s.materials||[],
+      division:s.division||"performance", done:false, materials:s.materials||[], category:s.category||null,
     }).select().single();
     if(error) throw error;
     return {id:data.id,appointmentId:data.appointment_id,label:data.label,estimatedValue:Number(data.estimated_value||0),division:data.division,done:data.done,createdAt:data.created_at,materials:data.materials||[]};

@@ -7737,7 +7737,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.3";
+const APP_VERSION = "2026.08.21.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10381,24 +10381,32 @@ export default function App() {
     }catch(e){errToast(e);}
   };
   const updTask=async(id,patch)=>{
-    // If materials changed, check if any fromStock item qty changed and sync stock balance
+    // If materials changed, validate and sync stock balance
     if(patch.materials){
       const oldTask=tasks.find(t=>t.id===id);
       const oldMats=oldTask?.materials||[];
       const newMats=patch.materials;
-      // For each fromStock material, compare old qty vs new qty and adjust stock
-      newMats.forEach(nm=>{
-        if(!nm.fromStock||!nm.stockItemId) return;
+      // Validate and adjust stock for each fromStock material
+      for(const nm of newMats){
+        if(!nm.fromStock||!nm.stockItemId) continue;
         const oldMat=oldMats.find(om=>om.fromStock&&om.stockItemId===nm.stockItemId);
         const oldQty=Number(oldMat?.qty||0);
         const newQty=Number(nm.qty||1);
-        const delta=newQty-oldQty; // positive = more consumed, negative = returned
-        if(delta!==0){
-          setStk(p=>p.map(s=>s.id===nm.stockItemId?{...s,qty:Math.max(0,s.qty-delta)}:s));
-          const stockItem=stock.find(s=>s.id===nm.stockItemId);
-          if(stockItem) db.updateStock(nm.stockItemId,{qty:Math.max(0,stockItem.qty-delta)}).catch(()=>{});
+        const delta=newQty-oldQty; // positive = consuming more, negative = returning
+        if(delta===0) continue;
+        const stockItem=stock.find(s=>s.id===nm.stockItemId);
+        if(delta>0){
+          // Consuming more — check if stock has enough
+          const available=stockItem?.qty||0;
+          if(available<delta){
+            errToast(new Error(`Estoque insuficiente para "${nm.name}": disponível ${available} un., tentando usar ${delta} un. a mais.`));
+            return; // abort entire update
+          }
         }
-      });
+        const newStockQty=Math.max(0,(stockItem?.qty||0)-delta);
+        setStk(p=>p.map(s=>s.id===nm.stockItemId?{...s,qty:newStockQty}:s));
+        db.updateStock(nm.stockItemId,{qty:newStockQty}).catch(e=>errToast(e));
+      }
     }
     setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));
     try{

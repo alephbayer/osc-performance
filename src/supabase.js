@@ -1050,6 +1050,7 @@ export const db = {
         estimatedValue:Number(s.estimated_value||0),
         division:s.division||"performance", done:s.done, createdAt:s.created_at,
         materials:s.materials||[], category:s.category||null,
+        hours:Number(s.hours||0), rate:Number(s.rate||0),
       })),
       payments:(pays.data||[]).filter(p=>p.appointment_id===a.id).map(p=>({
         id:p.id, appointmentId:p.appointment_id, amount:Number(p.amount||0),
@@ -1081,9 +1082,10 @@ export const db = {
     const {data,error}=await supabase.from("appointment_services").insert({
       appointment_id:s.appointmentId, label:s.label, estimated_value:s.estimatedValue||0,
       division:s.division||"performance", done:false, materials:s.materials||[], category:s.category||null,
+      hours:s.hours||0, rate:s.rate||0,
     }).select().single();
     if(error) throw error;
-    return {id:data.id,appointmentId:data.appointment_id,label:data.label,estimatedValue:Number(data.estimated_value||0),division:data.division,done:data.done,createdAt:data.created_at,materials:data.materials||[]};
+    return {id:data.id,appointmentId:data.appointment_id,label:data.label,estimatedValue:Number(data.estimated_value||0),division:data.division,done:data.done,createdAt:data.created_at,materials:data.materials||[],category:data.category||null,hours:Number(data.hours||0),rate:Number(data.rate||0)};
   },
   async updateAppointmentService(id,patch) {
     const dbp={label:patch.label,estimated_value:patch.estimatedValue,division:patch.division,done:patch.done};

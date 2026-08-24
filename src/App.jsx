@@ -4964,7 +4964,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   const [form,setForm]=useState({vehicleId:"",title:"",notes:"",estimatedValue:""});
   const [vSearch,setVSearch]=useState("");
   const [showVList,setShowVList]=useState(false);
-  const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance",category:"",materials:[]});
+  const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance",category:"",materials:[],hours:"",rate:""});
   const [svcMatSearch,setSvcMatSearch]=useState("");
   const [showSvcForm,setShowSvcForm]=useState(null);
   const [editingSvc,setEditingSvc]=useState(null);
@@ -5153,9 +5153,10 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                       </button>}
                       {canManage&&<button onClick={()=>onDeleteService(sv.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2}}><ITrash s={11}/></button>}
                     </div>
-                    {/* Category + price subrow */}
-                    {(sv.category||sv.estimatedValue>0)&&!isEditing&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"0 10px 7px 10px"}}>
+                    {/* Category + hours subrow */}
+                    {(sv.category||sv.hours>0||sv.estimatedValue>0)&&!isEditing&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"0 10px 7px 10px"}}>
                       {sv.category&&<span style={{fontSize:9,fontWeight:700,color:CAT_MAP[sv.category]||B.gray400,background:`${CAT_MAP[sv.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px"}}>{sv.category}</span>}
+                      {sv.hours>0&&<span style={{fontSize:9,color:B.gray500}}>{sv.hours}h{sv.rate>0?` × ${fmtBRL(sv.rate)}/h`:""}</span>}
                       <div style={{flex:1}}/>
                     </div>}
                     {/* Inline edit form */}
@@ -5163,8 +5164,14 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                       <input defaultValue={sv.label} onBlur={e=>onUpdateService(sv.id,{...sv,label:e.target.value})}
                         style={{padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",marginTop:8}}/>
                       <div style={{display:"flex",gap:6}}>
-                        <input defaultValue={sv.estimatedValue||""} type="number" placeholder="Valor R$" onBlur={e=>onUpdateService(sv.id,{...sv,estimatedValue:parseFloat(e.target.value)||0})}
+                        <input defaultValue={sv.hours||""} type="number" step="0.5" placeholder="Horas/qtd" onBlur={e=>onUpdateService(sv.id,{...sv,hours:parseFloat(e.target.value)||0})}
                           style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+                        <input defaultValue={sv.rate||""} type="number" placeholder="R$/hora" onBlur={e=>onUpdateService(sv.id,{...sv,rate:parseFloat(e.target.value)||0,estimatedValue:(sv.hours||0)*(parseFloat(e.target.value)||0)||(sv.estimatedValue||0)})}
+                          style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+                        <input defaultValue={sv.estimatedValue||""} type="number" placeholder="Valor total R$" onBlur={e=>onUpdateService(sv.id,{...sv,estimatedValue:parseFloat(e.target.value)||0})}
+                          style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
                         <select defaultValue={sv.category||""} onChange={e=>onUpdateService(sv.id,{...sv,category:e.target.value||null})}
                           style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:sv.category?B.white:B.gray500,fontSize:12,outline:"none"}}>
                           <option value="">Categoria</option>
@@ -5207,8 +5214,25 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   ))}
                 </select>
               </div>
-              <input value={svcForm.estimatedValue} onChange={e=>setSvcForm(p=>({...p,estimatedValue:e.target.value}))} type="number" placeholder="Valor estimado"
+              <input value={svcForm.estimatedValue} onChange={e=>setSvcForm(p=>({...p,estimatedValue:e.target.value}))} type="number" placeholder="Valor estimado (ou calculado pelas horas)"
                 style={{padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+              {/* Hours + rate */}
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <input value={svcForm.hours} onChange={e=>{
+                  const h=e.target.value;
+                  const r=parseFloat(svcForm.rate)||0;
+                  setSvcForm(p=>({...p,hours:h,estimatedValue:r&&h?String((parseFloat(h)||0)*r):""}));
+                }} type="number" step="0.5" placeholder="Horas/qtd"
+                  style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+                <span style={{fontSize:11,color:B.gray500,flexShrink:0}}>×</span>
+                <input value={svcForm.rate} onChange={e=>{
+                  const r=e.target.value;
+                  const h=parseFloat(svcForm.hours)||0;
+                  setSvcForm(p=>({...p,rate:r,estimatedValue:h&&r?String(h*(parseFloat(r)||0)):""}));
+                }} type="number" placeholder="Valor/hora (R$)"
+                  style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+                {svcForm.hours&&svcForm.rate&&<span style={{fontSize:11,color:B.amber,fontWeight:700,flexShrink:0}}>= {fmtBRL((parseFloat(svcForm.hours)||0)*(parseFloat(svcForm.rate)||0))}</span>}
+              </div>
               <div>
                 <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Materiais do estoque (opcional)</div>
                 <div style={{position:"relative"}}>
@@ -5257,12 +5281,12 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   if(!svcForm.label.trim()) return;
                   const matCost=(svcForm.materials||[]).reduce((s,m)=>s+m.cost*m.qty,0);
                   const est=parseFloat(svcForm.estimatedValue)||matCost;
-                  await onAddService({appointmentId:a.id,label:svcForm.label.trim(),estimatedValue:est,division:svcForm.division,category:svcForm.category||null,materials:svcForm.materials||[]});
-                  setSvcForm({label:"",estimatedValue:"",division:"performance",category:"",materials:[]});
+                  await onAddService({appointmentId:a.id,label:svcForm.label.trim(),estimatedValue:est,division:svcForm.division,category:svcForm.category||null,materials:svcForm.materials||[],hours:parseFloat(svcForm.hours)||0,rate:parseFloat(svcForm.rate)||0});
+                  setSvcForm({label:"",estimatedValue:"",division:"performance",category:"",materials:[],hours:"",rate:""});
                   setSvcMatSearch("");
                   setShowSvcForm(null);
                 }} style={{flex:1,padding:"6px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Adicionar</button>
-                <button onClick={()=>{setShowSvcForm(null);setSvcForm({label:"",estimatedValue:"",division:"performance",category:"",materials:[]});setSvcMatSearch("");}} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
+                <button onClick={()=>{setShowSvcForm(null);setSvcForm({label:"",estimatedValue:"",division:"performance",category:"",materials:[],hours:"",rate:""});setSvcMatSearch("");}} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
               </div>
             </div>}
           </div>
@@ -8051,7 +8075,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.2";
+const APP_VERSION = "2026.08.24.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11605,8 +11629,9 @@ export default function App() {
                   category:sv.category||null,
                   division:sv.division||"performance",
                   materials:sv.materials||[],
-                  hours:0, ratePerHour:defaultRate, done:false,
-                  outsourced:false, warranty:false, discount:0,
+                  hours:sv.hours||0,
+                  ratePerHour:sv.rate||defaultRate,
+                  done:false, outsourced:false, warranty:false, discount:0,
                 };
                 try{
                   const newTask=await db.addTask(taskPayload);

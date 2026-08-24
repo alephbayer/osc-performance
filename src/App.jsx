@@ -8240,7 +8240,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.10";
+const APP_VERSION = "2026.08.24.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10336,7 +10336,7 @@ export default function App() {
   const [mechSearch,setMechSearch]=useState("");
   const [osSearch,setOsSearch]=useState("");
   const [finSearch,setFinSearch]=useState("");
-  const [testOpen,setTestOpen]=useState(true);
+  const [testOpen,setTestOpen]=useState(false);
   const [confirmReadyId,setConfirmReadyId]=useState(null);
   const [cN,setCN]=useState(""); const [cP,setCP]=useState(""); const [cE,setCE]=useState("");
 

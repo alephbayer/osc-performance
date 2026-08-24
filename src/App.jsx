@@ -757,7 +757,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                     <div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:3}}>
                       {sv.category&&<span style={{fontSize:9,fontWeight:700,color:CAT_MAP[sv.category]||B.gray400,background:`${CAT_MAP[sv.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px"}}>{sv.category}</span>}
                       {(sv.materials||[]).map((m,mi)=>(
-                        <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 5px"}}>{m.name}×{m.qty}</span>
+                        <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 5px"}}>{m.name} ×{m.qty}</span>
                       ))}
                     </div>
                   </div>
@@ -5086,11 +5086,13 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
         <div onClick={()=>setExpanded(isExp?null:a.id)} style={{padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
           {v?.photo&&<img src={v.photo} alt="" style={{width:38,height:38,borderRadius:8,objectFit:"cover",flexShrink:0}}/>}
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontWeight:800,fontSize:14,color:B.white}}>{a.title}</div>
-            <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",marginTop:2}}>
+            <div style={{fontWeight:900,fontSize:14,color:B.white,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
               {v&&<span>{v.model}{v.plate?` · ${v.plate}`:""}</span>}
-              {cli&&<span style={{color:B.blue}}>{cli.name}</span>}
-              {a.services.length>0&&<span>{a.services.length} serviço{a.services.length!==1?"s":""}</span>}
+              {cli&&<span style={{color:B.blue,fontWeight:700}}>{cli.name}</span>}
+            </div>
+            <div style={{fontSize:11,color:B.gray500,marginTop:2,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+              <span>{a.title}</span>
+              {a.services.length>0&&<span>· {a.services.length} serviço{a.services.length!==1?"s":""}</span>}
             </div>
           </div>
           <div style={{textAlign:"right",flexShrink:0}}>
@@ -5168,7 +5170,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                       <div style={{display:"flex",gap:6}}>
                         <input defaultValue={sv.hours||""} type="number" step="0.5" placeholder="Horas/qtd" onBlur={e=>onUpdateService(sv.id,{...sv,hours:parseFloat(e.target.value)||0})}
                           style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
-                        <input defaultValue={sv.rate||""} type="number" placeholder="R$/hora" onBlur={e=>onUpdateService(sv.id,{...sv,rate:parseFloat(e.target.value)||0,estimatedValue:(sv.hours||0)*(parseFloat(e.target.value)||0)||(sv.estimatedValue||0)})}
+                        <input defaultValue={sv.rate||""} type="number" placeholder="R$/hora" onBlur={e=>onUpdateService(sv.id,{...sv,rate:parseFloat(e.target.value)||0})}
                           style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
                         <input defaultValue={sv.estimatedValue||""} type="number" placeholder="Valor total R$" onBlur={e=>onUpdateService(sv.id,{...sv,estimatedValue:parseFloat(e.target.value)||0})}
                           style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
@@ -5185,12 +5187,38 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                           <option value="finishing">Finishing</option>
                         </select>
                       </div>
+                      {/* Materials management in edit mode */}
+                      <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Materiais</div>
+                      {(sv.materials||[]).map((m,mi)=>(
+                        <div key={mi} style={{display:"flex",alignItems:"center",gap:5,padding:"3px 6px",background:B.gray900,borderRadius:5,border:`1px solid ${B.gray700}`}}>
+                          <span style={{flex:1,fontSize:11,color:B.white}}>{m.name}</span>
+                          <input value={m.qty} type="number" min="1" onChange={e=>{const mats=[...(sv.materials||[])];mats[mi]={...m,qty:parseInt(e.target.value)||1};onUpdateService(sv.id,{...sv,materials:mats});}}
+                            style={{width:36,padding:"1px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                          {m.cost>0&&<span style={{fontSize:10,color:B.amber}}>{fmtBRL(m.cost*m.qty)}</span>}
+                          <button onClick={()=>{const mats=(sv.materials||[]).filter((_,j)=>j!==mi);onUpdateService(sv.id,{...sv,materials:mats});}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0}}><IX s={10}/></button>
+                        </div>
+                      ))}
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                        {stock.slice(0,0).length===0&&null}
+                        <select style={{flex:1,padding:"4px 7px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.gray400,fontSize:11,outline:"none"}}
+                          defaultValue=""
+                          onChange={e=>{
+                            const s=stock.find(x=>x.id===e.target.value);
+                            if(!s) return;
+                            const mats=[...(sv.materials||[]),{name:s.name,qty:1,stockId:s.id,cost:s.salePrice||0}];
+                            onUpdateService(sv.id,{...sv,materials:mats});
+                            e.target.value="";
+                          }}>
+                          <option value="">+ Adicionar do estoque...</option>
+                          {stock.map(s=><option key={s.id} value={s.id}>{s.name}{s.brand?` · ${s.brand}`:""}</option>)}
+                        </select>
+                      </div>
                     </div>}
                     {/* Materials */}
                     {(sv.materials||[]).length>0&&<div style={{padding:"0 10px 8px",display:"flex",flexWrap:"wrap",gap:4}}>
                       {(sv.materials||[]).map((m,mi)=>(
                         <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 6px",display:"inline-flex",alignItems:"center",gap:3}}>
-                          {m.name}×{m.qty}
+                          {m.name} ×{m.qty}
                           {m.cost>0&&<span style={{color:B.amber,marginLeft:2}}>{fmtBRL(m.cost*m.qty)}</span>}
                         </span>
                       ))}
@@ -5246,7 +5274,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                     if(!hits.length) return null;
                     return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,borderRadius:7,border:`1px solid ${B.gray600}`,zIndex:50,marginTop:2}}>
                       {hits.map(s=>(
-                        <div key={s.id} onClick={()=>{setSvcForm(p=>({...p,materials:[...(p.materials||[]),{name:s.name,qty:1,stockId:s.id,cost:s.salePrice||0}]}));setSvcMatSearch("");}}
+                        <div key={s.id} onClick={()=>{setSvcForm(p=>({...p,materials:[...(p.materials||[]),{name:s.name,qty:1,stockId:s.id,cost:s.salePrice||0}]}));}}
                           style={{padding:"6px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}
                           onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
                           onMouseLeave={e=>e.currentTarget.style.background="none"}>
@@ -8120,7 +8148,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.5";
+const APP_VERSION = "2026.08.24.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

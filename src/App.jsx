@@ -7176,6 +7176,25 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 <span style={{fontSize:13,fontWeight:700,color:"#60a5fa",flexShrink:0}}>{fmtBRL(t.value)}</span>
               </div>
             ))}
+            {(v.freights||[]).filter(f=>Number(f.value||0)>0).map((f,i)=>(
+              <div key={i} style={{display:"flex",flexDirection:"column",gap:6,background:`${B.purple}08`,border:`1px solid ${B.purple}33`,borderRadius:8,padding:"10px 12px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,color:B.white,fontWeight:700}}>Frete {i+1>1?`#${i+1}`:""}</div>
+                    {(f.origin||f.destination)&&<div style={{fontSize:11,color:B.gray400}}>{f.origin&&f.destination?`${f.origin} → ${f.destination}`:f.origin||f.destination}</div>}
+                    {f.description&&<div style={{fontSize:11,color:B.gray400}}>{f.description}</div>}
+                    {f.taskRef&&<div style={{fontSize:10,color:B.purple,marginTop:2}}>Ref: {f.taskRef}</div>}
+                  </div>
+                  <span style={{fontSize:13,fontWeight:700,color:B.purple,flexShrink:0}}>{fmtBRL(f.value)}</span>
+                </div>
+                {(f.photos||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {(f.photos||[]).map((p,pi)=>(
+                    <img key={pi} src={p} alt="" style={{width:64,height:64,borderRadius:8,objectFit:"cover",border:`1px solid ${B.purple}44`}}/>
+                  ))}
+                </div>}
+              </div>
+            ))}
           </div>}
           <div style={{marginTop:8}}>
             {catOrder.map(cat=>{
@@ -7854,7 +7873,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.12";
+const APP_VERSION = "2026.08.21.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

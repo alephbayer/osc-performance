@@ -3282,7 +3282,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
 
 // ─── VehicleCard ──────────────────────────────────────────────────────────────
 // ─── NextVisitModal ───────────────────────────────────────────────────────────
-function NextVisitModal({vehicle,tasks,clients,onClose,onCreateAppointment}) {
+function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppointment,onDeleteTask}) {
   const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty);
   const [selected,setSelected]=useState(new Set());
   const [newItems,setNewItems]=useState([{label:"",division:"performance",category:""}]);
@@ -3294,19 +3294,35 @@ function NextVisitModal({vehicle,tasks,clients,onClose,onCreateAppointment}) {
   const addRow=()=>setNewItems(p=>[...p,{label:"",division:"performance",category:""}]);
 
   const save=async()=>{
+    const selectedTasks=[...selected].map(id=>vTasks.find(x=>x.id===id)).filter(Boolean);
     const services=[
-      ...[...selected].map(id=>{
-        const t=vTasks.find(x=>x.id===id);
-        return {label:t.label,division:t.division||"performance",category:t.category||null,estimatedValue:0,materials:t.materials||[]};
+      ...selectedTasks.map(t=>{
+        const cost=taskCost(t,defaultRate);
+        return {
+          label:t.label, division:t.division||"performance",
+          category:t.category||null, estimatedValue:cost.total,
+          hours:t.hours||0, materials:t.materials||[],
+        };
       }),
-      ...newItems.filter(i=>i.label.trim()).map(i=>({label:i.label.trim(),division:i.division,category:i.category||null,estimatedValue:0,materials:[]})),
+      ...newItems.filter(i=>i.label.trim()).map(i=>({
+        label:i.label.trim(), division:i.division,
+        category:i.category||null, estimatedValue:0, hours:0, materials:[],
+      })),
     ];
     if(!services.length&&!notes.trim()) return;
     setSaving(true);
-    try{ await onCreateAppointment({title,notes,vehicleId:vehicle.id,clientId:vehicle.clientId,services}); onClose(); }
-    catch(e){ alert("Erro: "+e.message); }
+    try{
+      await onCreateAppointment({title,notes,vehicleId:vehicle.id,clientId:vehicle.clientId,services});
+      // Delete selected tasks from current OS
+      for(const t of selectedTasks){
+        try{ await onDeleteTask(t.id); }catch(e){ console.error("Erro ao remover tarefa:",e); }
+      }
+      onClose();
+    }catch(e){ alert("Erro: "+e.message); }
     finally{ setSaving(false); }
   };
+
+  const canSave=selected.size>0||newItems.some(i=>i.label.trim())||notes.trim();
 
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
     <div style={{background:B.gray900,borderRadius:16,padding:0,maxWidth:480,width:"100%",border:`1px solid ${B.purple}44`,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
@@ -3327,18 +3343,30 @@ function NextVisitModal({vehicle,tasks,clients,onClose,onCreateAppointment}) {
 
         {/* Select existing tasks */}
         {vTasks.length>0&&<div>
-          <div style={{fontSize:11,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Tarefas desta OS para adiar</div>
-          {vTasks.map(t=>(
-            <div key={t.id} onClick={()=>toggleTask(t.id)}
-              style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:selected.has(t.id)?`${B.purple}18`:B.gray800,border:`1px solid ${selected.has(t.id)?B.purple+"55":B.gray700}`,borderRadius:8,marginBottom:5,cursor:"pointer"}}>
-              <div style={{width:16,height:16,borderRadius:4,border:`2px solid ${selected.has(t.id)?B.purple:B.gray600}`,background:selected.has(t.id)?B.purple:"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                {selected.has(t.id)&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
+          <div style={{fontSize:11,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>
+            Tarefas desta OS para adiar
+            {selected.size>0&&<span style={{color:B.red,marginLeft:6,fontWeight:600,fontSize:10}}>(serão removidas da OS atual)</span>}
+          </div>
+          {vTasks.map(t=>{
+            const cost=taskCost(t,defaultRate);
+            const isSel=selected.has(t.id);
+            return(<div key={t.id} onClick={()=>toggleTask(t.id)}
+              style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:isSel?`${B.purple}18`:B.gray800,border:`1px solid ${isSel?B.purple+"55":B.gray700}`,borderRadius:8,marginBottom:5,cursor:"pointer"}}>
+              <div style={{width:16,height:16,borderRadius:4,border:`2px solid ${isSel?B.purple:B.gray600}`,background:isSel?B.purple:"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                {isSel&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
               </div>
-              <span style={{flex:1,fontSize:12,color:t.done?B.gray500:B.white,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
-              {t.category&&<span style={{fontSize:9,color:CAT_MAP[t.category]||B.gray400,background:`${CAT_MAP[t.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px",fontWeight:700}}>{t.category}</span>}
-              {t.done&&<span style={{fontSize:9,color:B.green,fontWeight:700}}>✓</span>}
-            </div>
-          ))}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,color:t.done?B.gray500:B.white,textDecoration:t.done?"line-through":"none"}}>{t.label}</div>
+                <div style={{display:"flex",gap:6,marginTop:2,flexWrap:"wrap"}}>
+                  {t.category&&<span style={{fontSize:9,color:CAT_MAP[t.category]||B.gray400,background:`${CAT_MAP[t.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px",fontWeight:700}}>{t.category}</span>}
+                  {t.hours>0&&<span style={{fontSize:9,color:B.gray500}}>{t.hours}h</span>}
+                  {(t.materials||[]).length>0&&<span style={{fontSize:9,color:B.purple}}>{(t.materials||[]).length} mat.</span>}
+                </div>
+              </div>
+              {cost.total>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700,flexShrink:0}}>{fmtBRL(cost.total)}</span>}
+              {t.done&&<span style={{fontSize:9,color:B.green,fontWeight:700,flexShrink:0}}>✓</span>}
+            </div>);
+          })}
         </div>}
 
         {/* New tasks */}
@@ -3367,12 +3395,16 @@ function NextVisitModal({vehicle,tasks,clients,onClose,onCreateAppointment}) {
         {/* Notes */}
         <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Observações para o próximo agendamento" rows={2}
           style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
+
+        {selected.size>0&&<div style={{background:`${B.red}10`,border:`1px solid ${B.red}33`,borderRadius:8,padding:"8px 12px",fontSize:11,color:B.red}}>
+          ⚠ {selected.size} tarefa{selected.size!==1?"s":""} selecionada{selected.size!==1?"s":""} ser{selected.size!==1?"ão":"á"} removida{selected.size!==1?"s":""} da OS atual ao confirmar.
+        </div>}
       </div>
 
       {/* Footer */}
       <div style={{padding:"12px 20px",borderTop:`1px solid ${B.gray700}`,display:"flex",gap:8}}>
-        <button onClick={save} disabled={saving||(!selected.size&&!newItems.some(i=>i.label.trim())&&!notes.trim())}
-          style={{flex:1,padding:"9px 0",borderRadius:9,background:B.purple,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:"pointer",opacity:saving?0.6:1}}>
+        <button onClick={save} disabled={saving||!canSave}
+          style={{flex:1,padding:"9px 0",borderRadius:9,background:canSave?B.purple:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:canSave?"pointer":"not-allowed",opacity:saving?0.6:1}}>
           {saving?"Criando...":"Criar agendamento"}
         </button>
         <button onClick={onClose} style={{padding:"9px 14px",borderRadius:9,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,fontSize:13,cursor:"pointer"}}>Cancelar</button>
@@ -3901,7 +3933,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} onClose={()=>setSA(false)}/>}
     {confirmDelV&&<ConfirmModal title="Remover veículo?" message={<>Tem certeza que deseja remover <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b>? Todas as tarefas desta OS também serão removidas.</>} confirmLabel="Remover veículo" onConfirm={()=>{onDeleteVehicle(vehicle.id);setConfirmDelV(false);}} onCancel={()=>setConfirmDelV(false)}/>}
     {confirmDeliver&&<ConfirmModal title={isFD?"Encerrar OS Finishing?":"Confirmar entrega?"} danger={false} message={isFD?<>Encerrar a OS da <b style={{color:FD.primary}}>Finishing Division</b> para <b style={{color:B.white}}>{vehicle.model}</b>?</>:<>Registrar a entrega de <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b> ao cliente? O timer será encerrado.</>} confirmLabel={isFD?"Encerrar Finishing":"Confirmar entrega"} onConfirm={()=>{isFD?onDeliverFinishing&&onDeliverFinishing(vehicle.id):onDeliver&&onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
-    {showNextVisit&&<NextVisitModal vehicle={vehicle} tasks={tasks} clients={clients} onClose={()=>setShowNextVisit(false)} onCreateAppointment={onCreateAppointment}/>}
+    {showNextVisit&&<NextVisitModal vehicle={vehicle} tasks={tasks} clients={clients} defaultRate={defaultRate} onClose={()=>setShowNextVisit(false)} onCreateAppointment={onCreateAppointment} onDeleteTask={onDeleteTask}/>}
   </>);
 }
 
@@ -7979,7 +8011,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.15";
+const APP_VERSION = "2026.08.21.16";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

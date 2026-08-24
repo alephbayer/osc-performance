@@ -5853,6 +5853,19 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             <InlineEdit value={vehicle.color||""} onSave={v=>onUpdateVehicle(vehicle.id,{color:v})} placeholder="—"/>
           </div>
         </div>
+        {/* Identification photo */}
+        <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
+          {vehicle.photo
+            ?<img src={vehicle.photo} alt="" style={{width:56,height:56,borderRadius:8,objectFit:"cover",border:`1px solid ${B.gray600}`,flexShrink:0}}/>
+            :<div style={{width:56,height:56,borderRadius:8,background:`${B.orange}18`,border:`1px dashed ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <ICar s={20} c={B.orange}/>
+            </div>}
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <UploadBtn onFile={src=>onUpdateVehicle(vehicle.id,{photo:src})} folder="vehicles" label={vehicle.photo?"Trocar foto de identificação":"+ Foto de identificação"}/>
+            {vehicle.photo&&<button onClick={()=>onUpdateVehicle(vehicle.id,{photo:null})} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:11,textAlign:"left",padding:0}}
+              onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}>Remover foto</button>}
+          </div>
+        </div>
       </div>
 
       {/* ── Active OS ── */}
@@ -8224,7 +8237,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.7";
+const APP_VERSION = "2026.08.24.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

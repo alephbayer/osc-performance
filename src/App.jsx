@@ -4967,6 +4967,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance",category:"",materials:[]});
   const [svcMatSearch,setSvcMatSearch]=useState("");
   const [showSvcForm,setShowSvcForm]=useState(null);
+  const [editingSvc,setEditingSvc]=useState(null);
   const [payForm,setPayForm]=useState({amount:"",method:"Pix",note:""});
   const [showPayForm,setShowPayForm]=useState(null);
   const [confirmConvert,setConfirmConvert]=useState(null);
@@ -5137,18 +5138,47 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   {DIV_LABEL[div]}
                   <div style={{flex:1,height:1,background:`${DIV_COLOR[div]}33`}}/>
                 </div>
-                {divSvcs.map(sv=>(
-                  <div key={sv.id} style={{display:"flex",flexDirection:"column",gap:3,padding:"7px 10px",background:B.gray800,borderRadius:8,marginBottom:4,border:`1px solid ${DIV_COLOR[sv.division]}22`}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {divSvcs.map(sv=>{
+                  const isEditing=editingSvc===sv.id;
+                  return(<div key={sv.id} style={{display:"flex",flexDirection:"column",gap:0,background:B.gray800,borderRadius:8,marginBottom:4,border:`1px solid ${isEditing?DIV_COLOR[sv.division]+"44":DIV_COLOR[sv.division]+"22"}`,overflow:"hidden"}}>
+                    {/* Main row */}
+                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px"}}>
                       <span style={{flex:1,fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</span>
-                      {sv.category&&<span style={{fontSize:9,fontWeight:700,color:CAT_MAP[sv.category]||B.gray400,background:`${CAT_MAP[sv.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px"}}>{sv.category}</span>}
-                      {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(sv.estimatedValue)}</span>}
+                      {sv.estimatedValue>0&&!isEditing&&<span style={{fontSize:11,color:B.amber,fontWeight:700,flexShrink:0}}>{fmtBRL(sv.estimatedValue)}</span>}
+                      {canManage&&<button onClick={()=>setEditingSvc(isEditing?null:sv.id)} style={{background:"none",border:"none",cursor:"pointer",color:isEditing?DIV_COLOR[sv.division]:B.gray500,padding:2,display:"flex"}}>
+                        <IEdit s={11}/>
+                      </button>}
                       {canManage&&<button onClick={()=>onUpdateService(sv.id,{...sv,done:!sv.done})} style={{background:"none",border:"none",cursor:"pointer",color:sv.done?B.green:B.gray600,padding:2}}>
                         <ICheck s={12} c={sv.done?B.green:B.gray600}/>
                       </button>}
                       {canManage&&<button onClick={()=>onDeleteService(sv.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2}}><ITrash s={11}/></button>}
                     </div>
-                    {(sv.materials||[]).length>0&&<div style={{paddingLeft:4,display:"flex",flexWrap:"wrap",gap:4}}>
+                    {/* Category + price subrow */}
+                    {(sv.category||sv.estimatedValue>0)&&!isEditing&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"0 10px 7px 10px"}}>
+                      {sv.category&&<span style={{fontSize:9,fontWeight:700,color:CAT_MAP[sv.category]||B.gray400,background:`${CAT_MAP[sv.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px"}}>{sv.category}</span>}
+                      <div style={{flex:1}}/>
+                    </div>}
+                    {/* Inline edit form */}
+                    {isEditing&&<div style={{padding:"0 10px 10px",display:"flex",flexDirection:"column",gap:6,borderTop:`1px solid ${DIV_COLOR[sv.division]}22`}}>
+                      <input defaultValue={sv.label} onBlur={e=>onUpdateService(sv.id,{...sv,label:e.target.value})}
+                        style={{padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",marginTop:8}}/>
+                      <div style={{display:"flex",gap:6}}>
+                        <input defaultValue={sv.estimatedValue||""} type="number" placeholder="Valor R$" onBlur={e=>onUpdateService(sv.id,{...sv,estimatedValue:parseFloat(e.target.value)||0})}
+                          style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+                        <select defaultValue={sv.category||""} onChange={e=>onUpdateService(sv.id,{...sv,category:e.target.value||null})}
+                          style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:sv.category?B.white:B.gray500,fontSize:12,outline:"none"}}>
+                          <option value="">Categoria</option>
+                          {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.id}</option>)}
+                        </select>
+                        <select defaultValue={sv.division} onChange={e=>onUpdateService(sv.id,{...sv,division:e.target.value})}
+                          style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}>
+                          <option value="performance">Performance</option>
+                          <option value="finishing">Finishing</option>
+                        </select>
+                      </div>
+                    </div>}
+                    {/* Materials */}
+                    {(sv.materials||[]).length>0&&<div style={{padding:"0 10px 8px",display:"flex",flexWrap:"wrap",gap:4}}>
                       {(sv.materials||[]).map((m,mi)=>(
                         <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 6px",display:"inline-flex",alignItems:"center",gap:3}}>
                           {m.name}×{m.qty}
@@ -5156,8 +5186,8 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                         </span>
                       ))}
                     </div>}
-                  </div>
-                ))}
+                  </div>);
+                })}
               </div>);
             })}
             {showSvcForm===a.id&&<div style={{background:B.gray800,borderRadius:8,padding:10,marginTop:6,display:"flex",flexDirection:"column",gap:6}}>
@@ -8021,7 +8051,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.1";
+const APP_VERSION = "2026.08.24.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

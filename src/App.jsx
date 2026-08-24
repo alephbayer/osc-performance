@@ -7155,7 +7155,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           })()}
           {/* Tasks grouped by category */}
           {/* Fuel and tows */}
-          {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
+          {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0||(v.freights||[]).filter(f=>Number(f.value||0)>0).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
             {(v.fuels||[]).filter(f=>Number(f.value||0)>0).map((f,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
                 <span style={{fontSize:16}}>⛽</span>
@@ -7873,7 +7873,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.13";
+const APP_VERSION = "2026.08.21.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

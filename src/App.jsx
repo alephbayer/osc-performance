@@ -1473,6 +1473,20 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     doc.setFont("helvetica","bold"); doc.setTextColor(...black);
     doc.text(fmtBRL(Number(fr.value||0)), cTotal, y+5.5, {align:"right"});
     y += 9;
+    // Freight photos
+    const frPhotos=(fr.photos||[]).slice(0,4);
+    if(frPhotos.length>0){
+      checkPageBreak(32);
+      let px=marginX+3;
+      for(const photoUrl of frPhotos){
+        try{
+          const img=await loadImageBase64(photoUrl);
+          doc.addImage(img,"JPEG",px,y,28,28);
+          px+=30;
+        }catch{}
+      }
+      y+=30;
+    }
   });
 
   y += 5;
@@ -3300,11 +3314,12 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const mech  = mechs[0] || null;  // first mechanic for PDF compat
   const cli   = clients.find(c=>c.id===vehicle.clientId);
   const tasksTotal = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
-  const towTotal   = managerMode?(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0):0;
-  const fuelTotal  = managerMode?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
-  const laborSum   = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
-  const osDiscount = managerMode?laborSum*Number(vehicle.osDiscountPct||0)/100:0;
-  const total      = managerMode?tasksTotal+fuelTotal+towTotal-osDiscount:0;
+  const towTotal    = managerMode?(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0):0;
+  const fuelTotal   = managerMode?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
+  const freightTotal= managerMode?(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
+  const laborSum    = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
+  const osDiscount  = managerMode?laborSum*Number(vehicle.osDiscountPct||0)/100:0;
+  const total       = managerMode?tasksTotal+fuelTotal+towTotal+freightTotal-osDiscount:0;
   const photos= isFD ? (vehicle.photosFinishing||[]) : (vehicle.photos||[]);
   const pubLink=getPublicLink(vehicle.id);
   const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Perf.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
@@ -3730,6 +3745,17 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
                       <option key={t.id} value={t.label}>{t.label}{t.done?" ✓":""}</option>
                     ))}
                   </select>
+                </div>
+                {/* Photos */}
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:2}}>
+                  {(fr.photos||[]).map((p,pi)=>(
+                    <div key={pi} style={{position:"relative",flexShrink:0}}>
+                      <img src={p} alt="" style={{width:48,height:48,borderRadius:6,objectFit:"cover",border:`1px solid ${B.gray600}`}}/>
+                      <button onClick={()=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],photos:(fr.photos||[]).filter((_,i)=>i!==pi)};onUpdateVehicle(vehicle.id,{freights});}}
+                        style={{position:"absolute",top:-4,right:-4,background:B.red,border:"none",borderRadius:99,width:14,height:14,cursor:"pointer",color:"#fff",fontSize:9,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                    </div>
+                  ))}
+                  <UploadBtn onFile={async src=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],photos:[...(fr.photos||[]),src]};onUpdateVehicle(vehicle.id,{freights});}} folder="freight" label="+ Foto"/>
                 </div>
               </div>
             ))}
@@ -7826,7 +7852,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.10";
+const APP_VERSION = "2026.08.21.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

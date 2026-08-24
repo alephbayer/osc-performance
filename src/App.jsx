@@ -1460,12 +1460,13 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   // ── Fretes ───────────────────────────────────────────────────────────────────
   const freights2 = Array.isArray(vehicle.freights) ? vehicle.freights : [];
   const freightTotal2 = freights2.reduce((s,f)=>s+Number(f.value||0),0);
-  freights2.filter(f=>f.value>0).forEach((fr,fi)=>{
+  let fi2=0;
+  for(const fr of freights2.filter(f=>f.value>0)){
     checkPageBreak(10);
     doc.setFillColor(245,240,255); doc.setDrawColor(225,225,225);
     doc.rect(marginX, y, contentW, 8, "FD");
     const route = fr.origin&&fr.destination?` (${fr.origin} → ${fr.destination})`:fr.origin?` (${fr.origin})`:fr.destination?` (→ ${fr.destination})`:"";
-    const frLabel = `Frete #${fi+1}${route}${fr.description?` · ${fr.description}`:""}${fr.taskRef?` [${fr.taskRef}]`:""}`;
+    const frLabel = `Frete #${fi2+1}${route}${fr.description?` · ${fr.description}`:""}${fr.taskRef?` [${fr.taskRef}]`:""}`;
     doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
     const frLines = doc.splitTextToSize(frLabel, cDescW);
     frLines.forEach((line,li)=>doc.text(line, marginX+3, y+5.5+li*4));
@@ -1487,7 +1488,8 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
       }
       y+=30;
     }
-  });
+    fi2++;
+  }
 
   y += 5;
   checkPageBreak(50);
@@ -7852,7 +7854,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.11";
+const APP_VERSION = "2026.08.21.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

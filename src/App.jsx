@@ -8120,7 +8120,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.4";
+const APP_VERSION = "2026.08.24.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11616,7 +11616,14 @@ export default function App() {
               onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
               onTransferMechanic={xferMech} onTransferOwner={xferOwn}
               onConsumeStock={consumeStock} onReturnStock={returnStock}
-              payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company} onCreateAppointment={onCreateAppointment}
+              payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company} onCreateAppointment={async({title,notes,vehicleId,clientId,services})=>{
+                try{
+                  const r=await db.addAppointment({title,notes,vehicleId,clientId,estimatedValue:0});
+                  for(const sv of services){const s=await db.addAppointmentService({appointmentId:r.id,label:sv.label,estimatedValue:sv.estimatedValue||0,division:sv.division,category:sv.category||null,materials:sv.materials||[],hours:sv.hours||0,rate:sv.rate||0});r.services=[...(r.services||[]),s];}
+                  setAppts(p=>[{...r,services:r.services||[],payments:[]},...p]);
+                  toast_(`Agendamento "${title}" criado ✓`);
+                }catch(e){errToast(e);}
+              }}
               onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
               onDeliver={deliverVehicleFinishing} onDeliverFinishing={deliverVehicleFinishing}
               isOwner={adminRole==="owner"} division="finishing"

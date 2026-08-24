@@ -795,9 +795,10 @@ function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
   if (!vehicle) return tasksTotal; // fallback if vehicle not passed
   const towTotal   = (vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0), 0);
   const fuelTotal  = (vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0), 0);
+  const freightTotal2=(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0), 0);
   const laborSum   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor, 0);
   const osDiscount = laborSum * Number(vehicle.osDiscountPct||0) / 100;
-  return tasksTotal + fuelTotal + towTotal - osDiscount;
+  return tasksTotal + fuelTotal + towTotal + freightTotal2 - osDiscount;
 }
 function vehiclePaid(vehicleId,payments,division=null) {
   return payments.filter(p=>p.vehicleId===vehicleId&&!p.osHistoryId&&(division===null||(p.division||"performance")===division)).reduce((s,p)=>s+Number(p.amount),0);
@@ -1455,14 +1456,34 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   });
 
   y += 5;
+
+  // ── Fretes ───────────────────────────────────────────────────────────────────
+  const freights2 = Array.isArray(vehicle.freights) ? vehicle.freights : [];
+  const freightTotal2 = freights2.reduce((s,f)=>s+Number(f.value||0),0);
+  freights2.filter(f=>f.value>0).forEach((fr,fi)=>{
+    checkPageBreak(10);
+    doc.setFillColor(245,240,255); doc.setDrawColor(225,225,225);
+    doc.rect(marginX, y, contentW, 8, "FD");
+    const route = fr.origin&&fr.destination?` (${fr.origin} → ${fr.destination})`:fr.origin?` (${fr.origin})`:fr.destination?` (→ ${fr.destination})`:"";
+    const frLabel = `Frete #${fi+1}${route}${fr.description?` · ${fr.description}`:""}${fr.taskRef?` [${fr.taskRef}]`:""}`;
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+    const frLines = doc.splitTextToSize(frLabel, cDescW);
+    frLines.forEach((line,li)=>doc.text(line, marginX+3, y+5.5+li*4));
+    doc.text("—", cDisc, y+5.5, {align:"right"});
+    doc.setFont("helvetica","bold"); doc.setTextColor(...black);
+    doc.text(fmtBRL(Number(fr.value||0)), cTotal, y+5.5, {align:"right"});
+    y += 9;
+  });
+
+  y += 5;
   checkPageBreak(50);
 
   // ── Totals box ───────────────────────────────────────────────────────────────
   const osDiscountPct = Number(vehicle.osDiscountPct || 0);
   const laborSumForDiscount = ts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
   const osDiscountAmt = laborSumForDiscount * osDiscountPct / 100;
-  const grandTotal = partsTotal + freightTotal + laborTotal + fuelTotal + towTotal - osDiscountAmt;
-  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelTotal > 0 ? 1 : 0) + (towTotal > 0 ? 1 : 0) + (osDiscountAmt > 0 ? 1 : 0);
+  const grandTotal = partsTotal + freightTotal + laborTotal + fuelTotal + towTotal + freightTotal2 - osDiscountAmt;
+  const extraLines = (freightTotal > 0 ? 1 : 0) + (fuelTotal > 0 ? 1 : 0) + (towTotal > 0 ? 1 : 0) + (freightTotal2 > 0 ? 1 : 0) + (osDiscountAmt > 0 ? 1 : 0);
   const boxH_inner = 26 + extraLines * 8;
   const boxW = 85, boxX = pageW - marginX - boxW;
   doc.setDrawColor(220,220,220);
@@ -1476,6 +1497,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   if (freightTotal  > 0) { doc.text("Total de Frete",                    boxX + 5, y + nextY); nextY += 8; }
   if (fuelTotal > 0) { doc.text("Combustivel",     boxX + 5, y + nextY); nextY += 8; }
   if (towTotal      > 0) { doc.text("Reboque",                           boxX + 5, y + nextY); nextY += 8; }
+  if (freightTotal2 > 0) { doc.text("Frete",                             boxX + 5, y + nextY); nextY += 8; }
   if (osDiscountAmt > 0) { doc.setTextColor(180, 60, 60); doc.text(`Desconto (${osDiscountPct}% m.o.)`, boxX + 5, y + nextY); doc.setTextColor(...black); nextY += 8; }
 
   doc.setFont("helvetica","bold"); doc.setTextColor(...black);
@@ -1485,6 +1507,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   if (freightTotal  > 0) { doc.text(fmtBRL(freightTotal),            boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
   if (fuelTotal > 0) { doc.text(fmtBRL(fuelTotal), boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
   if (towTotal      > 0) { doc.text(fmtBRL(towTotal),                boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
+  if (freightTotal2 > 0) { doc.text(fmtBRL(freightTotal2),           boxX + boxW - 5, y + nextY2, { align: "right" }); nextY2 += 8; }
   if (osDiscountAmt > 0) { doc.setTextColor(180, 60, 60); doc.text(`-${fmtBRL(osDiscountAmt)}`, boxX + boxW - 5, y + nextY2, { align: "right" }); doc.setTextColor(...black); nextY2 += 8; }
 
   doc.setDrawColor(...orange); doc.setLineWidth(0.4);
@@ -3670,9 +3693,45 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
               </div>
             ))}
           </div>
+
+          {/* ── Frete ── */}
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>
+              <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Frete</span>
+              <button onClick={()=>{const freights=[...(vehicle.freights||[]),{origin:"",destination:"",description:"",taskRef:"",value:0}];onUpdateVehicle(vehicle.id,{freights});}}
+                style={{marginLeft:"auto",background:`${B.purple}22`,border:`1px solid ${B.purple}44`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:B.purple,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                <IPlus s={11} c={B.purple}/>Adicionar frete
+              </button>
+            </div>
+            {(vehicle.freights||[]).map((fr,fi)=>(
+              <div key={fi} style={{display:"flex",flexDirection:"column",gap:5,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:7,padding:"8px 10px",marginBottom:5}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,color:B.gray500,fontWeight:700,flexShrink:0}}>#{fi+1}</span>
+                  <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Origem:</span>
+                  <InlineEdit value={fr.origin||""} onSave={v=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],origin:v};onUpdateVehicle(vehicle.id,{freights});}} placeholder="Cidade de origem"/>
+                  <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>→ Destino:</span>
+                  <InlineEdit value={fr.destination||""} onSave={v=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],destination:v};onUpdateVehicle(vehicle.id,{freights});}} placeholder="Cidade destino"/>
+                  <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>R$</span>
+                  <InlineEdit value={fr.value?fmtR2(fr.value):""} onSave={v=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],value:parseFloat(v.replace(",","."))||0};onUpdateVehicle(vehicle.id,{freights});}} placeholder="0" type="number"/>
+                  {fr.value>0&&<span style={{fontSize:11,color:B.purple,fontWeight:700}}>{fmtBRL(fr.value)}</span>}
+                  <button onClick={()=>{const freights=(vehicle.freights||[]).filter((_,i)=>i!==fi);onUpdateVehicle(vehicle.id,{freights});}}
+                    style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex",marginLeft:"auto"}}
+                    onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={12}/></button>
+                </div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Descrição:</span>
+                  <InlineEdit value={fr.description||""} onSave={v=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],description:v};onUpdateVehicle(vehicle.id,{freights});}} placeholder="Descrição do frete"/>
+                  <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Ref. tarefa:</span>
+                  <InlineEdit value={fr.taskRef||""} onSave={v=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],taskRef:v};onUpdateVehicle(vehicle.id,{freights});}} placeholder="Nome da tarefa vinculada"/>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>}
         {(()=>{
           const towTotal=(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
+          const freightTotal=(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
           const fuelTotal=(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0);
           const laborSum=vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
           const osDiscountAmt=laborSum*Number(vehicle.osDiscountPct||0)/100;
@@ -3682,6 +3741,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           if(osDiscountAmt>0) breakdown.push(`Desconto: -${fmtBRL(osDiscountAmt)}`);
           if(fuelTotal>0) breakdown.push(`Combustível: ${fmtBRL(fuelTotal)}`);
           if(towTotal>0) breakdown.push(`Reboque: ${fmtBRL(towTotal)}`);
+          if(freightTotal>0) breakdown.push(`Frete: ${fmtBRL(freightTotal)}`);
           return (<div style={{marginTop:8,padding:"8px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:12,color:B.gray400}}>Total deste veículo</span>
@@ -7760,7 +7820,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.8";
+const APP_VERSION = "2026.08.21.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -129,6 +129,7 @@ const mapVehicleIn = (v) => ({
   partsListFinishing: Array.isArray(v.parts_list_finishing) ? v.parts_list_finishing : (v.parts_list_finishing ? JSON.parse(v.parts_list_finishing) : []),
   osDiscountPct: Number(v.os_discount_pct || 0),
   tows: Array.isArray(v.tows) ? v.tows : (v.tows ? JSON.parse(v.tows) : []),
+  freights: Array.isArray(v.freights) ? v.freights : (v.freights ? JSON.parse(v.freights) : []),
   notes: v.notes || '',
   // Finishing Division
   osNumberFinishing: v.os_number_finishing || null,
@@ -380,6 +381,7 @@ export const db = {
     if ("fuelCost"               in patch) dbPatch.fuel_cost                = patch.fuelCost;
     if ("fuels"                  in patch) dbPatch.fuels                    = patch.fuels;
     if ("tows"                   in patch) dbPatch.tows                     = patch.tows;
+    if ("freights"               in patch) dbPatch.freights                 = patch.freights;
     if ("notes"                  in patch) dbPatch.notes                    = patch.notes;
     if ("pausedAt"               in patch) dbPatch.paused_at                = patch.pausedAt;
     if ("totalPausedMs"          in patch) dbPatch.total_paused_ms          = patch.totalPausedMs;
@@ -444,6 +446,7 @@ export const db = {
       fuel_cost: historyRecord.fuelCost || 0,
       fuels: historyRecord.fuels || [],
       tows: historyRecord.tows || [],
+      freights: historyRecord.freights || [],
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
       photos: historyRecord.photos || [],

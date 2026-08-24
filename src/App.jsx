@@ -5127,29 +5127,39 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
               <span style={{fontSize:11,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Serviços planejados</span>
               {canManage&&<button onClick={()=>setShowSvcForm(a.id)} style={{fontSize:11,color:B.blue,background:"none",border:`1px solid ${B.blue}44`,borderRadius:6,padding:"2px 8px",cursor:"pointer",fontWeight:600}}>+ Serviço</button>}
             </div>
-            {a.services.map(sv=>(
-              <div key={sv.id} style={{display:"flex",flexDirection:"column",gap:3,padding:"7px 10px",background:B.gray800,borderRadius:8,marginBottom:5,border:`1px solid ${B.gray700}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:6,height:6,borderRadius:99,background:DIV_COLOR[sv.division]||B.orange,flexShrink:0}}/>
-                  <span style={{flex:1,fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</span>
-                  <span style={{fontSize:10,color:DIV_COLOR[sv.division]||B.orange,fontWeight:700}}>{DIV_LABEL[sv.division]}</span>
-                  {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(sv.estimatedValue)}</span>}
-                  {canManage&&<button onClick={()=>onUpdateService(sv.id,{...sv,done:!sv.done})} style={{background:"none",border:"none",cursor:"pointer",color:sv.done?B.green:B.gray600,padding:2}}>
-                    <ICheck s={12} c={sv.done?B.green:B.gray600}/>
-                  </button>}
-                  {canManage&&<button onClick={()=>onDeleteService(sv.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2}}><ITrash s={11}/></button>}
-                </div>
-                {(sv.materials||[]).length>0&&<div style={{paddingLeft:14,display:"flex",flexWrap:"wrap",gap:4}}>
-                  {(sv.materials||[]).map((m,mi)=>(
-                    <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 6px",display:"inline-flex",alignItems:"center",gap:3}}>
-                      {m.name}×{m.qty}
-                      {m.cost>0&&<span style={{color:B.amber,marginLeft:2}}>{fmtBRL(m.cost*m.qty)}</span>}
-                    </span>
-                  ))}
-                </div>}
-              </div>
-            ))}
             {a.services.length===0&&<div style={{fontSize:11,color:B.gray500,textAlign:"center",padding:"8px 0"}}>Nenhum serviço planejado</div>}
+            {["performance","finishing"].map(div=>{
+              const divSvcs=a.services.filter(sv=>sv.division===div);
+              if(!divSvcs.length) return null;
+              return(<div key={div} style={{marginBottom:8}}>
+                <div style={{fontSize:9,fontWeight:800,color:DIV_COLOR[div],textTransform:"uppercase",letterSpacing:.8,marginBottom:4,paddingLeft:2,display:"flex",alignItems:"center",gap:5}}>
+                  <div style={{width:8,height:1,background:DIV_COLOR[div]}}/>
+                  {DIV_LABEL[div]}
+                  <div style={{flex:1,height:1,background:`${DIV_COLOR[div]}33`}}/>
+                </div>
+                {divSvcs.map(sv=>(
+                  <div key={sv.id} style={{display:"flex",flexDirection:"column",gap:3,padding:"7px 10px",background:B.gray800,borderRadius:8,marginBottom:4,border:`1px solid ${DIV_COLOR[sv.division]}22`}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{flex:1,fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</span>
+                      {sv.category&&<span style={{fontSize:9,fontWeight:700,color:CAT_MAP[sv.category]||B.gray400,background:`${CAT_MAP[sv.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px"}}>{sv.category}</span>}
+                      {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(sv.estimatedValue)}</span>}
+                      {canManage&&<button onClick={()=>onUpdateService(sv.id,{...sv,done:!sv.done})} style={{background:"none",border:"none",cursor:"pointer",color:sv.done?B.green:B.gray600,padding:2}}>
+                        <ICheck s={12} c={sv.done?B.green:B.gray600}/>
+                      </button>}
+                      {canManage&&<button onClick={()=>onDeleteService(sv.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2}}><ITrash s={11}/></button>}
+                    </div>
+                    {(sv.materials||[]).length>0&&<div style={{paddingLeft:4,display:"flex",flexWrap:"wrap",gap:4}}>
+                      {(sv.materials||[]).map((m,mi)=>(
+                        <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 6px",display:"inline-flex",alignItems:"center",gap:3}}>
+                          {m.name}×{m.qty}
+                          {m.cost>0&&<span style={{color:B.amber,marginLeft:2}}>{fmtBRL(m.cost*m.qty)}</span>}
+                        </span>
+                      ))}
+                    </div>}
+                  </div>
+                ))}
+              </div>);
+            })}
             {showSvcForm===a.id&&<div style={{background:B.gray800,borderRadius:8,padding:10,marginTop:6,display:"flex",flexDirection:"column",gap:6}}>
               <input value={svcForm.label} onChange={e=>setSvcForm(p=>({...p,label:e.target.value}))} placeholder="Nome do serviço *"
                 style={{padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
@@ -8011,7 +8021,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.16";
+const APP_VERSION = "2026.08.24.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10464,9 +10474,15 @@ export default function App() {
       await db.updateVehicle(vid,patch);
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
-      const statusLabel=newStatus==="paused"?"⏸ pausado (Performance)":newStatus==="active"?"▶ retomado (Performance)":"atualizado";
-      pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de performance foi pausado.":"O serviço de performance foi retomado.");
-      if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de performance foi pausado momentaneamente.":"O serviço de performance foi retomado!",`/?portal=cliente`).catch(()=>{});
+      if(newStatus==="ready"){
+        db.sendPushToAdmins(`✅ Pronto — ${vModel}`,"Veículo concluiu todos os serviços e está pronto para entrega.","/?").catch(()=>{});
+        if(v?.clientId) db.sendPushToClient(v.clientId,`✅ ${vModel} — Pronto!`,"Seu veículo concluiu todos os serviços e está pronto para retirada!",`/?v=${vid}`).catch(()=>{});
+      } else {
+        const statusLabel=newStatus==="paused"?"⏸ pausado (Performance)":"▶ retomado (Performance)";
+        const statusMsg=newStatus==="paused"?"O serviço de performance foi pausado.":"O serviço de performance foi retomado.";
+        pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,statusMsg);
+        if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de performance foi pausado momentaneamente.":"O serviço de performance foi retomado!",`/?portal=cliente`).catch(()=>{});
+      }
     }catch(e){errToast(e);}
   };
 

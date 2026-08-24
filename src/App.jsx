@@ -3722,8 +3722,14 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                   <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Descrição:</span>
                   <InlineEdit value={fr.description||""} onSave={v=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],description:v};onUpdateVehicle(vehicle.id,{freights});}} placeholder="Descrição do frete"/>
-                  <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Ref. tarefa:</span>
-                  <InlineEdit value={fr.taskRef||""} onSave={v=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],taskRef:v};onUpdateVehicle(vehicle.id,{freights});}} placeholder="Nome da tarefa vinculada"/>
+                  <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Tarefa:</span>
+                  <select value={fr.taskRef||""} onChange={e=>{const freights=[...(vehicle.freights||[])];freights[fi]={...freights[fi],taskRef:e.target.value};onUpdateVehicle(vehicle.id,{freights});}}
+                    style={{flex:1,minWidth:120,padding:"3px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:fr.taskRef?B.white:B.gray500,fontSize:11,outline:"none"}}>
+                    <option value="">Nenhuma</option>
+                    {tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty).map(t=>(
+                      <option key={t.id} value={t.label}>{t.label}{t.done?" ✓":""}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             ))}
@@ -7820,7 +7826,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.9";
+const APP_VERSION = "2026.08.21.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

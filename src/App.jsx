@@ -3281,7 +3281,107 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
 }
 
 // ─── VehicleCard ──────────────────────────────────────────────────────────────
-function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null}) {
+// ─── NextVisitModal ───────────────────────────────────────────────────────────
+function NextVisitModal({vehicle,tasks,clients,onClose,onCreateAppointment}) {
+  const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty);
+  const [selected,setSelected]=useState(new Set());
+  const [newItems,setNewItems]=useState([{label:"",division:"performance",category:""}]);
+  const [title,setTitle]=useState(`Próxima visita — ${vehicle.model}`);
+  const [notes,setNotes]=useState("");
+  const [saving,setSaving]=useState(false);
+
+  const toggleTask=id=>setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n;});
+  const addRow=()=>setNewItems(p=>[...p,{label:"",division:"performance",category:""}]);
+
+  const save=async()=>{
+    const services=[
+      ...[...selected].map(id=>{
+        const t=vTasks.find(x=>x.id===id);
+        return {label:t.label,division:t.division||"performance",category:t.category||null,estimatedValue:0,materials:t.materials||[]};
+      }),
+      ...newItems.filter(i=>i.label.trim()).map(i=>({label:i.label.trim(),division:i.division,category:i.category||null,estimatedValue:0,materials:[]})),
+    ];
+    if(!services.length&&!notes.trim()) return;
+    setSaving(true);
+    try{ await onCreateAppointment({title,notes,vehicleId:vehicle.id,clientId:vehicle.clientId,services}); onClose(); }
+    catch(e){ alert("Erro: "+e.message); }
+    finally{ setSaving(false); }
+  };
+
+  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    <div style={{background:B.gray900,borderRadius:16,padding:0,maxWidth:480,width:"100%",border:`1px solid ${B.purple}44`,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      {/* Header */}
+      <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:14,color:B.white}}>Próxima visita</div>
+          <div style={{fontSize:11,color:B.gray400}}>{vehicle.model}{vehicle.plate?` · ${vehicle.plate}`:""}</div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:18,padding:4}}>×</button>
+      </div>
+
+      <div style={{overflowY:"auto",flex:1,padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
+        {/* Title */}
+        <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Título do agendamento"
+          style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",fontWeight:600}}/>
+
+        {/* Select existing tasks */}
+        {vTasks.length>0&&<div>
+          <div style={{fontSize:11,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Tarefas desta OS para adiar</div>
+          {vTasks.map(t=>(
+            <div key={t.id} onClick={()=>toggleTask(t.id)}
+              style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:selected.has(t.id)?`${B.purple}18`:B.gray800,border:`1px solid ${selected.has(t.id)?B.purple+"55":B.gray700}`,borderRadius:8,marginBottom:5,cursor:"pointer"}}>
+              <div style={{width:16,height:16,borderRadius:4,border:`2px solid ${selected.has(t.id)?B.purple:B.gray600}`,background:selected.has(t.id)?B.purple:"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                {selected.has(t.id)&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
+              </div>
+              <span style={{flex:1,fontSize:12,color:t.done?B.gray500:B.white,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
+              {t.category&&<span style={{fontSize:9,color:CAT_MAP[t.category]||B.gray400,background:`${CAT_MAP[t.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px",fontWeight:700}}>{t.category}</span>}
+              {t.done&&<span style={{fontSize:9,color:B.green,fontWeight:700}}>✓</span>}
+            </div>
+          ))}
+        </div>}
+
+        {/* New tasks */}
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Novos serviços</div>
+          {newItems.map((item,i)=>(
+            <div key={i} style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"}}>
+              <input value={item.label} onChange={e=>setNewItems(p=>p.map((x,j)=>j===i?{...x,label:e.target.value}:x))} placeholder="Nome do serviço"
+                style={{flex:"2 1 150px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+              <select value={item.division} onChange={e=>setNewItems(p=>p.map((x,j)=>j===i?{...x,division:e.target.value}:x))}
+                style={{flex:"1 1 100px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
+                <option value="performance">Performance</option>
+                <option value="finishing">Finishing</option>
+              </select>
+              <select value={item.category} onChange={e=>setNewItems(p=>p.map((x,j)=>j===i?{...x,category:e.target.value}:x))}
+                style={{flex:"1 1 100px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:item.category?B.white:B.gray500,fontSize:12,outline:"none"}}>
+                <option value="">Categoria</option>
+                {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.id}</option>)}
+              </select>
+              {newItems.length>1&&<button onClick={()=>setNewItems(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:"0 4px"}}><IX s={12}/></button>}
+            </div>
+          ))}
+          <button onClick={addRow} style={{fontSize:11,color:B.purple,background:"none",border:`1px solid ${B.purple}33`,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontWeight:600}}>+ Adicionar serviço</button>
+        </div>
+
+        {/* Notes */}
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Observações para o próximo agendamento" rows={2}
+          style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
+      </div>
+
+      {/* Footer */}
+      <div style={{padding:"12px 20px",borderTop:`1px solid ${B.gray700}`,display:"flex",gap:8}}>
+        <button onClick={save} disabled={saving||(!selected.size&&!newItems.some(i=>i.label.trim())&&!notes.trim())}
+          style={{flex:1,padding:"9px 0",borderRadius:9,background:B.purple,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:"pointer",opacity:saving?0.6:1}}>
+          {saving?"Criando...":"Criar agendamento"}
+        </button>
+        <button onClick={onClose} style={{padding:"9px 14px",borderRadius:9,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,fontSize:13,cursor:"pointer"}}>Cancelar</button>
+      </div>
+    </div>
+  </div>);
+}
+
+function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null}) {
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
   useEffect(()=>{
@@ -3307,6 +3407,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const [showPOForm,setShowPOForm]=useState(false);
   const [confirmDelV,setConfirmDelV]=useState(false);
   const [confirmDeliver,setConfirmDeliver]=useState(false);
+  const [showNextVisit,setShowNextVisit]=useState(false);
   const [pdfLoading,setPdfLoading]=useState(false);
 
   const isFD=division==="finishing";
@@ -3472,6 +3573,10 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Entregue {new Date(vehicle.deliveredAtFinishing).toLocaleDateString("pt-BR")}
           </span>}
         </>}
+        {!hideManagerButtons&&managerMode&&<button onClick={()=>setShowNextVisit(true)} style={{background:`${B.purple}15`,border:`1px solid ${B.purple}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/></svg>
+          Próxima visita
+        </button>}
         {!hideManagerButtons&&<button onClick={()=>setConfirmDelV(true)} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}
           onMouseEnter={e=>{e.currentTarget.style.background=`${B.red}33`;}} onMouseLeave={e=>{e.currentTarget.style.background=`${B.red}15`;}}>
           <ITrash s={12} c={B.red}/>Excluir
@@ -3796,6 +3901,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} onClose={()=>setSA(false)}/>}
     {confirmDelV&&<ConfirmModal title="Remover veículo?" message={<>Tem certeza que deseja remover <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b>? Todas as tarefas desta OS também serão removidas.</>} confirmLabel="Remover veículo" onConfirm={()=>{onDeleteVehicle(vehicle.id);setConfirmDelV(false);}} onCancel={()=>setConfirmDelV(false)}/>}
     {confirmDeliver&&<ConfirmModal title={isFD?"Encerrar OS Finishing?":"Confirmar entrega?"} danger={false} message={isFD?<>Encerrar a OS da <b style={{color:FD.primary}}>Finishing Division</b> para <b style={{color:B.white}}>{vehicle.model}</b>?</>:<>Registrar a entrega de <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b> ao cliente? O timer será encerrado.</>} confirmLabel={isFD?"Encerrar Finishing":"Confirmar entrega"} onConfirm={()=>{isFD?onDeliverFinishing&&onDeliverFinishing(vehicle.id):onDeliver&&onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
+    {showNextVisit&&<NextVisitModal vehicle={vehicle} tasks={tasks} clients={clients} onClose={()=>setShowNextVisit(false)} onCreateAppointment={onCreateAppointment}/>}
   </>);
 }
 
@@ -4596,7 +4702,7 @@ function PurchaseForm({stockId,onConfirm,onCancel}) {
 function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaultRate,company,
   addTask,toggleT,delTask,updTask,updVeh,delVeh,xferMech,xferOwn,consumeStock,returnStock,
   payments,addPayment,deletePayment,updatePayment,addVehicleMechanic,removeVehicleMechanic,setVehicleStatus,deliverVehicle,deliverVehicleFinishing,adminRole,searching=false,division="performance",
-  purchaseOrders=[],onAddPurchaseOrder,onOpenOS=null}) {
+  purchaseOrders=[],onAddPurchaseOrder,onOpenOS=null,onCreateAppointment=null}) {
   const [collapsed,setCollapsed]=useState(()=>{
     const init={};
     groups.forEach(({emp})=>{ init[emp?.id||"__none__"]=true; });
@@ -4630,7 +4736,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
             onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
             onTransferMechanic={xferMech} onTransferOwner={xferOwn}
             onConsumeStock={consumeStock} onReturnStock={returnStock}
-            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company}
+            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company} onCreateAppointment={onCreateAppointment}
             onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"} division={division||"performance"}
             onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>)}
         </div>}
@@ -7873,7 +7979,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.14";
+const APP_VERSION = "2026.08.21.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11314,6 +11420,17 @@ export default function App() {
             addTask={addTask} toggleT={toggleT} delTask={delTask} updTask={updTask} updVeh={updVeh} delVeh={delVeh}
             xferMech={xferMech} xferOwn={xferOwn} consumeStock={consumeStock} returnStock={returnStock}
             payments={payments} addPayment={addPayment} deletePayment={deletePayment} updatePayment={updatePayment}
+            onCreateAppointment={async({title,notes,vehicleId,clientId,services})=>{
+              try{
+                const r=await db.addAppointment({title,notes,vehicleId,clientId,estimatedValue:0});
+                for(const sv of services){
+                  const s=await db.addAppointmentService({appointmentId:r.id,label:sv.label,estimatedValue:sv.estimatedValue||0,division:sv.division,category:sv.category||null,materials:sv.materials||[]});
+                  r.services=[...(r.services||[]),s];
+                }
+                setAppts(p=>[{...r,services:r.services||[],payments:[]},...p]);
+                toast_(`Agendamento "${title}" criado ✓`);
+              }catch(e){errToast(e);}
+            }}
             addVehicleMechanic={addVehicleMechanic} removeVehicleMechanic={removeVehicleMechanic}
             setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} deliverVehicleFinishing={deliverVehicleFinishing} adminRole={adminRole}
             searching={!!osSearch} purchaseOrders={purchaseOrders} onOpenOS={openNewOS}
@@ -11352,7 +11469,7 @@ export default function App() {
               onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
               onTransferMechanic={xferMech} onTransferOwner={xferOwn}
               onConsumeStock={consumeStock} onReturnStock={returnStock}
-              payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company}
+              payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company} onCreateAppointment={onCreateAppointment}
               onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
               onDeliver={deliverVehicleFinishing} onDeliverFinishing={deliverVehicleFinishing}
               isOwner={adminRole==="owner"} division="finishing"

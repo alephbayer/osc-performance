@@ -4955,8 +4955,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
   </div>);
 }
 // ─── AppointmentsTab ──────────────────────────────────────────────────────────
-function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,
-  onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
+function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,  onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
   onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[]}) {
 
   const [showNew,setShowNew]=useState(false);
@@ -4968,6 +4967,9 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   const [svcMatSearch,setSvcMatSearch]=useState("");
   const [showSvcForm,setShowSvcForm]=useState(null);
   const [editingSvc,setEditingSvc]=useState(null);
+  const [manualMat,setManualMat]=useState({name:"",qty:1,cost:0,markup:50});
+  const [showManualMat,setShowManualMat]=useState(false);
+  const [convertPick,setConvertPick]=useState(null); // appointment awaiting mechanic pick
   const [payForm,setPayForm]=useState({amount:"",method:"Pix",note:""});
   const [showPayForm,setShowPayForm]=useState(null);
   const [confirmConvert,setConfirmConvert]=useState(null);
@@ -5256,12 +5258,34 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                     </div>);
                   })()}
                 </div>
-                {/* Also allow manual material */}
-                {svcMatSearch.length>=1&&!stock.find(s=>s.name.toLowerCase()===svcMatSearch.toLowerCase())&&<button
-                  onClick={()=>{setSvcForm(p=>({...p,materials:[...(p.materials||[]),{name:svcMatSearch,qty:1,stockId:null,cost:0}]}));setSvcMatSearch("");}}
-                  style={{marginTop:4,fontSize:10,color:B.purple,background:"none",border:`1px solid ${B.purple}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer"}}>
-                  + Adicionar "{svcMatSearch}" manualmente
-                </button>}
+                {/* Manual material form */}
+                <button onClick={()=>setShowManualMat(s=>!s)} style={{marginTop:4,fontSize:10,color:B.purple,background:"none",border:`1px solid ${B.purple}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer"}}>
+                  {showManualMat?"✕ Fechar":"+ Material manual (com custo e markup)"}
+                </button>
+                {showManualMat&&<div style={{marginTop:6,padding:"8px",background:B.gray900,borderRadius:7,border:`1px solid ${B.purple}33`,display:"flex",flexDirection:"column",gap:5}}>
+                  <input value={manualMat.name} onChange={e=>setManualMat(p=>({...p,name:e.target.value}))} placeholder="Nome do material *"
+                    style={{padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                  <div style={{display:"flex",gap:5}}>
+                    <input value={manualMat.qty} onChange={e=>setManualMat(p=>({...p,qty:parseInt(e.target.value)||1}))} type="number" min="1" placeholder="Qtd"
+                      style={{width:50,padding:"5px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                    <input value={manualMat.cost} onChange={e=>setManualMat(p=>({...p,cost:parseFloat(e.target.value)||0}))} type="number" placeholder="Custo unit. R$"
+                      style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                    <input value={manualMat.markup} onChange={e=>setManualMat(p=>({...p,markup:parseFloat(e.target.value)||0}))} type="number" placeholder="Markup %"
+                      style={{width:70,padding:"5px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                  </div>
+                  {manualMat.cost>0&&<div style={{fontSize:10,color:B.amber}}>
+                    Venda: {fmtBRL(manualMat.cost*(1+manualMat.markup/100))} · Total: {fmtBRL(manualMat.cost*(1+manualMat.markup/100)*manualMat.qty)}
+                  </div>}
+                  <button onClick={()=>{
+                    if(!manualMat.name.trim()) return;
+                    const salePrice=manualMat.cost*(1+manualMat.markup/100);
+                    setSvcForm(p=>({...p,materials:[...(p.materials||[]),{name:manualMat.name.trim(),qty:manualMat.qty,stockId:null,cost:salePrice,markup:manualMat.markup}]}));
+                    setManualMat({name:"",qty:1,cost:0,markup:50});
+                    setShowManualMat(false);
+                  }} style={{padding:"5px 0",borderRadius:6,background:B.purple,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer"}}>
+                    Adicionar material
+                  </button>
+                </div>}
                 {/* Selected materials */}
                 {(svcForm.materials||[]).length>0&&<div style={{marginTop:4,display:"flex",flexDirection:"column",gap:3}}>
                   {(svcForm.materials||[]).map((m,i)=>(
@@ -5357,7 +5381,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
 
           {/* Actions */}
           {canManage&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>setConfirmConvert(a)} style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            <button onClick={()=>setConvertPick(a)} style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
               <IWrench s={13} c={B.orange}/>Converter em OS
             </button>
             <button onClick={()=>setConfirmDel(a.id)} style={{padding:"9px 14px",borderRadius:9,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,fontWeight:600,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
@@ -5386,14 +5410,35 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
     </div>}
 
     {/* Confirm convert */}
-    {confirmConvert&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:380,width:"100%",border:`1px solid ${B.orange}44`}}>
-        <div style={{fontWeight:800,fontSize:16,color:B.white,marginBottom:8}}>Converter em OS</div>
-        <div style={{fontSize:13,color:B.gray300,marginBottom:16}}>O agendamento <b style={{color:B.white}}>{confirmConvert.title}</b> será convertido. Os sinais pagos serão transferidos como pagamentos da OS.</div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={async()=>{await onConvertToOS(confirmConvert);setConfirmConvert(null);}} style={{flex:1,padding:"9px 0",borderRadius:9,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:"pointer"}}>Converter</button>
-          <button onClick={()=>setConfirmConvert(null)} style={{padding:"9px 14px",borderRadius:9,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,fontSize:13,cursor:"pointer"}}>Cancelar</button>
+    {convertPick&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:400,width:"100%",border:`1px solid ${B.orange}44`}}>
+        <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:4}}>Converter em OS</div>
+        <div style={{fontSize:12,color:B.gray400,marginBottom:16}}>
+          <b style={{color:B.white}}>{convertPick.title}</b> — selecione o mecânico principal (opcional)
         </div>
+        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16,maxHeight:240,overflowY:"auto"}}>
+          <div onClick={async()=>{await onConvertToOS(convertPick,null);setConvertPick(null);}}
+            style={{padding:"10px 12px",borderRadius:9,background:B.gray800,border:`1px solid ${B.gray700}`,cursor:"pointer",fontSize:12,color:B.gray400,fontStyle:"italic"}}
+            onMouseEnter={e=>e.currentTarget.style.border=`1px solid ${B.orange}44`}
+            onMouseLeave={e=>e.currentTarget.style.border=`1px solid ${B.gray700}`}>
+            Sem mecânico vinculado
+          </div>
+          {employees.filter(e=>e.division!=="finishing"&&e.active!==false).map(emp=>(
+            <div key={emp.id} onClick={async()=>{await onConvertToOS(convertPick,emp.id);setConvertPick(null);}}
+              style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:9,background:B.gray800,border:`1px solid ${B.gray700}`,cursor:"pointer"}}
+              onMouseEnter={e=>e.currentTarget.style.border=`1px solid ${B.orange}44`}
+              onMouseLeave={e=>e.currentTarget.style.border=`1px solid ${B.gray700}`}>
+              <div style={{width:32,height:32,borderRadius:99,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700,color:B.white}}>{emp.name}</div>
+                {emp.specialty&&<div style={{fontSize:10,color:B.orange}}>{emp.specialty}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={()=>setConvertPick(null)} style={{width:"100%",padding:"8px 0",borderRadius:9,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,fontSize:13,cursor:"pointer"}}>Cancelar</button>
       </div>
     </div>}
 
@@ -8075,7 +8120,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.3";
+const APP_VERSION = "2026.08.24.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11614,13 +11659,13 @@ export default function App() {
           onDeleteService={async id=>{try{await db.deleteAppointmentService(id);setAppts(p=>p.map(a=>({...a,services:a.services.filter(s=>s.id!==id)})));}catch(e){errToast(e);}}}
           onAddPayment={async p=>{try{const r=await db.addAppointmentPayment(p);setAppts(prev=>prev.map(a=>a.id===p.appointmentId?{...a,payments:[...a.payments,r]}:a));toast_(`${fmtBRL(p.amount)} registrado ✓`);}catch(e){errToast(e);}}}
           onDeletePayment={async id=>{try{await db.deleteAppointmentPayment(id);setAppts(p=>p.map(a=>({...a,payments:a.payments.filter(pay=>pay.id!==id)})));}catch(e){errToast(e);}}}
-          onConvertToOS={async a=>{
+          onConvertToOS={async(a,mechanicId)=>{
             try{
               const v=vehicles.find(x=>x.id===a.vehicleId);
               if(!v) return;
               const perfSvcs=a.services.filter(s=>s.division==="performance");
               const finSvcs=a.services.filter(s=>s.division==="finishing");
-              if(perfSvcs.length>0||a.services.length===0) await openNewOS(v.id,null,null);
+              if(perfSvcs.length>0||a.services.length===0) await openNewOS(v.id,mechanicId||null,null);
               if(finSvcs.length>0) await openNewOSFinishing(v.id,null,null);
               // Create tasks from services
               for(const sv of a.services){

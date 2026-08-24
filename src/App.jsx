@@ -7760,7 +7760,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.7";
+const APP_VERSION = "2026.08.21.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11286,15 +11286,29 @@ export default function App() {
             try{
               const v=vehicles.find(x=>x.id===a.vehicleId);
               if(!v) return;
-              // Open OS for performance services
               const perfSvcs=a.services.filter(s=>s.division==="performance");
               const finSvcs=a.services.filter(s=>s.division==="finishing");
               if(perfSvcs.length>0||a.services.length===0) await openNewOS(v.id,null,null);
               if(finSvcs.length>0) await openNewOSFinishing(v.id,null,null);
+              // Create tasks from services
+              for(const sv of a.services){
+                const taskPayload={
+                  vehicleId:v.id, label:sv.label,
+                  category:sv.category||null,
+                  division:sv.division||"performance",
+                  materials:sv.materials||[],
+                  hours:0, ratePerHour:defaultRate, done:false,
+                  outsourced:false, warranty:false, discount:0,
+                };
+                try{
+                  const newTask=await db.addTask(taskPayload);
+                  setTsk(p=>[...p,newTask]);
+                }catch(e){ console.error("Erro ao criar tarefa:",e); }
+              }
               // Mark as converted
               await db.updateAppointment(a.id,{status:"converted",convertedAt:new Date().toISOString()});
               setAppts(p=>p.map(x=>x.id===a.id?{...x,status:"converted",convertedAt:new Date().toISOString()}:x));
-              toast_(`OS aberta para ${v.model} ✓ — sinais migrados`);
+              toast_(`OS aberta para ${v.model} com ${a.services.length} tarefa(s) ✓`);
               setTab("clients");
             }catch(e){errToast(e);}
           }}

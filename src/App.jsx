@@ -2923,7 +2923,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 
   return (<><div style={{padding:"8px 0",borderBottom:`1px solid ${B.gray700}`,opacity:task.outsourced?.85:1}}>
     <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-      <button onClick={()=>!task.outsourced&&onToggle(task.id)} style={{width:22,height:22,borderRadius:5,flexShrink:0,marginTop:1,cursor:task.outsourced?"not-allowed":"pointer",border:task.done?"none":`2px solid ${task.outsourced?B.gray600+"66":B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+      <button onClick={()=>{if(task.outsourced)return;if(!task.done&&!window.confirm(`Confirmar conclusão?\n\n"${task.label}"`))return;onToggle(task.id);}} style={{width:22,height:22,borderRadius:5,flexShrink:0,marginTop:1,cursor:task.outsourced?"not-allowed":"pointer",border:task.done?"none":`2px solid ${task.outsourced?B.gray600+"66":B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
         {task.done&&<ICheck/>}
       </button>
       <div style={{flex:1,minWidth:0}}>
@@ -3065,7 +3065,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
   return (<>
     <div style={{padding:"8px 0",borderBottom:`1px solid ${B.gray700}`}}>
       <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-        <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:5,flexShrink:0,marginTop:1,cursor:"pointer",border:task.done?"none":`2px solid ${B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+        <button onClick={()=>{if(!task.done&&!window.confirm(`Confirmar conclusão?\n\n"${task.label}"`))return;onToggle(task.id);}} style={{width:22,height:22,borderRadius:5,flexShrink:0,marginTop:1,cursor:"pointer",border:task.done?"none":`2px solid ${B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
           {task.done&&<ICheck/>}
         </button>
         <div style={{flex:1,minWidth:0}}>
@@ -7760,7 +7760,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.21.6";
+const APP_VERSION = "2026.08.21.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

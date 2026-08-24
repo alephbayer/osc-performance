@@ -740,8 +740,12 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
               {v?.photo&&<img src={v.photo} alt="" style={{width:36,height:36,borderRadius:8,objectFit:"cover",flexShrink:0}}/>}
               <div style={{flex:1}}>
-                <div style={{fontWeight:800,fontSize:14,color:B.white}}>{a.title}</div>
-                {v&&<div style={{fontSize:11,color:B.gray400}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>}
+                <div style={{fontWeight:800,fontSize:14,color:B.white}}>{v?`${v.model}${v.plate?` · ${v.plate}`:""}`:a.title}</div>
+                <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{a.title}</div>
+                {a.scheduledDate&&<div style={{fontSize:11,color:B.purple,fontWeight:700,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Agendado para {new Date(a.scheduledDate+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}
+                </div>}
               </div>
               {totalEst>0&&<div style={{textAlign:"right"}}>
                 <div style={{fontSize:10,color:B.gray500}}>Estimado</div>
@@ -4960,7 +4964,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
 
   const [showNew,setShowNew]=useState(false);
   const [expanded,setExpanded]=useState(null);
-  const [form,setForm]=useState({vehicleId:"",title:"",notes:"",estimatedValue:""});
+  const [form,setForm]=useState({vehicleId:"",title:"",notes:"",estimatedValue:"",scheduledDate:""});
   const [vSearch,setVSearch]=useState("");
   const [showVList,setShowVList]=useState(false);
   const [svcForm,setSvcForm]=useState({label:"",estimatedValue:"",division:"performance",category:"",materials:[],hours:"",rate:""});
@@ -4985,8 +4989,8 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   const save=async()=>{
     if(!form.vehicleId||!form.title.trim()) return;
     const v=vehicles.find(x=>x.id===form.vehicleId);
-    await onAdd({vehicleId:form.vehicleId,clientId:v?.clientId||null,title:form.title.trim(),notes:form.notes,estimatedValue:parseFloat(form.estimatedValue)||0});
-    setForm({vehicleId:"",title:"",notes:"",estimatedValue:""});
+    await onAdd({vehicleId:form.vehicleId,clientId:v?.clientId||null,title:form.title.trim(),notes:form.notes,estimatedValue:parseFloat(form.estimatedValue)||0,scheduledDate:form.scheduledDate||null});
+    setForm({vehicleId:"",title:"",notes:"",estimatedValue:"",scheduledDate:""});
     setShowNew(false);
   };
 
@@ -5058,12 +5062,17 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
           style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
         <input value={form.estimatedValue} onChange={e=>setForm(p=>({...p,estimatedValue:e.target.value}))} type="number" placeholder="Valor estimado (opcional)"
           style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <label style={{fontSize:12,color:B.gray400,flexShrink:0}}>Data prevista:</label>
+          <input type="date" value={form.scheduledDate} onChange={e=>setForm(p=>({...p,scheduledDate:e.target.value}))}
+            style={{flex:1,padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:form.scheduledDate?B.white:B.gray500,fontSize:12,outline:"none"}}/>
+        </div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={save} disabled={!form.vehicleId||!form.title.trim()}
             style={{flex:1,padding:"8px 0",borderRadius:8,background:form.vehicleId&&form.title.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:form.vehicleId&&form.title.trim()?"pointer":"not-allowed"}}>
             Criar agendamento
           </button>
-          <button onClick={()=>{setShowNew(false);setVSearch("");setForm({vehicleId:"",title:"",notes:"",estimatedValue:""}); }} style={{padding:"8px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray400,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+          <button onClick={()=>{setShowNew(false);setVSearch("");setForm({vehicleId:"",title:"",notes:"",estimatedValue:"",scheduledDate:""}); }} style={{padding:"8px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray400,fontSize:12,cursor:"pointer"}}>Cancelar</button>
         </div>
       </div>
     </div>}
@@ -5093,9 +5102,16 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
             <div style={{fontSize:11,color:B.gray500,marginTop:2,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
               <span>{a.title}</span>
               {a.services.length>0&&<span>· {a.services.length} serviço{a.services.length!==1?"s":""}</span>}
+              {a.scheduledDate&&<span style={{color:B.purple,fontWeight:700,display:"flex",alignItems:"center",gap:3}}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                {new Date(a.scheduledDate+"T12:00:00").toLocaleDateString("pt-BR")}
+              </span>}
             </div>
           </div>
           <div style={{textAlign:"right",flexShrink:0}}>
+            {a.scheduledDate&&<div style={{fontSize:11,fontWeight:800,color:B.purple,background:`${B.purple}15`,border:`1px solid ${B.purple}33`,borderRadius:6,padding:"2px 8px",marginBottom:4}}>
+              📅 {new Date(a.scheduledDate+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"})}
+            </div>}
             {totalPaid>0&&<div style={{fontSize:11,color:B.green,fontWeight:700}}>{fmtBRL(totalPaid)} pago</div>}
             {balance>0&&<div style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(balance)} pendente</div>}
             {balance===0&&totalPaid>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}>Quitado</div>}
@@ -5106,6 +5122,23 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
         {isExp&&<div style={{borderTop:`1px solid ${B.gray700}`,padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
           {/* Notes */}
           {a.notes&&<div style={{fontSize:12,color:B.gray300,background:B.gray800,borderRadius:8,padding:"8px 12px",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{a.notes}</div>}
+
+          {/* Scheduled date */}
+          {canManage&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span style={{fontSize:11,color:B.gray400}}>Data prevista:</span>
+            <input type="date" defaultValue={a.scheduledDate||""} onBlur={e=>onUpdate(a.id,{scheduledDate:e.target.value||null})}
+              style={{flex:1,padding:"4px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:a.scheduledDate?B.white:B.gray500,fontSize:11,outline:"none"}}/>
+            {a.scheduledDate&&<button onClick={()=>onUpdate(a.id,{scheduledDate:null})} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0}}><IX s={11}/></button>}
+          </div>}
+
+          {/* Date edit */}
+          {canManage&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:11,color:B.gray400,flexShrink:0}}>Data prevista:</span>
+            <input type="date" value={a.scheduledDate||""} onChange={e=>onUpdate(a.id,{scheduledDate:e.target.value||null})}
+              style={{flex:1,padding:"5px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:a.scheduledDate?B.white:B.gray500,fontSize:12,outline:"none"}}/>
+            {a.scheduledDate&&<button onClick={()=>onUpdate(a.id,{scheduledDate:null})} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2}}><IX s={11}/></button>}
+          </div>}
 
           {/* Client notes — pull as service */}
           {(()=>{
@@ -5198,21 +5231,64 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                           <button onClick={()=>{const mats=(sv.materials||[]).filter((_,j)=>j!==mi);onUpdateService(sv.id,{...sv,materials:mats});}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0}}><IX s={10}/></button>
                         </div>
                       ))}
-                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                        {stock.slice(0,0).length===0&&null}
-                        <select style={{flex:1,padding:"4px 7px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.gray400,fontSize:11,outline:"none"}}
-                          defaultValue=""
-                          onChange={e=>{
-                            const s=stock.find(x=>x.id===e.target.value);
-                            if(!s) return;
-                            const mats=[...(sv.materials||[]),{name:s.name,qty:1,stockId:s.id,cost:s.salePrice||0}];
-                            onUpdateService(sv.id,{...sv,materials:mats});
-                            e.target.value="";
-                          }}>
-                          <option value="">+ Adicionar do estoque...</option>
-                          {stock.map(s=><option key={s.id} value={s.id}>{s.name}{s.brand?` · ${s.brand}`:""}</option>)}
-                        </select>
-                      </div>
+                      {/* Add material from stock - same as creation */}
+                      {(()=>{
+                        const [editMatSearch,setEditMatSearch]=useState("");
+                        return(<div style={{position:"relative"}}>
+                          <input value={editMatSearch} onChange={e=>setEditMatSearch(e.target.value)} placeholder="Buscar material do estoque..."
+                            style={{width:"100%",padding:"4px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none",boxSizing:"border-box"}}/>
+                          {editMatSearch.length>=1&&(()=>{
+                            const q=editMatSearch.toLowerCase();
+                            const hits=stock.filter(s=>(s.name||"").toLowerCase().includes(q)||(s.brand||"").toLowerCase().includes(q)).slice(0,6);
+                            if(!hits.length) return null;
+                            return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,borderRadius:7,border:`1px solid ${B.gray600}`,zIndex:50,marginTop:2}}>
+                              {hits.map(s=>(
+                                <div key={s.id} onClick={()=>{
+                                  const mats=[...(sv.materials||[]),{name:s.name,qty:1,stockId:s.id,cost:s.salePrice||0}];
+                                  onUpdateService(sv.id,{...sv,materials:mats});
+                                  setEditMatSearch("");
+                                }} style={{padding:"5px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8,fontSize:11}}
+                                  onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+                                  onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                                  <span style={{flex:1,color:B.white}}>{s.name}{s.brand?` · ${s.brand}`:""}</span>
+                                  <span style={{color:B.gray400}}>Estoque: {s.qty}</span>
+                                  {s.salePrice>0&&<span style={{color:B.amber,fontWeight:700}}>{fmtBRL(s.salePrice)}</span>}
+                                </div>
+                              ))}
+                            </div>);
+                          })()}
+                        </div>);
+                      })()}
+                      {/* Manual material in edit mode */}
+                      {(()=>{
+                        const [showEM,setShowEM]=useState(false);
+                        const [em,setEm]=useState({name:"",qty:1,cost:0,markup:50});
+                        return(<>
+                          <button onClick={()=>setShowEM(s=>!s)} style={{fontSize:10,color:B.purple,background:"none",border:`1px solid ${B.purple}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer"}}>
+                            {showEM?"✕ Fechar":"+ Material manual"}
+                          </button>
+                          {showEM&&<div style={{padding:"6px",background:B.gray900,borderRadius:6,border:`1px solid ${B.purple}22`,display:"flex",flexDirection:"column",gap:4}}>
+                            <input value={em.name} onChange={e=>setEm(p=>({...p,name:e.target.value}))} placeholder="Nome *"
+                              style={{padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                            <div style={{display:"flex",gap:4}}>
+                              <input value={em.qty} type="number" min="1" onChange={e=>setEm(p=>({...p,qty:parseInt(e.target.value)||1}))}
+                                style={{width:45,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                              <input value={em.cost} type="number" placeholder="Custo R$" onChange={e=>setEm(p=>({...p,cost:parseFloat(e.target.value)||0}))}
+                                style={{flex:1,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                              <input value={em.markup} type="number" placeholder="Markup %" onChange={e=>setEm(p=>({...p,markup:parseFloat(e.target.value)||0}))}
+                                style={{width:60,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                            </div>
+                            {em.cost>0&&<span style={{fontSize:10,color:B.amber}}>Venda: {fmtBRL(em.cost*(1+em.markup/100))} · Total: {fmtBRL(em.cost*(1+em.markup/100)*em.qty)}</span>}
+                            <button onClick={()=>{
+                              if(!em.name.trim()) return;
+                              const sale=em.cost*(1+em.markup/100);
+                              const mats=[...(sv.materials||[]),{name:em.name.trim(),qty:em.qty,stockId:null,cost:sale,markup:em.markup}];
+                              onUpdateService(sv.id,{...sv,materials:mats});
+                              setEm({name:"",qty:1,cost:0,markup:50}); setShowEM(false);
+                            }} style={{padding:"4px 0",borderRadius:5,background:B.purple,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer"}}>Adicionar</button>
+                          </div>}
+                        </>);
+                      })()}
                     </div>}
                     {/* Materials */}
                     {(sv.materials||[]).length>0&&<div style={{padding:"0 10px 8px",display:"flex",flexWrap:"wrap",gap:4}}>
@@ -8148,7 +8224,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.6";
+const APP_VERSION = "2026.08.24.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

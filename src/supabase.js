@@ -1044,6 +1044,7 @@ export const db = {
       id:a.id, vehicleId:a.vehicle_id, clientId:a.client_id,
       title:a.title, notes:a.notes, status:a.status,
       estimatedValue:Number(a.estimated_value||0),
+      scheduledDate:a.scheduled_date||null,
       createdAt:a.created_at, convertedAt:a.converted_at,
       services:(svcs.data||[]).filter(s=>s.appointment_id===a.id).map(s=>({
         id:s.id, appointmentId:s.appointment_id, label:s.label,
@@ -1063,12 +1064,13 @@ export const db = {
       vehicle_id:a.vehicleId||null, client_id:a.clientId||null,
       title:a.title||"", notes:a.notes||"",
       estimated_value:a.estimatedValue||0, status:"open",
+      scheduled_date:a.scheduledDate||null,
     }).select().single();
     if(error) throw error;
-    return {...data,vehicleId:data.vehicle_id,clientId:data.client_id,estimatedValue:Number(data.estimated_value||0),createdAt:data.created_at,convertedAt:null,services:[],payments:[]};
+    return {...data,vehicleId:data.vehicle_id,clientId:data.client_id,estimatedValue:Number(data.estimated_value||0),scheduledDate:data.scheduled_date||null,createdAt:data.created_at,convertedAt:null,services:[],payments:[]};
   },
   async updateAppointment(id,patch) {
-    const map={title:"title",notes:"notes",status:"status",estimatedValue:"estimated_value",convertedAt:"converted_at"};
+    const map={title:"title",notes:"notes",status:"status",estimatedValue:"estimated_value",convertedAt:"converted_at",scheduledDate:"scheduled_date"};
     const dbp={};
     Object.keys(patch).forEach(k=>{if(map[k]) dbp[map[k]]=patch[k];});
     const {error}=await supabase.from("appointments").update(dbp).eq("id",id);

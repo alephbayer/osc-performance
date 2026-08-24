@@ -3127,8 +3127,11 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               {task.warranty&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Garantia</span>}
           </div>
           {/* Line 1: task label — alone */}
-          <div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
             <TaskLabel task={task} onUpdate={onUpdate}/>
+            {!task.done&&!task.warranty&&!task.outsourced&&!task.hours&&!mats.some(m=>m.cost>0)&&<span title="Nenhum valor ou hora definido para esta tarefa" style={{fontSize:9,fontWeight:700,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:4,padding:"1px 5px",flexShrink:0,cursor:"default"}}>
+              ⚠ sem valor
+            </span>}
           </div>
           {/* Description — optional */}
           <div style={{marginTop:3}}>
@@ -8237,7 +8240,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.8";
+const APP_VERSION = "2026.08.24.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

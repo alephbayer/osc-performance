@@ -4972,9 +4972,11 @@ const CAL_TYPES={
 
 function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[],onAdd,onUpdate,onDelete}) {
   const today=new Date();
-  const [view,setView]=useState("month"); // month|week|list
+  const [view,setView]=useState("month");
+  // cursor for month = first of month; for week = any day in the week (we compute Sunday)
   const [cursor,setCursor]=useState(new Date(today.getFullYear(),today.getMonth(),1));
-  const [newEv,setNewEv]=useState(null); // {date,title,type,time,vehicleId,color,notes}
+  const [weekCursor,setWeekCursor]=useState(()=>{const d=new Date(today);d.setDate(d.getDate()-d.getDay());return d;});
+  const [newEv,setNewEv]=useState(null);
   const [editEv,setEditEv]=useState(null);
 
   // Merge manual events with automatic ones from appointments
@@ -5006,9 +5008,8 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
   };
 
   const weekDays=()=>{
-    const d=new Date(cursor);
-    const day=d.getDay();
-    d.setDate(d.getDate()-day);
+    const d=new Date(weekCursor);
+    d.setDate(d.getDate()-d.getDay()); // go to Sunday
     return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(d.getDate()+i);return x;});
   };
 
@@ -5048,10 +5049,15 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
   const DAYS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
   const MONTHS=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-  const VehicleSearch=({value,onChange,vehicles})=>{
+  const VehicleSearch=({value,onChange,vehicles,filterActive=false})=>{
     const [q,setQ]=useState("");
     const [open,setOpen]=useState(false);
     const sel=vehicles.find(x=>x.id===value);
+    const filtered=vehicles.filter(v=>{
+      if(filterActive&&!v.status) return false;
+      const qs=q.toLowerCase();
+      return !qs||v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs);
+    });
     return(<div style={{position:"relative",flex:2}}>
       <input value={open?q:(sel?`${sel.model}${sel.plate?` (${sel.plate})`:""}`:"Veículo (opcional)")}
         onFocus={()=>{setOpen(true);setQ("");}}
@@ -5061,15 +5067,12 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
         style={{width:"100%",padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:sel||open?B.white:B.gray500,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
       {open&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:7,zIndex:200,maxHeight:180,overflowY:"auto",marginTop:2}}>
         <div onMouseDown={()=>onChange("")} style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.gray400,fontStyle:"italic",borderBottom:`1px solid ${B.gray700}`}}>Nenhum veículo</div>
-        {vehicles.filter(v=>{
-          const qs=q.toLowerCase();
-          return !qs||v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs);
-        }).map(v=>(
+        {filtered.map(v=>(
           <div key={v.id} onMouseDown={()=>{onChange(v.id);setQ("");setOpen(false);}}
             style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.white,borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
             onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
             onMouseLeave={e=>e.currentTarget.style.background=value===v.id?`${B.purple}22`:"none"}>
-            {v.model}{v.plate?` (${v.plate})`:""}{v.clientId?(()=>{const c=vehicles._cli?.find?.(x=>x.id===v.clientId);return c?` · ${c.name}`:"";})():""}
+            {v.model}{v.plate?` (${v.plate})`:""}
           </div>
         ))}
       </div>}
@@ -5077,31 +5080,44 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
   };
 
   const inputStyle={padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",colorScheme:"dark"};
+  const btnSecondary={padding:"8px 14px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:12};
 
-  const EventForm=({ev,setEv,onSave,onClose2,onDel})=>(<div style={{display:"flex",flexDirection:"column",gap:8}}>
-    <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} placeholder="Título *" autoFocus
-      style={{...inputStyle,fontSize:13,fontWeight:600}}/>
-    <div style={{display:"flex",gap:6}}>
-      <input type="date" value={ev.date} onChange={e=>setEv(p=>({...p,date:e.target.value}))}
-        style={{...inputStyle,flex:1}}/>
-      <input type="time" value={ev.time||""} onChange={e=>setEv(p=>({...p,time:e.target.value}))}
-        style={{...inputStyle,width:90}}/>
-    </div>
-    <div style={{display:"flex",gap:6,alignItems:"stretch"}}>
-      <select value={ev.type} onChange={e=>setEv(p=>({...p,type:e.target.value,color:CAL_TYPES[e.target.value]?.color||p.color}))}
-        style={{...inputStyle,flex:1}}>
-        {Object.entries(CAL_TYPES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-      </select>
-      <VehicleSearch value={ev.vehicleId||""} onChange={v=>setEv(p=>({...p,vehicleId:v||null}))} vehicles={vehicles}/>
-    </div>
-    <textarea value={ev.notes||""} onChange={e=>setEv(p=>({...p,notes:e.target.value}))} placeholder="Notas..." rows={2}
-      style={{...inputStyle,resize:"none",fontFamily:"inherit"}}/>
-    <div style={{display:"flex",gap:6}}>
-      <button onClick={onSave} disabled={!ev.title.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:ev.title.trim()?B.purple:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:ev.title.trim()?"pointer":"not-allowed"}}>Salvar</button>
-      <button onClick={onClose2} style={{padding:"8px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontSize:12}}>Cancelar</button>
-      {onDel&&<button onClick={onDel} style={{padding:"8px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,cursor:"pointer",fontSize:12}}><ITrash s={12}/></button>}
-    </div>
-  </div>);
+  const EventForm=({ev,setEv,onSave,onClose2,onDel})=>{
+    const vehicleList=ev.type==="delivery"
+      ?vehicles.filter(v=>v.status==="active"||v.status==="ready")
+      :vehicles;
+    return(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {/* Type pills */}
+      <div style={{display:"flex",gap:5}}>
+        {Object.entries(CAL_TYPES).map(([k,v])=>(
+          <button key={k} onClick={()=>setEv(p=>({...p,type:k,color:v.color,vehicleId:k==="note"?null:p.vehicleId}))}
+            style={{flex:1,padding:"6px 0",borderRadius:7,border:`2px solid ${ev.type===k?v.color:B.gray700}`,background:ev.type===k?`${v.color}22`:B.gray800,color:ev.type===k?v.color:B.gray500,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+      {/* Title */}
+      <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} autoFocus
+        placeholder={ev.type==="delivery"?"Ex: Entrega do Maverick":ev.type==="visit"?"Ex: Visita do Rodrigo":ev.type==="note"?"Anotação...":"Título do evento"}
+        style={{...inputStyle,fontSize:13,fontWeight:600}}/>
+      {/* Vehicle — hidden for note, filtered for delivery */}
+      {ev.type!=="note"&&<VehicleSearch value={ev.vehicleId||""} onChange={v=>setEv(p=>({...p,vehicleId:v||null}))} vehicles={vehicleList}/>}
+      {/* Date + time */}
+      <div style={{display:"flex",gap:6}}>
+        <input type="date" value={ev.date} onChange={e=>setEv(p=>({...p,date:e.target.value}))}
+          style={{...inputStyle,flex:1}}/>
+        <input type="time" value={ev.time||""} onChange={e=>setEv(p=>({...p,time:e.target.value}))}
+          style={{...inputStyle,width:90}}/>
+      </div>
+      <textarea value={ev.notes||""} onChange={e=>setEv(p=>({...p,notes:e.target.value}))} placeholder="Notas..." rows={2}
+        style={{...inputStyle,resize:"none",fontFamily:"inherit"}}/>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={onSave} disabled={!ev.title.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:ev.title.trim()?B.purple:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:ev.title.trim()?"pointer":"not-allowed"}}>Salvar</button>
+        <button onClick={onClose2} style={btnSecondary}>Cancelar</button>
+        {onDel&&<button onClick={onDel} style={{padding:"8px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,cursor:"pointer",fontSize:12}}><ITrash s={12}/></button>}
+      </div>
+    </div>);
+  };
 
   return(<div style={{position:"fixed",bottom:"calc(125px + env(safe-area-inset-bottom))",right:16,zIndex:1000,pointerEvents:"none",display:"flex",flexDirection:"column",alignItems:"flex-end"}}>    <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:16,width:420,maxWidth:"calc(100vw - 32px)",maxHeight:"75vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,0.5)",pointerEvents:"all",overflow:"hidden"}}>
       {/* Header */}
@@ -5109,14 +5125,22 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <div style={{flex:1}}>
           {view==="month"&&<div style={{fontWeight:800,fontSize:14,color:B.white}}>{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</div>}
-          {view==="week"&&<div style={{fontWeight:800,fontSize:14,color:B.white}}>Semana de {fmt(weekDays()[0])}</div>}
-          {view==="list"&&<div style={{fontWeight:800,fontSize:14,color:B.white}}>Próximos eventos</div>}
+          {view==="week"&&<div style={{fontWeight:800,fontSize:14,color:B.white}}>Semana de {fmt(weekDays()[0])}</div>}          {view==="list"&&<div style={{fontWeight:800,fontSize:14,color:B.white}}>Próximos eventos</div>}
         </div>
         {/* Nav */}
         {view!=="list"&&<div style={{display:"flex",gap:4}}>
-          <button onClick={()=>setCursor(p=>{const d=new Date(p);view==="month"?d.setMonth(d.getMonth()-1):d.setDate(d.getDate()-7);return d;})} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:13}}>‹</button>
-          <button onClick={()=>setCursor(new Date(today.getFullYear(),today.getMonth(),1))} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:11}}>Hoje</button>
-          <button onClick={()=>setCursor(p=>{const d=new Date(p);view==="month"?d.setMonth(d.getMonth()+1):d.setDate(d.getDate()+7);return d;})} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:13}}>›</button>
+          <button onClick={()=>{
+            if(view==="month") setCursor(p=>{const d=new Date(p);d.setMonth(d.getMonth()-1);return d;});
+            else {setWeekCursor(p=>{const d=new Date(p);d.setDate(d.getDate()-7);return d;});}
+          }} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:13}}>‹</button>
+          <button onClick={()=>{
+            setCursor(new Date(today.getFullYear(),today.getMonth(),1));
+            setWeekCursor(()=>{const d=new Date(today);d.setDate(d.getDate()-d.getDay());return d;});
+          }} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:11}}>Hoje</button>
+          <button onClick={()=>{
+            if(view==="month") setCursor(p=>{const d=new Date(p);d.setMonth(d.getMonth()+1);return d;});
+            else {setWeekCursor(p=>{const d=new Date(p);d.setDate(d.getDate()+7);return d;});}
+          }} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:13}}>›</button>
         </div>}
         {/* View toggle */}
         <div style={{display:"flex",background:B.gray800,borderRadius:7,padding:2,gap:1}}>
@@ -8489,7 +8513,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.15";
+const APP_VERSION = "2026.08.24.16";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -4962,6 +4962,230 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
   </div>);
 }
 // ─── AppointmentsTab ──────────────────────────────────────────────────────────
+// ─── CalendarPanel ────────────────────────────────────────────────────────────
+const CAL_TYPES={
+  manual:{label:"Evento",color:"#6366f1"},
+  visit:{label:"Visita",color:"#3b82f6"},
+  delivery:{label:"Entrega",color:"#22c55e"},
+  note:{label:"Nota",color:"#f59e0b"},
+};
+
+function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[],onAdd,onUpdate,onDelete}) {
+  const today=new Date();
+  const [view,setView]=useState("month"); // month|week|list
+  const [cursor,setCursor]=useState(new Date(today.getFullYear(),today.getMonth(),1));
+  const [newEv,setNewEv]=useState(null); // {date,title,type,time,vehicleId,color,notes}
+  const [editEv,setEditEv]=useState(null);
+
+  // Merge manual events with automatic ones from appointments
+  const apptEvents=appointments
+    .filter(a=>a.scheduledDate&&a.status==="open")
+    .map(a=>{
+      const v=vehicles.find(x=>x.id===a.vehicleId);
+      const cli=clients.find(x=>x.id===a.clientId);
+      return {id:"appt_"+a.id,title:(v?v.model:a.title)+(cli?` · ${cli.name}`:""),date:a.scheduledDate,type:"visit",color:CAL_TYPES.visit.color,auto:true,notes:a.title};
+    });
+  const allEvents=[...events,...apptEvents].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||"00:00").localeCompare(b.time||"00:00"));
+
+  const eventsOnDate=d=>{
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    return allEvents.filter(e=>e.date===ds);
+  };
+
+  const monthDays=()=>{
+    const y=cursor.getFullYear(),m=cursor.getMonth();
+    const first=new Date(y,m,1);
+    const last=new Date(y,m+1,0);
+    const days=[];
+    // pad start
+    for(let i=0;i<first.getDay();i++) days.push(null);
+    for(let d=1;d<=last.getDate();d++) days.push(new Date(y,m,d));
+    // pad end
+    while(days.length%7!==0) days.push(null);
+    return days;
+  };
+
+  const weekDays=()=>{
+    const d=new Date(cursor);
+    const day=d.getDay();
+    d.setDate(d.getDate()-day);
+    return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(d.getDate()+i);return x;});
+  };
+
+  const listEvents=()=>{
+    const now=today.toISOString().slice(0,10);
+    return allEvents.filter(e=>e.date>=now).slice(0,40);
+  };
+
+  const isToday=d=>d&&d.toDateString()===today.toDateString();
+  const fmt=d=>d.toLocaleDateString("pt-BR",{day:"numeric",month:"short"});
+  const fmtFull=d=>d.toLocaleDateString("pt-BR",{weekday:"short",day:"numeric",month:"long"});
+
+  const EventDot=({ev,small=false})=>(
+    <div style={{fontSize:small?9:10,padding:small?"1px 4px":"2px 6px",borderRadius:4,background:`${ev.color||CAL_TYPES[ev.type]?.color||"#6366f1"}22`,border:`1px solid ${ev.color||CAL_TYPES[ev.type]?.color||"#6366f1"}55`,color:ev.color||CAL_TYPES[ev.type]?.color||"#6366f1",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",cursor:ev.auto?"default":"pointer",maxWidth:"100%"}}
+      onClick={()=>!ev.auto&&setEditEv(ev)}>
+      {ev.title}
+    </div>
+  );
+
+  const openNew=d=>{
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    setNewEv({date:ds,title:"",type:"manual",time:"",vehicleId:"",notes:"",color:CAL_TYPES.manual.color});
+  };
+
+  const save=async()=>{
+    if(!newEv?.title.trim()||!newEv?.date) return;
+    await onAdd({...newEv,vehicleId:newEv.vehicleId||null});
+    setNewEv(null);
+  };
+
+  const saveEdit=async()=>{
+    if(!editEv?.title.trim()) return;
+    await onUpdate(editEv.id,{title:editEv.title,date:editEv.date,time:editEv.time,type:editEv.type,vehicleId:editEv.vehicleId||null,color:editEv.color,notes:editEv.notes});
+    setEditEv(null);
+  };
+
+  const DAYS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  const MONTHS=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+  const EventForm=({ev,setEv,onSave,onClose2,onDel})=>(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+    <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} placeholder="Título *" autoFocus
+      style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",fontWeight:600}}/>
+    <div style={{display:"flex",gap:6}}>
+      <input type="date" value={ev.date} onChange={e=>setEv(p=>({...p,date:e.target.value}))}
+        style={{flex:1,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+      <input type="time" value={ev.time||""} onChange={e=>setEv(p=>({...p,time:e.target.value}))}
+        style={{width:90,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+    </div>
+    <div style={{display:"flex",gap:6}}>
+      <select value={ev.type} onChange={e=>setEv(p=>({...p,type:e.target.value,color:CAL_TYPES[e.target.value]?.color||p.color}))}
+        style={{flex:1,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
+        {Object.entries(CAL_TYPES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+      </select>
+      <select value={ev.vehicleId||""} onChange={e=>setEv(p=>({...p,vehicleId:e.target.value||null}))}
+        style={{flex:2,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:ev.vehicleId?B.white:B.gray500,fontSize:12,outline:"none"}}>
+        <option value="">Veículo (opcional)</option>
+        {vehicles.map(v=><option key={v.id} value={v.id}>{v.model}{v.plate?` (${v.plate})`:""}</option>)}
+      </select>
+    </div>
+    <textarea value={ev.notes||""} onChange={e=>setEv(p=>({...p,notes:e.target.value}))} placeholder="Notas..." rows={2}
+      style={{padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
+    <div style={{display:"flex",gap:6}}>
+      <button onClick={onSave} disabled={!ev.title.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:ev.title.trim()?B.purple:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:ev.title.trim()?"pointer":"not-allowed"}}>Salvar</button>
+      <button onClick={onClose2} style={{padding:"8px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontSize:12}}>Cancelar</button>
+      {onDel&&<button onClick={onDel} style={{padding:"8px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,cursor:"pointer",fontSize:12}}><ITrash s={12}/></button>}
+    </div>
+  </div>);
+
+  return(<div style={{position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"flex-end",padding:80,pointerEvents:"none"}}>
+    <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:16,width:420,maxHeight:"80vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,0.5)",pointerEvents:"all",overflow:"hidden"}}>
+      {/* Header */}
+      <div style={{padding:"14px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div style={{flex:1}}>
+          {view==="month"&&<div style={{fontWeight:800,fontSize:14,color:B.white}}>{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</div>}
+          {view==="week"&&<div style={{fontWeight:800,fontSize:14,color:B.white}}>Semana de {fmt(weekDays()[0])}</div>}
+          {view==="list"&&<div style={{fontWeight:800,fontSize:14,color:B.white}}>Próximos eventos</div>}
+        </div>
+        {/* Nav */}
+        {view!=="list"&&<div style={{display:"flex",gap:4}}>
+          <button onClick={()=>setCursor(p=>{const d=new Date(p);view==="month"?d.setMonth(d.getMonth()-1):d.setDate(d.getDate()-7);return d;})} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:13}}>‹</button>
+          <button onClick={()=>setCursor(new Date(today.getFullYear(),today.getMonth(),1))} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:11}}>Hoje</button>
+          <button onClick={()=>setCursor(p=>{const d=new Date(p);view==="month"?d.setMonth(d.getMonth()+1):d.setDate(d.getDate()+7);return d;})} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.gray300,fontSize:13}}>›</button>
+        </div>}
+        {/* View toggle */}
+        <div style={{display:"flex",background:B.gray800,borderRadius:7,padding:2,gap:1}}>
+          {["month","week","list"].map(v=>(
+            <button key={v} onClick={()=>setView(v)} style={{padding:"3px 8px",borderRadius:5,border:"none",background:view===v?B.purple:"none",color:view===v?B.white:B.gray400,cursor:"pointer",fontSize:10,fontWeight:700}}>
+              {v==="month"?"Mês":v==="week"?"Sem":"Lista"}
+            </button>
+          ))}
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:18,padding:4}}>×</button>
+      </div>
+
+      {/* Calendar body */}
+      <div style={{overflowY:"auto",flex:1,padding:"10px 12px"}}>
+        {/* Month view */}
+        {view==="month"&&<>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+            {DAYS.map(d=><div key={d} style={{textAlign:"center",fontSize:9,color:B.gray500,fontWeight:700,padding:"2px 0"}}>{d}</div>)}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+            {monthDays().map((d,i)=>{
+              const evs=d?eventsOnDate(d):[];
+              return(<div key={i} onClick={()=>d&&openNew(d)}
+                style={{minHeight:56,padding:"3px",borderRadius:6,background:d?(isToday(d)?`${B.purple}18`:B.gray800):"none",border:`1px solid ${d?(isToday(d)?B.purple+"44":B.gray700):"transparent"}`,cursor:d?"pointer":"default",overflow:"hidden"}}>
+                {d&&<>
+                  <div style={{fontSize:10,fontWeight:isToday(d)?800:400,color:isToday(d)?B.purple:B.gray400,marginBottom:2}}>{d.getDate()}</div>
+                  {evs.slice(0,2).map((ev,j)=><EventDot key={j} ev={ev} small/>)}
+                  {evs.length>2&&<div style={{fontSize:8,color:B.gray500}}>+{evs.length-2}</div>}
+                </>}
+              </div>);
+            })}
+          </div>
+        </>}
+
+        {/* Week view */}
+        {view==="week"&&<div style={{display:"flex",flexDirection:"column",gap:4}}>
+          {weekDays().map((d,i)=>{
+            const evs=eventsOnDate(d);
+            return(<div key={i} style={{display:"flex",gap:8,padding:"6px 8px",borderRadius:8,background:isToday(d)?`${B.purple}12`:B.gray800,border:`1px solid ${isToday(d)?B.purple+"44":B.gray700}`,cursor:"pointer"}} onClick={()=>openNew(d)}>
+              <div style={{width:32,flexShrink:0,textAlign:"center"}}>
+                <div style={{fontSize:9,color:B.gray500,fontWeight:700}}>{DAYS[d.getDay()]}</div>
+                <div style={{fontSize:16,fontWeight:800,color:isToday(d)?B.purple:B.white,lineHeight:1}}>{d.getDate()}</div>
+              </div>
+              <div style={{flex:1,display:"flex",flexDirection:"column",gap:3}}>
+                {evs.length===0&&<div style={{fontSize:10,color:B.gray600,fontStyle:"italic"}}>Nenhum evento</div>}
+                {evs.map((ev,j)=><EventDot key={j} ev={ev}/>)}
+              </div>
+            </div>);
+          })}
+        </div>}
+
+        {/* List view */}
+        {view==="list"&&<div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {listEvents().length===0&&<div style={{textAlign:"center",padding:"24px 0",color:B.gray500}}>Nenhum evento próximo</div>}
+          {listEvents().map((ev,i)=>{
+            const v=vehicles.find(x=>x.id===ev.vehicleId);
+            const evDate=new Date(ev.date+"T12:00:00");
+            return(<div key={i} style={{display:"flex",gap:10,padding:"8px 10px",background:B.gray800,borderRadius:8,border:`1px solid ${ev.color||CAL_TYPES[ev.type]?.color||B.gray700}33`,cursor:ev.auto?"default":"pointer"}} onClick={()=>!ev.auto&&setEditEv(ev)}>
+              <div style={{width:3,borderRadius:2,background:ev.color||CAL_TYPES[ev.type]?.color||B.purple,flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:12,color:B.white}}>{ev.title}</div>
+                <div style={{fontSize:10,color:B.gray400,display:"flex",gap:6,marginTop:2}}>
+                  <span>{evDate.toLocaleDateString("pt-BR",{weekday:"short",day:"numeric",month:"short"})}{ev.time?` · ${ev.time}`:""}</span>
+                  {v&&<span style={{color:B.orange}}>· {v.model}</span>}
+                  <span style={{color:ev.color||CAL_TYPES[ev.type]?.color||B.purple}}>{CAL_TYPES[ev.type]?.label||"Evento"}</span>
+                </div>
+              </div>
+            </div>);
+          })}
+        </div>}
+
+        {/* New event form */}
+        {newEv&&<div style={{marginTop:12,padding:12,background:B.gray800,borderRadius:10,border:`1px solid ${B.purple}44`}}>
+          <div style={{fontWeight:700,fontSize:12,color:B.purple,marginBottom:8}}>Novo evento — {newEv.date&&new Date(newEv.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"numeric",month:"long"})}</div>
+          <EventForm ev={newEv} setEv={setNewEv} onSave={save} onClose2={()=>setNewEv(null)}/>
+        </div>}
+
+        {/* Edit event form */}
+        {editEv&&<div style={{marginTop:12,padding:12,background:B.gray800,borderRadius:10,border:`1px solid ${B.blue}44`}}>
+          <div style={{fontWeight:700,fontSize:12,color:B.blue,marginBottom:8}}>Editar evento</div>
+          <EventForm ev={editEv} setEv={setEditEv} onSave={saveEdit} onClose2={()=>setEditEv(null)} onDel={async()=>{await onDelete(editEv.id);setEditEv(null);}}/>
+        </div>}
+      </div>
+
+      {/* Footer — add event */}
+      {!newEv&&!editEv&&<div style={{padding:"10px 12px",borderTop:`1px solid ${B.gray700}`,flexShrink:0}}>
+        <button onClick={()=>openNew(today)} style={{width:"100%",padding:"8px 0",borderRadius:8,background:`${B.purple}22`,border:`1px solid ${B.purple}44`,color:B.purple,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+          <IPlus s={12} c={B.purple}/>Novo evento
+        </button>
+      </div>}
+    </div>
+  </div>);
+}
+
 function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,  onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
   onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[]}) {
 
@@ -8240,7 +8464,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.11";
+const APP_VERSION = "2026.08.24.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10253,6 +10477,8 @@ export default function App() {
   const [internalTransfers,setInternalTransfers]=useState([]);
   const [appointments,setAppts]=useState([]);
   const [allClientNotes,setAllClientNotes]=useState([]);
+  const [calendarEvents,setCalEvents]=useState([]);
+  const [showCalendar,setShowCalendar]=useState(false);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
@@ -10381,6 +10607,7 @@ export default function App() {
       db.loadInternalTransfers().then(setInternalTransfers).catch(()=>{});
       db.loadAppointments().then(setAppts).catch(()=>{});
       db.loadAllClientVehicleNotes().then(setAllClientNotes).catch(()=>{});
+      db.loadCalendarEvents().then(setCalEvents).catch(()=>{});
       db.loadPurchaseOrders().then(setPurchaseOrders).catch(()=>{});
       db.loadInvestments().then(setInvestments).catch(()=>{});
       db.getShelfItems().then(setShelfItems).catch(()=>{});
@@ -10502,7 +10729,24 @@ export default function App() {
       onLogout={doLogout}
       purchaseOrders={purchaseOrders}
       onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(e){errToast(e);}}}
-      /></ErrorBoundary><GlobalErrorDisplay/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>
+      /></ErrorBoundary><GlobalErrorDisplay/>
+      {/* Calendar floating button — owner and admin */}
+      {(adminRole==="owner"||adminRole==="admin")&&<>
+        <button onClick={()=>setShowCalendar(s=>!s)} style={{position:"fixed",bottom:80,right:16,width:44,height:44,borderRadius:99,background:showCalendar?B.purple:`${B.purple}22`,border:`2px solid ${B.purple}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",zIndex:490,transition:"all .2s"}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </button>
+        {showCalendar&&<CalendarPanel
+          onClose={()=>setShowCalendar(false)}
+          events={calendarEvents}
+          appointments={appointments}
+          vehicles={vehicles}
+          clients={clients}
+          onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Evento criado ✓");}catch(err){errToast(err);}}}
+          onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Evento atualizado ✓");}catch(err){errToast(err);}}}
+          onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Evento removido ✓");}catch(err){errToast(err);}}}
+        />}
+      </>}
+      <ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>
   }
 
   if(isClientPortal){

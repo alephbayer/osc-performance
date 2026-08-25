@@ -1113,6 +1113,36 @@ export const db = {
     if(error) throw error;
   },
 
+  // ── Calendar Events ──────────────────────────────────────────────────────────
+  async loadCalendarEvents() {
+    const {data,error}=await supabase.from("calendar_events").select("*").order("date").order("time");
+    if(error) throw error;
+    return (data||[]).map(e=>({
+      id:e.id, title:e.title, date:e.date, time:e.time||null,
+      type:e.type||"manual", vehicleId:e.vehicle_id||null, clientId:e.client_id||null,
+      color:e.color||null, notes:e.notes||"", createdAt:e.created_at,
+    }));
+  },
+  async addCalendarEvent(e) {
+    const {data,error}=await supabase.from("calendar_events").insert({
+      title:e.title, date:e.date, time:e.time||null,
+      type:e.type||"manual", vehicle_id:e.vehicleId||null, client_id:e.clientId||null,
+      color:e.color||null, notes:e.notes||"",
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,title:data.title,date:data.date,time:data.time,type:data.type,vehicleId:data.vehicle_id,clientId:data.client_id,color:data.color,notes:data.notes,createdAt:data.created_at};
+  },
+  async updateCalendarEvent(id,patch) {
+    const map={title:"title",date:"date",time:"time",type:"type",vehicleId:"vehicle_id",clientId:"client_id",color:"color",notes:"notes"};
+    const dbp={};Object.keys(patch).forEach(k=>{if(map[k])dbp[map[k]]=patch[k];});
+    const {error}=await supabase.from("calendar_events").update(dbp).eq("id",id);
+    if(error) throw error;
+  },
+  async deleteCalendarEvent(id) {
+    const {error}=await supabase.from("calendar_events").delete().eq("id",id);
+    if(error) throw error;
+  },
+
   async deleteOsHistory(id) {
     const { error } = await supabase.from("os_history").delete().eq("id", id);
     if (error) throw error;

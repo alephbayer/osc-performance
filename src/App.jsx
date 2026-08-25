@@ -5285,6 +5285,8 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
 
   const canManage=adminRole==="owner"||adminRole==="admin";
   const openAppts=appointments.filter(a=>a.status==="open");
+  const datedAppts=openAppts.filter(a=>a.scheduledDate).sort((a,b)=>a.scheduledDate.localeCompare(b.scheduledDate));
+  const undatedAppts=openAppts.filter(a=>!a.scheduledDate);
   const closedAppts=appointments.filter(a=>a.status!=="open");
 
   const DIV_COLOR={performance:B.orange,finishing:FD.primary};
@@ -5386,15 +5388,18 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
       Nenhum agendamento em aberto
     </div>}
 
-    {/* Open appointments */}
-    {openAppts.map(a=>{
+    {/* Dated appointments — sorted by date */}
+    {[...datedAppts,...undatedAppts].map((a,idx)=>{
+      const isFirstUndated=a===undatedAppts[0]&&datedAppts.length>0;
+
       const v=vehicles.find(x=>x.id===a.vehicleId);
       const cli=clients.find(x=>x.id===a.clientId);
       const isExp=expanded===a.id;
       const totalPaid=a.payments.reduce((s,p)=>s+p.amount,0);
+      const sep=isFirstUndated?(<div style={{display:'flex',alignItems:'center',gap:8,margin:'12px 0 8px'}}><div style={{flex:1,height:1,background:B.gray700}}/><span style={{fontSize:10,fontWeight:700,color:B.gray500,textTransform:'uppercase',letterSpacing:.6}}>Sem data definida</span><div style={{flex:1,height:1,background:B.gray700}}/></div>):null;
       const totalSvc=a.services.reduce((s,sv)=>s+sv.estimatedValue,0);
       const balance=Math.max(0,(totalSvc||a.estimatedValue)-totalPaid);
-      return(<div key={a.id} style={{background:B.gray900,borderRadius:14,marginBottom:10,border:`1px solid ${B.blue}22`,overflow:"hidden"}}>
+      return(<React.Fragment key={a.id}>{sep}<div key={a.id+"c"} style={{background:B.gray900,borderRadius:14,marginBottom:10,border:`1px solid ${B.blue}22`,overflow:"hidden"}}>
         {/* Header */}
         <div onClick={()=>setExpanded(isExp?null:a.id)} style={{padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
           {v?.photo&&<img src={v.photo} alt="" style={{width:38,height:38,borderRadius:8,objectFit:"cover",flexShrink:0}}/>}
@@ -5797,10 +5802,8 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
             </button>
           </div>}
         </div>}
-      </div>);
-    })}
-
-    {/* Closed/converted */}
+      </div></React.Fragment>);
+    return(<React.Fragment key={a.id}>{isFirstUndated&&<div style={{display:"flex",alignItems:"center",gap:8,margin:"12px 0 8px"}}><div style={{flex:1,height:1,background:B.gray700}}/><span style={{fontSize:10,fontWeight:700,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Sem data definida</span><div style={{flex:1,height:1,background:B.gray700}}/></div>}{card}</React.Fragment>);})
     {closedAppts.length>0&&<div style={{marginTop:20}}>
       <div style={{fontSize:11,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Encerrados</div>
       {closedAppts.map(a=>{
@@ -8541,7 +8544,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.20";
+const APP_VERSION = "2026.08.24.21";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11560,10 +11563,17 @@ export default function App() {
       const pendingMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="pending").length;
       const approvedMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="approved").length;
       const boughtMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="bought").length;
-      if(!hasPurchases&&!hasInvest&&!hasNotes&&lowStock===0&&pendingMateriais===0&&approvedMateriais===0&&boughtMateriais===0) return(
+      const todayStr=new Date().toISOString().slice(0,10);
+      const todayCalEvents=(calendarEvents||[]).filter(e=>e.date===todayStr);
+      if(!hasPurchases&&!hasInvest&&!hasNotes&&lowStock===0&&pendingMateriais===0&&approvedMateriais===0&&boughtMateriais===0&&todayCalEvents.length===0) return(
         <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${B.gray700}`,textAlign:"center",color:B.gray600,fontSize:13}}>✅ Nenhum alerta no momento</div>
       );
       return(<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.gray700}`}}>
+        {todayCalEvents.map(e=>{
+          const calColor=CAL_TYPES[e.type]?.color||B.purple;
+          const calIcon=<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+          return(<DashAlert key={e.id} color={calColor} icon={calIcon} label={e.title} sub={`${CAL_TYPES[e.type]?.label||"Evento"}${e.time?` · ${e.time}`:""}`} onClick={()=>setShowCalendar(true)}/>);
+        })}
         {hasPurchases&&<DashAlert color={B.amber} icon={iconCart} label={`${pendingPurchaseCount} pedido${pendingPurchaseCount!==1?"s":""} de peça aguardando compra`} sub="Pedidos de Compras" onClick={()=>goSection("gestao","purchases")}/>}
         {pendingMateriais>0&&<DashAlert color={B.blue} icon={iconBox} label={`${pendingMateriais} ${pendingMateriais!==1?"materiais sortidos":"material sortido"} para aprovar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
         {approvedMateriais>0&&<DashAlert color={B.amber} icon={iconBox} label={`${approvedMateriais} ${approvedMateriais!==1?"materiais sortidos":"material sortido"} para comprar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}

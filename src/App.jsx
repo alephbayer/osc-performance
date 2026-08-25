@@ -5086,22 +5086,49 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
     const vehicleList=ev.type==="delivery"
       ?vehicles.filter(v=>v.status==="active"||v.status==="ready")
       :vehicles;
+
+    const autoTitle=(type,vehicleId)=>{
+      const v=vehicles.find(x=>x.id===vehicleId);
+      if(!v) return "";
+      const cli=clients.find(x=>x.id===v.clientId);
+      if(type==="delivery") return `Entrega ${v.model?`da ${v.model}`:""}`.trim();
+      if(type==="visit") return cli?`Visita de ${cli.name}`:(v.model?`Visita — ${v.model}`:"");
+      return "";
+    };
+
+    const handleTypeChange=k=>{
+      const newColor=CAL_TYPES[k].color;
+      const newVehicleId=k==="note"?null:ev.vehicleId;
+      const generated=autoTitle(k,newVehicleId);
+      // Only auto-update title if it's empty or was previously auto-generated
+      const prevAuto=autoTitle(ev.type,ev.vehicleId);
+      const titleIsAuto=!ev.title||ev.title===prevAuto;
+      setEv(p=>({...p,type:k,color:newColor,vehicleId:newVehicleId,title:titleIsAuto?generated:p.title}));
+    };
+
+    const handleVehicleChange=vehicleId=>{
+      const generated=autoTitle(ev.type,vehicleId);
+      const prevAuto=autoTitle(ev.type,ev.vehicleId);
+      const titleIsAuto=!ev.title||ev.title===prevAuto;
+      setEv(p=>({...p,vehicleId:vehicleId||null,title:titleIsAuto?generated:p.title}));
+    };
+
     return(<div style={{display:"flex",flexDirection:"column",gap:8}}>
       {/* Type pills */}
       <div style={{display:"flex",gap:5}}>
         {Object.entries(CAL_TYPES).map(([k,v])=>(
-          <button key={k} onClick={()=>setEv(p=>({...p,type:k,color:v.color,vehicleId:k==="note"?null:p.vehicleId}))}
+          <button key={k} onClick={()=>handleTypeChange(k)}
             style={{flex:1,padding:"6px 0",borderRadius:7,border:`2px solid ${ev.type===k?v.color:B.gray700}`,background:ev.type===k?`${v.color}22`:B.gray800,color:ev.type===k?v.color:B.gray500,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
             {v.label}
           </button>
         ))}
       </div>
-      {/* Title */}
-      <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} autoFocus
-        placeholder={ev.type==="delivery"?"Ex: Entrega do Maverick":ev.type==="visit"?"Ex: Visita do Rodrigo":ev.type==="note"?"Anotação...":"Título do evento"}
-        style={{...inputStyle,fontSize:13,fontWeight:600}}/>
       {/* Vehicle — hidden for note, filtered for delivery */}
-      {ev.type!=="note"&&<VehicleSearch value={ev.vehicleId||""} onChange={v=>setEv(p=>({...p,vehicleId:v||null}))} vehicles={vehicleList}/>}
+      {ev.type!=="note"&&<VehicleSearch value={ev.vehicleId||""} onChange={handleVehicleChange} vehicles={vehicleList}/>}
+      {/* Title — auto-filled, editable */}
+      <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} autoFocus
+        placeholder={ev.type==="delivery"?"Entrega da...":ev.type==="visit"?"Visita de...":ev.type==="note"?"Anotação...":"Título do evento"}
+        style={{...inputStyle,fontSize:13,fontWeight:600}}/>
       {/* Date + time */}
       <div style={{display:"flex",gap:6}}>
         <input type="date" value={ev.date} onChange={e=>setEv(p=>({...p,date:e.target.value}))}
@@ -8513,7 +8540,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.16";
+const APP_VERSION = "2026.08.24.17";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

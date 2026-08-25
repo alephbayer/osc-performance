@@ -5048,28 +5048,54 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
   const DAYS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
   const MONTHS=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
+  const VehicleSearch=({value,onChange,vehicles})=>{
+    const [q,setQ]=useState("");
+    const [open,setOpen]=useState(false);
+    const sel=vehicles.find(x=>x.id===value);
+    return(<div style={{position:"relative",flex:2}}>
+      <input value={open?q:(sel?`${sel.model}${sel.plate?` (${sel.plate})`:""}`:"Veículo (opcional)")}
+        onFocus={()=>{setOpen(true);setQ("");}}
+        onBlur={()=>setTimeout(()=>setOpen(false),150)}
+        onChange={e=>setQ(e.target.value)}
+        placeholder="Buscar veículo..."
+        style={{width:"100%",padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:sel||open?B.white:B.gray500,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+      {open&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:7,zIndex:200,maxHeight:180,overflowY:"auto",marginTop:2}}>
+        <div onMouseDown={()=>onChange("")} style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.gray400,fontStyle:"italic",borderBottom:`1px solid ${B.gray700}`}}>Nenhum veículo</div>
+        {vehicles.filter(v=>{
+          const qs=q.toLowerCase();
+          return !qs||v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs);
+        }).map(v=>(
+          <div key={v.id} onMouseDown={()=>{onChange(v.id);setQ("");setOpen(false);}}
+            style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.white,borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
+            onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+            onMouseLeave={e=>e.currentTarget.style.background=value===v.id?`${B.purple}22`:"none"}>
+            {v.model}{v.plate?` (${v.plate})`:""}{v.clientId?(()=>{const c=vehicles._cli?.find?.(x=>x.id===v.clientId);return c?` · ${c.name}`:"";})():""}
+          </div>
+        ))}
+      </div>}
+    </div>);
+  };
+
+  const inputStyle={padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",colorScheme:"dark"};
+
   const EventForm=({ev,setEv,onSave,onClose2,onDel})=>(<div style={{display:"flex",flexDirection:"column",gap:8}}>
     <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} placeholder="Título *" autoFocus
-      style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",fontWeight:600}}/>
+      style={{...inputStyle,fontSize:13,fontWeight:600}}/>
     <div style={{display:"flex",gap:6}}>
       <input type="date" value={ev.date} onChange={e=>setEv(p=>({...p,date:e.target.value}))}
-        style={{flex:1,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        style={{...inputStyle,flex:1}}/>
       <input type="time" value={ev.time||""} onChange={e=>setEv(p=>({...p,time:e.target.value}))}
-        style={{width:90,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        style={{...inputStyle,width:90}}/>
     </div>
-    <div style={{display:"flex",gap:6}}>
+    <div style={{display:"flex",gap:6,alignItems:"stretch"}}>
       <select value={ev.type} onChange={e=>setEv(p=>({...p,type:e.target.value,color:CAL_TYPES[e.target.value]?.color||p.color}))}
-        style={{flex:1,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
+        style={{...inputStyle,flex:1}}>
         {Object.entries(CAL_TYPES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
       </select>
-      <select value={ev.vehicleId||""} onChange={e=>setEv(p=>({...p,vehicleId:e.target.value||null}))}
-        style={{flex:2,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:ev.vehicleId?B.white:B.gray500,fontSize:12,outline:"none"}}>
-        <option value="">Veículo (opcional)</option>
-        {vehicles.map(v=><option key={v.id} value={v.id}>{v.model}{v.plate?` (${v.plate})`:""}</option>)}
-      </select>
+      <VehicleSearch value={ev.vehicleId||""} onChange={v=>setEv(p=>({...p,vehicleId:v||null}))} vehicles={vehicles}/>
     </div>
     <textarea value={ev.notes||""} onChange={e=>setEv(p=>({...p,notes:e.target.value}))} placeholder="Notas..." rows={2}
-      style={{padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
+      style={{...inputStyle,resize:"none",fontFamily:"inherit"}}/>
     <div style={{display:"flex",gap:6}}>
       <button onClick={onSave} disabled={!ev.title.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:ev.title.trim()?B.purple:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:ev.title.trim()?"pointer":"not-allowed"}}>Salvar</button>
       <button onClick={onClose2} style={{padding:"8px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontSize:12}}>Cancelar</button>
@@ -8463,7 +8489,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.14";
+const APP_VERSION = "2026.08.24.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10449,6 +10475,7 @@ export default function App() {
         .osc-vhc-timer > div { display: flex !important; align-items: center !important; gap: 8px !important; }
         .osc-vhc-summary { width: 100% !important; text-align: left !important; flex-direction: row !important; gap: 12px !important; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+        input[type="date"], input[type="time"], input[type="datetime-local"] { color-scheme: dark; }
         .osc-tab-btn span.tab-label { display: none; }
       }
     `;

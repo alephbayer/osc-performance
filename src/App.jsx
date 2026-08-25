@@ -4971,6 +4971,41 @@ const CAL_TYPES={
   appointment:{label:"Agendamento",color:"#8b5cf6"},
 };
 
+function CalVehicleSearch({value,onChange,vehicles=[],clients=[],filterActive=false}){
+  const [q,setQ]=useState("");
+  const [open,setOpen]=useState(false);
+  const sel=vehicles.find(x=>x.id===value);
+  const selCli=sel?clients.find(x=>x.id===sel.clientId):null;
+  const selLabel=sel?`${sel.model}${sel.plate?` · ${sel.plate}`:""}`+(selCli?` · ${selCli.name}`:""):"";
+  const filtered=vehicles.filter(v=>{
+    if(filterActive&&v.status!=="active"&&v.status!=="ready") return false;
+    const qs=q.toLowerCase();
+    const c=clients.find(x=>x.id===v.clientId);
+    return !qs||v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||c?.name?.toLowerCase().includes(qs);
+  });
+  return(<div style={{position:"relative"}}>
+    <input value={open?q:selLabel}
+      onFocus={()=>{setOpen(true);setQ("");}}
+      onBlur={()=>setTimeout(()=>setOpen(false),150)}
+      onChange={e=>setQ(e.target.value)}
+      placeholder="Buscar veículo ou cliente..."
+      style={{width:"100%",padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:sel||open?B.white:B.gray500,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+    {open&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:7,zIndex:300,maxHeight:180,overflowY:"auto",marginTop:2,boxShadow:"0 8px 24px rgba(0,0,0,.4)"}}>
+      <div onMouseDown={()=>{onChange("");setOpen(false);}} style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.gray400,fontStyle:"italic",borderBottom:`1px solid ${B.gray700}`}}>Nenhum veículo</div>
+      {filtered.map(v=>{
+        const c=clients.find(x=>x.id===v.clientId);
+        return(<div key={v.id} onMouseDown={()=>{onChange(v.id);setQ("");setOpen(false);}}
+          style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
+          onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+          onMouseLeave={e=>e.currentTarget.style.background=value===v.id?`${B.purple}22`:"none"}>
+          <div style={{fontSize:11,color:B.white,fontWeight:600}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+          {c&&<div style={{fontSize:10,color:B.blue}}>{c.name}</div>}
+        </div>);
+      })}
+    </div>}
+  </div>);
+}
+
 function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[],onAdd,onUpdate,onDelete}) {
   const today=new Date();
   const [view,setView]=useState("month");
@@ -5050,40 +5085,6 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
   const DAYS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
   const MONTHS=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-  const VehicleSearch=({value,onChange,vehicles,filterActive=false})=>{
-    const [q,setQ]=useState("");
-    const [open,setOpen]=useState(false);
-    const sel=vehicles.find(x=>x.id===value);
-    const selCli=sel?clients.find(x=>x.id===sel.clientId):null;
-    const selLabel=sel?`${sel.model}${sel.plate?` (${sel.plate})`:""}`+(selCli?` · ${selCli.name}`:""):"";
-    const filtered=vehicles.filter(v=>{
-      if(filterActive&&v.status!=="active"&&v.status!=="ready") return false;
-      const qs=q.toLowerCase();
-      const c=clients.find(x=>x.id===v.clientId);
-      return !qs||v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||c?.name?.toLowerCase().includes(qs);
-    });
-    return(<div style={{position:"relative",flex:2}}>
-      <input value={open?q:selLabel}
-        onFocus={()=>{setOpen(true);setQ("");}}
-        onBlur={()=>setTimeout(()=>setOpen(false),150)}
-        onChange={e=>setQ(e.target.value)}
-        placeholder="Buscar veículo ou cliente..."
-        style={{width:"100%",padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:sel||open?B.white:B.gray500,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
-      {open&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:7,zIndex:200,maxHeight:180,overflowY:"auto",marginTop:2}}>
-        <div onMouseDown={()=>onChange("")} style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.gray400,fontStyle:"italic",borderBottom:`1px solid ${B.gray700}`}}>Nenhum veículo</div>
-        {filtered.map(v=>{
-          const c=clients.find(x=>x.id===v.clientId);
-          return(<div key={v.id} onMouseDown={()=>{onChange(v.id);setQ("");setOpen(false);}}
-            style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
-            onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
-            onMouseLeave={e=>e.currentTarget.style.background=value===v.id?`${B.purple}22`:"none"}>
-            <div style={{fontSize:11,color:B.white,fontWeight:600}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
-            {c&&<div style={{fontSize:10,color:B.blue}}>{c.name}</div>}
-          </div>);
-        })}
-      </div>}
-    </div>);
-  };
 
   const inputStyle={padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",colorScheme:"dark"};
   const btnSecondary={padding:"8px 14px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:12};
@@ -5130,7 +5131,7 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
         ))}
       </div>
       {/* Vehicle — hidden for note, filtered for delivery */}
-      {ev.type!=="note"&&<VehicleSearch value={ev.vehicleId||""} onChange={handleVehicleChange} vehicles={vehicleList}/>}
+      {ev.type!=="note"&&<CalVehicleSearch value={ev.vehicleId||""} onChange={handleVehicleChange} vehicles={vehicleList} clients={clients} filterActive={ev.type==="delivery"}/>}
       {/* Title — auto-filled, editable */}
       <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} autoFocus
         placeholder={ev.type==="delivery"?"Entrega da...":ev.type==="visit"?"Visita de...":ev.type==="note"?"Anotação...":"Título do evento"}
@@ -8546,7 +8547,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.18";
+const APP_VERSION = "2026.08.24.19";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -5006,6 +5006,63 @@ function CalVehicleSearch({value,onChange,vehicles=[],clients=[],filterActive=fa
   </div>);
 }
 
+function CalEventForm({ev,setEv,onSave,onClose2,onDel,vehicles=[],clients=[]}) {
+    const inputStyle={padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",colorScheme:"dark"};
+    const btnSecondary={padding:"8px 14px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:12};
+    const vehicleList=ev.type==="delivery"
+      ?vehicles.filter(v=>v.status==="active"||v.status==="ready")
+      :vehicles;
+    const autoTitle=(type,vehicleId)=>{
+      const v=vehicles.find(x=>x.id===vehicleId);
+      if(!v) return "";
+      const cli=clients.find(x=>x.id===v.clientId);
+      if(type==="delivery") return `Entrega ${v.model?`da ${v.model}`:""}`.trim();
+      if(type==="visit") return cli?`Visita de ${cli.name}`:(v.model?`Visita — ${v.model}`:"");
+      return "";
+    };
+    const handleTypeChange=k=>{
+      const newColor=CAL_TYPES[k].color;
+      const newVehicleId=k==="note"?null:ev.vehicleId;
+      const generated=autoTitle(k,newVehicleId);
+      const prevAuto=autoTitle(ev.type,ev.vehicleId);
+      const titleIsAuto=!ev.title||ev.title===prevAuto;
+      setEv(p=>({...p,type:k,color:newColor,vehicleId:newVehicleId,title:titleIsAuto?generated:p.title}));
+    };
+    const handleVehicleChange=vehicleId=>{
+      const generated=autoTitle(ev.type,vehicleId);
+      const prevAuto=autoTitle(ev.type,ev.vehicleId);
+      const titleIsAuto=!ev.title||ev.title===prevAuto;
+      setEv(p=>({...p,vehicleId:vehicleId||null,title:titleIsAuto?generated:p.title}));
+    };
+    return(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+      <div style={{display:"flex",gap:5}}>
+        {Object.entries(CAL_TYPES).filter(([k])=>k!=="appointment").map(([k,v])=>(
+          <button key={k} onClick={()=>handleTypeChange(k)}
+            style={{flex:1,padding:"6px 0",borderRadius:7,border:`2px solid ${ev.type===k?v.color:B.gray700}`,background:ev.type===k?`${v.color}22`:B.gray800,color:ev.type===k?v.color:B.gray500,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+      {ev.type!=="note"&&<CalVehicleSearch value={ev.vehicleId||""} onChange={handleVehicleChange} vehicles={vehicleList} clients={clients} filterActive={ev.type==="delivery"}/>}
+      <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} autoFocus
+        placeholder={ev.type==="delivery"?"Entrega da...":ev.type==="visit"?"Visita de...":ev.type==="note"?"Anotação...":"Título do evento"}
+        style={{...inputStyle,fontSize:13,fontWeight:600}}/>
+      <div style={{display:"flex",gap:6}}>
+        <input type="date" value={ev.date} onChange={e=>setEv(p=>({...p,date:e.target.value}))}
+          style={{...inputStyle,flex:1}}/>
+        <input type="time" value={ev.time||""} onChange={e=>setEv(p=>({...p,time:e.target.value}))}
+          style={{...inputStyle,width:90}}/>
+      </div>
+      <textarea value={ev.notes||""} onChange={e=>setEv(p=>({...p,notes:e.target.value}))} placeholder="Notas..." rows={2}
+        style={{...inputStyle,resize:"none",fontFamily:"inherit"}}/>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={onSave} disabled={!ev.title.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:ev.title.trim()?B.purple:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:ev.title.trim()?"pointer":"not-allowed"}}>Salvar</button>
+        <button onClick={onClose2} style={btnSecondary}>Cancelar</button>
+        {onDel&&<button onClick={onDel} style={{padding:"8px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,cursor:"pointer",fontSize:12}}><ITrash s={12}/></button>}
+      </div>
+    </div>);
+}
+
 function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[],onAdd,onUpdate,onDelete}) {
   const today=new Date();
   const [view,setView]=useState("month");
@@ -5089,69 +5146,6 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
   const inputStyle={padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",colorScheme:"dark"};
   const btnSecondary={padding:"8px 14px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:12};
 
-  const EventForm=({ev,setEv,onSave,onClose2,onDel})=>{
-    const vehicleList=ev.type==="delivery"
-      ?vehicles.filter(v=>v.status==="active"||v.status==="ready")
-      :vehicles;
-
-    const autoTitle=(type,vehicleId)=>{
-      const v=vehicles.find(x=>x.id===vehicleId);
-      if(!v) return "";
-      const cli=clients.find(x=>x.id===v.clientId);
-      if(type==="delivery") return `Entrega ${v.model?`da ${v.model}`:""}`.trim();
-      if(type==="visit") return cli?`Visita de ${cli.name}`:(v.model?`Visita — ${v.model}`:"");
-      return "";
-    };
-
-    const handleTypeChange=k=>{
-      const newColor=CAL_TYPES[k].color;
-      const newVehicleId=k==="note"?null:ev.vehicleId;
-      const generated=autoTitle(k,newVehicleId);
-      // Only auto-update title if it's empty or was previously auto-generated
-      const prevAuto=autoTitle(ev.type,ev.vehicleId);
-      const titleIsAuto=!ev.title||ev.title===prevAuto;
-      setEv(p=>({...p,type:k,color:newColor,vehicleId:newVehicleId,title:titleIsAuto?generated:p.title}));
-    };
-
-    const handleVehicleChange=vehicleId=>{
-      const generated=autoTitle(ev.type,vehicleId);
-      const prevAuto=autoTitle(ev.type,ev.vehicleId);
-      const titleIsAuto=!ev.title||ev.title===prevAuto;
-      setEv(p=>({...p,vehicleId:vehicleId||null,title:titleIsAuto?generated:p.title}));
-    };
-
-    return(<div style={{display:"flex",flexDirection:"column",gap:8}}>
-      {/* Type pills */}
-      <div style={{display:"flex",gap:5}}>
-        {Object.entries(CAL_TYPES).filter(([k])=>k!=="appointment").map(([k,v])=>(
-          <button key={k} onClick={()=>handleTypeChange(k)}
-            style={{flex:1,padding:"6px 0",borderRadius:7,border:`2px solid ${ev.type===k?v.color:B.gray700}`,background:ev.type===k?`${v.color}22`:B.gray800,color:ev.type===k?v.color:B.gray500,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
-            {v.label}
-          </button>
-        ))}
-      </div>
-      {/* Vehicle — hidden for note, filtered for delivery */}
-      {ev.type!=="note"&&<CalVehicleSearch value={ev.vehicleId||""} onChange={handleVehicleChange} vehicles={vehicleList} clients={clients} filterActive={ev.type==="delivery"}/>}
-      {/* Title — auto-filled, editable */}
-      <input value={ev.title} onChange={e=>setEv(p=>({...p,title:e.target.value}))} autoFocus
-        placeholder={ev.type==="delivery"?"Entrega da...":ev.type==="visit"?"Visita de...":ev.type==="note"?"Anotação...":"Título do evento"}
-        style={{...inputStyle,fontSize:13,fontWeight:600}}/>
-      {/* Date + time */}
-      <div style={{display:"flex",gap:6}}>
-        <input type="date" value={ev.date} onChange={e=>setEv(p=>({...p,date:e.target.value}))}
-          style={{...inputStyle,flex:1}}/>
-        <input type="time" value={ev.time||""} onChange={e=>setEv(p=>({...p,time:e.target.value}))}
-          style={{...inputStyle,width:90}}/>
-      </div>
-      <textarea value={ev.notes||""} onChange={e=>setEv(p=>({...p,notes:e.target.value}))} placeholder="Notas..." rows={2}
-        style={{...inputStyle,resize:"none",fontFamily:"inherit"}}/>
-      <div style={{display:"flex",gap:6}}>
-        <button onClick={onSave} disabled={!ev.title.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:ev.title.trim()?B.purple:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:ev.title.trim()?"pointer":"not-allowed"}}>Salvar</button>
-        <button onClick={onClose2} style={btnSecondary}>Cancelar</button>
-        {onDel&&<button onClick={onDel} style={{padding:"8px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,cursor:"pointer",fontSize:12}}><ITrash s={12}/></button>}
-      </div>
-    </div>);
-  };
 
   return(<div style={{position:"fixed",bottom:"calc(125px + env(safe-area-inset-bottom))",right:16,zIndex:1000,pointerEvents:"none",display:"flex",flexDirection:"column",alignItems:"flex-end"}}>    <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:16,width:420,maxWidth:"calc(100vw - 32px)",maxHeight:"75vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,0.5)",pointerEvents:"all",overflow:"hidden"}}>
       {/* Header */}
@@ -5249,13 +5243,13 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
         {/* New event form */}
         {newEv&&<div style={{marginTop:12,padding:12,background:B.gray800,borderRadius:10,border:`1px solid ${B.purple}44`}}>
           <div style={{fontWeight:700,fontSize:12,color:B.purple,marginBottom:8}}>Novo evento — {newEv.date&&new Date(newEv.date+"T12:00:00").toLocaleDateString("pt-BR",{day:"numeric",month:"long"})}</div>
-          <EventForm ev={newEv} setEv={setNewEv} onSave={save} onClose2={()=>setNewEv(null)}/>
+          <CalEventForm ev={newEv} setEv={setNewEv} onSave={save} onClose2={()=>setNewEv(null)} vehicles={vehicles} clients={clients}/>
         </div>}
 
         {/* Edit event form */}
         {editEv&&<div style={{marginTop:12,padding:12,background:B.gray800,borderRadius:10,border:`1px solid ${B.blue}44`}}>
           <div style={{fontWeight:700,fontSize:12,color:B.blue,marginBottom:8}}>Editar evento</div>
-          <EventForm ev={editEv} setEv={setEditEv} onSave={saveEdit} onClose2={()=>setEditEv(null)} onDel={async()=>{await onDelete(editEv.id);setEditEv(null);}}/>
+          <CalEventForm ev={editEv} setEv={setEditEv} onSave={saveEdit} onClose2={()=>setEditEv(null)} onDel={async()=>{await onDelete(editEv.id);setEditEv(null);}} vehicles={vehicles} clients={clients}/>
         </div>}
       </div>
 
@@ -8547,7 +8541,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.19";
+const APP_VERSION = "2026.08.24.20";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

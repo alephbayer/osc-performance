@@ -5803,7 +5803,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
           </div>}
         </div>}
       </div></React.Fragment>);
-    return(<React.Fragment key={a.id}>{isFirstUndated&&<div style={{display:"flex",alignItems:"center",gap:8,margin:"12px 0 8px"}}><div style={{flex:1,height:1,background:B.gray700}}/><span style={{fontSize:10,fontWeight:700,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Sem data definida</span><div style={{flex:1,height:1,background:B.gray700}}/></div>}{card}</React.Fragment>);})
+    })}
     {closedAppts.length>0&&<div style={{marginTop:20}}>
       <div style={{fontSize:11,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Encerrados</div>
       {closedAppts.map(a=>{
@@ -8544,7 +8544,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.21";
+const APP_VERSION = "2026.08.24.22";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

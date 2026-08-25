@@ -5077,8 +5077,7 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
     </div>
   </div>);
 
-  return(<div style={{position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"flex-end",padding:80,pointerEvents:"none"}}>
-    <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:16,width:420,maxHeight:"80vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,0.5)",pointerEvents:"all",overflow:"hidden"}}>
+  return(<div style={{position:"fixed",bottom:"calc(125px + env(safe-area-inset-bottom))",right:16,zIndex:1000,pointerEvents:"none",display:"flex",flexDirection:"column",alignItems:"flex-end"}}>    <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:16,width:420,maxWidth:"calc(100vw - 32px)",maxHeight:"75vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,0.5)",pointerEvents:"all",overflow:"hidden"}}>
       {/* Header */}
       <div style={{padding:"14px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -8464,7 +8463,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.12";
+const APP_VERSION = "2026.08.24.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10732,7 +10731,7 @@ export default function App() {
       /></ErrorBoundary><GlobalErrorDisplay/>
       {/* Calendar floating button — owner and admin */}
       {(adminRole==="owner"||adminRole==="admin")&&<>
-        <button onClick={()=>setShowCalendar(s=>!s)} style={{position:"fixed",bottom:80,right:16,width:44,height:44,borderRadius:99,background:showCalendar?B.purple:`${B.purple}22`,border:`2px solid ${B.purple}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",zIndex:490,transition:"all .2s"}}>
+        <button onClick={()=>setShowCalendar(s=>!s)} style={{position:"fixed",bottom:"calc(72px + env(safe-area-inset-bottom))",right:16,width:44,height:44,borderRadius:99,background:showCalendar?B.purple:`${B.gray800}`,border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",zIndex:1000,transition:"all .2s"}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </button>
         {showCalendar&&<CalendarPanel

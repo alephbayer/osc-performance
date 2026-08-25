@@ -4968,6 +4968,7 @@ const CAL_TYPES={
   visit:{label:"Visita",color:"#3b82f6"},
   delivery:{label:"Entrega",color:"#22c55e"},
   note:{label:"Nota",color:"#f59e0b"},
+  appointment:{label:"Agendamento",color:"#8b5cf6"},
 };
 
 function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[],onAdd,onUpdate,onDelete}) {
@@ -4985,7 +4986,7 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
     .map(a=>{
       const v=vehicles.find(x=>x.id===a.vehicleId);
       const cli=clients.find(x=>x.id===a.clientId);
-      return {id:"appt_"+a.id,title:(v?v.model:a.title)+(cli?` · ${cli.name}`:""),date:a.scheduledDate,type:"visit",color:CAL_TYPES.visit.color,auto:true,notes:a.title};
+      return {id:"appt_"+a.id,title:(v?v.model:a.title)+(cli?` · ${cli.name}`:""),date:a.scheduledDate,type:"appointment",color:"#8b5cf6",auto:true,notes:a.title};
     });
   const allEvents=[...events,...apptEvents].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||"00:00").localeCompare(b.time||"00:00"));
 
@@ -5053,28 +5054,33 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
     const [q,setQ]=useState("");
     const [open,setOpen]=useState(false);
     const sel=vehicles.find(x=>x.id===value);
+    const selCli=sel?clients.find(x=>x.id===sel.clientId):null;
+    const selLabel=sel?`${sel.model}${sel.plate?` (${sel.plate})`:""}`+(selCli?` · ${selCli.name}`:""):"";
     const filtered=vehicles.filter(v=>{
-      if(filterActive&&!v.status) return false;
+      if(filterActive&&v.status!=="active"&&v.status!=="ready") return false;
       const qs=q.toLowerCase();
-      return !qs||v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs);
+      const c=clients.find(x=>x.id===v.clientId);
+      return !qs||v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||c?.name?.toLowerCase().includes(qs);
     });
     return(<div style={{position:"relative",flex:2}}>
-      <input value={open?q:(sel?`${sel.model}${sel.plate?` (${sel.plate})`:""}`:"Veículo (opcional)")}
+      <input value={open?q:selLabel}
         onFocus={()=>{setOpen(true);setQ("");}}
         onBlur={()=>setTimeout(()=>setOpen(false),150)}
         onChange={e=>setQ(e.target.value)}
-        placeholder="Buscar veículo..."
+        placeholder="Buscar veículo ou cliente..."
         style={{width:"100%",padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:sel||open?B.white:B.gray500,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
       {open&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:7,zIndex:200,maxHeight:180,overflowY:"auto",marginTop:2}}>
         <div onMouseDown={()=>onChange("")} style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.gray400,fontStyle:"italic",borderBottom:`1px solid ${B.gray700}`}}>Nenhum veículo</div>
-        {filtered.map(v=>(
-          <div key={v.id} onMouseDown={()=>{onChange(v.id);setQ("");setOpen(false);}}
-            style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.white,borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
+        {filtered.map(v=>{
+          const c=clients.find(x=>x.id===v.clientId);
+          return(<div key={v.id} onMouseDown={()=>{onChange(v.id);setQ("");setOpen(false);}}
+            style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
             onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
             onMouseLeave={e=>e.currentTarget.style.background=value===v.id?`${B.purple}22`:"none"}>
-            {v.model}{v.plate?` (${v.plate})`:""}
-          </div>
-        ))}
+            <div style={{fontSize:11,color:B.white,fontWeight:600}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+            {c&&<div style={{fontSize:10,color:B.blue}}>{c.name}</div>}
+          </div>);
+        })}
       </div>}
     </div>);
   };
@@ -5116,7 +5122,7 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
     return(<div style={{display:"flex",flexDirection:"column",gap:8}}>
       {/* Type pills */}
       <div style={{display:"flex",gap:5}}>
-        {Object.entries(CAL_TYPES).map(([k,v])=>(
+        {Object.entries(CAL_TYPES).filter(([k])=>k!=="appointment").map(([k,v])=>(
           <button key={k} onClick={()=>handleTypeChange(k)}
             style={{flex:1,padding:"6px 0",borderRadius:7,border:`2px solid ${ev.type===k?v.color:B.gray700}`,background:ev.type===k?`${v.color}22`:B.gray800,color:ev.type===k?v.color:B.gray500,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
             {v.label}
@@ -8540,7 +8546,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.17";
+const APP_VERSION = "2026.08.24.18";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

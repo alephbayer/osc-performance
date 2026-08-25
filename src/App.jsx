@@ -8463,7 +8463,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.13";
+const APP_VERSION = "2026.08.24.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10728,24 +10728,7 @@ export default function App() {
       onLogout={doLogout}
       purchaseOrders={purchaseOrders}
       onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(e){errToast(e);}}}
-      /></ErrorBoundary><GlobalErrorDisplay/>
-      {/* Calendar floating button — owner and admin */}
-      {(adminRole==="owner"||adminRole==="admin")&&<>
-        <button onClick={()=>setShowCalendar(s=>!s)} style={{position:"fixed",bottom:"calc(72px + env(safe-area-inset-bottom))",right:16,width:44,height:44,borderRadius:99,background:showCalendar?B.purple:`${B.gray800}`,border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",zIndex:1000,transition:"all .2s"}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </button>
-        {showCalendar&&<CalendarPanel
-          onClose={()=>setShowCalendar(false)}
-          events={calendarEvents}
-          appointments={appointments}
-          vehicles={vehicles}
-          clients={clients}
-          onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Evento criado ✓");}catch(err){errToast(err);}}}
-          onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Evento atualizado ✓");}catch(err){errToast(err);}}}
-          onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Evento removido ✓");}catch(err){errToast(err);}}}
-        />}
-      </>}
-      <ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>
+      /></ErrorBoundary><GlobalErrorDisplay/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>
   }
 
   if(isClientPortal){
@@ -12494,5 +12477,18 @@ export default function App() {
       mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});
     }}/>
     </div>{/* end main content */}
+    {/* Calendar floating button — owner and admin */}
+    {(adminRole==="owner"||adminRole==="admin")&&<>
+      <button onClick={()=>setShowCalendar(s=>!s)} style={{position:"fixed",bottom:"calc(72px + env(safe-area-inset-bottom))",right:16,width:44,height:44,borderRadius:99,background:showCalendar?B.purple:B.gray800,border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",zIndex:1000,transition:"all .2s"}}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </button>
+      {showCalendar&&<CalendarPanel
+        onClose={()=>setShowCalendar(false)}
+        events={calendarEvents} appointments={appointments} vehicles={vehicles} clients={clients}
+        onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Evento criado ✓");}catch(err){errToast(err);}}}
+        onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Evento atualizado ✓");}catch(err){errToast(err);}}}
+        onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Evento removido ✓");}catch(err){errToast(err);}}}
+      />}
+    </>}
   </div>);
 }

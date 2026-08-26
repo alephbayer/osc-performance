@@ -7794,11 +7794,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
       {/* ── Timeline do Projeto ── */}
       {tlLoaded&&timeline.length>0&&<div style={S.card}>
-        <div onClick={()=>setTlOpen(o=>!o)} style={{...S.pad,cursor:"pointer",display:"flex",alignItems:"center",gap:8,paddingBottom:tlOpen?8:S.pad.padding}}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style={{fontWeight:800,fontSize:13,color:B.white,flex:1}}>Timeline do Projeto</span>
-          <span style={{fontSize:10,color:B.gray500}}>{timeline.length} update{timeline.length!==1?"s":""}</span>
-          {tlOpen?<IChevU s={12} c={B.gray500}/>:<IChevD s={12} c={B.gray500}/>}
+        <div onClick={()=>setTlOpen(o=>!o)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style={{fontWeight:800,fontSize:15,color:B.white,flex:1}}>Timeline do Projeto</span>
+          <span style={{fontSize:11,color:B.gray500}}>{timeline.length} update{timeline.length!==1?"s":""}</span>
+          {tlOpen?<IChevU s={13} c={B.gray500}/>:<IChevD s={13} c={B.gray500}/>}
         </div>
         {tlOpen&&<div style={{...S.pad,paddingTop:4}}>
           <div style={{position:"relative"}}>
@@ -8611,7 +8611,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.6";
+const APP_VERSION = "2026.08.25.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

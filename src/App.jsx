@@ -7672,12 +7672,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     if(!v?.id) return;
     db.loadTimeline(v.id).then(evs=>{setTimeline(evs);setTlLoaded(true);}).catch(()=>setTlLoaded(true));
   },[v?.id]);
-  const [timeline,setTimeline]=useState([]);
-  const [timelineLoaded,setTimelineLoaded]=useState(false);
-  useEffect(()=>{
-    if(!v) return;
-    db.loadTimeline(v.id).then(evs=>{setTimeline(evs);setTimelineLoaded(true);}).catch(()=>setTimelineLoaded(true));
-  },[v?.id]);
   if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
     <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
   </div>);
@@ -8619,7 +8613,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.1";
+const APP_VERSION = "2026.08.25.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10636,7 +10630,6 @@ export default function App() {
   const [calendarEvents,setCalEvents]=useState([]);
   const [showCalendar,setShowCalendar]=useState(false);
   const [vehicleTimelines,setVehicleTimelines]=useState({});
-  const [vehicleTimelines,setVehicleTimelines]=useState({}); // {vehicleId: [events]}
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);

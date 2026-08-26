@@ -3917,8 +3917,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           const towTotal=(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
           const freightTotal=(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
           const fuelTotal=(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0);
-          const laborSum=vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-          const osDiscountAmt=laborSum*Number(vehicle.osDiscountPct||0)/100;
+          const osDiscountAmt=osDiscount; // already computed correctly above with right division field
           if(!managerMode||total<=0) return null;
           const breakdown=[];
           if(tasksTotal>0) breakdown.push(`Serviços: ${fmtBRL(tasksTotal)}`);
@@ -8611,7 +8610,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.10";
+const APP_VERSION = "2026.08.25.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -7718,6 +7718,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   };
 
   return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+    <div style={{position:"fixed",top:0,left:0,right:0,height:"env(safe-area-inset-top)",background:B.gray900,zIndex:9999,pointerEvents:"none"}}/>
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${hasFin?FD.primary:B.orange}`}}>
       {/* Top row: logos + name */}
@@ -8611,7 +8612,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.7";
+const APP_VERSION = "2026.08.25.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10598,6 +10599,8 @@ export default function App() {
         .osc-vhc-summary { width: 100% !important; text-align: left !important; flex-direction: row !important; gap: 12px !important; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
         input[type="date"], input[type="time"], input[type="datetime-local"] { color-scheme: dark; }
+        :root { --sat: env(safe-area-inset-top); }
+        body { background: #000; }
         .osc-tab-btn span.tab-label { display: none; }
       }
     `;
@@ -11864,6 +11867,8 @@ export default function App() {
     {/* ── Main content area ── */}
     <div style={{flex:1,overflow:"hidden",position:"relative",minWidth:0,background:B.black}}>
     <div ref={mainScrollRef} onScroll={()=>setScrollY(mainScrollRef.current?.scrollTop||0)} style={{height:"100%",padding:"20px 14px 0",paddingTop:"calc(env(safe-area-inset-top) + 20px)",overflowY:"auto",scrollbarWidth:"none",msOverflowStyle:"none",WebkitOverflowScrolling:"touch",maxWidth:820,margin:"0 auto",width:"100%",boxSizing:"border-box",background:B.black}}>
+    {/* iOS safe area blur overlay */}
+    <div style={{position:"fixed",top:0,left:0,right:0,height:"env(safe-area-inset-top)",background:B.black,zIndex:9999,pointerEvents:"none"}}/>
     <div style={{minHeight:"calc(100vh - env(safe-area-inset-top) - 20px)",background:B.black,paddingBottom:"80px"}}>
       <ErrorBoundary>
 

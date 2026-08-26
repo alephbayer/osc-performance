@@ -7668,6 +7668,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const v=vehicles.find(x=>x.id===vehicleId);
   const [timeline,setTimeline]=useState([]);
   const [tlLoaded,setTlLoaded]=useState(false);
+  const [tlOpen,setTlOpen]=useState(true);
   const [lb,setLB]=useState(null);
   useEffect(()=>{
     if(!v?.id) return;
@@ -7790,6 +7791,42 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           </div>}
         </div>
       </div>
+
+      {/* ── Timeline do Projeto ── */}
+      {tlLoaded&&timeline.length>0&&<div style={S.card}>
+        <div onClick={()=>setTlOpen(o=>!o)} style={{...S.pad,cursor:"pointer",display:"flex",alignItems:"center",gap:8,paddingBottom:tlOpen?8:S.pad.padding}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style={{fontWeight:800,fontSize:13,color:B.white,flex:1}}>Timeline do Projeto</span>
+          <span style={{fontSize:10,color:B.gray500}}>{timeline.length} update{timeline.length!==1?"s":""}</span>
+          {tlOpen?<IChevU s={12} c={B.gray500}/>:<IChevD s={12} c={B.gray500}/>}
+        </div>
+        {tlOpen&&<div style={{...S.pad,paddingTop:4}}>
+          <div style={{position:"relative"}}>
+            <div style={{position:"absolute",left:13,top:0,bottom:0,width:2,background:B.gray700,borderRadius:1}}/>
+            {timeline.map((ev,i)=>{
+              const evColor=ev.color||B.gray500;
+              const evDate=new Date(ev.createdAt);
+              const dateStr=evDate.toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"});
+              const timeStr=evDate.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+              const typeIcon={task_done:"✅",task_update:"📝",materials:"📦",parts_order:"🔧",payment:"💰",photo:"📷",note:"💬"}[ev.type]||"•";
+              return(<div key={ev.id} style={{display:"flex",gap:12,marginBottom:i<timeline.length-1?16:0,position:"relative"}}>
+                <div style={{width:28,height:28,borderRadius:99,background:`${evColor}22`,border:`2px solid ${evColor}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1,fontSize:11,marginTop:1}}>
+                  {typeIcon}
+                </div>
+                <div style={{flex:1,paddingTop:2}}>
+                  <div style={{fontSize:13,fontWeight:700,color:B.white,lineHeight:1.3}}>{ev.title}</div>
+                  {ev.body&&<div style={{fontSize:12,color:B.gray300,marginTop:2,lineHeight:1.4}}>{ev.body}</div>}
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4,alignItems:"center"}}>
+                    {ev.category&&<span style={{fontSize:9,fontWeight:700,color:evColor,background:`${evColor}18`,borderRadius:4,padding:"1px 5px"}}>{ev.category}</span>}
+                    {ev.actor&&<span style={{fontSize:10,color:B.gray500}}>por {ev.actor}</span>}
+                    <span style={{fontSize:10,color:B.gray600}}>{dateStr} · {timeStr}</span>
+                  </div>
+                </div>
+              </div>);
+            })}
+          </div>
+        </div>}
+      </div>}
 
       {/* ── Progress ── */}
       {(()=>{
@@ -8346,45 +8383,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         Atualizado em {fmtD()} · OSC Performance
       </div>
 
-      {/* ── Timeline ── */}
-      {(tlLoaded&&timeline.length>0)&&<div style={{...S.card,marginTop:4}}>
-        <div style={{...S.pad}}>
-          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:16,display:"flex",alignItems:"center",gap:6}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Histórico de atualizações
-          </div>
-          <div style={{position:"relative"}}>
-            <div style={{position:"absolute",left:13,top:0,bottom:0,width:2,background:`${B.gray700}`,borderRadius:1}}/>
-            {timeline.map((ev,i)=>{
-              const evColor=ev.color||B.gray500;
-              const evDate=new Date(ev.createdAt);
-              const dateStr=evDate.toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"});
-              const timeStr=evDate.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-              const typeIcon={
-                task_done:"✅", task_update:"📝", materials:"📦",
-                parts_order:"🔧", payment:"💰", photo:"📷", note:"💬",
-              }[ev.type]||"•";
-              return(<div key={ev.id} style={{display:"flex",gap:12,marginBottom:i<timeline.length-1?16:0,position:"relative"}}>
-                {/* Dot */}
-                <div style={{width:28,height:28,borderRadius:99,background:`${evColor}22`,border:`2px solid ${evColor}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1,fontSize:11,marginTop:1}}>
-                  {typeIcon}
-                </div>
-                {/* Content */}
-                <div style={{flex:1,paddingTop:2}}>
-                  <div style={{fontSize:13,fontWeight:700,color:B.white,lineHeight:1.3}}>{ev.title}</div>
-                  {ev.body&&<div style={{fontSize:12,color:B.gray300,marginTop:2,lineHeight:1.4}}>{ev.body}</div>}
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4,alignItems:"center"}}>
-                    {ev.category&&<span style={{fontSize:9,fontWeight:700,color:evColor,background:`${evColor}18`,borderRadius:4,padding:"1px 5px"}}>{ev.category}</span>}
-                    {ev.actor&&<span style={{fontSize:10,color:B.gray500}}>por {ev.actor}</span>}
-                    <span style={{fontSize:10,color:B.gray600}}>{dateStr} · {timeStr}</span>
-                  </div>
-                </div>
-              </div>);
-            })}
-          </div>
-        </div>
-      </div>}
-
       {/* Nota manual da equipe — só visível para admins via url param */}
     </div>
 
@@ -8613,7 +8611,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.4";
+const APP_VERSION = "2026.08.25.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

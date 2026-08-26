@@ -3827,12 +3827,12 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             <span style={{fontSize:12,color:B.red,fontWeight:600}}>Desconto geral (% sobre mão de obra):</span>
             <span style={{display:"flex",alignItems:"center",gap:3}}>
-              <InlineEdit value={vehicle.osDiscountPct?fmtR2(vehicle.osDiscountPct):""} onSave={v=>{const val=Math.max(0,Math.min(100,parseFloat(v.replace(",","."))||0));onUpdateVehicle(vehicle.id,{osDiscountPct:val});}} placeholder="0" type="number"/>
+              <InlineEdit value={(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)?fmtR2(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct):""} onSave={v=>{const val=Math.max(0,Math.min(100,parseFloat(v.replace(",","."))||0));onUpdateVehicle(vehicle.id,isFD?{osDiscountPctFinishing:val}:{osDiscountPct:val});}} placeholder="0" type="number"/>
               <span style={{fontSize:11,color:B.gray400}}>%</span>
             </span>
-            {vehicle.osDiscountPct>0&&(()=>{
-              const laborSum=vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-              const discAmt=laborSum*Number(vehicle.osDiscountPct)/100;
+            {(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)>0&&(()=>{
+              const laborSumDisp=vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+              const discAmt=laborSumDisp*parseDiscount(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)/100;
               return <span style={{fontSize:11,color:B.red,fontWeight:700}}>= -{fmtBRL(discAmt)} s/ mão de obra</span>;
             })()}
           </div>
@@ -8611,7 +8611,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.12";
+const APP_VERSION = "2026.08.25.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -8613,7 +8613,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.3";
+const APP_VERSION = "2026.08.25.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10644,6 +10644,7 @@ export default function App() {
   const [showQuickMatSortidos,setShowQuickMatSortidos]=useState(false);
   const [showNovaOS,setShowNovaOS]=useState(false);
   const mainScrollRef=useRef(null);
+  const matDebounce=useRef({});
   const [theme,setTheme]=useState(getTheme);
   const [themePref,setThemePref]=useState(getThemePref);
   const [showChangelog,setShowChangelog]=useState(false);
@@ -11262,7 +11263,6 @@ export default function App() {
       setVehicleTimelines(p=>({...p,[vehicleId]:[ev,...(p[vehicleId]||[])]}));
     }catch(e){ console.error("timeline:",e); }
   };
-  const matDebounce=useRef({});
   const postMaterialsTimeline=(vehicleId,taskId,taskLabel,mats,actor)=>{
     clearTimeout(matDebounce.current[taskId]);
     matDebounce.current[taskId]=setTimeout(()=>{

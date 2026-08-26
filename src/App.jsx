@@ -801,7 +801,7 @@ function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
   const fuelTotal  = (vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0), 0);
   const freightTotal2=(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0), 0);
   const laborSum   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor, 0);
-  const osDiscount = laborSum * Number(vehicle.osDiscountPct||0) / 100;
+  const osDiscount = laborSum * (parseFloat(String(vehicle.osDiscountPct||0).replace(",","."))||0) / 100;
   return tasksTotal + fuelTotal + towTotal + freightTotal2 - osDiscount;
 }
 function vehiclePaid(vehicleId,payments,division=null) {
@@ -3461,8 +3461,9 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const towTotal    = managerMode?(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0):0;
   const fuelTotal   = managerMode?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
   const freightTotal= managerMode?(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
+  const parseDiscount=v=>parseFloat(String(v||0).replace(",","."))||0;
   const laborSum    = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
-  const osDiscount  = managerMode?laborSum*Number(isFD?(vehicle.osDiscountPctFinishing||0):(vehicle.osDiscountPct||0))/100:0;
+  const osDiscount  = managerMode?laborSum*parseDiscount(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)/100:0;
   const total       = managerMode?tasksTotal+fuelTotal+towTotal+freightTotal-osDiscount:0;
   const photos= isFD ? (vehicle.photosFinishing||[]) : (vehicle.photos||[]);
   const pubLink=getPublicLink(vehicle.id);
@@ -8610,7 +8611,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.11";
+const APP_VERSION = "2026.08.25.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

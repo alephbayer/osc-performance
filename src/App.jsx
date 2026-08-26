@@ -3462,7 +3462,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const fuelTotal   = managerMode?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
   const freightTotal= managerMode?(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
   const laborSum    = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
-  const osDiscount  = managerMode?laborSum*Number(vehicle.osDiscountPct||0)/100:0;
+  const osDiscount  = managerMode?laborSum*Number(isFD?(vehicle.osDiscountPctFinishing||0):(vehicle.osDiscountPct||0))/100:0;
   const total       = managerMode?tasksTotal+fuelTotal+towTotal+freightTotal-osDiscount:0;
   const photos= isFD ? (vehicle.photosFinishing||[]) : (vehicle.photos||[]);
   const pubLink=getPublicLink(vehicle.id);
@@ -8611,7 +8611,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.9";
+const APP_VERSION = "2026.08.25.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

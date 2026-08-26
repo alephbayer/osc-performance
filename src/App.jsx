@@ -3420,7 +3420,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
   </div>);
 }
 
-function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null}) {
+function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}) {
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
   useEffect(()=>{
@@ -3447,6 +3447,8 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const [confirmDelV,setConfirmDelV]=useState(false);
   const [confirmDeliver,setConfirmDeliver]=useState(false);
   const [showNextVisit,setShowNextVisit]=useState(false);
+  const [showTLNote,setShowTLNote]=useState(false);
+  const [tlNoteText,setTLNoteText]=useState("");
   const [pdfLoading,setPdfLoading]=useState(false);
 
   const isFD=division==="finishing";
@@ -3615,6 +3617,10 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         {!hideManagerButtons&&managerMode&&<button onClick={()=>setShowNextVisit(true)} style={{background:`${B.purple}15`,border:`1px solid ${B.purple}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/></svg>
           Próxima visita
+        </button>}
+        {!hideManagerButtons&&managerMode&&onPostTimeline&&<button onClick={()=>setShowTLNote(true)} style={{background:`${B.blue}15`,border:`1px solid ${B.blue}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Nota cliente
         </button>}
         {!hideManagerButtons&&<button onClick={()=>setConfirmDelV(true)} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}
           onMouseEnter={e=>{e.currentTarget.style.background=`${B.red}33`;}} onMouseLeave={e=>{e.currentTarget.style.background=`${B.red}15`;}}>
@@ -3941,6 +3947,22 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
     {confirmDelV&&<ConfirmModal title="Remover veículo?" message={<>Tem certeza que deseja remover <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b>? Todas as tarefas desta OS também serão removidas.</>} confirmLabel="Remover veículo" onConfirm={()=>{onDeleteVehicle(vehicle.id);setConfirmDelV(false);}} onCancel={()=>setConfirmDelV(false)}/>}
     {confirmDeliver&&<ConfirmModal title={isFD?"Encerrar OS Finishing?":"Confirmar entrega?"} danger={false} message={isFD?<>Encerrar a OS da <b style={{color:FD.primary}}>Finishing Division</b> para <b style={{color:B.white}}>{vehicle.model}</b>?</>:<>Registrar a entrega de <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b> ao cliente? O timer será encerrado.</>} confirmLabel={isFD?"Encerrar Finishing":"Confirmar entrega"} onConfirm={()=>{isFD?onDeliverFinishing&&onDeliverFinishing(vehicle.id):onDeliver&&onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
     {showNextVisit&&<NextVisitModal vehicle={vehicle} tasks={tasks} clients={clients} defaultRate={defaultRate} onClose={()=>setShowNextVisit(false)} onCreateAppointment={onCreateAppointment} onDeleteTask={onDeleteTask}/>}
+    {showTLNote&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:B.gray900,borderRadius:14,padding:20,maxWidth:380,width:"100%",border:`1px solid ${B.blue}44`}}>
+        <div style={{fontWeight:800,fontSize:14,color:B.white,marginBottom:4}}>💬 Nota para o cliente</div>
+        <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>Aparece na timeline do link de acompanhamento</div>
+        <textarea value={tlNoteText} onChange={e=>setTLNoteText(e.target.value)} rows={4} placeholder="Ex: Identificamos que a junta do cabeçote também precisará de substituição..."
+          style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+        <div style={{display:"flex",gap:8,marginTop:10}}>
+          <button onClick={async()=>{
+            if(!tlNoteText.trim()) return;
+            await onPostTimeline(vehicle.id,{type:"note",title:"💬 Atualização da equipe",body:tlNoteText.trim(),color:B.blue});
+            setTLNoteText(""); setShowTLNote(false);
+          }} disabled={!tlNoteText.trim()} style={{flex:1,padding:"9px 0",borderRadius:8,background:tlNoteText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,cursor:tlNoteText.trim()?"pointer":"not-allowed",fontSize:13}}>Publicar</button>
+          <button onClick={()=>{setShowTLNote(false);setTLNoteText("");}} style={{padding:"9px 14px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:12}}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
   </>);
 }
 
@@ -7644,6 +7666,18 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
 function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[]}) {
   const v=vehicles.find(x=>x.id===vehicleId);
+  const [timeline,setTimeline]=useState([]);
+  const [tlLoaded,setTlLoaded]=useState(false);
+  useEffect(()=>{
+    if(!v?.id) return;
+    db.loadTimeline(v.id).then(evs=>{setTimeline(evs);setTlLoaded(true);}).catch(()=>setTlLoaded(true));
+  },[v?.id]);
+  const [timeline,setTimeline]=useState([]);
+  const [timelineLoaded,setTimelineLoaded]=useState(false);
+  useEffect(()=>{
+    if(!v) return;
+    db.loadTimeline(v.id).then(evs=>{setTimeline(evs);setTimelineLoaded(true);}).catch(()=>setTimelineLoaded(true));
+  },[v?.id]);
   if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
     <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
   </div>);
@@ -8317,6 +8351,47 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       <div style={{textAlign:"center",fontSize:12,color:B.gray500,marginTop:8,paddingBottom:24}}>
         Atualizado em {fmtD()} · OSC Performance
       </div>
+
+      {/* ── Timeline ── */}
+      {(tlLoaded&&timeline.length>0)&&<div style={{...S.card,marginTop:4}}>
+        <div style={{...S.pad}}>
+          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:16,display:"flex",alignItems:"center",gap:6}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Histórico de atualizações
+          </div>
+          <div style={{position:"relative"}}>
+            <div style={{position:"absolute",left:13,top:0,bottom:0,width:2,background:`${B.gray700}`,borderRadius:1}}/>
+            {timeline.map((ev,i)=>{
+              const evColor=ev.color||B.gray500;
+              const evDate=new Date(ev.createdAt);
+              const dateStr=evDate.toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"});
+              const timeStr=evDate.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+              const typeIcon={
+                task_done:"✅", task_update:"📝", materials:"📦",
+                parts_order:"🔧", payment:"💰", photo:"📷", note:"💬",
+              }[ev.type]||"•";
+              return(<div key={ev.id} style={{display:"flex",gap:12,marginBottom:i<timeline.length-1?16:0,position:"relative"}}>
+                {/* Dot */}
+                <div style={{width:28,height:28,borderRadius:99,background:`${evColor}22`,border:`2px solid ${evColor}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1,fontSize:11,marginTop:1}}>
+                  {typeIcon}
+                </div>
+                {/* Content */}
+                <div style={{flex:1,paddingTop:2}}>
+                  <div style={{fontSize:13,fontWeight:700,color:B.white,lineHeight:1.3}}>{ev.title}</div>
+                  {ev.body&&<div style={{fontSize:12,color:B.gray300,marginTop:2,lineHeight:1.4}}>{ev.body}</div>}
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4,alignItems:"center"}}>
+                    {ev.category&&<span style={{fontSize:9,fontWeight:700,color:evColor,background:`${evColor}18`,borderRadius:4,padding:"1px 5px"}}>{ev.category}</span>}
+                    {ev.actor&&<span style={{fontSize:10,color:B.gray500}}>por {ev.actor}</span>}
+                    <span style={{fontSize:10,color:B.gray600}}>{dateStr} · {timeStr}</span>
+                  </div>
+                </div>
+              </div>);
+            })}
+          </div>
+        </div>
+      </div>}
+
+      {/* Nota manual da equipe — só visível para admins via url param */}
     </div>
 
     {/* Lightbox */}
@@ -8544,7 +8619,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.24.22";
+const APP_VERSION = "2026.08.25.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10560,6 +10635,8 @@ export default function App() {
   const [allClientNotes,setAllClientNotes]=useState([]);
   const [calendarEvents,setCalEvents]=useState([]);
   const [showCalendar,setShowCalendar]=useState(false);
+  const [vehicleTimelines,setVehicleTimelines]=useState({});
+  const [vehicleTimelines,setVehicleTimelines]=useState({}); // {vehicleId: [events]}
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
@@ -10933,6 +11010,7 @@ export default function App() {
         const vModel=v?.model||v?.plate||"Veículo";
         const div="photosFinishing" in patch?"Finishing":"Performance";
         db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});
+        postTimeline(id,{type:"photo",title:"📷 Fotos adicionadas",body:div,actor:null,color:"#6366f1"});
       }
       // Notify mechanics when vehicle is marked urgent
       if("urgent" in patch&&patch.urgent){
@@ -11184,6 +11262,22 @@ export default function App() {
       if(v?.clientId) db.sendPushToClient(v.clientId,`🔧 Novo serviço — ${vModel}`,lbl,`/?v=${vid}`).catch(()=>{});
     }catch(e){errToast(e);}
   };
+  // ── Timeline helpers ─────────────────────────────────────────────────────────
+  const postTimeline=async(vehicleId,event)=>{
+    try{
+      const ev=await db.addTimelineEvent({vehicleId,...event});
+      setVehicleTimelines(p=>({...p,[vehicleId]:[ev,...(p[vehicleId]||[])]}));
+    }catch(e){ console.error("timeline:",e); }
+  };
+  const matDebounce=useRef({});
+  const postMaterialsTimeline=(vehicleId,taskId,taskLabel,mats,actor)=>{
+    clearTimeout(matDebounce.current[taskId]);
+    matDebounce.current[taskId]=setTimeout(()=>{
+      const names=mats.map(m=>`${m.name}${m.qty>1?` ×${m.qty}`:""}`).join(", ");
+      if(names) postTimeline(vehicleId,{type:"materials",title:`Materiais — ${taskLabel}`,body:names,actor,color:B.purple});
+    },2500);
+  };
+
   const toggleT=async(id, signerEmployeeId)=>{
     const t=tasks.find(x=>x.id===id);
     const nowDone=!t.done;
@@ -11199,6 +11293,10 @@ export default function App() {
         db.sendPushToAdmins(`✅ ${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});
         const v2=vehicles.find(x=>x.id===t.vehicleId);
         if(v2?.clientId) db.sendPushToClient(v2.clientId,`✅ ${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
+        // Timeline: task completed
+        const actor=employees.find(e=>e.id===signerEmployeeId)?.name||null;
+        const catColor=t.category?(CAT_MAP?.[t.category]||B.green):B.green;
+        postTimeline(t.vehicleId,{type:"task_done",title:`✅ ${t.label}`,body:"",actor,category:t.category||null,color:catColor});
         // Auto-remove specialist mechanic if all their specialty tasks are done
         if(t.category){
           const specialist=employees.find(e=>e.specialty===t.category&&e.division!=="finishing");
@@ -11294,6 +11392,19 @@ export default function App() {
         if(lastUpdate&&v?.clientId){
           const vModel=v?.model||v?.plate||"Veículo";
           db.sendPushToClient(v.clientId,`Atualização — ${vModel}`,`${t?.label||"Serviço"}: ${lastUpdate.text.slice(0,80)}${lastUpdate.text.length>80?"…":""}`,`/?v=${v.id}`).catch(()=>{});
+          // Timeline: task update
+          const catColor=t?.category?(CAT_MAP?.[t.category]||B.blue):B.blue;
+          postTimeline(t.vehicleId,{type:"task_update",title:`📝 ${t?.label||"Serviço"}`,body:lastUpdate.text,actor:lastUpdate.author||null,category:t?.category||null,color:catColor});
+        }
+      }
+      // Timeline: materials added (debounced consolidation)
+      if(patch.materials){
+        const t2=tasks.find(x=>x.id===id);
+        const oldMats=t2?.materials||[];
+        const newMats=patch.materials;
+        const added=newMats.filter(m=>!oldMats.find(o=>o.name===m.name));
+        if(added.length>0&&t2){
+          postMaterialsTimeline(t2.vehicleId,id,t2.label,added,null);
         }
       }
       // Notify admins when mechanic adds/changes materials
@@ -11454,6 +11565,7 @@ export default function App() {
       toast_(`Pagamento de ${fmtBRL(p.amount)} registrado ✓`);
       const v=vehicles.find(x=>x.id===p.vehicleId);
       if(v?.clientId) db.sendPushToClient(v.clientId,`💰 Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${p.method}`,`/?portal=cliente`).catch(()=>{});
+      postTimeline(p.vehicleId,{type:"payment",title:`💰 Pagamento — ${fmtBRL(p.amount)}`,body:p.method||"",actor:null,color:B.green});
     }
     catch(e){errToast(e);}
   };
@@ -12016,6 +12128,7 @@ export default function App() {
             addVehicleMechanic={addVehicleMechanic} removeVehicleMechanic={removeVehicleMechanic}
             setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} deliverVehicleFinishing={deliverVehicleFinishing} adminRole={adminRole}
             searching={!!osSearch} purchaseOrders={purchaseOrders} onOpenOS={openNewOS}
+            onPostTimeline={postTimeline}
             onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}}
             />}</>;
         })()}
@@ -12062,7 +12175,7 @@ export default function App() {
               onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
               onDeliver={deliverVehicleFinishing} onDeliverFinishing={deliverVehicleFinishing}
               isOwner={adminRole==="owner"} division="finishing"
-              onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders}/>)}
+              onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders} onPostTimeline={postTimeline}/>)}
           </div>;
         })()}
       </>}

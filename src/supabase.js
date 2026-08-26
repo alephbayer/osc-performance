@@ -1143,6 +1143,54 @@ export const db = {
     if(error) throw error;
   },
 
+  // ── Vehicle Timeline ─────────────────────────────────────────────────────────
+  async loadTimeline(vehicleId) {
+    const {data,error}=await supabase.from("vehicle_timeline")
+      .select("*").eq("vehicle_id",vehicleId).order("created_at",{ascending:false}).limit(80);
+    if(error) throw error;
+    return (data||[]).map(e=>({
+      id:e.id, vehicleId:e.vehicle_id, type:e.type, title:e.title,
+      body:e.body||"", actor:e.actor||null, category:e.category||null,
+      color:e.color||null, meta:e.meta||{}, createdAt:e.created_at,
+    }));
+  },
+  async addTimelineEvent(e) {
+    const {data,error}=await supabase.from("vehicle_timeline").insert({
+      vehicle_id:e.vehicleId, type:e.type, title:e.title, body:e.body||"",
+      actor:e.actor||null, category:e.category||null, color:e.color||null, meta:e.meta||{},
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,vehicleId:data.vehicle_id,type:data.type,title:data.title,body:data.body||"",actor:data.actor||null,category:data.category||null,color:data.color||null,meta:data.meta||{},createdAt:data.created_at};
+  },
+  async deleteTimelineEvent(id) {
+    const {error}=await supabase.from("vehicle_timeline").delete().eq("id",id);
+    if(error) throw error;
+  },
+
+  // ── Vehicle Timeline ─────────────────────────────────────────────────────────
+  async loadTimeline(vehicleId) {
+    const {data,error}=await supabase.from("vehicle_timeline")
+      .select("*").eq("vehicle_id",vehicleId).order("created_at",{ascending:false}).limit(80);
+    if(error) throw error;
+    return (data||[]).map(e=>({
+      id:e.id, vehicleId:e.vehicle_id, type:e.type, title:e.title,
+      body:e.body||"", actor:e.actor||null, category:e.category||null,
+      color:e.color||null, meta:e.meta||{}, createdAt:e.created_at,
+    }));
+  },
+  async addTimelineEvent(e) {
+    const {data,error}=await supabase.from("vehicle_timeline").insert({
+      vehicle_id:e.vehicleId, type:e.type, title:e.title, body:e.body||"",
+      actor:e.actor||null, category:e.category||null, color:e.color||null, meta:e.meta||{},
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,vehicleId:data.vehicle_id,type:data.type,title:data.title,body:data.body||"",actor:data.actor||null,category:data.category||null,color:data.color||null,meta:data.meta||{},createdAt:data.created_at};
+  },
+  async deleteTimelineEvent(id) {
+    const {error}=await supabase.from("vehicle_timeline").delete().eq("id",id);
+    if(error) throw error;
+  },
+
   async deleteOsHistory(id) {
     const { error } = await supabase.from("os_history").delete().eq("id", id);
     if (error) throw error;

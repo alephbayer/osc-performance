@@ -4763,7 +4763,7 @@ function PurchaseForm({stockId,onConfirm,onCancel}) {
 function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaultRate,company,
   addTask,toggleT,delTask,updTask,updVeh,delVeh,xferMech,xferOwn,consumeStock,returnStock,
   payments,addPayment,deletePayment,updatePayment,addVehicleMechanic,removeVehicleMechanic,setVehicleStatus,deliverVehicle,deliverVehicleFinishing,adminRole,searching=false,division="performance",
-  purchaseOrders=[],onAddPurchaseOrder,onOpenOS=null,onCreateAppointment=null}) {
+  purchaseOrders=[],onAddPurchaseOrder,onOpenOS=null,onCreateAppointment=null,onPostTimeline=null}) {
   const [collapsed,setCollapsed]=useState(()=>{
     const init={};
     groups.forEach(({emp})=>{ init[emp?.id||"__none__"]=true; });
@@ -4797,7 +4797,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
             onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
             onTransferMechanic={xferMech} onTransferOwner={xferOwn}
             onConsumeStock={consumeStock} onReturnStock={returnStock}
-            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company} onCreateAppointment={onCreateAppointment}
+            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company} onCreateAppointment={onCreateAppointment} onPostTimeline={onPostTimeline}
             onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"} division={division||"performance"}
             onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>)}
         </div>}
@@ -7668,6 +7668,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const v=vehicles.find(x=>x.id===vehicleId);
   const [timeline,setTimeline]=useState([]);
   const [tlLoaded,setTlLoaded]=useState(false);
+  const [lb,setLB]=useState(null);
   useEffect(()=>{
     if(!v?.id) return;
     db.loadTimeline(v.id).then(evs=>{setTimeline(evs);setTlLoaded(true);}).catch(()=>setTlLoaded(true));
@@ -7687,7 +7688,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const photos=rawPhotos.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
   const rawPhotosF=v.photosFinishing||[];
   const photosF=rawPhotosF.map(p=>typeof p==="string"?{url:p,taskId:null,caption:""}:p);
-  const [lb,setLB]=useState(null);
   const hasPerf=!!v.enteredAt||perfTasks.length>0;
   const hasFin=!!v.enteredAtFinishing||finTasks.length>0;
   const regularTs=ts.filter(t=>!t.warranty);
@@ -8613,7 +8613,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.2";
+const APP_VERSION = "2026.08.25.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -7718,11 +7718,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   };
 
   return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
-    <div style={{position:"fixed",top:0,left:0,right:0,height:"env(safe-area-inset-top)",background:B.gray900,zIndex:9999,pointerEvents:"none"}}/>
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${hasFin?FD.primary:B.orange}`}}>
       {/* Top row: logos + name */}
-      <div style={{padding:"12px 16px",paddingTop:"calc(12px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"12px 16px",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
           <div style={{width:32,height:32,borderRadius:7,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center"}}><IWrench s={16} c={B.white}/></div>
           {hasFin&&<div style={{width:32,height:32,borderRadius:7,background:FD.primary,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎨</div>}
@@ -8612,7 +8611,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.8";
+const APP_VERSION = "2026.08.25.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11866,9 +11865,7 @@ export default function App() {
 
     {/* ── Main content area ── */}
     <div style={{flex:1,overflow:"hidden",position:"relative",minWidth:0,background:B.black}}>
-    <div ref={mainScrollRef} onScroll={()=>setScrollY(mainScrollRef.current?.scrollTop||0)} style={{height:"100%",padding:"20px 14px 0",paddingTop:"calc(env(safe-area-inset-top) + 20px)",overflowY:"auto",scrollbarWidth:"none",msOverflowStyle:"none",WebkitOverflowScrolling:"touch",maxWidth:820,margin:"0 auto",width:"100%",boxSizing:"border-box",background:B.black}}>
-    {/* iOS safe area blur overlay */}
-    <div style={{position:"fixed",top:0,left:0,right:0,height:"env(safe-area-inset-top)",background:B.black,zIndex:9999,pointerEvents:"none"}}/>
+    <div ref={mainScrollRef} onScroll={()=>setScrollY(mainScrollRef.current?.scrollTop||0)} style={{height:"100%",padding:"20px 14px 0",paddingTop:"calc(env(safe-area-inset-top) + 36px)",overflowY:"auto",scrollbarWidth:"none",msOverflowStyle:"none",WebkitOverflowScrolling:"touch",maxWidth:820,margin:"0 auto",width:"100%",boxSizing:"border-box",background:B.black}}>
     <div style={{minHeight:"calc(100vh - env(safe-area-inset-top) - 20px)",background:B.black,paddingBottom:"80px"}}>
       <ErrorBoundary>
 

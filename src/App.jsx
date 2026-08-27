@@ -3289,6 +3289,61 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
 
 // ─── VehicleCard ──────────────────────────────────────────────────────────────
 // ─── NextVisitModal ───────────────────────────────────────────────────────────
+// ─── NewOSModal ───────────────────────────────────────────────────────────────
+function NewOSModal({division,vehicles,clients,employees,onClose,onConfirm}) {
+  const isFin=division==="finishing";
+  const [q,setQ]=useState("");
+  const [selV,setSelV]=useState(null);
+  const [selE,setSelE]=useState("");
+  const [saving,setSaving]=useState(false);
+  const color=isFin?FD.primary:B.orange;
+  const availVehicles=vehicles.filter(v=>{
+    const qs=q.toLowerCase();
+    if(!qs) return true;
+    const cli=clients.find(c=>c.id===v.clientId);
+    return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
+  });
+  const relevantEmps=employees.filter(e=>isFin?e.division==="finishing":(e.division||"performance")==="performance");
+  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:420,width:"100%",border:`1px solid ${color}44`}}>
+      <div style={{fontWeight:800,fontSize:16,color:B.white,marginBottom:4}}>{isFin?"🎨 Nova OS — Finishing":"🔧 Nova OS — Performance"}</div>
+      <div style={{fontSize:12,color:B.gray400,marginBottom:14}}>Selecione o veículo para abrir a OS</div>
+      <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar veículo ou cliente..."
+        style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+      <div style={{maxHeight:200,overflowY:"auto",borderRadius:8,border:`1px solid ${B.gray700}`,marginBottom:10}}>
+        {availVehicles.slice(0,20).map(v=>{
+          const cli=clients.find(c=>c.id===v.clientId);
+          return(<div key={v.id} onClick={()=>setSelV(v)}
+            style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:selV?.id===v.id?`${color}22`:"none"}}
+            onMouseEnter={e=>e.currentTarget.style.background=B.gray800}
+            onMouseLeave={e=>e.currentTarget.style.background=selV?.id===v.id?`${color}22`:"none"}>
+            <div style={{fontWeight:700,fontSize:13,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+            {cli&&<div style={{fontSize:11,color:B.blue}}>{cli.name}</div>}
+          </div>);
+        })}
+        {availVehicles.length===0&&<div style={{padding:"16px",textAlign:"center",color:B.gray500,fontSize:12}}>Nenhum resultado</div>}
+      </div>
+      <select value={selE} onChange={e=>setSelE(e.target.value)}
+        style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:selE?B.white:B.gray500,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:14}}>
+        <option value="">Mecânico (opcional)</option>
+        {relevantEmps.map(e=><option key={e.id} value={e.id}>{e.name}{e.specialty?` — ${e.specialty}`:""}</option>)}
+      </select>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={async()=>{
+          if(!selV||saving) return;
+          setSaving(true);
+          try{ await onConfirm(selV.id,selE||null); }
+          catch(e){ alert("Erro: "+e.message); }
+          setSaving(false);
+        }} disabled={!selV||saving} style={{flex:1,padding:"10px 0",borderRadius:9,background:selV?color:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:selV&&!saving?"pointer":"not-allowed"}}>
+          {saving?"Abrindo...":(isFin?"Abrir OS Finishing":"Abrir OS Performance")}
+        </button>
+        <button onClick={onClose} style={{padding:"10px 16px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:13}}>Cancelar</button>
+      </div>
+    </div>
+  </div>);
+}
+
 function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppointment,onDeleteTask}) {
   const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty);
   const [selected,setSelected]=useState(new Set());
@@ -8739,7 +8794,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.2";
+const APP_VERSION = "2026.08.26.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12837,61 +12892,19 @@ export default function App() {
     }}/>
     </div>{/* end main content */}
     {/* Nova OS Modal */}
-    {showNewOSModal&&(()=>{
-      const isFin=showNewOSModal==="finishing";
-      const [q,setNOSQ]=useState("");
-      const [selV,setNOSV]=useState(null);
-      const [selE,setNOSE]=useState("");
-      const [saving,setNOSSaving]=useState(false);
-      const availVehicles=vehicles.filter(v=>{
-        const qs=q.toLowerCase();
-        if(!qs) return true;
-        const cli=clients.find(c=>c.id===v.clientId);
-        return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
-      });
-      const relevantEmps=employees.filter(e=>isFin?e.division==="finishing":(e.division||"performance")==="performance");
-      return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-        <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:420,width:"100%",border:`1px solid ${isFin?FD.primary+"44":B.orange+"44"}`}}>
-          <div style={{fontWeight:800,fontSize:16,color:B.white,marginBottom:4}}>{isFin?"🎨 Nova OS — Finishing":"🔧 Nova OS — Performance"}</div>
-          <div style={{fontSize:12,color:B.gray400,marginBottom:14}}>Selecione o veículo para abrir a OS</div>
-          <input value={q} onChange={e=>setNOSQ(e.target.value)} placeholder="Buscar veículo ou cliente..."
-            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8}}/>
-          <div style={{maxHeight:200,overflowY:"auto",borderRadius:8,border:`1px solid ${B.gray700}`,marginBottom:10}}>
-            {availVehicles.slice(0,20).map(v=>{
-              const cli=clients.find(c=>c.id===v.clientId);
-              return(<div key={v.id} onClick={()=>setNOSV(v)} style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:selV?.id===v.id?`${isFin?FD.primary:B.orange}22`:"none"}}
-                onMouseEnter={e=>e.currentTarget.style.background=B.gray800}
-                onMouseLeave={e=>e.currentTarget.style.background=selV?.id===v.id?`${isFin?FD.primary:B.orange}22`:"none"}>
-                <div style={{fontWeight:700,fontSize:13,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
-                {cli&&<div style={{fontSize:11,color:B.blue}}>{cli.name}</div>}
-              </div>);
-            })}
-            {availVehicles.length===0&&<div style={{padding:"16px",textAlign:"center",color:B.gray500,fontSize:12}}>Nenhum resultado</div>}
-          </div>
-          <select value={selE} onChange={e=>setNOSE(e.target.value)}
-            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:selE?B.white:B.gray500,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:14}}>
-            <option value="">Mecânico (opcional)</option>
-            {relevantEmps.map(e=><option key={e.id} value={e.id}>{e.name}{e.specialty?` — ${e.specialty}`:""}</option>)}
-          </select>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={async()=>{
-              if(!selV||saving) return;
-              setNOSSaving(true);
-              try{
-                if(isFin) await openNewOSFinishing(selV.id,selE||null,null);
-                else await openNewOS(selV.id,selE||null,null);
-                setShowNewOSModal(null);
-                setTab(isFin?"finishing":"clients");
-              }catch(e){errToast(e);}
-              setNOSSaving(false);
-            }} disabled={!selV||saving} style={{flex:1,padding:"10px 0",borderRadius:9,background:selV?(isFin?FD.primary:B.orange):B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:selV&&!saving?"pointer":"not-allowed"}}>
-              {saving?"Abrindo...":(isFin?"Abrir OS Finishing":"Abrir OS Performance")}
-            </button>
-            <button onClick={()=>setShowNewOSModal(null)} style={{padding:"10px 16px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:13}}>Cancelar</button>
-          </div>
-        </div>
-      </div>);
-    })()}
+    {showNewOSModal&&<NewOSModal
+      division={showNewOSModal}
+      vehicles={vehicles}
+      clients={clients}
+      employees={employees}
+      onClose={()=>setShowNewOSModal(null)}
+      onConfirm={async(vehicleId,employeeId)=>{
+        if(showNewOSModal==="finishing") await openNewOSFinishing(vehicleId,employeeId||null,null);
+        else await openNewOS(vehicleId,employeeId||null,null);
+        setShowNewOSModal(null);
+        setTab(showNewOSModal==="finishing"?"finishing":"clients");
+      }}
+    />}
 
     {/* Calendar floating button — owner and admin */}
     {(adminRole==="owner"||adminRole==="admin")&&<>

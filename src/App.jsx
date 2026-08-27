@@ -7447,6 +7447,118 @@ function InternalTransfersPanel({transfers=[],vehicles=[],osHistory=[],onAdd,onD
   </div>);
 }
 
+// ─── Finance PDF ─────────────────────────────────────────────────────────────
+async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTransfers,vehicles,clients,tasks,defaultRate,osHistory,adminRole}) {
+  const jsPDF = await loadJsPDF();
+  const doc = new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  const pageW=210, marginX=14, contentW=pageW-marginX*2;
+  const black=[20,20,20], gray=[120,120,120], white=[255,255,255];
+  const divColor=finDiv==="finishing"?[162,109,219]:[234,88,12];
+  const divLabel=finDiv==="finishing"?"OSC Finishing Division":"OSC Performance";
+  const periodLabel=(from||to)?`${from?new Date(from+"T12:00").toLocaleDateString("pt-BR",""):""} ${from&&to?"→":""} ${to?new Date(to+"T12:00").toLocaleDateString("pt-BR",""):""}`.trim():"Todo o período";
+  let y=16;
+
+  // Header
+  doc.setFillColor(...divColor); doc.rect(0,0,pageW,32,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(...white);
+  doc.text("RELATÓRIO FINANCEIRO",marginX,12);
+  doc.setFontSize(10); doc.setFont("helvetica","normal");
+  doc.text(divLabel,marginX,19);
+  doc.text(periodLabel,marginX,25);
+  doc.setFontSize(9); doc.text(`Emitido em ${new Date().toLocaleDateString("pt-BR")}`,pageW-marginX,25,{align:"right"});
+  y=40;
+
+  const inRange=dateStr=>{
+    if(!dateStr) return true;
+    const d=dateStr.slice(0,10);
+    if(from&&d<from) return false;
+    if(to&&d>to) return false;
+    return true;
+  };
+
+  const divPayments=payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt));
+  const totalRevenue=divPayments.reduce((s,p)=>s+Number(p.amount),0);
+  const filteredExpenses=expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&inRange(e.date));
+  const totalExpenses=filteredExpenses.reduce((s,e)=>s+Number(e.amount),0);
+
+  // Summary box
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
+  doc.setFillColor(248,248,248); doc.rect(marginX,y,contentW,28,"FD");
+  doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...black);
+  const cols=[{label:"RECEITA (PAGAMENTOS)",val:totalRevenue,color:[22,163,74]},{label:"DESPESAS",val:totalExpenses,color:[220,38,38]},{label:"RESULTADO",val:totalRevenue-totalExpenses,color:totalRevenue-totalExpenses>=0?[22,163,74]:[220,38,38]}];
+  cols.forEach((c,i)=>{
+    const cx=marginX+5+i*(contentW/3);
+    doc.setTextColor(...gray); doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.text(c.label,cx,y+7);
+    doc.setTextColor(...c.color); doc.setFont("helvetica","bold"); doc.setFontSize(13);
+    doc.text(fmtBRL(c.val),cx,y+20);
+  });
+  y+=34;
+
+  // Payments section
+  const sectionHeader=(title)=>{
+    if(y>260){doc.addPage();y=16;}
+    doc.setFillColor(...divColor); doc.rect(marginX,y,contentW,7,"F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...white);
+    doc.text(title,marginX+3,y+5); y+=10;
+  };
+  const row=(label,val,sub="",color=black)=>{
+    if(y>275){doc.addPage();y=16;}
+    doc.setFillColor(248,248,248); doc.setDrawColor(235,235,235);
+    doc.rect(marginX,y,contentW,7,"FD");
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+    doc.text(label+(sub?` · ${sub}`:""),marginX+2,y+5);
+    doc.setFont("helvetica","bold"); doc.setTextColor(...color);
+    doc.text(fmtBRL(val),marginX+contentW-2,y+5,{align:"right"});
+    y+=8;
+  };
+
+  // Payments list
+  sectionHeader(`PAGAMENTOS RECEBIDOS (${divPayments.length})`);
+  if(divPayments.length===0){doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(...gray);doc.text("Nenhum pagamento no período",marginX+2,y);y+=8;}
+  else{
+    const byV={};
+    divPayments.forEach(p=>{const vid=p.vehicleId||"sem_veiculo";if(!byV[vid])byV[vid]=[];byV[vid].push(p);});
+    Object.entries(byV).forEach(([vid,ps])=>{
+      const v=vehicles.find(x=>x.id===vid);const cli=v?clients.find(c=>c.id===v.clientId):null;
+      const label=(v?v.model:"Sem veículo")+(cli?` — ${cli.name}`:"");
+      const total=ps.reduce((s,p)=>s+Number(p.amount),0);
+      if(y>270){doc.addPage();y=16;}
+      doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(...black);
+      doc.setFillColor(240,240,240);doc.rect(marginX,y,contentW,6,"F");
+      doc.text(label,marginX+2,y+4.5);
+      doc.text(fmtBRL(total),marginX+contentW-2,y+4.5,{align:"right"});
+      y+=7;
+      ps.forEach(p=>{
+        const dateStr=p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"";
+        row(`  ${p.method||""}`,Number(p.amount),dateStr,[22,163,74]);
+      });
+    });
+  }
+  y+=4;
+
+  // Expenses
+  sectionHeader(`DESPESAS (${filteredExpenses.length})`);
+  if(filteredExpenses.length===0){doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(...gray);doc.text("Nenhuma despesa no período",marginX+2,y);y+=8;}
+  else filteredExpenses.forEach(e=>row(e.description||"Despesa",Number(e.amount),e.date?new Date(e.date+"T12:00").toLocaleDateString("pt-BR"):"",[ 220,38,38]));
+  y+=4;
+
+  // Internal transfers (owner only)
+  if(adminRole==="owner"&&internalTransfers.length>0){
+    const filtered=internalTransfers.filter(t=>inRange(t.createdAt));
+    if(filtered.length>0){
+      sectionHeader(`ACERTOS INTERNOS (${filtered.length})`);
+      filtered.forEach(t=>{
+        const v=vehicles.find(x=>x.id===t.vehicleId);
+        const label=`${t.fromDivision||""} → ${t.toDivision||""}${t.description?` · ${t.description}`:""}`;
+        const sub=v?v.model:"";
+        row(label,Number(t.amount),sub,[162,109,219]);
+      });
+    }
+  }
+
+  doc.save(`financeiro-${finDiv}-${from||"inicio"}-${to||"fim"}.pdf`);
+}
+
 function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expenses=[],onAddExpense,onUpdateExpense,onDeleteExpense,osHistory=[],internalTransfers=[],onAddTransfer,onDeleteTransfer,adminRole=""}) {
   const [finDiv,setFinDiv]=useState("performance"); // "performance" | "finishing"
   const [from,setFrom]=useState("");
@@ -7525,6 +7637,11 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
         <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
         <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
         {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>}
+        <button onClick={()=>generateFinancePDF({finDiv,from,to,payments,expenses,internalTransfers,vehicles,clients,tasks,defaultRate,osHistory,adminRole})}
+          style={{padding:"7px 12px",borderRadius:8,background:`${B.purple}22`,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontSize:12,flexShrink:0,display:"flex",alignItems:"center",gap:4,fontWeight:700}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          PDF
+        </button>
       </div>
     </div>
 
@@ -8611,7 +8728,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.25.13";
+const APP_VERSION = "2026.08.26.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10713,6 +10830,7 @@ export default function App() {
   const [eN,setEN]=useState(""); const [eP,setEP]=useState(""); const [eDiv,setEDiv]=useState("performance");
   const [mechSearch,setMechSearch]=useState("");
   const [osSearch,setOsSearch]=useState("");
+  const [showNewOSModal,setShowNewOSModal]=useState(null); // "performance" | "finishing" | null
   const [finSearch,setFinSearch]=useState("");
   const [testOpen,setTestOpen]=useState(false);
   const [confirmReadyId,setConfirmReadyId]=useState(null);
@@ -11985,11 +12103,17 @@ export default function App() {
             if(a.urgent&&!b.urgent) return -1;
             return Number(a.sortOrder||0)-Number(b.sortOrder||0);
           });
-          return <><div style={{position:"relative",marginBottom:14}}>
+          return <><div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
+            <div style={{position:"relative",flex:1}}>
             <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder="Buscar veículo, cliente, mecânico ou tarefa…"
               style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
             <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
             {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
+            </div>
+            <button onClick={()=>setShowNewOSModal("performance")} style={{padding:"8px 14px",borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova OS
+            </button>
           </div>
           {activeVehicles.length===0&&osSearch&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray400,fontSize:13}}>Nenhum resultado para "<b style={{color:B.white}}>{osSearch}</b>"</div>}
 
@@ -12131,10 +12255,16 @@ export default function App() {
       {tab==="finishing"&&allowedTabs.includes("finishing")&&<>
         <TabHeader color={FD.primary} title="OSC Finishing Division" subtitle="OS em andamento · Pintura, Funilaria e Acabamento"/>
         {/* Search */}
-        <div style={{position:"relative",marginBottom:14}}>
+        <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
+          <div style={{position:"relative",flex:1}}>
           <input value={finSearch} onChange={e=>setFinSearch(e.target.value)} placeholder="Buscar veículo, cliente, mecânico ou tarefa…"
             style={{width:"100%",padding:"10px 36px 10px 14px",borderRadius:9,border:`1px solid ${finSearch?FD.border:B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           {finSearch&&<button onClick={()=>setFinSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
+          </div>
+          <button onClick={()=>setShowNewOSModal("finishing")} style={{padding:"8px 14px",borderRadius:8,background:`${FD.primary}22`,border:`1px solid ${FD.primary}44`,color:FD.primary,fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova OS
+          </button>
         </div>
         {(()=>{
           const activeFin=vehicles.filter(v=>v.enteredAtFinishing);
@@ -12672,6 +12802,63 @@ export default function App() {
       mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});
     }}/>
     </div>{/* end main content */}
+    {/* Nova OS Modal */}
+    {showNewOSModal&&(()=>{
+      const isFin=showNewOSModal==="finishing";
+      const [q,setNOSQ]=useState("");
+      const [selV,setNOSV]=useState(null);
+      const [selE,setNOSE]=useState("");
+      const [saving,setNOSSaving]=useState(false);
+      const availVehicles=vehicles.filter(v=>{
+        const qs=q.toLowerCase();
+        if(!qs) return true;
+        const cli=clients.find(c=>c.id===v.clientId);
+        return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
+      });
+      const relevantEmps=employees.filter(e=>isFin?e.division==="finishing":(e.division||"performance")==="performance");
+      return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:420,width:"100%",border:`1px solid ${isFin?FD.primary+"44":B.orange+"44"}`}}>
+          <div style={{fontWeight:800,fontSize:16,color:B.white,marginBottom:4}}>{isFin?"🎨 Nova OS — Finishing":"🔧 Nova OS — Performance"}</div>
+          <div style={{fontSize:12,color:B.gray400,marginBottom:14}}>Selecione o veículo para abrir a OS</div>
+          <input value={q} onChange={e=>setNOSQ(e.target.value)} placeholder="Buscar veículo ou cliente..."
+            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+          <div style={{maxHeight:200,overflowY:"auto",borderRadius:8,border:`1px solid ${B.gray700}`,marginBottom:10}}>
+            {availVehicles.slice(0,20).map(v=>{
+              const cli=clients.find(c=>c.id===v.clientId);
+              return(<div key={v.id} onClick={()=>setNOSV(v)} style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:selV?.id===v.id?`${isFin?FD.primary:B.orange}22`:"none"}}
+                onMouseEnter={e=>e.currentTarget.style.background=B.gray800}
+                onMouseLeave={e=>e.currentTarget.style.background=selV?.id===v.id?`${isFin?FD.primary:B.orange}22`:"none"}>
+                <div style={{fontWeight:700,fontSize:13,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+                {cli&&<div style={{fontSize:11,color:B.blue}}>{cli.name}</div>}
+              </div>);
+            })}
+            {availVehicles.length===0&&<div style={{padding:"16px",textAlign:"center",color:B.gray500,fontSize:12}}>Nenhum resultado</div>}
+          </div>
+          <select value={selE} onChange={e=>setNOSE(e.target.value)}
+            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:selE?B.white:B.gray500,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:14}}>
+            <option value="">Mecânico (opcional)</option>
+            {relevantEmps.map(e=><option key={e.id} value={e.id}>{e.name}{e.specialty?` — ${e.specialty}`:""}</option>)}
+          </select>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={async()=>{
+              if(!selV||saving) return;
+              setNOSSaving(true);
+              try{
+                if(isFin) await openNewOSFinishing(selV.id,selE||null,null);
+                else await openNewOS(selV.id,selE||null,null);
+                setShowNewOSModal(null);
+                setTab(isFin?"finishing":"clients");
+              }catch(e){errToast(e);}
+              setNOSSaving(false);
+            }} disabled={!selV||saving} style={{flex:1,padding:"10px 0",borderRadius:9,background:selV?(isFin?FD.primary:B.orange):B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:selV&&!saving?"pointer":"not-allowed"}}>
+              {saving?"Abrindo...":(isFin?"Abrir OS Finishing":"Abrir OS Performance")}
+            </button>
+            <button onClick={()=>setShowNewOSModal(null)} style={{padding:"10px 16px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:13}}>Cancelar</button>
+          </div>
+        </div>
+      </div>);
+    })()}
+
     {/* Calendar floating button — owner and admin */}
     {(adminRole==="owner"||adminRole==="admin")&&<>
       <button onClick={()=>setShowCalendar(s=>!s)} style={{position:"fixed",bottom:"calc(72px + env(safe-area-inset-bottom))",right:16,width:44,height:44,borderRadius:99,background:showCalendar?B.purple:B.gray800,border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",zIndex:1000,transition:"all .2s"}}>

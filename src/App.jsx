@@ -7448,7 +7448,7 @@ function InternalTransfersPanel({transfers=[],vehicles=[],osHistory=[],onAdd,onD
 }
 
 // ─── Finance PDF ─────────────────────────────────────────────────────────────
-async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTransfers,vehicles,clients,tasks,defaultRate,osHistory,adminRole}) {
+async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTransfers,vehicles,clients,tasks,defaultRate,osHistory,adminRole,sales=[]}) {
   const jsPDF = await loadJsPDF();
   const doc = new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
   const pageW=210, marginX=14, contentW=pageW-marginX*2;
@@ -7540,6 +7540,17 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   sectionHeader(`DESPESAS (${filteredExpenses.length})`);
   if(filteredExpenses.length===0){doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(...gray);doc.text("Nenhuma despesa no período",marginX+2,y);y+=8;}
   else filteredExpenses.forEach(e=>row(e.description||"Despesa",Number(e.amount),e.date?new Date(e.date+"T12:00").toLocaleDateString("pt-BR"):"",[ 220,38,38]));
+  // Sales section
+  const filteredSales=sales.filter(s=>inRange(s.soldAt||s.sold_at));
+  if(filteredSales.length>0){
+    y+=4;
+    sectionHeader(`VENDAS DIRETAS (${filteredSales.length})`);
+    filteredSales.forEach(s=>{
+      const label=(s.client_name?`${s.client_name} — `:"")+(s.description||s.note||"Venda");
+      const dateStr=s.soldAt||s.sold_at?new Date(s.soldAt||s.sold_at).toLocaleDateString("pt-BR"):"";
+      row(label,Number(s.total),`${s.method||""}${dateStr?` · ${dateStr}`:""}`.trim(),[22,163,74]);
+    });
+  }
   y+=4;
 
   // Internal transfers (owner only)
@@ -7559,7 +7570,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   doc.save(`financeiro-${finDiv}-${from||"inicio"}-${to||"fim"}.pdf`);
 }
 
-function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expenses=[],onAddExpense,onUpdateExpense,onDeleteExpense,osHistory=[],internalTransfers=[],onAddTransfer,onDeleteTransfer,adminRole=""}) {
+function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expenses=[],onAddExpense,onUpdateExpense,onDeleteExpense,osHistory=[],internalTransfers=[],onAddTransfer,onDeleteTransfer,adminRole="",sales=[]}) {
   const [finDiv,setFinDiv]=useState("performance"); // "performance" | "finishing"
   const [from,setFrom]=useState("");
   const [to,setTo]=useState("");
@@ -7637,7 +7648,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
         <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
         <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
         {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>}
-        <button onClick={()=>generateFinancePDF({finDiv,from,to,payments,expenses,internalTransfers,vehicles,clients,tasks,defaultRate,osHistory,adminRole})}
+        <button onClick={()=>generateFinancePDF({finDiv,from,to,payments,expenses,internalTransfers,vehicles,clients,tasks,defaultRate,osHistory,adminRole,sales})}
           style={{padding:"7px 12px",borderRadius:8,background:`${B.purple}22`,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontSize:12,flexShrink:0,display:"flex",alignItems:"center",gap:4,fontWeight:700}}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           PDF
@@ -8728,7 +8739,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.1";
+const APP_VERSION = "2026.08.26.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10272,6 +10283,8 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
   const [cart,setCart]=useState([]); // {id,name,price,qty,from_stock,stock_item_id}
   const [method,setMethod]=useState("pix");
   const [saleNote,setSaleNote]=useState("");
+  const [saleClientName,setSaleClientName]=useState("");
+  const [saleDescription,setSaleDescription]=useState("");
   const [discountType,setDiscountType]=useState("percent"); // percent | value
   const [discountVal,setDiscountVal]=useState("");
   const [showShelfForm,setShowShelfForm]=useState(false);
@@ -10283,6 +10296,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
   const [histFrom,setHistFrom]=useState("");
   const [histTo,setHistTo]=useState("");
   const [confirmDel,setConfirmDel]=useState(null);
+  const [stockSearch,setStockSearch]=useState("");
 
   const cats=["peças","acessórios","serviços","produtos","outros"];
   const METHODS=["pix","dinheiro","crédito","débito","transferência"];
@@ -10303,10 +10317,10 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
   async function finalizeSale(){
     if(!cart.length) return;
     const discNote=discountAmount>0?` [Desconto: ${discountType==="percent"?discountVal+"%":"R$"+discountVal} = −${fmtBRL(discountAmount)}]`:"";
-    const sale={total:cartTotal,method,note:(saleNote+discNote).trim(),division:"performance",sold_at:new Date().toISOString()};
+    const sale={total:cartTotal,method,note:(saleNote+discNote).trim(),client_name:saleClientName.trim()||null,description:saleDescription.trim()||null,division:"performance",sold_at:new Date().toISOString()};
     const items=cart.map(i=>({shelf_item_id:i.from_stock?null:i.id,name:i.name,price:i.price,qty:i.qty,from_stock:i.from_stock}));
     await onAddSale(sale,items);
-    setCart([]);setSaleNote("");setDiscountVal("");
+    setCart([]);setSaleNote("");setSaleClientName("");setSaleDescription("");setDiscountVal("");
   }
 
   function openShelfForm(item=null){
@@ -10352,14 +10366,30 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
         ))}
       </div>
 
-      <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10}}>Do estoque</div>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
-        {stock.map(s=>(
-          <button key={s.id} onClick={()=>addToCart({id:s.id,name:s.name,price:s.price||0,stock_item_id:s.id},true)} style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.gray200,fontSize:12,cursor:"pointer"}}>
-            {s.name} — {fmtBRL(Number(s.price||0))} <span style={{color:B.gray500}}>({s.qty})</span>
-          </button>
-        ))}
+      <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Do estoque</div>
+      <div style={{position:"relative",marginBottom:8}}>
+        <input value={stockSearch} onChange={e=>setStockSearch(e.target.value)} placeholder="Buscar item do estoque..."
+          style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:13}}>🔍</span>
+        {stockSearch&&<button onClick={()=>setStockSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:12}}>✕</button>}
       </div>
+      {stockSearch&&<div style={{background:B.gray800,borderRadius:8,border:`1px solid ${B.gray700}`,marginBottom:16,maxHeight:220,overflowY:"auto"}}>
+        {stock.filter(s=>(s.name||"").toLowerCase().includes(stockSearch.toLowerCase())||(s.brand||"").toLowerCase().includes(stockSearch.toLowerCase())).slice(0,12).map(s=>(
+          <div key={s.id} onClick={()=>{addToCart({id:s.id,name:s.name,price:s.salePrice||s.price||0,stock_item_id:s.id},true);setStockSearch("");}}
+            style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}
+            onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+            onMouseLeave={e=>e.currentTarget.style.background="none"}>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:13,color:B.white}}>{s.name}{s.brand?` · ${s.brand}`:""}</div>
+              <div style={{fontSize:11,color:B.gray400}}>Estoque: {s.qty} un.</div>
+            </div>
+            <div style={{fontWeight:700,fontSize:13,color:"#06b6d4"}}>{fmtBRL(Number(s.salePrice||s.price||0))}</div>
+          </div>
+        ))}
+        {stock.filter(s=>(s.name||"").toLowerCase().includes(stockSearch.toLowerCase())).length===0&&
+          <div style={{padding:"12px",textAlign:"center",color:B.gray500,fontSize:12}}>Nenhum item encontrado</div>}
+      </div>}
+      {!stockSearch&&<div style={{marginBottom:16}}/>}
 
       {/* Cart */}
       {cart.length>0&&<>
@@ -10403,7 +10433,9 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
               {METHODS.map(m=><button key={m} onClick={()=>setMethod(m)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${method===m?"#06b6d4":B.gray600}`,background:method===m?"#06b6d418":B.gray700,color:method===m?"#06b6d4":B.gray300,fontWeight:700,fontSize:11,cursor:"pointer",textTransform:"capitalize"}}>{m}</button>)}
             </div>
-            <input value={saleNote} onChange={e=>setSaleNote(e.target.value)} placeholder="Observação (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
+            <input value={saleClientName} onChange={e=>setSaleClientName(e.target.value)} placeholder="Nome do cliente (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+            <input value={saleDescription} onChange={e=>setSaleDescription(e.target.value)} placeholder="Descrição da venda (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+            <input value={saleNote} onChange={e=>setSaleNote(e.target.value)} placeholder="Observação interna (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
             <button onClick={finalizeSale} style={{width:"100%",padding:"12px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>✓ Finalizar venda — {fmtBRL(cartTotal)}</button>
           </div>
         </div>
@@ -10476,6 +10508,8 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
             </div>
           </div>
           <div style={{fontSize:11,color:B.gray500}}>{new Date(sale.sold_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+          {sale.client_name&&<div style={{fontSize:12,color:B.blue,fontWeight:600,marginTop:3}}>👤 {sale.client_name}</div>}
+          {sale.description&&<div style={{fontSize:12,color:B.white,marginTop:2}}>{sale.description}</div>}
           {sale.note&&<div style={{fontSize:11,color:B.gray400,marginTop:4}}>{sale.note}</div>}
           {(sale.sale_items||[]).map((item,i)=>(
             <div key={i} style={{fontSize:11,color:B.gray400,marginTop:4}}>• {item.name} × {item.qty} — {fmtBRL(item.price*item.qty)}{item.from_stock?" (estoque)":""}</div>
@@ -12379,7 +12413,7 @@ export default function App() {
       </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
-        <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory} internalTransfers={internalTransfers} adminRole={adminRole}
+        <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory} internalTransfers={internalTransfers} adminRole={adminRole} sales={sales}
           onAddTransfer={async t=>{try{const r=await db.addInternalTransfer(t);setInternalTransfers(p=>[r,...p]);}catch(e){errToast(e);}}}
           onDeleteTransfer={async id=>{try{await db.deleteInternalTransfer(id);setInternalTransfers(p=>p.filter(t=>t.id!==id));}catch(e){errToast(e);}}}
           onAddExpense={async e=>{try{const r=await db.addExpense(e);setExpenses(p=>[...p,r]);}catch(err){errToast(err);}}}

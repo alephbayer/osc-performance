@@ -7394,10 +7394,12 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
 }
 
 // ─── InternalTransfersPanel ────────────────────────────────────────────────────
-function InternalTransfersPanel({transfers=[],vehicles=[],osHistory=[],onAdd,onDelete}) {
+function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[],onAdd,onDelete}) {
   const [showForm,setShowForm]=useState(false);
   const [form,setForm]=useState({vehicleId:"",divisionFrom:"performance",divisionTo:"finishing",amount:"",reason:"",date:new Date().toISOString().slice(0,10)});
   const [confirmDel,setConfirmDel]=useState(null);
+  const [vSearch,setVSearch]=useState("");
+  const [vOpen,setVOpen]=useState(false);
 
   const vOsMap={}; // vehicleId → latest osNumber
   [...osHistory].sort((a,b)=>new Date(b.delivered_at||0)-new Date(a.delivered_at||0)).forEach(h=>{
@@ -7439,15 +7441,40 @@ function InternalTransfersPanel({transfers=[],vehicles=[],osHistory=[],onAdd,onD
 
     {showForm&&<div style={{padding:"14px 16px",background:`${B.purple}08`,borderBottom:`1px solid ${B.gray700}`}}>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
-        <select value={form.vehicleId} onChange={e=>setForm(p=>({...p,vehicleId:e.target.value}))}
-          style={{flex:"2 1 160px",padding:"8px 10px",borderRadius:8,border:`1px solid ${form.vehicleId?B.purple:B.gray600}`,background:B.gray800,color:form.vehicleId?B.white:B.gray500,fontSize:12,outline:"none"}}>
-          <option value="">Selecione o veículo *</option>
-          {[...vehicles].sort((a,b)=>(a.model||"").localeCompare(b.model||"","pt-BR")).map(v=>{
-            const cli=vehicles&&v.clientId?null:null; // just model
-            const osN=vOsMap[v.id];
-            return <option key={v.id} value={v.id}>{v.model}{v.plate?` (${v.plate})`:""}{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</option>;
-          })}
-        </select>
+        <div style={{flex:"2 1 160px",position:"relative"}}>
+          {(()=>{
+            const selV=vehicles.find(x=>x.id===form.vehicleId);
+            const selCli=selV?clients.find(c=>c.id===selV.clientId):null;
+            const selLabel=selV?`${selV.model}${selV.plate?` (${selV.plate})`:""}`+(selCli?` · ${selCli.name}`:""):"";
+            const hits=vehicles.filter(v=>{
+              const qs=vSearch.toLowerCase();
+              if(!qs) return true;
+              const cli=clients.find(c=>c.id===v.clientId);
+              return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
+            }).slice(0,12);
+            return(<>
+              <input value={vOpen?vSearch:selLabel} onChange={e=>setVSearch(e.target.value)}
+                onFocus={()=>{setVOpen(true);setVSearch("");}}
+                onBlur={()=>setTimeout(()=>{setVOpen(false);setVSearch("");},150)}
+                placeholder="Buscar veículo ou cliente *"
+                style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${form.vehicleId?B.purple:B.gray600}`,background:B.gray800,color:form.vehicleId||vOpen?B.white:B.gray500,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+              {vOpen&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:8,zIndex:200,maxHeight:180,overflowY:"auto",marginTop:2,boxShadow:"0 8px 24px rgba(0,0,0,.4)"}}>
+                {hits.length===0&&<div style={{padding:"10px",textAlign:"center",fontSize:11,color:B.gray500}}>Nenhum resultado</div>}
+                {hits.map(v=>{
+                  const cli=clients.find(c=>c.id===v.clientId);
+                  const osN=vOsMap[v.id];
+                  return(<div key={v.id} onMouseDown={()=>{setForm(p=>({...p,vehicleId:v.id}));setVOpen(false);setVSearch("");}}
+                    style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:form.vehicleId===v.id?`${B.purple}22`:"none"}}
+                    onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+                    onMouseLeave={e=>e.currentTarget.style.background=form.vehicleId===v.id?`${B.purple}22`:"none"}>
+                    <div style={{fontWeight:700,fontSize:12,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</div>
+                    {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
+                  </div>);
+                })}
+              </div>}
+            </>);
+          })()}
+        </div>
         <input value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} type="number" step="0.01" placeholder="Valor R$ *"
           style={{flex:"1 1 110px",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
         <input type="date" value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))}
@@ -7681,6 +7708,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
     {adminRole==="owner"&&<InternalTransfersPanel
       transfers={internalTransfers}
       vehicles={vehicles}
+      clients={clients}
       osHistory={osHistory}
       onAdd={onAddTransfer}
       onDelete={onDeleteTransfer}
@@ -8794,7 +8822,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.3";
+const APP_VERSION = "2026.08.26.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

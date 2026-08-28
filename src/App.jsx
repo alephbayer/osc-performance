@@ -8692,9 +8692,10 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
     const ok=await registerPushSubscription(employee.id);
     setPushStatus(ok?"granted":"denied");
   };
-  // Show vehicles where this mechanic is assigned AND relevant OS is active
+  // Show vehicles where this mechanic is assigned AND relevant OS is active (not ready/delivered)
   const empV=[...vehicles.filter(v=>{
     if(!(v.mechanicIds||[v.employeeId]).includes(employee.id)) return false;
+    if(v.status==="ready"||v.status==="delivered") return false;
     if(isFD) return !!v.enteredAtFinishing;
     return !!v.enteredAt || tasks.some(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
   })].sort((a,b)=>{
@@ -8825,7 +8826,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.7";
+const APP_VERSION = "2026.08.26.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

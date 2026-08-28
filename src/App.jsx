@@ -7558,8 +7558,11 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
     return true;
   };
 
-  const divPayments=payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt));
-  const totalRevenue=divPayments.reduce((s,p)=>s+Number(p.amount),0);
+  const divPayments=payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt)&&p.vehicleId); // OS payments only
+  const filteredSales=sales.filter(s=>inRange(s.soldAt||s.sold_at));
+  const totalOSRevenue=divPayments.reduce((s,p)=>s+Number(p.amount),0);
+  const totalSalesRevenue=filteredSales.reduce((s,sale)=>s+Number(sale.total),0);
+  const totalRevenue=totalOSRevenue+totalSalesRevenue;
   const filteredExpenses=expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&inRange(e.date));
   const totalExpenses=filteredExpenses.reduce((s,e)=>s+Number(e.amount),0);
 
@@ -7567,7 +7570,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
   doc.setFillColor(248,248,248); doc.rect(marginX,y,contentW,28,"FD");
   doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...black);
-  const cols=[{label:"RECEITA (PAGAMENTOS)",val:totalRevenue,color:[22,163,74]},{label:"DESPESAS",val:totalExpenses,color:[220,38,38]},{label:"RESULTADO",val:totalRevenue-totalExpenses,color:totalRevenue-totalExpenses>=0?[22,163,74]:[220,38,38]}];
+  const cols=[{label:"RECEITA TOTAL",val:totalRevenue,color:[22,163,74]},{label:"DESPESAS",val:totalExpenses,color:[220,38,38]},{label:"RESULTADO",val:totalRevenue-totalExpenses,color:totalRevenue-totalExpenses>=0?[22,163,74]:[220,38,38]}];
   cols.forEach((c,i)=>{
     const cx=marginX+5+i*(contentW/3);
     doc.setTextColor(...gray); doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.text(c.label,cx,y+7);
@@ -7595,7 +7598,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   };
 
   // Payments list
-  sectionHeader(`PAGAMENTOS RECEBIDOS (${divPayments.length})`);
+  sectionHeader(`PAGAMENTOS DE OS (${divPayments.length})`);
   if(divPayments.length===0){doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(...gray);doc.text("Nenhum pagamento no período",marginX+2,y);y+=8;}
   else{
     const byV={};
@@ -7623,7 +7626,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   if(filteredExpenses.length===0){doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(...gray);doc.text("Nenhuma despesa no período",marginX+2,y);y+=8;}
   else filteredExpenses.forEach(e=>row(e.description||"Despesa",Number(e.amount),e.date?new Date(e.date+"T12:00").toLocaleDateString("pt-BR"):"",[ 220,38,38]));
   // Sales section
-  const filteredSales=sales.filter(s=>inRange(s.soldAt||s.sold_at));
+  // filteredSales already computed above
   if(filteredSales.length>0){
     y+=4;
     sectionHeader(`VENDAS DIRETAS (${filteredSales.length})`);
@@ -8822,7 +8825,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.5";
+const APP_VERSION = "2026.08.26.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

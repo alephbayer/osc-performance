@@ -7559,7 +7559,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   };
 
   const divPayments=payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt)&&p.vehicleId); // OS payments only
-  const filteredSales=sales.filter(s=>inRange(s.soldAt||s.sold_at));
+  const filteredSales=finDiv==="performance"?sales.filter(s=>inRange(s.soldAt||s.sold_at)):[];
   const totalOSRevenue=divPayments.reduce((s,p)=>s+Number(p.amount),0);
   const totalSalesRevenue=filteredSales.reduce((s,sale)=>s+Number(sale.total),0);
   const totalRevenue=totalOSRevenue+totalSalesRevenue;
@@ -8825,7 +8825,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.6";
+const APP_VERSION = "2026.08.26.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -8822,7 +8822,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.4";
+const APP_VERSION = "2026.08.26.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10361,7 +10361,7 @@ function PresencaTab({employees}) {
   </div>);
 }
 
-function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale}){
+function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale,onUpdateSale}){
   const [view,setView]=useState("sell"); // sell | shelf | history
   const [cart,setCart]=useState([]); // {id,name,price,qty,from_stock,stock_item_id}
   const [method,setMethod]=useState("pix");
@@ -10380,6 +10380,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
   const [histTo,setHistTo]=useState("");
   const [confirmDel,setConfirmDel]=useState(null);
   const [stockSearch,setStockSearch]=useState("");
+  const [editSale,setEditSale]=useState(null); // {id, client_name, description, note}
 
   const cats=["peças","acessórios","serviços","produtos","outros"];
   const METHODS=["pix","dinheiro","crédito","débito","transferência"];
@@ -10587,13 +10588,33 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
             <div style={{fontWeight:700,fontSize:14,color:B.white}}>{fmtBRL(Number(sale.total))}</div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:11,color:B.gray400,textTransform:"capitalize"}}>{sale.method}</span>
+              <button onClick={()=>setEditSale(editSale?.id===sale.id?null:{id:sale.id,client_name:sale.client_name||"",description:sale.description||"",note:sale.note||""})}
+                style={{width:26,height:26,borderRadius:6,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,color:B.blue,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <IEdit s={11} c={B.blue}/>
+              </button>
               <button onClick={()=>onDeleteSale(sale.id)} style={{width:26,height:26,borderRadius:6,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
           </div>
           <div style={{fontSize:11,color:B.gray500}}>{new Date(sale.sold_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
-          {sale.client_name&&<div style={{fontSize:12,color:B.blue,fontWeight:600,marginTop:3}}>👤 {sale.client_name}</div>}
-          {sale.description&&<div style={{fontSize:12,color:B.white,marginTop:2}}>{sale.description}</div>}
-          {sale.note&&<div style={{fontSize:11,color:B.gray400,marginTop:4}}>{sale.note}</div>}
+          {editSale?.id===sale.id?(<div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6,padding:"10px",background:B.gray900,borderRadius:8,border:`1px solid ${B.blue}33`}}>
+            <input value={editSale.client_name} onChange={e=>setEditSale(p=>({...p,client_name:e.target.value}))} placeholder="Nome do cliente"
+              style={{padding:"6px 9px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+            <input value={editSale.description} onChange={e=>setEditSale(p=>({...p,description:e.target.value}))} placeholder="Descrição"
+              style={{padding:"6px 9px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+            <input value={editSale.note} onChange={e=>setEditSale(p=>({...p,note:e.target.value}))} placeholder="Observação interna"
+              style={{padding:"6px 9px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={async()=>{
+                await onUpdateSale(editSale.id,{client_name:editSale.client_name||null,description:editSale.description||null,note:editSale.note||null});
+                setEditSale(null);
+              }} style={{flex:1,padding:"6px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
+              <button onClick={()=>setEditSale(null)} style={{padding:"6px 12px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+            </div>
+          </div>):(<>
+            {sale.client_name&&<div style={{fontSize:12,color:B.blue,fontWeight:600,marginTop:3}}>👤 {sale.client_name}</div>}
+            {sale.description&&<div style={{fontSize:12,color:B.white,marginTop:2}}>{sale.description}</div>}
+            {sale.note&&<div style={{fontSize:11,color:B.gray400,marginTop:4}}>{sale.note}</div>}
+          </>)}
           {(sale.sale_items||[]).map((item,i)=>(
             <div key={i} style={{fontSize:11,color:B.gray400,marginTop:4}}>• {item.name} × {item.qty} — {fmtBRL(item.price*item.qty)}{item.from_stock?" (estoque)":""}</div>
           ))}
@@ -12630,6 +12651,7 @@ export default function App() {
             }catch(e){errToast(e);}
           }}
           onDeleteSale={async id=>{try{await db.deleteSale(id);setSales(p=>p.filter(s=>s.id!==id));toast_("Venda removida ✓");}catch(e){errToast(e);}}}
+          onUpdateSale={async(id,patch)=>{try{await db.updateSale(id,patch);setSales(p=>p.map(s=>s.id===id?{...s,...patch}:s));toast_("Venda atualizada ✓");}catch(e){errToast(e);}}}
         />
       </>}
 

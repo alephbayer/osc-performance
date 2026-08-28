@@ -929,6 +929,10 @@ export const db = {
     }
     return { ...saleRow, sale_items: items?.map(i => ({ ...i, sale_id: saleRow.id })) || [] };
   },
+  async updateSale(id, patch) {
+    const {error}=await supabase.from("sales").update(patch).eq("id",id);
+    if(error) throw error;
+  },
   async deleteSale(id) {
     const { error } = await supabase.from("sales").delete().eq("id", id);
     if (error) throw error;

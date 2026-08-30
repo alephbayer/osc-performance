@@ -7889,17 +7889,19 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
     </div>
     {/* Date filter */}
     <div style={{marginBottom:18}}>
-      <div style={{fontSize:11,fontWeight:700,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Período</div>
-      <div style={{display:"flex",gap:6,alignItems:"center"}}>
-        <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-        <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
-        <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-        {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div style={{fontSize:11,fontWeight:700,color:B.gray500,textTransform:"uppercase",letterSpacing:.8}}>Período</div>
         <button onClick={()=>generateFinancePDF({finDiv,from,to,payments,expenses,internalTransfers,vehicles,clients,tasks,defaultRate,osHistory,adminRole,sales})}
-          style={{padding:"7px 12px",borderRadius:8,background:`${B.purple}22`,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontSize:12,flexShrink:0,display:"flex",alignItems:"center",gap:4,fontWeight:700}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          PDF
+          style={{padding:"5px 10px",borderRadius:7,background:`${B.purple}22`,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",gap:4,fontWeight:700}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Gerar PDF
         </button>
+      </div>
+      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",minWidth:0}}/>
+        <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
+        <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",minWidth:0}}/>
+        {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>}
       </div>
     </div>
 
@@ -8987,7 +8989,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.11";
+const APP_VERSION = "2026.08.26.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10254,14 +10256,14 @@ function LiquidNav({active,setActive,navItems,scrollY,theme}){
             return(
               <button key={n.id} onClick={()=>setActive(n.id)} style={{
                 display:"flex",alignItems:"center",justifyContent:"center",
-                padding:`5px 11px`,
+                padding:`6px 12px`,
                 borderRadius:99,border:"none",cursor:"pointer",
                 background:on?"rgba(255,107,0,0.18)":"transparent",
                 color:on?B.orange:B.gray400,
                 position:"relative",transition:"all .25s cubic-bezier(.4,0,.2,1)",
               }}>
                 {on&&<div style={{position:"absolute",inset:2,borderRadius:99,background:"rgba(255,107,0,0.06)"}}/>}
-                <div style={{position:"relative",transform:on?"scale(0.85)":"scale(0.75)",transition:"transform .2s"}}>
+                <div style={{position:"relative",transform:on?"scale(0.94)":"scale(0.83)",transition:"transform .2s"}}>
                   {n.svgIcon}
                 </div>
               </button>
@@ -11052,6 +11054,7 @@ export default function App() {
   const [vehicleTimelines,setVehicleTimelines]=useState({});
   const [reminders,setReminders]=useState([]);
   const [showReminders,setShowReminders]=useState(false);
+  const [hideRevenue,setHideRevenue]=useState(true);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
@@ -12174,9 +12177,16 @@ export default function App() {
 
       <div style={{background:`linear-gradient(135deg,${B.orange}22,${B.orange}06)`,border:`1px solid ${B.orange}44`,borderRadius:18,padding:"20px 22px",marginBottom:10,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:99,background:`${B.orange}10`}}/>
-        <div style={{fontSize:10,color:B.orange,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>Receita do mês</div>
-        <div style={{fontSize:32,fontWeight:900,color:B.white,letterSpacing:-1}}>{fmtBRL(totalRevenue)}</div>
-        <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Semana: <span style={{color:B.green,fontWeight:700}}>{fmtBRL(weekRevenue)}</span></div>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+          <div style={{fontSize:10,color:B.orange,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,flex:1}}>Receita do mês</div>
+          <button onClick={()=>setHideRevenue(h=>!h)} style={{background:"none",border:"none",cursor:"pointer",color:B.orange,opacity:.7,padding:2}}>
+            {hideRevenue
+              ?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
+          </button>
+        </div>
+        <div style={{fontSize:32,fontWeight:900,color:B.white,letterSpacing:-1}}>{hideRevenue?"••••••":fmtBRL(totalRevenue)}</div>
+        <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Semana: <span style={{color:B.green,fontWeight:700}}>{hideRevenue?"••••":fmtBRL(weekRevenue)}</span></div>
       </div>
 
       <SL2 label="Operação atual"/>
@@ -12190,7 +12200,7 @@ export default function App() {
 
       <SL2 label="Resumo do mês"/>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
-        <DashCard color={B.green}  icon={iconChart}  label="Receita total"   value={fmtBRL(totalRevenue)} onClick={()=>goSection("gestao","finance")}/>
+        <DashCard color={B.green}  icon={iconChart}  label="Receita total"   value={hideRevenue?"••••":fmtBRL(totalRevenue)} onClick={()=>goSection("gestao","finance")}/>
         <DashCard color={B.blue}   icon={iconPeople} label="Clientes ativos"  value={clients.length} onClick={()=>goSection("oficina","clientsMonitor")}/>
         <DashCard color={B.purple} icon={iconBox}    label="Veículos este mês" value={monthVehicles}/>
         <DashCard color={B.teal||"#14b8a6"} icon={iconChart} label="Tarefas concluídas" value={monthTasks.length}/>

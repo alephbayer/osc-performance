@@ -1147,6 +1147,37 @@ export const db = {
     if(error) throw error;
   },
 
+  // ── Reminders ────────────────────────────────────────────────────────────────
+  async loadReminders() {
+    const {data,error}=await supabase.from("reminders").select("*").order("done").order("created_at",{ascending:false});
+    if(error) throw error;
+    return (data||[]).map(r=>({
+      id:r.id, title:r.title, body:r.body||"", priority:r.priority||"medium",
+      dueDate:r.due_date||null, category:r.category||null, vehicleId:r.vehicle_id||null,
+      visibility:r.visibility||"both", done:r.done||false, doneAt:r.done_at||null,
+      createdBy:r.created_by||null, createdAt:r.created_at,
+    }));
+  },
+  async addReminder(r) {
+    const {data,error}=await supabase.from("reminders").insert({
+      title:r.title, body:r.body||"", priority:r.priority||"medium",
+      due_date:r.dueDate||null, category:r.category||null, vehicle_id:r.vehicleId||null,
+      visibility:r.visibility||"both", done:false, created_by:r.createdBy||null,
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,title:data.title,body:data.body||"",priority:data.priority,dueDate:data.due_date||null,category:data.category||null,vehicleId:data.vehicle_id||null,visibility:data.visibility,done:data.done,doneAt:null,createdBy:data.created_by||null,createdAt:data.created_at};
+  },
+  async updateReminder(id,patch) {
+    const map={title:"title",body:"body",priority:"priority",dueDate:"due_date",category:"category",vehicleId:"vehicle_id",visibility:"visibility",done:"done",doneAt:"done_at"};
+    const dbp={};Object.keys(patch).forEach(k=>{if(map[k])dbp[map[k]]=patch[k];});
+    const {error}=await supabase.from("reminders").update(dbp).eq("id",id);
+    if(error) throw error;
+  },
+  async deleteReminder(id) {
+    const {error}=await supabase.from("reminders").delete().eq("id",id);
+    if(error) throw error;
+  },
+
   // ── Vehicle Timeline ─────────────────────────────────────────────────────────
   async loadTimeline(vehicleId) {
     const {data,error}=await supabase.from("vehicle_timeline")

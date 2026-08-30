@@ -5040,6 +5040,147 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 }
 // ─── AppointmentsTab ──────────────────────────────────────────────────────────
 // ─── CalendarPanel ────────────────────────────────────────────────────────────
+// ─── RemindersPanel ───────────────────────────────────────────────────────────
+const PRIO={high:{label:"Alta",color:"#ef4444"},medium:{label:"Média",color:"#f59e0b"},low:{label:"Baixa",color:"#6366f1"}};
+const REM_CATS=["Financeiro","Fornecedor","Cliente","Compras","Manutenção","Outro"];
+
+function RemindersPanel({onClose,reminders=[],vehicles=[],adminRole,onAdd,onUpdate,onDelete}) {
+  const [form,setForm]=useState(null); // null = list, {} = new, {id,...} = edit
+  const [filter,setFilter]=useState("pending"); // pending | done | all
+
+  const visible=reminders.filter(r=>{
+    if(adminRole==="admin"&&r.visibility==="owner") return false;
+    if(adminRole==="owner"&&r.visibility==="admin") return false;
+    if(filter==="pending") return !r.done;
+    if(filter==="done") return r.done;
+    return true;
+  });
+
+  const overdueCount=reminders.filter(r=>!r.done&&r.dueDate&&r.dueDate<new Date().toISOString().slice(0,10)&&(adminRole==="owner"||r.visibility!=="owner")).length;
+
+  const prioOrder={high:0,medium:1,low:2};
+  const sorted=[...visible].sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    return (prioOrder[a.priority]||1)-(prioOrder[b.priority]||1);
+  });
+
+  const EmptyForm=()=>{
+    const [f,setF]=useState({title:"",body:"",priority:"medium",dueDate:"",category:"",vehicleId:"",visibility:"both"});
+    const [saving,setSaving]=useState(false);
+    return(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+      <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:4}}>Novo lembrete</div>
+      <input value={f.title} onChange={e=>setF(p=>({...p,title:e.target.value}))} placeholder="Título *" autoFocus
+        style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",fontWeight:600}}/>
+      <textarea value={f.body} onChange={e=>setF(p=>({...p,body:e.target.value}))} placeholder="Detalhes (opcional)" rows={2}
+        style={{padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
+      <div style={{display:"flex",gap:6}}>
+        {/* Priority */}
+        {Object.entries(PRIO).map(([k,v])=>(
+          <button key={k} onClick={()=>setF(p=>({...p,priority:k}))}
+            style={{flex:1,padding:"5px 0",borderRadius:7,border:`2px solid ${f.priority===k?v.color:B.gray700}`,background:f.priority===k?`${v.color}22`:B.gray800,color:f.priority===k?v.color:B.gray500,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <input type="date" value={f.dueDate} onChange={e=>setF(p=>({...p,dueDate:e.target.value}))} placeholder="Data limite"
+          style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:f.dueDate?B.white:B.gray500,fontSize:12,outline:"none"}}/>
+        <select value={f.category} onChange={e=>setF(p=>({...p,category:e.target.value}))}
+          style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:f.category?B.white:B.gray500,fontSize:12,outline:"none"}}>
+          <option value="">Categoria</option>
+          {REM_CATS.map(c=><option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <select value={f.vehicleId} onChange={e=>setF(p=>({...p,vehicleId:e.target.value}))}
+        style={{padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:f.vehicleId?B.white:B.gray500,fontSize:12,outline:"none"}}>
+        <option value="">Vincular veículo (opcional)</option>
+        {vehicles.filter(v=>v.status==="active").map(v=><option key={v.id} value={v.id}>{v.model}{v.plate?` · ${v.plate}`:""}</option>)}
+      </select>
+      {/* Visibility — only owner can set */}
+      {adminRole==="owner"&&<div style={{display:"flex",gap:6}}>
+        {[["both","Ambos"],["owner","Só gestor"],["admin","Só admin"]].map(([k,lbl])=>(
+          <button key={k} onClick={()=>setF(p=>({...p,visibility:k}))}
+            style={{flex:1,padding:"5px 0",borderRadius:7,border:`1px solid ${f.visibility===k?B.purple:B.gray700}`,background:f.visibility===k?`${B.purple}22`:B.gray800,color:f.visibility===k?B.purple:B.gray500,fontSize:10,fontWeight:700,cursor:"pointer"}}>
+            {lbl}
+          </button>
+        ))}
+      </div>}
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={async()=>{
+          if(!f.title.trim()||saving) return;
+          setSaving(true);
+          await onAdd({...f,vehicleId:f.vehicleId||null,dueDate:f.dueDate||null,category:f.category||null,createdBy:adminRole});
+          setForm(null);setSaving(false);
+        }} disabled={!f.title.trim()||saving}
+          style={{flex:1,padding:"8px 0",borderRadius:8,background:f.title.trim()?B.purple:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:f.title.trim()?"pointer":"not-allowed"}}>
+          {saving?"Salvando...":"Criar lembrete"}
+        </button>
+        <button onClick={()=>setForm(null)} style={{padding:"8px 14px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:12}}>Cancelar</button>
+      </div>
+    </div>);
+  };
+
+  return(<div style={{position:"fixed",bottom:"calc(125px + env(safe-area-inset-bottom))",right:62,zIndex:1000,pointerEvents:"none",display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
+    <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:16,width:380,maxWidth:"calc(100vw - 32px)",maxHeight:"75vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,0.5)",pointerEvents:"all",overflow:"hidden"}}>
+      {/* Header */}
+      <div style={{padding:"14px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={B.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span style={{fontWeight:800,fontSize:14,color:B.white,flex:1}}>Lembretes</span>
+        {overdueCount>0&&<span style={{fontSize:10,fontWeight:700,background:B.red,color:B.white,borderRadius:99,padding:"1px 6px"}}>{overdueCount} atrasado{overdueCount!==1?"s":""}</span>}
+        <div style={{display:"flex",background:B.gray800,borderRadius:7,padding:2,gap:1}}>
+          {[["pending","Abertos"],["done","Feitos"],["all","Todos"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setFilter(v)} style={{padding:"3px 7px",borderRadius:5,border:"none",background:filter===v?B.blue:"none",color:filter===v?B.white:B.gray400,cursor:"pointer",fontSize:9,fontWeight:700}}>{l}</button>
+          ))}
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:18,padding:4}}>×</button>
+      </div>
+
+      {/* Body */}
+      <div style={{overflowY:"auto",flex:1,padding:"10px 12px"}}>
+        {form!==null?<EmptyForm/>:<>
+          <button onClick={()=>setForm({})} style={{width:"100%",padding:"8px 0",borderRadius:8,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:12,cursor:"pointer",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+            <IPlus s={12} c={B.blue}/>Novo lembrete
+          </button>
+          {sorted.length===0&&<div style={{textAlign:"center",padding:"24px 0",color:B.gray500,fontSize:12}}>Nenhum lembrete{filter==="pending"?" em aberto":filter==="done"?" concluído":""}.</div>}
+          {sorted.map(r=>{
+            const prio=PRIO[r.priority]||PRIO.medium;
+            const v=vehicles.find(x=>x.id===r.vehicleId);
+            const isOverdue=!r.done&&r.dueDate&&r.dueDate<new Date().toISOString().slice(0,10);
+            const dateColor=isOverdue?B.red:B.gray500;
+            return(<div key={r.id} style={{background:r.done?B.gray800:`${prio.color}08`,border:`1px solid ${r.done?B.gray700:prio.color+"33"}`,borderRadius:10,padding:"10px 12px",marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                {/* Checkbox */}
+                <button onClick={()=>{const now=new Date().toISOString();onUpdate(r.id,{done:!r.done,doneAt:!r.done?now:null});}}
+                  style={{width:18,height:18,borderRadius:4,border:`2px solid ${r.done?B.green:prio.color}`,background:r.done?B.green:"none",flexShrink:0,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginTop:1}}>
+                  {r.done&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+                </button>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,color:r.done?B.gray500:B.white,textDecoration:r.done?"line-through":"none"}}>{r.title}</div>
+                  {r.body&&<div style={{fontSize:11,color:B.gray400,marginTop:2,lineHeight:1.4}}>{r.body}</div>}
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:4,alignItems:"center"}}>
+                    <span style={{fontSize:9,fontWeight:700,color:prio.color,background:`${prio.color}18`,borderRadius:4,padding:"1px 5px"}}>{prio.label}</span>
+                    {r.category&&<span style={{fontSize:9,color:B.gray400,background:B.gray700,borderRadius:4,padding:"1px 5px"}}>{r.category}</span>}
+                    {r.visibility!=="both"&&<span style={{fontSize:9,color:B.purple,background:`${B.purple}18`,borderRadius:4,padding:"1px 5px"}}>{r.visibility==="owner"?"Gestor":"Admin"}</span>}
+                    {v&&<span style={{fontSize:9,color:B.orange,background:`${B.orange}18`,borderRadius:4,padding:"1px 5px"}}>{v.model}</span>}
+                    {r.dueDate&&<span style={{fontSize:9,color:dateColor,fontWeight:isOverdue?700:400}}>
+                      {isOverdue?"⚠ ":""}{new Date(r.dueDate+"T12:00").toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}
+                    </span>}
+                  </div>
+                </div>
+                <button onClick={()=>onDelete(r.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0,flexShrink:0}}
+                  onMouseEnter={e=>e.currentTarget.style.color=B.red}
+                  onMouseLeave={e=>e.currentTarget.style.color=B.gray600}>
+                  <ITrash s={12}/>
+                </button>
+              </div>
+            </div>);
+          })}
+        </>}
+      </div>
+    </div>
+  </div>);
+}
+
 const CAL_TYPES={
   manual:{label:"Evento",color:"#6366f1"},
   visit:{label:"Visita",color:"#3b82f6"},
@@ -8826,7 +8967,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.8";
+const APP_VERSION = "2026.08.26.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10889,6 +11030,8 @@ export default function App() {
   const [calendarEvents,setCalEvents]=useState([]);
   const [showCalendar,setShowCalendar]=useState(false);
   const [vehicleTimelines,setVehicleTimelines]=useState({});
+  const [reminders,setReminders]=useState([]);
+  const [showReminders,setShowReminders]=useState(false);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
@@ -11020,6 +11163,7 @@ export default function App() {
       db.loadAppointments().then(setAppts).catch(()=>{});
       db.loadAllClientVehicleNotes().then(setAllClientNotes).catch(()=>{});
       db.loadCalendarEvents().then(setCalEvents).catch(()=>{});
+      db.loadReminders().then(setReminders).catch(()=>{});
       db.loadPurchaseOrders().then(setPurchaseOrders).catch(()=>{});
       db.loadInvestments().then(setInvestments).catch(()=>{});
       db.getShelfItems().then(setShelfItems).catch(()=>{});
@@ -12962,16 +13106,41 @@ export default function App() {
 
     {/* Calendar floating button — owner and admin */}
     {(adminRole==="owner"||adminRole==="admin")&&<>
-      <button onClick={()=>setShowCalendar(s=>!s)} style={{position:"fixed",bottom:"calc(72px + env(safe-area-inset-bottom))",right:16,width:44,height:44,borderRadius:99,background:showCalendar?B.purple:B.gray800,border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",zIndex:1000,transition:"all .2s"}}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      </button>
+      {/* Reminders panel */}
+      {showReminders&&<RemindersPanel
+        onClose={()=>setShowReminders(false)}
+        reminders={reminders}
+        vehicles={vehicles}
+        adminRole={adminRole}
+        onAdd={async r=>{try{const ev=await db.addReminder(r);setReminders(p=>[ev,...p]);toast_("Lembrete criado ✓");}catch(e){errToast(e);}}}
+        onUpdate={async(id,patch)=>{try{await db.updateReminder(id,patch);setReminders(p=>p.map(r=>r.id===id?{...r,...patch}:r));}catch(e){errToast(e);}}}
+        onDelete={async id=>{try{await db.deleteReminder(id);setReminders(p=>p.filter(r=>r.id!==id));toast_("Removido ✓");}catch(e){errToast(e);}}}
+      />}
+      {/* Calendar panel */}
       {showCalendar&&<CalendarPanel
         onClose={()=>setShowCalendar(false)}
-        events={calendarEvents} appointments={appointments} vehicles={vehicles} clients={clients}
-        onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Evento criado ✓");}catch(err){errToast(err);}}}
+        events={[...calendarEvents,...reminders.filter(r=>r.dueDate&&!r.done&&(adminRole==="owner"||r.visibility!=="owner")).map(r=>({id:"rem_"+r.id,title:r.title,date:r.dueDate,type:"note",color:PRIO[r.priority]?.color||B.blue,auto:true,notes:r.body}))]}
+        appointments={appointments}
+        vehicles={vehicles}
+        clients={clients}
+        onAdd={async e=>{try{const ev=await db.addCalendarEvent(e);setCalEvents(p=>[...p,ev]);toast_("Evento criado ✓");}catch(err){errToast(err);}}}
         onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Evento atualizado ✓");}catch(err){errToast(err);}}}
         onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Evento removido ✓");}catch(err){errToast(err);}}}
       />}
+      {/* Floating buttons */}
+      <div style={{position:"fixed",bottom:"calc(72px + env(safe-area-inset-bottom))",right:16,display:"flex",flexDirection:"column",gap:8,zIndex:1000}}>
+        {/* Reminders button */}
+        <button onClick={()=>{setShowReminders(s=>!s);setShowCalendar(false);}}
+          style={{width:44,height:44,borderRadius:99,background:showReminders?B.blue:B.gray800,border:`2px solid ${showReminders?B.blue:B.blue+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",transition:"all .2s",position:"relative"}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showReminders?B.white:B.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          {(()=>{const due=reminders.filter(r=>!r.done&&r.dueDate&&r.dueDate<new Date().toISOString().slice(0,10)&&(adminRole==="owner"||r.visibility!=="owner")).length;return due>0?<span style={{position:"absolute",top:-3,right:-3,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{due}</span>:null;})()}
+        </button>
+        {/* Calendar button */}
+        <button onClick={()=>{setShowCalendar(s=>!s);setShowReminders(false);}}
+          style={{width:44,height:44,borderRadius:99,background:showCalendar?B.purple:B.gray800,border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",transition:"all .2s"}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </button>
+      </div>
     </>}
   </div>);
 }

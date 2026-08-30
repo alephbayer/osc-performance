@@ -5041,9 +5041,10 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 // ─── AppointmentsTab ──────────────────────────────────────────────────────────
 // ─── CalendarPanel ────────────────────────────────────────────────────────────
 // ─── QuickNoteModal ───────────────────────────────────────────────────────────
-function QuickNoteModal({vehicles,clients,adminRole,onClose,onPost}) {
+function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
   const [q,setQ]=useState("");
   const [selV,setSelV]=useState(null);
+  const [selT,setSelT]=useState(""); // optional task id
   const [vOpen,setVOpen]=useState(false);
   const [note,setNote]=useState("");
   const [saving,setSaving]=useState(false);
@@ -5057,6 +5058,20 @@ function QuickNoteModal({vehicles,clients,adminRole,onClose,onPost}) {
   }).slice(0,8);
 
   const selCli=selV?clients.find(c=>c.id===selV.clientId):null;
+  const vTasks=selV?tasks.filter(t=>t.vehicleId===selV.id&&!t.done):[];
+
+  const handlePublish=async()=>{
+    if(!selV||!note.trim()||saving) return;
+    setSaving(true);
+    try{
+      const selTask=vTasks.find(t=>t.id===selT);
+      const title=selTask?`💬 ${selTask.label}`:"💬 Atualização da equipe";
+      const color=selTask?(CAT_MAP?.[selTask.category]||B.blue):B.blue;
+      await onPost(selV.id,{type:selTask?"task_update":"note",title,body:note.trim(),actor:adminRole==="owner"?"Gestor":"Admin",category:selTask?.category||null,color});
+      onClose();
+    }catch(e){console.error(e);}
+    setSaving(false);
+  };
 
   return(<div style={{position:"fixed",bottom:"calc(100px + env(safe-area-inset-bottom))",right:16,zIndex:1001,width:"min(360px, calc(100vw - 32px))",background:B.gray900,border:`1px solid ${B.green}44`,borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.5)",overflow:"hidden"}}>
     <div style={{padding:"12px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
@@ -5077,7 +5092,7 @@ function QuickNoteModal({vehicles,clients,adminRole,onClose,onPost}) {
           {hits.length===0&&<div style={{padding:"10px",textAlign:"center",fontSize:11,color:B.gray500}}>Nenhum veículo em andamento</div>}
           {hits.map(v=>{
             const cli=clients.find(c=>c.id===v.clientId);
-            return(<div key={v.id} onMouseDown={()=>{setSelV(v);setVOpen(false);setQ("");}}
+            return(<div key={v.id} onMouseDown={()=>{setSelV(v);setSelT("");setVOpen(false);setQ("");}}
               style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
               onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
@@ -5087,20 +5102,17 @@ function QuickNoteModal({vehicles,clients,adminRole,onClose,onPost}) {
           })}
         </div>}
       </div>
+      {/* Task picker — optional */}
+      {selV&&vTasks.length>0&&<select value={selT} onChange={e=>setSelT(e.target.value)}
+        style={{padding:"7px 10px",borderRadius:8,border:`1px solid ${selT?B.blue:B.gray600}`,background:B.gray800,color:selT?B.white:B.gray500,fontSize:12,outline:"none"}}>
+        <option value="">Serviço relacionado (opcional)</option>
+        {vTasks.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}
+      </select>}
       {/* Note */}
-      <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Escreva a atualização para o cliente..." rows={3} autoFocus={false}
+      <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Escreva a atualização para o cliente..." rows={3}
         style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
       <div style={{display:"flex",gap:6}}>
-        <button onClick={async()=>{
-          if(!selV||!note.trim()||saving) return;
-          setSaving(true);
-          try{
-            await onPost(selV.id,{type:"note",title:"💬 Atualização da equipe",body:note.trim(),actor:adminRole==="owner"?"Gestor":"Admin",color:B.blue});
-            toast_("Nota publicada ✓");
-            onClose();
-          }catch(e){errToast(e);}
-          setSaving(false);
-        }} disabled={!selV||!note.trim()||saving}
+        <button onClick={handlePublish} disabled={!selV||!note.trim()||saving}
           style={{flex:1,padding:"9px 0",borderRadius:8,background:selV&&note.trim()?B.green:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:selV&&note.trim()?"pointer":"not-allowed"}}>
           {saving?"Publicando...":"Publicar na timeline"}
         </button>
@@ -9059,7 +9071,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.13";
+const APP_VERSION = "2026.08.30.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13208,7 +13220,7 @@ export default function App() {
     {/* Calendar floating button — owner and admin */}
     {(adminRole==="owner"||adminRole==="admin")&&<>
       {showQuickNote&&<QuickNoteModal
-        vehicles={vehicles} clients={clients} adminRole={adminRole}
+        vehicles={vehicles} clients={clients} tasks={tasks} adminRole={adminRole}
         onClose={()=>setShowQuickNote(false)}
         onPost={postTimeline}
       />}

@@ -5040,6 +5040,76 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 }
 // ─── AppointmentsTab ──────────────────────────────────────────────────────────
 // ─── CalendarPanel ────────────────────────────────────────────────────────────
+// ─── QuickNoteModal ───────────────────────────────────────────────────────────
+function QuickNoteModal({vehicles,clients,adminRole,onClose,onPost}) {
+  const [q,setQ]=useState("");
+  const [selV,setSelV]=useState(null);
+  const [vOpen,setVOpen]=useState(false);
+  const [note,setNote]=useState("");
+  const [saving,setSaving]=useState(false);
+
+  const activeVehicles=vehicles.filter(v=>v.status==="active");
+  const hits=activeVehicles.filter(v=>{
+    const qs=q.toLowerCase();
+    if(!qs) return true;
+    const cli=clients.find(c=>c.id===v.clientId);
+    return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
+  }).slice(0,8);
+
+  const selCli=selV?clients.find(c=>c.id===selV.clientId):null;
+
+  return(<div style={{position:"fixed",bottom:"calc(100px + env(safe-area-inset-bottom))",right:16,zIndex:1001,width:"min(360px, calc(100vw - 32px))",background:B.gray900,border:`1px solid ${B.green}44`,borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.5)",overflow:"hidden"}}>
+    <div style={{padding:"12px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <span style={{fontWeight:800,fontSize:14,color:B.white,flex:1}}>Nota rápida</span>
+      <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:18,lineHeight:1,padding:"0 2px"}}>×</button>
+    </div>
+    <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
+      {/* Vehicle search */}
+      <div style={{position:"relative"}}>
+        <input value={vOpen?q:(selV?`${selV.model}${selV.plate?` · ${selV.plate}`:""}`+(selCli?` · ${selCli.name}`:""):"")}
+          onChange={e=>setQ(e.target.value)}
+          onFocus={()=>{setVOpen(true);setQ("");}}
+          onBlur={()=>setTimeout(()=>setVOpen(false),150)}
+          placeholder="Selecione o veículo *"
+          style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${selV?B.green:B.gray600}`,background:B.gray800,color:selV||vOpen?B.white:B.gray500,fontSize:13,outline:"none",boxSizing:"border-box",fontWeight:selV?600:400}}/>
+        {vOpen&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:8,zIndex:300,maxHeight:160,overflowY:"auto",marginTop:2,boxShadow:"0 8px 24px rgba(0,0,0,.5)"}}>
+          {hits.length===0&&<div style={{padding:"10px",textAlign:"center",fontSize:11,color:B.gray500}}>Nenhum veículo em andamento</div>}
+          {hits.map(v=>{
+            const cli=clients.find(c=>c.id===v.clientId);
+            return(<div key={v.id} onMouseDown={()=>{setSelV(v);setVOpen(false);setQ("");}}
+              style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
+              onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+              onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+              {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
+            </div>);
+          })}
+        </div>}
+      </div>
+      {/* Note */}
+      <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Escreva a atualização para o cliente..." rows={3} autoFocus={false}
+        style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={async()=>{
+          if(!selV||!note.trim()||saving) return;
+          setSaving(true);
+          try{
+            await onPost(selV.id,{type:"note",title:"💬 Atualização da equipe",body:note.trim(),actor:adminRole==="owner"?"Gestor":"Admin",color:B.blue});
+            toast_("Nota publicada ✓");
+            onClose();
+          }catch(e){errToast(e);}
+          setSaving(false);
+        }} disabled={!selV||!note.trim()||saving}
+          style={{flex:1,padding:"9px 0",borderRadius:8,background:selV&&note.trim()?B.green:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:selV&&note.trim()?"pointer":"not-allowed"}}>
+          {saving?"Publicando...":"Publicar na timeline"}
+        </button>
+        <button onClick={onClose} style={{padding:"9px 14px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:12}}>Cancelar</button>
+      </div>
+    </div>
+  </div>);
+}
+
 // ─── RemindersPanel ───────────────────────────────────────────────────────────
 const PRIO={high:{label:"Alta",color:"#ef4444"},medium:{label:"Média",color:"#f59e0b"},low:{label:"Baixa",color:"#6366f1"}};
 const REM_CATS=["Financeiro","Fornecedor","Cliente","Compras","Manutenção","Outro"];
@@ -8989,7 +9059,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.12";
+const APP_VERSION = "2026.08.26.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11054,6 +11124,7 @@ export default function App() {
   const [vehicleTimelines,setVehicleTimelines]=useState({});
   const [reminders,setReminders]=useState([]);
   const [showReminders,setShowReminders]=useState(false);
+  const [showQuickNote,setShowQuickNote]=useState(false);
   const [hideRevenue,setHideRevenue]=useState(true);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
   const [investments,setInvestments]=useState([]);
@@ -13136,6 +13207,11 @@ export default function App() {
 
     {/* Calendar floating button — owner and admin */}
     {(adminRole==="owner"||adminRole==="admin")&&<>
+      {showQuickNote&&<QuickNoteModal
+        vehicles={vehicles} clients={clients} adminRole={adminRole}
+        onClose={()=>setShowQuickNote(false)}
+        onPost={postTimeline}
+      />}
       {showReminders&&<RemindersPanel
         onClose={()=>setShowReminders(false)}
         reminders={reminders}
@@ -13156,13 +13232,18 @@ export default function App() {
       />}
       {/* Floating mini-menu — horizontal */}
       <div style={{position:"fixed",bottom:"calc(58px + env(safe-area-inset-bottom))",right:16,display:"flex",flexDirection:"row",gap:8,zIndex:1000,alignItems:"center",background:B.gray800,borderRadius:99,padding:"5px 8px",boxShadow:"0 4px 20px rgba(0,0,0,0.5)",border:`1px solid ${B.gray700}`}}>
-        <button onClick={()=>{setShowReminders(s=>!s);setShowCalendar(false);}}
+        <button onClick={()=>{setShowReminders(s=>!s);setShowCalendar(false);setShowQuickNote(false);}}
           style={{width:34,height:34,borderRadius:99,background:showReminders?B.blue:"none",border:`2px solid ${showReminders?B.blue:B.blue+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",position:"relative"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showReminders?B.white:B.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           {(()=>{const due=reminders.filter(r=>!r.done&&r.dueDate&&r.dueDate<new Date().toISOString().slice(0,10)&&(adminRole==="owner"||r.visibility!=="owner")).length;return due>0?<span style={{position:"absolute",top:-4,right:-4,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{due}</span>:null;})()}
         </button>
         <div style={{width:1,height:20,background:B.gray600}}/>
-        <button onClick={()=>{setShowCalendar(s=>!s);setShowReminders(false);}}
+        <button onClick={()=>{setShowQuickNote(s=>!s);setShowReminders(false);setShowCalendar(false);}}
+          style={{width:34,height:34,borderRadius:99,background:showQuickNote?B.green:"none",border:`2px solid ${showQuickNote?B.green:B.green+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showQuickNote?B.white:B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+        <div style={{width:1,height:20,background:B.gray600}}/>
+        <button onClick={()=>{setShowCalendar(s=>!s);setShowReminders(false);setShowQuickNote(false);}}
           style={{width:34,height:34,borderRadius:99,background:showCalendar?B.purple:"none",border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </button>

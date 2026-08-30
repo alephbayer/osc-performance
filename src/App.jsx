@@ -8987,7 +8987,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.26.10";
+const APP_VERSION = "2026.08.26.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10237,15 +10237,15 @@ class ErrorBoundary extends React.Component {
 function LiquidNav({active,setActive,navItems,scrollY,theme}){
   const scrolled=scrollY>40;
   return(
-    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent",paddingBottom:"calc(16px + env(safe-area-inset-bottom))"}}>
-      <div style={{padding:scrolled?"4px 0":"7px 0",display:"flex",justifyContent:"center",width:"100%",transition:"padding .3s"}}>
+    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent",paddingBottom:"calc(4px + env(safe-area-inset-bottom))"}}>
+      <div style={{padding:"2px 0",display:"flex",justifyContent:"center",width:"100%"}}>
         <div style={{
           display:"flex",borderRadius:99,
           background:theme==="light"?"rgba(240,240,245,0.85)":"rgba(16,16,20,0.55)",
           backdropFilter:"blur(40px) saturate(1.8)",WebkitBackdropFilter:"blur(40px) saturate(1.8)",
           border:theme==="light"?"1px solid rgba(0,0,0,0.10)":"1px solid rgba(255,255,255,0.10)",
-          boxShadow:theme==="light"?"0 6px 28px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.80)":"0 6px 28px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.10)",
-          padding:"6px",position:"relative",overflow:"hidden",
+          boxShadow:theme==="light"?"0 4px 20px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.80)":"0 4px 20px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.10)",
+          padding:"3px",position:"relative",overflow:"hidden",
           transition:"all .3s cubic-bezier(.4,0,.2,1)",
         }}>
           <div style={{position:"absolute",top:0,left:"15%",right:"15%",height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)",borderRadius:99,pointerEvents:"none"}}/>
@@ -10254,14 +10254,14 @@ function LiquidNav({active,setActive,navItems,scrollY,theme}){
             return(
               <button key={n.id} onClick={()=>setActive(n.id)} style={{
                 display:"flex",alignItems:"center",justifyContent:"center",
-                padding:scrolled?`7px 16px`:`9px 22px`,
+                padding:`5px 11px`,
                 borderRadius:99,border:"none",cursor:"pointer",
                 background:on?"rgba(255,107,0,0.18)":"transparent",
                 color:on?B.orange:B.gray400,
                 position:"relative",transition:"all .25s cubic-bezier(.4,0,.2,1)",
               }}>
                 {on&&<div style={{position:"absolute",inset:2,borderRadius:99,background:"rgba(255,107,0,0.06)"}}/>}
-                <div style={{position:"relative",transform:on?"scale(1.1)":"scale(1)",transition:"transform .2s"}}>
+                <div style={{position:"relative",transform:on?"scale(0.85)":"scale(0.75)",transition:"transform .2s"}}>
                   {n.svgIcon}
                 </div>
               </button>
@@ -12010,7 +12010,7 @@ export default function App() {
   const IGear2=()=><Svg d="M12 15a3 3 0 100-6 3 3 0 000 6z" d2="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" s={17} c={B.amber}/>;
 
   // Nav items by role
-  const mkSvg=(d)=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={Array.isArray(d)?d[0]:d}/>{Array.isArray(d)&&d.slice(1).map((p,i)=><path key={i} d={p}/>)}</svg>;
+  const mkSvg=(d)=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={Array.isArray(d)?d[0]:d}/>{Array.isArray(d)&&d.slice(1).map((p,i)=><path key={i} d={p}/>)}</svg>;
   const NAV_ITEMS_BY_ROLE={
     owner:[
       {id:"home",    label:"Início",   svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
@@ -13145,7 +13145,7 @@ export default function App() {
         onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Evento removido ✓");}catch(err){errToast(err);}}}
       />}
       {/* Floating mini-menu — horizontal */}
-      <div style={{position:"fixed",bottom:"calc(72px + env(safe-area-inset-bottom))",right:16,display:"flex",flexDirection:"row",gap:8,zIndex:1000,alignItems:"center",background:B.gray800,borderRadius:99,padding:"6px 10px",boxShadow:"0 4px 20px rgba(0,0,0,0.5)",border:`1px solid ${B.gray700}`}}>
+      <div style={{position:"fixed",bottom:"calc(58px + env(safe-area-inset-bottom))",right:16,display:"flex",flexDirection:"row",gap:8,zIndex:1000,alignItems:"center",background:B.gray800,borderRadius:99,padding:"5px 8px",boxShadow:"0 4px 20px rgba(0,0,0,0.5)",border:`1px solid ${B.gray700}`}}>
         <button onClick={()=>{setShowReminders(s=>!s);setShowCalendar(false);}}
           style={{width:34,height:34,borderRadius:99,background:showReminders?B.blue:"none",border:`2px solid ${showReminders?B.blue:B.blue+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",position:"relative"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showReminders?B.white:B.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>

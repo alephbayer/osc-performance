@@ -9071,7 +9071,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.30.1";
+const APP_VERSION = "2026.08.30.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13242,24 +13242,49 @@ export default function App() {
         onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Evento atualizado ✓");}catch(err){errToast(err);}}}
         onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Evento removido ✓");}catch(err){errToast(err);}}}
       />}
-      {/* Floating mini-menu — horizontal */}
-      <div style={{position:"fixed",bottom:"calc(58px + env(safe-area-inset-bottom))",right:16,display:"flex",flexDirection:"row",gap:8,zIndex:1000,alignItems:"center",background:B.gray800,borderRadius:99,padding:"5px 8px",boxShadow:"0 4px 20px rgba(0,0,0,0.5)",border:`1px solid ${B.gray700}`}}>
-        <button onClick={()=>{setShowReminders(s=>!s);setShowCalendar(false);setShowQuickNote(false);}}
-          style={{width:34,height:34,borderRadius:99,background:showReminders?B.blue:"none",border:`2px solid ${showReminders?B.blue:B.blue+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",position:"relative"}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showReminders?B.white:B.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-          {(()=>{const due=reminders.filter(r=>!r.done&&r.dueDate&&r.dueDate<new Date().toISOString().slice(0,10)&&(adminRole==="owner"||r.visibility!=="owner")).length;return due>0?<span style={{position:"absolute",top:-4,right:-4,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{due}</span>:null;})()}
-        </button>
-        <div style={{width:1,height:20,background:B.gray600}}/>
-        <button onClick={()=>{setShowQuickNote(s=>!s);setShowReminders(false);setShowCalendar(false);}}
-          style={{width:34,height:34,borderRadius:99,background:showQuickNote?B.green:"none",border:`2px solid ${showQuickNote?B.green:B.green+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showQuickNote?B.white:B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        </button>
-        <div style={{width:1,height:20,background:B.gray600}}/>
-        <button onClick={()=>{setShowCalendar(s=>!s);setShowReminders(false);setShowQuickNote(false);}}
-          style={{width:34,height:34,borderRadius:99,background:showCalendar?B.purple:"none",border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </button>
-      </div>
+      {/* Floating mini-menu — collapsible */}
+      {(()=>{
+        const anyOpen=showReminders||showQuickNote||showCalendar;
+        return(<div style={{position:"fixed",bottom:"calc(58px + env(safe-area-inset-bottom))",right:16,zIndex:1000,display:"flex",flexDirection:"row",alignItems:"center",gap:0}}>
+          {/* Expandable pill */}
+          <div style={{
+            display:"flex",alignItems:"center",
+            background:B.gray800,borderRadius:99,
+            border:`1px solid ${anyOpen?B.gray600:B.gray700}`,
+            boxShadow:"0 4px 20px rgba(0,0,0,0.5)",
+            overflow:"hidden",
+            transition:"all .25s cubic-bezier(.4,0,.2,1)",
+            maxWidth:anyOpen?"200px":"0px",
+            opacity:anyOpen?1:0,
+            marginRight:anyOpen?8:0,
+            padding:anyOpen?"5px 8px":"5px 0",
+          }}>
+            <button onClick={()=>{setShowReminders(s=>!s);setShowCalendar(false);setShowQuickNote(false);}}
+              style={{width:34,height:34,borderRadius:99,background:showReminders?B.blue:"none",border:`2px solid ${showReminders?B.blue:B.blue+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",position:"relative",flexShrink:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showReminders?B.white:B.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+              {(()=>{const due=reminders.filter(r=>!r.done&&r.dueDate&&r.dueDate<new Date().toISOString().slice(0,10)&&(adminRole==="owner"||r.visibility!=="owner")).length;return due>0?<span style={{position:"absolute",top:-4,right:-4,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{due}</span>:null;})()}
+            </button>
+            <div style={{width:1,height:20,background:B.gray600,margin:"0 6px",flexShrink:0}}/>
+            <button onClick={()=>{setShowQuickNote(s=>!s);setShowReminders(false);setShowCalendar(false);}}
+              style={{width:34,height:34,borderRadius:99,background:showQuickNote?B.green:"none",border:`2px solid ${showQuickNote?B.green:B.green+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",flexShrink:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showQuickNote?B.white:B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </button>
+            <div style={{width:1,height:20,background:B.gray600,margin:"0 6px",flexShrink:0}}/>
+            <button onClick={()=>{setShowCalendar(s=>!s);setShowReminders(false);setShowQuickNote(false);}}
+              style={{width:34,height:34,borderRadius:99,background:showCalendar?B.purple:"none",border:`2px solid ${showCalendar?B.purple:B.purple+"66"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",flexShrink:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showCalendar?B.white:B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
+          {/* Main toggle button */}
+          <button onClick={()=>{if(anyOpen){setShowReminders(false);setShowCalendar(false);setShowQuickNote(false);}else{setShowReminders(true);}}}
+            style={{width:42,height:42,borderRadius:99,background:anyOpen?B.gray700:B.gray800,border:`2px solid ${anyOpen?B.gray500:B.gray600}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(0,0,0,0.4)",transition:"all .2s",flexShrink:0}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={anyOpen?B.white:B.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{transition:"transform .25s",transform:anyOpen?"rotate(45deg)":"rotate(0deg)"}}>
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </div>);
+      })()}
     </>}
   </div>);
 }

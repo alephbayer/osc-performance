@@ -9071,7 +9071,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.30.2";
+const APP_VERSION = "2026.08.30.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11771,6 +11771,15 @@ export default function App() {
     try{
       const ev=await db.addTimelineEvent({vehicleId,...event});
       setVehicleTimelines(p=>({...p,[vehicleId]:[ev,...(p[vehicleId]||[])]}));
+      // Notify client on notes and task updates
+      if(event.type==="note"||event.type==="task_update"){
+        const v=vehicles.find(x=>x.id===vehicleId);
+        if(v?.clientId){
+          const vModel=v.model||v.plate||"Veículo";
+          const body=event.body?.slice(0,80)+(event.body?.length>80?"…":"");
+          db.sendPushToClient(v.clientId,`💬 ${vModel}`,body,`/?v=${vehicleId}`).catch(()=>{});
+        }
+      }
     }catch(e){ console.error("timeline:",e); }
   };
   const postMaterialsTimeline=(vehicleId,taskId,taskLabel,mats,actor)=>{

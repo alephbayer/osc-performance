@@ -3753,7 +3753,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
               <div key={m.id} style={{display:"flex",alignItems:"center",gap:4,background:`${B.orange}18`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"3px 8px"}}>
                 <IWrench s={10} c={B.orange}/>
                 <span style={{fontSize:11,color:B.orange,fontWeight:600}}>{m.name}</span>
-                {onRemoveMechanic&&mechs.length>1&&<button onClick={()=>onRemoveMechanic(vehicle.id,m.id)}
+                {onRemoveMechanic&&<button onClick={()=>onRemoveMechanic(vehicle.id,m.id)}
                   style={{background:"none",border:"none",cursor:"pointer",color:`${B.orange}88`,padding:0,display:"flex",marginLeft:2,lineHeight:1}}
                   title={`Remover ${m.name} deste veículo`}
                   onMouseEnter={e=>e.currentTarget.style.color=B.red}
@@ -9071,7 +9071,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.30.4";
+const APP_VERSION = "2026.08.30.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

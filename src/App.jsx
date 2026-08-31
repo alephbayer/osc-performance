@@ -5073,7 +5073,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
     setSaving(false);
   };
 
-  return(<div style={{position:"fixed",bottom:"calc(100px + env(safe-area-inset-bottom))",right:16,zIndex:1001,width:"min(360px, calc(100vw - 32px))",background:B.gray900,border:`1px solid ${B.green}44`,borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.5)",overflow:"hidden"}}>
+  return(<div style={{position:"fixed",bottom:"calc(125px + env(safe-area-inset-bottom))",right:16,zIndex:1001,width:"min(360px, calc(100vw - 32px))",background:B.gray900,border:`1px solid ${B.green}44`,borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.5)",overflow:"hidden"}}>
     <div style={{padding:"12px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       <span style={{fontWeight:800,fontSize:14,color:B.white,flex:1}}>Nota rápida</span>
@@ -9071,7 +9071,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.30.3";
+const APP_VERSION = "2026.08.30.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

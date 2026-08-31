@@ -6277,7 +6277,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
     const val=parseFloat(amount.replace(",","."))||0;
     if(val<=0) return;
     const date=paidAt?new Date(paidAt+"T12:00:00").toISOString():new Date().toISOString();
-    onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:val,method,paidAt:date,note});
+    onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:val,method,paidAt:date,note,division:h.division||"performance"});
     setAmount(""); setNote(""); setPaidAt(new Date().toISOString().slice(0,10)); setShowForm(false);
   };
 
@@ -9075,7 +9075,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.30.6";
+const APP_VERSION = "2026.08.31.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -4219,7 +4219,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const [note,setNote]=useState("");
   const [confirmDelPay,setConfirmDelPay]=useState(null);
   const [editingPay,setEditingPay]=useState(null); // {id, amount, method, note, paidAt}
-  const [payDiv,setPayDiv]=useState(hasPerformance?"performance":"finishing");
+  const [payDiv,setPayDiv]=useState(hasBoth?null:hasPerformance?"performance":"finishing");
 
   const vPayments=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId).sort((a,b)=>a.paidAt<b.paidAt?1:-1);
   const perfPaid=vPayments.filter(p=>(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
@@ -4237,7 +4237,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const submit=()=>{
     const val=parseFloat(String(amount).replace(",","."));
     if(!val||val<=0)return;
-    onAddPayment({vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:payDiv});
+    onAddPayment({vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:payDiv||"performance"});
     setAmount(""); setNote("");
   };
 
@@ -4293,10 +4293,14 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
           </div>
           <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
             style={{width:"100%",marginTop:7,padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-          {hasFinishing&&<div style={{marginTop:8,display:"flex",gap:6}}>
-            <button onClick={()=>setPayDiv("performance")} style={{flex:1,padding:"6px 0",borderRadius:7,border:`1px solid ${payDiv==="performance"?B.orange+"66":B.gray600}`,background:payDiv==="performance"?`${B.orange}22`:"none",color:payDiv==="performance"?B.orange:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}><IGear s={11} c={payDiv==="performance"?B.orange:B.gray400}/>Performance</button>
-            <button onClick={()=>setPayDiv("finishing")} style={{flex:1,padding:"6px 0",borderRadius:7,border:`1px solid ${payDiv==="finishing"?FD.primary+"66":B.gray600}`,background:payDiv==="finishing"?FD.bg:"none",color:payDiv==="finishing"?FD.primary:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing</button>
-          </div>}          <button onClick={submit} style={{marginTop:10,width:"100%",padding:"9px 0",borderRadius:8,background:B.green,border:"none",color:B.white,fontWeight:800,cursor:"pointer",fontSize:13}}>Registrar pagamento</button>
+          {hasFinishing&&<div style={{marginTop:8}}>
+            {hasBoth&&<div style={{fontSize:10,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:5}}>⚠ Para qual divisão é este pagamento?</div>}
+            <div style={{display:"flex",gap:6}}>
+              {hasPerformance&&<button onClick={()=>setPayDiv("performance")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="performance"?B.orange:B.gray600}`,background:payDiv==="performance"?`${B.orange}22`:"none",color:payDiv==="performance"?B.orange:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><IGear s={11} c={payDiv==="performance"?B.orange:B.gray400}/>Performance</button>}
+              <button onClick={()=>setPayDiv("finishing")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="finishing"?FD.primary:B.gray600}`,background:payDiv==="finishing"?FD.bg:"none",color:payDiv==="finishing"?FD.primary:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing</button>
+            </div>
+          </div>}
+          <button onClick={submit} disabled={hasBoth&&!payDiv} style={{marginTop:10,width:"100%",padding:"9px 0",borderRadius:8,background:hasBoth&&!payDiv?B.gray700:B.green,border:"none",color:B.white,fontWeight:800,cursor:hasBoth&&!payDiv?"not-allowed":"pointer",fontSize:13}}>{hasBoth&&!payDiv?"Selecione a divisão":"Registrar pagamento"}</button>
         </div>
 
         {/* History */}
@@ -9071,7 +9075,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.30.5";
+const APP_VERSION = "2026.08.30.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -3813,6 +3813,8 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             const isCollapsed=collapsedCats[key]!==undefined ? collapsedCats[key] : allDone;
             const doneCount=groupTasks.filter(t=>t.done).length;
             const toggleCat=()=>setCollapsedCats(p=>({...p,[key]:!isCollapsed}));
+            const pendingTasks=groupTasks.filter(t=>!t.done);
+            const doneTasks=groupTasks.filter(t=>t.done);
             return (<div key={key} style={{marginBottom:4}}>
               <div onClick={toggleCat} style={{display:"flex",alignItems:"center",gap:6,margin:"8px 0 4px",padding:"4px 8px",background:catColor?(catColor+(isCollapsed?"22":"15")):B.gray700+"80",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 4px 4px 0",cursor:"pointer",userSelect:"none",opacity:allDone?.75:1}}>
                 <span style={{width:7,height:7,borderRadius:99,background:catColor||B.gray500,flexShrink:0}}/>
@@ -3822,9 +3824,31 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
                 {managerMode&&catTotal>0&&<span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,marginLeft:"auto",marginRight:4}}>{fmtBRL(catTotal)}</span>}
                 <span style={{color:(catColor||B.gray500),fontSize:9,flexShrink:0}}>{isCollapsed?"▶":"▼"}</span>
               </div>
-              {!isCollapsed&&groupTasks.map(t=>managerMode
-                ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>                :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>
-              )}
+              {!isCollapsed&&<>
+                {/* Pending tasks — always shown normally */}
+                {pendingTasks.map(t=>managerMode
+                  ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
+                  :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>
+                )}
+                {/* Done tasks — compact collapsible block */}
+                {doneTasks.length>0&&(()=>{
+                  const doneKey=key+"__done";
+                  const doneOpen=collapsedCats[doneKey]===true;
+                  return(<div style={{marginTop:pendingTasks.length>0?4:0}}>
+                    <div onClick={()=>setCollapsedCats(p=>({...p,[doneKey]:!doneOpen}))}
+                      style={{display:"flex",alignItems:"center",gap:5,padding:"3px 8px",borderRadius:6,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none",marginBottom:doneOpen?4:0}}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                      <span style={{fontSize:10,color:B.green,fontWeight:700,flex:1}}>{doneTasks.length} concluída{doneTasks.length!==1?"s":""}</span>
+                      {managerMode&&<span style={{fontSize:10,color:B.green,fontWeight:700,opacity:.7}}>{fmtBRL(doneTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0))}</span>}
+                      <span style={{fontSize:9,color:B.green,opacity:.6,marginLeft:4}}>{doneOpen?"▲":"▼"}</span>
+                    </div>
+                    {doneOpen&&doneTasks.map(t=>managerMode
+                      ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
+                      :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>
+                    )}
+                  </div>);
+                })()}
+              </>}
             </div>);
           });
         })()}
@@ -9075,7 +9099,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.1";
+const APP_VERSION = "2026.08.31.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

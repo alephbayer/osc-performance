@@ -1466,18 +1466,24 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   const freightTotal2 = freights2.reduce((s,f)=>s+Number(f.value||0),0);
   let fi2=0;
   for(const fr of freights2.filter(f=>f.value>0)){
-    checkPageBreak(10);
+    const route = fr.origin&&fr.destination?`${fr.origin} → ${fr.destination}`:fr.origin||fr.destination||"";
+    const descPart = fr.description?fr.description:"";
+    const labelParts = [`Frete #${fi2+1}`];
+    if(route) labelParts.push(route);
+    if(descPart) labelParts.push(descPart);
+    const frLabel = labelParts.join(" · ");
+    doc.setFontSize(8);
+    const frLines = doc.splitTextToSize(frLabel, cDescW - 4);
+    const rowH = Math.max(9, frLines.length * 4 + 5);
+    checkPageBreak(rowH);
     doc.setFillColor(245,240,255); doc.setDrawColor(225,225,225);
-    doc.rect(marginX, y, contentW, 8, "FD");
-    const route = fr.origin&&fr.destination?` (${fr.origin} → ${fr.destination})`:fr.origin?` (${fr.origin})`:fr.destination?` (→ ${fr.destination})`:"";
-    const frLabel = `Frete #${fi2+1}${route}${fr.description?` · ${fr.description}`:""}${fr.taskRef?` [${fr.taskRef}]`:""}`;
+    doc.rect(marginX, y, contentW, rowH, "FD");
     doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-    const frLines = doc.splitTextToSize(frLabel, cDescW);
-    frLines.forEach((line,li)=>doc.text(line, marginX+3, y+5.5+li*4));
-    doc.text("—", cDisc, y+5.5, {align:"right"});
+    frLines.forEach((line,li)=>doc.text(line, marginX+3, y+5+li*4));
+    doc.text("—", cDisc, y+5, {align:"right"});
     doc.setFont("helvetica","bold"); doc.setTextColor(...black);
-    doc.text(fmtBRL(Number(fr.value||0)), cTotal, y+5.5, {align:"right"});
-    y += 9;
+    doc.text(fmtBRL(Number(fr.value||0)), cTotal, y+5, {align:"right"});
+    y += rowH;
     // Freight photos
     const frPhotos=(fr.photos||[]).slice(0,4);
     if(frPhotos.length>0){
@@ -9224,7 +9230,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.01.1";
+const APP_VERSION = "2026.09.01.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

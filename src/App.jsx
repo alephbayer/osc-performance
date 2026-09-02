@@ -3678,9 +3678,9 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Nota cliente
         </button>}
-        {!hideManagerButtons&&<button onClick={()=>setConfirmDelV(true)} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}
+        {!hideManagerButtons&&managerMode&&<button onClick={()=>setConfirmDelV(true)} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}
           onMouseEnter={e=>{e.currentTarget.style.background=`${B.red}33`;}} onMouseLeave={e=>{e.currentTarget.style.background=`${B.red}15`;}}>
-          <ITrash s={12} c={B.red}/>Excluir
+          <ITrash s={12} c={B.red}/>Excluir OS
         </button>}
       </div>
 
@@ -4023,7 +4023,15 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       onPick={id=>{onTransferOwner(vehicle.id,id);setXfO(false);}} onClose={()=>setXfO(false)}/>}
     {showAccount&&<AccountModal vehicle={vehicle} tasks={tasks} payments={payments} defaultRate={defaultRate}
       onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} onClose={()=>setSA(false)}/>}
-    {confirmDelV&&<ConfirmModal title="Remover veículo?" message={<>Tem certeza que deseja remover <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b>? Todas as tarefas desta OS também serão removidas.</>} confirmLabel="Remover veículo" onConfirm={()=>{onDeleteVehicle(vehicle.id);setConfirmDelV(false);}} onCancel={()=>setConfirmDelV(false)}/>}
+    {confirmDelV&&<ConfirmModal title="Excluir OS?" message={<>Deseja excluir a OS de <b style={{color:B.white}}>{vehicle.model}</b>? As tarefas desta {isFD?"Finishing":"Performance"} serão removidas, mas o veículo e seus dados continuam no sistema.</>} confirmLabel="Excluir OS" onConfirm={async()=>{
+      // Remove tasks for this division only
+      const divTasks=vts; // already filtered by division
+      for(const t of divTasks) await onDeleteTask(t.id).catch(()=>{});
+      // Clear enteredAt for this division
+      if(isFD) await onUpdateVehicle(vehicle.id,{enteredAtFinishing:null,mechanicIdsFinishing:[]}).catch(()=>{});
+      else await onUpdateVehicle(vehicle.id,{enteredAt:null,mechanicIds:[]}).catch(()=>{});
+      setConfirmDelV(false);
+    }} onCancel={()=>setConfirmDelV(false)}/>}
     {confirmDeliver&&<ConfirmModal title={isFD?"Encerrar OS Finishing?":"Confirmar entrega?"} danger={false} message={isFD?<>Encerrar a OS da <b style={{color:FD.primary}}>Finishing Division</b> para <b style={{color:B.white}}>{vehicle.model}</b>?</>:<>Registrar a entrega de <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b> ao cliente? O timer será encerrado.</>} confirmLabel={isFD?"Encerrar Finishing":"Confirmar entrega"} onConfirm={()=>{isFD?onDeliverFinishing&&onDeliverFinishing(vehicle.id):onDeliver&&onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
     {showNextVisit&&<NextVisitModal vehicle={vehicle} tasks={tasks} clients={clients} defaultRate={defaultRate} onClose={()=>setShowNextVisit(false)} onCreateAppointment={onCreateAppointment} onDeleteTask={onDeleteTask}/>}
     {showTLNote&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -4886,12 +4894,17 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
     groups.forEach(({emp})=>{ init[emp?.id||"__none__"]=true; });
     return init;
   });
+  const [collapsedDone,setCollapsedDone]=useState({});
   const toggle=key=>setCollapsed(p=>({...p,[key]:!p[key]}));
+  const toggleDone=key=>setCollapsedDone(p=>({...p,[key]:!p[key]}));
   return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
     {groups.map(({emp,vehicles:gVs})=>{
       const key=emp?.id||"__none__";
       const sorted=sortVehicles(gVs);
+      const activeVs=sorted.filter(v=>v.status!=="ready"&&v.status!=="delivered");
+      const doneVs=sorted.filter(v=>v.status==="ready"||v.status==="delivered");
       const isCollapsed = searching ? false : !!collapsed[key];
+      const isDoneOpen = !!collapsedDone[key];
       const doneTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)&&t.done).length;
       const totalTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)).length;
       const mkVC=(v)=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
@@ -4903,7 +4916,6 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"}
         division={division||"performance"} onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>;
       return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`}}>
-        {/* Section header */}
         <div onClick={()=>toggle(key)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",background:B.gray900,borderRadius:`14px 14px 0 0`,userSelect:"none"}}>
           <div style={{width:36,height:36,borderRadius:9,background:emp?`${B.orange}22`:B.gray700,border:`1px solid ${emp?B.orange+"44":B.gray600}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <IWrench s={17} c={emp?B.orange:B.gray500}/>
@@ -4912,12 +4924,20 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
             <div style={{fontWeight:800,fontSize:14,color:emp?B.white:B.gray400}}>{emp?emp.name:"Sem mecânico atribuído"}</div>
             <div style={{fontSize:11,color:B.gray400,marginTop:1}}>{gVs.length} veículo{gVs.length!==1?"s":""} · {doneTasks}/{totalTasks} tarefas</div>
           </div>
-          <div style={{fontSize:11,color:B.gray400,fontWeight:700,flexShrink:0}}>{gVs.length} veículo{gVs.length!==1?"s":""}</div>
           <div style={{color:B.gray400,flexShrink:0}}>{isCollapsed?<IChevD s={15}/>:<IChevU s={15}/>}</div>
         </div>
-        {/* Vehicles */}
         {!isCollapsed&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
-          {sorted.map(v=>mkVC(v))}
+          {activeVs.map(v=>mkVC(v))}
+          {doneVs.length>0&&<div style={{marginTop:activeVs.length>0?4:0}}>
+            <div onClick={e=>{e.stopPropagation();toggleDone(key);}} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none"}}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneVs.length} pronto{doneVs.length!==1?"s":""}</span>
+              <span style={{fontSize:10,color:B.green,opacity:.6}}>{isDoneOpen?"▲":"▼"}</span>
+            </div>
+            {isDoneOpen&&<div style={{marginTop:8,display:"flex",flexDirection:"column",gap:8}}>
+              {doneVs.map(v=>mkVC(v))}
+            </div>}
+          </div>}
         </div>}
       </div>);
     })}
@@ -9196,7 +9216,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.8";
+const APP_VERSION = "2026.08.31.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12619,17 +12639,19 @@ export default function App() {
               <div style={{fontSize:13}}>Os veículos aparecem aqui quando têm uma OS aberta.</div>
             </div>
           );
-          // Group by mechanics — sorted alphabetically, "Sem mecânico" last
+          // Group by mechanics — active vehicles + ready vehicles separately
           const groups=[];
           const assignedVehicleIds=new Set();
+          const readyVehicles=vehicles.filter(v=>v.status==="ready"&&v.enteredAt);
+          const allGroupable=[...activeVehicles,...readyVehicles.filter(r=>!activeVehicles.find(a=>a.id===r.id))];
           [...employees].filter(e=>e.division!=="finishing").sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).forEach(emp=>{
-            const empVs=activeVehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id));
+            const empVs=allGroupable.filter(v=>(v.mechanicIds||[]).includes(emp.id));
             if(empVs.length>0){
               groups.push({emp,vehicles:empVs});
               empVs.forEach(v=>assignedVehicleIds.add(v.id));
             }
           });
-          const unassigned=activeVehicles.filter(v=>!assignedVehicleIds.has(v.id));
+          const unassigned=allGroupable.filter(v=>!assignedVehicleIds.has(v.id));
           if(unassigned.length>0) groups.push({emp:null,vehicles:unassigned});
           const sortVehicles=vs=>[...vs].sort((a,b)=>{
             if(b.urgent&&!a.urgent) return 1;

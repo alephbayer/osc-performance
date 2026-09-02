@@ -4882,13 +4882,14 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
       const isDoneOpen = !!collapsedDone[key];
       const doneTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)&&t.done).length;
       const totalTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)).length;
-      const vcProps={tasks,employees,clients,stock,defaultRate,managerMode:true,
-        onAddTask:addTask,onToggleTask:toggleT,onDeleteTask:delTask,onUpdateTask:updTask,onUpdateVehicle:updVeh,onDeleteVehicle:delVeh,
-        onTransferMechanic:xferMech,onTransferOwner:xferOwn,onConsumeStock:consumeStock,onReturnStock:returnStock,
-        payments,onAddPayment:addPayment,onDeletePayment:deletePayment,onUpdatePayment:updatePayment,company,
-        onCreateAppointment,onPostTimeline,onAddMechanic:addVehicleMechanic,onRemoveMechanic:removeVehicleMechanic,
-        onSetStatus:setVehicleStatus,onDeliver:deliverVehicle,onDeliverFinishing:deliverVehicleFinishing,
-        isOwner:adminRole==="owner",division:division||"performance",onAddPurchaseOrder,purchaseOrders,onOpenOS};
+      const mkVC=(v)=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
+        onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
+        onTransferMechanic={xferMech} onTransferOwner={xferOwn} onConsumeStock={consumeStock} onReturnStock={returnStock}
+        payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company}
+        onCreateAppointment={onCreateAppointment} onPostTimeline={onPostTimeline}
+        onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus}
+        onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"}
+        division={division||"performance"} onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>;
       return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
         {/* Section header */}
         <div onClick={()=>toggle(key)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",background:B.gray900,userSelect:"none"}}>
@@ -4904,9 +4905,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         </div>
         {/* Vehicles */}
         {!isCollapsed&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
-          {/* Active vehicles */}
-          {activeVs.map(v=><VehicleCard key={v.id} vehicle={v} {...vcProps}/>)}
-          {/* Done/ready vehicles — collapsed */}
+          {activeVs.map(v=>mkVC(v))}
           {doneVs.length>0&&<div style={{marginTop:activeVs.length>0?4:0}}>
             <div onClick={()=>toggleDone(key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none"}}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -4914,7 +4913,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
               <span style={{fontSize:10,color:B.green,opacity:.6}}>{isDoneOpen?"▲":"▼"}</span>
             </div>
             {isDoneOpen&&<div style={{display:"flex",flexDirection:"column",gap:8,marginTop:8}}>
-              {doneVs.map(v=><VehicleCard key={v.id} vehicle={v} {...vcProps}/>)}
+              {doneVs.map(v=>mkVC(v))}
             </div>}
           </div>}
         </div>}
@@ -9195,7 +9194,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.5";
+const APP_VERSION = "2026.08.31.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

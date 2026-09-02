@@ -4093,8 +4093,12 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
     if(orderDiff!==0) return orderDiff;
     return (a.status==="paused"?1:0)-(b.status==="paused"?1:0);
   });
-  const activeEmpV=empV.filter(v=>v.status!=="ready");
-  const doneEmpV=empV.filter(v=>v.status==="ready");
+  const isVDone=(v)=>v.status==="ready"||v.status==="delivered"||(()=>{
+    const vt=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")===(employee.division==="finishing"?"finishing":"performance"));
+    return vt.length>0&&vt.every(t=>t.done);
+  })();
+  const activeEmpV2=empV.filter(v=>!isVDone(v));
+  const doneEmpV2=empV.filter(v=>isVDone(v));
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
   const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase(),vColor.trim());setMod("");setPlate("");setVColor("");setSF(false);};;
@@ -4156,19 +4160,19 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         </select>
         {employee.specialty&&<span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,borderRadius:5,padding:"2px 8px"}}>Filtra: {employee.specialty}</span>}
       </div>}
-      {activeEmpV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={isOwner}
+      {activeEmpV2.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
         onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
         onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
         onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
         onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}
         onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>)}
-      {doneEmpV.length>0&&<div style={{marginTop:activeEmpV.length>0?8:0}}>
+      {doneEmpV2.length>0&&<div style={{marginTop:activeEmpV2.length>0?8:0}}>
         <div onClick={()=>setDoneOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none",marginBottom:doneOpen?8:0}}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-          <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneEmpV.length} veículo{doneEmpV.length!==1?"s":""} pronto{doneEmpV.length!==1?"s":""}</span>
+          <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneEmpV2.length} veículo{doneEmpV2.length!==1?"s":""} concluído{doneEmpV2.length!==1?"s":""}</span>
           <span style={{fontSize:10,color:B.green,opacity:.6}}>{doneOpen?"▲":"▼"}</span>
         </div>
-        {doneOpen&&doneEmpV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={isOwner}
+        {doneOpen&&doneEmpV2.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
           onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
           onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
           onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
@@ -4901,8 +4905,12 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
     {groups.map(({emp,vehicles:gVs})=>{
       const key=emp?.id||"__none__";
       const sorted=sortVehicles(gVs);
-      const activeVs=sorted.filter(v=>v.status!=="ready"&&v.status!=="delivered");
-      const doneVs=sorted.filter(v=>v.status==="ready"||v.status==="delivered");
+      const isVDone=(v)=>v.status==="ready"||v.status==="delivered"||(()=>{
+        const vt=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")===(division||"performance"));
+        return vt.length>0&&vt.every(t=>t.done);
+      })();
+      const activeVs=sorted.filter(v=>!isVDone(v));
+      const doneVs=sorted.filter(v=>isVDone(v));
       const isCollapsed = searching ? false : !!collapsed[key];
       const isDoneOpen = !!collapsedDone[key];
       const doneTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)&&t.done).length;
@@ -4931,7 +4939,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
           {doneVs.length>0&&<div style={{marginTop:activeVs.length>0?4:0}}>
             <div onClick={e=>{e.stopPropagation();toggleDone(key);}} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none"}}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-              <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneVs.length} pronto{doneVs.length!==1?"s":""}</span>
+              <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneVs.length} concluído{doneVs.length!==1?"s":""}</span>
               <span style={{fontSize:10,color:B.green,opacity:.6}}>{isDoneOpen?"▲":"▼"}</span>
             </div>
             {isDoneOpen&&<div style={{marginTop:8,display:"flex",flexDirection:"column",gap:8}}>
@@ -9216,7 +9224,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.10";
+const APP_VERSION = "2026.09.01.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -4032,12 +4032,30 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>Aparece na timeline do link de acompanhamento</div>
         <textarea value={tlNoteText} onChange={e=>setTLNoteText(e.target.value)} rows={4} placeholder="Ex: Identificamos que a junta do cabeçote também precisará de substituição..."
           style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+        {(()=>{
+          const cli=clients.find(c=>c.id===vehicle.clientId);
+          const hasPhone=!!cli?.phone;
+          return cli?(<div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,padding:"7px 10px",borderRadius:8,border:`1px solid ${"#25d366"+"44"}`,background:"#25d36610",fontSize:11}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.046 22l4.932-1.363A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.522 2 12 2zm0 18a7.946 7.946 0 01-4.35-1.296l-.31-.187-3.23.893.929-3.14-.204-.323A7.946 7.946 0 014 12c0-4.411 3.589-8 8-8 4.41 0 8 3.589 8 8 0 4.41-3.59 8-8 8z"/></svg>
+            <span style={{color:"#25d366",fontWeight:600}}>{cli.name}</span>
+            {hasPhone?<span style={{color:B.gray400}}>{cli.phone}</span>:<span style={{color:B.gray600}}>sem telefone cadastrado</span>}
+          </div>):null;
+        })()}
         <div style={{display:"flex",gap:8,marginTop:10}}>
           <button onClick={async()=>{
             if(!tlNoteText.trim()) return;
             await onPostTimeline(vehicle.id,{type:"note",title:"💬 Atualização da equipe",body:tlNoteText.trim(),color:B.blue});
+            // Open WhatsApp if client has phone
+            const cli=clients.find(c=>c.id===vehicle.clientId);
+            if(cli?.phone){
+              const vModel=vehicle.model||vehicle.plate||"seu veículo";
+              const waMsg=`Olá${cli.name?`, ${cli.name.split(" ")[0]}`:""}! 👋\n\nAtualização sobre o *${vModel}*:\n\n_${tlNoteText.trim()}_\n\nAcompanhe o progresso completo em: ${window.location.origin}/?v=${vehicle.id}`;
+              openWhatsApp(cli.phone, waMsg);
+            }
             setTLNoteText(""); setShowTLNote(false);
-          }} disabled={!tlNoteText.trim()} style={{flex:1,padding:"9px 0",borderRadius:8,background:tlNoteText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,cursor:tlNoteText.trim()?"pointer":"not-allowed",fontSize:13}}>Publicar</button>
+          }} disabled={!tlNoteText.trim()} style={{flex:1,padding:"9px 0",borderRadius:8,background:tlNoteText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,cursor:tlNoteText.trim()?"pointer":"not-allowed",fontSize:13}}>
+            {clients.find(c=>c.id===vehicle.clientId)?.phone?"Publicar + WhatsApp":"Publicar"}
+          </button>
           <button onClick={()=>{setShowTLNote(false);setTLNoteText("");}} style={{padding:"9px 14px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:12}}>Cancelar</button>
         </div>
       </div>
@@ -5068,14 +5086,25 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 }
 // ─── AppointmentsTab ──────────────────────────────────────────────────────────
 // ─── CalendarPanel ────────────────────────────────────────────────────────────
+// ─── WhatsApp helper ─────────────────────────────────────────────────────────
+function openWhatsApp(phone, message) {
+  if(!phone) return;
+  const num = phone.replace(/\D/g,"");
+  // Add Brazil country code if missing
+  const intl = num.startsWith("55") ? num : `55${num}`;
+  const url = `https://wa.me/${intl}?text=${encodeURIComponent(message)}`;
+  window.open(url,"_blank","noopener,noreferrer");
+}
+
 // ─── QuickNoteModal ───────────────────────────────────────────────────────────
 function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
   const [q,setQ]=useState("");
   const [selV,setSelV]=useState(null);
-  const [selT,setSelT]=useState(""); // optional task id
+  const [selT,setSelT]=useState("");
   const [vOpen,setVOpen]=useState(false);
   const [note,setNote]=useState("");
   const [saving,setSaving]=useState(false);
+  const [sendWA,setSendWA]=useState(true);
 
   const activeVehicles=vehicles.filter(v=>v.status==="active");
   const hits=activeVehicles.filter(v=>{
@@ -5087,6 +5116,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
 
   const selCli=selV?clients.find(c=>c.id===selV.clientId):null;
   const vTasks=selV?tasks.filter(t=>t.vehicleId===selV.id&&!t.done):[];
+  const hasPhone=!!(selCli?.phone);
 
   const handlePublish=async()=>{
     if(!selV||!note.trim()||saving) return;
@@ -5096,6 +5126,12 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
       const title=selTask?`💬 ${selTask.label}`:"💬 Atualização da equipe";
       const color=selTask?(CAT_MAP?.[selTask.category]||B.blue):B.blue;
       await onPost(selV.id,{type:selTask?"task_update":"note",title,body:note.trim(),actor:adminRole==="owner"?"Gestor":"Admin",category:selTask?.category||null,color});
+      // Open WhatsApp if toggled and client has phone
+      if(sendWA&&hasPhone){
+        const vModel=selV.model||selV.plate||"seu veículo";
+        const waMsg=`Olá${selCli?.name?`, ${selCli.name.split(" ")[0]}`:""}! 👋\n\nAtualização sobre o *${vModel}*:\n\n_${note.trim()}_\n\nAcompanhe o progresso completo em: ${window.location.origin}/?v=${selV.id}`;
+        openWhatsApp(selCli.phone, waMsg);
+      }
       onClose();
     }catch(e){console.error(e);}
     setSaving(false);
@@ -5139,6 +5175,21 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
       {/* Note */}
       <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Escreva a atualização para o cliente..." rows={3}
         style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+      {/* WhatsApp toggle */}
+      <button onClick={()=>setSendWA(s=>!s)}
+        style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,border:`1px solid ${sendWA&&hasPhone?"#25d366":""+B.gray600}`,background:sendWA&&hasPhone?"#25d36618":B.gray800,cursor:"pointer",textAlign:"left",width:"100%"}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill={sendWA&&hasPhone?"#25d366":B.gray500} xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.046 22l4.932-1.363A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.522 2 12 2zm0 18a7.946 7.946 0 01-4.35-1.296l-.31-.187-3.23.893.929-3.14-.204-.323A7.946 7.946 0 014 12c0-4.411 3.589-8 8-8 4.41 0 8 3.589 8 8 0 4.41-3.59 8-8 8z"/></svg>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,fontWeight:700,color:sendWA&&hasPhone?"#25d366":B.gray400}}>
+            {hasPhone?"Enviar por WhatsApp":"WhatsApp — cliente sem número"}
+          </div>
+          {hasPhone&&selCli&&<div style={{fontSize:10,color:B.gray500}}>{selCli.name} · {selCli.phone}</div>}
+          {!hasPhone&&selV&&<div style={{fontSize:10,color:B.gray600}}>Cadastre o telefone na ficha do cliente</div>}
+        </div>
+        <div style={{width:16,height:16,borderRadius:99,border:`2px solid ${sendWA&&hasPhone?"#25d366":B.gray600}`,background:sendWA&&hasPhone?"#25d366":"none",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          {sendWA&&hasPhone&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+        </div>
+      </button>
       <div style={{display:"flex",gap:6}}>
         <button onClick={handlePublish} disabled={!selV||!note.trim()||saving}
           style={{flex:1,padding:"9px 0",borderRadius:8,background:selV&&note.trim()?B.green:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:13,cursor:selV&&note.trim()?"pointer":"not-allowed"}}>
@@ -9099,7 +9150,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.2";
+const APP_VERSION = "2026.08.31.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

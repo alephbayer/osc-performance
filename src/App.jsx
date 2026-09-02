@@ -4886,16 +4886,12 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
     groups.forEach(({emp})=>{ init[emp?.id||"__none__"]=true; });
     return init;
   });
-  const [collapsedDone,setCollapsedDone]=useState({});
-  const toggleDone=key=>setCollapsedDone(p=>({...p,[key]:!p[key]}));
+  const toggle=key=>setCollapsed(p=>({...p,[key]:!p[key]}));
   return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
     {groups.map(({emp,vehicles:gVs})=>{
       const key=emp?.id||"__none__";
       const sorted=sortVehicles(gVs);
-      const activeVs=sorted.filter(v=>v.status!=="ready"&&v.status!=="delivered");
-      const doneVs=sorted.filter(v=>v.status==="ready"||v.status==="delivered");
       const isCollapsed = searching ? false : !!collapsed[key];
-      const isDoneOpen = !!collapsedDone[key];
       const doneTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)&&t.done).length;
       const totalTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)).length;
       const mkVC=(v)=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
@@ -4908,7 +4904,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         division={division||"performance"} onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>;
       return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`}}>
         {/* Section header */}
-        <div onClick={()=>toggle(key)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",background:B.gray900,userSelect:"none"}}>
+        <div onClick={()=>toggle(key)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",background:B.gray900,borderRadius:`14px 14px 0 0`,userSelect:"none"}}>
           <div style={{width:36,height:36,borderRadius:9,background:emp?`${B.orange}22`:B.gray700,border:`1px solid ${emp?B.orange+"44":B.gray600}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <IWrench s={17} c={emp?B.orange:B.gray500}/>
           </div>
@@ -4921,17 +4917,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         </div>
         {/* Vehicles */}
         {!isCollapsed&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
-          {activeVs.map(v=>mkVC(v))}
-          {doneVs.length>0&&<div style={{marginTop:activeVs.length>0?4:0}}>
-            <div onClick={()=>toggleDone(key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none"}}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-              <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneVs.length} veículo{doneVs.length!==1?"s":""} pronto{doneVs.length!==1?"s":""}</span>
-              <span style={{fontSize:10,color:B.green,opacity:.6}}>{isDoneOpen?"▲":"▼"}</span>
-            </div>
-            {isDoneOpen&&<div style={{display:"flex",flexDirection:"column",gap:8,marginTop:8}}>
-              {doneVs.map(v=>mkVC(v))}
-            </div>}
-          </div>}
+          {sorted.map(v=>mkVC(v))}
         </div>}
       </div>);
     })}
@@ -9210,7 +9196,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.7";
+const APP_VERSION = "2026.08.31.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12636,15 +12622,14 @@ export default function App() {
           // Group by mechanics — sorted alphabetically, "Sem mecânico" last
           const groups=[];
           const assignedVehicleIds=new Set();
-          const groupableVehicles=activeVehicles.concat(vehicles.filter(v=>v.status==="ready"&&!activeVehicles.find(a=>a.id===v.id)));
           [...employees].filter(e=>e.division!=="finishing").sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).forEach(emp=>{
-            const empVs=groupableVehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id));
+            const empVs=activeVehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id));
             if(empVs.length>0){
               groups.push({emp,vehicles:empVs});
               empVs.forEach(v=>assignedVehicleIds.add(v.id));
             }
           });
-          const unassigned=groupableVehicles.filter(v=>!assignedVehicleIds.has(v.id));
+          const unassigned=activeVehicles.filter(v=>!assignedVehicleIds.has(v.id));
           if(unassigned.length>0) groups.push({emp:null,vehicles:unassigned});
           const sortVehicles=vs=>[...vs].sort((a,b)=>{
             if(b.urgent&&!a.urgent) return 1;

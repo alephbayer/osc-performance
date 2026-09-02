@@ -8523,8 +8523,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                         </div>}
                         {/* Photos linked to this task */}
                         {tPhotos.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
-                          {tPhotos.map((p,pi)=><div key={pi} style={{width:72,height:72,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray600}`,flexShrink:0}} onClick={()=>setLB(p)}>
+                          {tPhotos.map((p,pi)=><div key={pi} style={{width:72,height:72,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray600}`,flexShrink:0,position:"relative"}} onClick={()=>setLB(p)}>
                             <img src={p.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                            <a href={p.url} download onClick={e=>e.stopPropagation()} target="_blank" rel="noopener noreferrer"
+                              style={{position:"absolute",top:3,right:3,background:"rgba(0,0,0,.55)",borderRadius:99,width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </a>
                           </div>)}
                         </div>}
                       </div>
@@ -8900,7 +8904,23 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* ── Photos without task link ── */}
       {photos.filter(p=>!p.taskId).length>0&&<div style={S.card}>
         <div style={S.pad}>
-          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos do serviço</div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <div style={{fontWeight:800,fontSize:13,color:B.white,display:"flex",alignItems:"center",gap:5,flex:1}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Fotos do serviço
+            </div>
+            <button onClick={async()=>{
+              const ps=photos.filter(p=>!p.taskId);
+              for(let i=0;i<ps.length;i++){
+                const a=document.createElement("a");a.href=ps[i].url;a.download=`foto-${i+1}.jpg`;a.target="_blank";a.rel="noopener noreferrer";
+                document.body.appendChild(a);a.click();document.body.removeChild(a);
+                await new Promise(r=>setTimeout(r,300));
+              }
+            }} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:7,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",color:B.gray300,fontSize:11,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Baixar todas
+            </button>
+          </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
             {photos.filter(p=>!p.taskId).map((p,i)=>(
               <div key={i} style={{width:140,flexShrink:0}}>
@@ -8909,6 +8929,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   {p.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.7)",padding:"4px 6px"}}>
                     <div style={{fontSize:9,color:B.gray200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.caption}</div>
                   </div>}
+                  <a href={p.url} download onClick={e=>e.stopPropagation()} target="_blank" rel="noopener noreferrer"
+                    style={{position:"absolute",top:5,right:5,background:"rgba(0,0,0,.55)",borderRadius:99,width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center",border:"none",cursor:"pointer"}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </a>
                 </div>
                 {p.caption&&<div style={{fontSize:10,color:B.gray400,marginTop:3,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.caption}</div>}
               </div>
@@ -8926,11 +8950,16 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
     {/* Lightbox */}
     {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
-      <img src={lb.url||lb} alt="" style={{maxWidth:"95vw",maxHeight:"82vh",objectFit:"contain",borderRadius:8}}/>
+      <img src={lb.url||lb} alt="" style={{maxWidth:"95vw",maxHeight:"75vh",objectFit:"contain",borderRadius:8}}/>
       {(lb.caption||(lb.taskId&&ts.find(t=>t.id===lb.taskId)))&&<div style={{textAlign:"center",padding:"0 20px"}}>
         {ts.find(t=>t.id===lb.taskId)&&<div style={{color:"#c4b5fd",fontWeight:700,fontSize:13,marginBottom:2}}>🔗 {ts.find(t=>t.id===lb.taskId).label}</div>}
         {lb.caption&&<div style={{color:B.gray200,fontSize:13}}>{lb.caption}</div>}
       </div>}
+      <a href={lb.url||lb} download target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}
+        style={{display:"flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:99,background:"rgba(255,255,255,.12)",border:"1px solid rgba(255,255,255,.2)",color:B.white,textDecoration:"none",fontSize:13,fontWeight:600}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar foto
+      </a>
       <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
   </div>);
@@ -9150,7 +9179,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.3";
+const APP_VERSION = "2026.08.31.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

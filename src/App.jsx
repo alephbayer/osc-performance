@@ -4870,14 +4870,25 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
     groups.forEach(({emp})=>{ init[emp?.id||"__none__"]=true; });
     return init;
   });
-  const toggle=key=>setCollapsed(p=>({...p,[key]:!p[key]}));
+  const [collapsedDone,setCollapsedDone]=useState({});
+  const toggleDone=key=>setCollapsedDone(p=>({...p,[key]:!p[key]}));
   return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
     {groups.map(({emp,vehicles:gVs})=>{
       const key=emp?.id||"__none__";
       const sorted=sortVehicles(gVs);
+      const activeVs=sorted.filter(v=>v.status!=="ready"&&v.status!=="delivered");
+      const doneVs=sorted.filter(v=>v.status==="ready"||v.status==="delivered");
       const isCollapsed = searching ? false : !!collapsed[key];
+      const isDoneOpen = !!collapsedDone[key];
       const doneTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)&&t.done).length;
       const totalTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)).length;
+      const vcProps={tasks,employees,clients,stock,defaultRate,managerMode:true,
+        onAddTask:addTask,onToggleTask:toggleT,onDeleteTask:delTask,onUpdateTask:updTask,onUpdateVehicle:updVeh,onDeleteVehicle:delVeh,
+        onTransferMechanic:xferMech,onTransferOwner:xferOwn,onConsumeStock:consumeStock,onReturnStock:returnStock,
+        payments,onAddPayment:addPayment,onDeletePayment:deletePayment,onUpdatePayment:updatePayment,company,
+        onCreateAppointment,onPostTimeline,onAddMechanic:addVehicleMechanic,onRemoveMechanic:removeVehicleMechanic,
+        onSetStatus:setVehicleStatus,onDeliver:deliverVehicle,onDeliverFinishing:deliverVehicleFinishing,
+        isOwner:adminRole==="owner",division:division||"performance",onAddPurchaseOrder,purchaseOrders,onOpenOS};
       return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
         {/* Section header */}
         <div onClick={()=>toggle(key)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",background:B.gray900,userSelect:"none"}}>
@@ -4888,19 +4899,24 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
             <div style={{fontWeight:800,fontSize:14,color:emp?B.white:B.gray400}}>{emp?emp.name:"Sem mecânico atribuído"}</div>
             <div style={{fontSize:11,color:B.gray400,marginTop:1}}>{gVs.length} veículo{gVs.length!==1?"s":""} · {doneTasks}/{totalTasks} tarefas</div>
           </div>
-          {/* Order number */}
           <div style={{fontSize:11,color:B.gray400,fontWeight:700,flexShrink:0}}>{gVs.length} veículo{gVs.length!==1?"s":""}</div>
           <div style={{color:B.gray400,flexShrink:0}}>{isCollapsed?<IChevD s={15}/>:<IChevU s={15}/>}</div>
         </div>
         {/* Vehicles */}
         {!isCollapsed&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
-          {sorted.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
-            onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
-            onTransferMechanic={xferMech} onTransferOwner={xferOwn}
-            onConsumeStock={consumeStock} onReturnStock={returnStock}
-            payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company} onCreateAppointment={onCreateAppointment} onPostTimeline={onPostTimeline}
-            onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"} division={division||"performance"}
-            onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>)}
+          {/* Active vehicles */}
+          {activeVs.map(v=><VehicleCard key={v.id} vehicle={v} {...vcProps}/>)}
+          {/* Done/ready vehicles — collapsed */}
+          {doneVs.length>0&&<div style={{marginTop:activeVs.length>0?4:0}}>
+            <div onClick={()=>toggleDone(key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none"}}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneVs.length} veículo{doneVs.length!==1?"s":""} pronto{doneVs.length!==1?"s":""}</span>
+              <span style={{fontSize:10,color:B.green,opacity:.6}}>{isDoneOpen?"▲":"▼"}</span>
+            </div>
+            {isDoneOpen&&<div style={{display:"flex",flexDirection:"column",gap:8,marginTop:8}}>
+              {doneVs.map(v=><VehicleCard key={v.id} vehicle={v} {...vcProps}/>)}
+            </div>}
+          </div>}
         </div>}
       </div>);
     })}
@@ -9179,7 +9195,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.4";
+const APP_VERSION = "2026.08.31.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

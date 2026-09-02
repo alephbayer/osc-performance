@@ -4156,7 +4156,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         </select>
         {employee.specialty&&<span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,borderRadius:5,padding:"2px 8px"}}>Filtra: {employee.specialty}</span>}
       </div>}
-      {activeEmpV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
+      {activeEmpV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={isOwner}
         onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
         onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
         onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
@@ -4168,13 +4168,13 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
           <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneEmpV.length} veículo{doneEmpV.length!==1?"s":""} pronto{doneEmpV.length!==1?"s":""}</span>
           <span style={{fontSize:10,color:B.green,opacity:.6}}>{doneOpen?"▲":"▼"}</span>
         </div>
-        {doneOpen&&doneEmpV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
+        {doneOpen&&doneEmpV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={isOwner}
           onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
           onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
           onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
           onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}
           onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>)}
-      </div>}}
+      </div>}
       {showF?<div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:4}}>
         <input value={model} onChange={e=>setMod(e.target.value)} placeholder="Modelo (ex: Honda Civic 2020)"
           style={{flex:"1 1 160px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
@@ -9216,7 +9216,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.9";
+const APP_VERSION = "2026.08.31.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

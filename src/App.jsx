@@ -4078,12 +4078,15 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
     if(editPhone.trim()!==employee.phone) onUpdatePhone(employee.id,editPhone.trim());
     setEditing(false);
   };
-  const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id) && v.status!=="ready")]
+  const [doneOpen,setDoneOpen]=useState(false);
+  const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id)&&v.status!=="delivered")]
     .sort((a,b)=>{
     const orderDiff=Number(a.sortOrder||0)-Number(b.sortOrder||0);
     if(orderDiff!==0) return orderDiff;
     return (a.status==="paused"?1:0)-(b.status==="paused"?1:0);
   });
+  const activeEmpV=empV.filter(v=>v.status!=="ready");
+  const doneEmpV=empV.filter(v=>v.status==="ready");
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
   const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase(),vColor.trim());setMod("");setPlate("");setVColor("");setSF(false);};;
@@ -4145,12 +4148,25 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         </select>
         {employee.specialty&&<span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,borderRadius:5,padding:"2px 8px"}}>Filtra: {employee.specialty}</span>}
       </div>}
-      {empV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
+      {activeEmpV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
         onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
         onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
         onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
         onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}
         onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>)}
+      {doneEmpV.length>0&&<div style={{marginTop:activeEmpV.length>0?8:0}}>
+        <div onClick={()=>setDoneOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none",marginBottom:doneOpen?8:0}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneEmpV.length} veículo{doneEmpV.length!==1?"s":""} pronto{doneEmpV.length!==1?"s":""}</span>
+          <span style={{fontSize:10,color:B.green,opacity:.6}}>{doneOpen?"▲":"▼"}</span>
+        </div>
+        {doneOpen&&doneEmpV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
+          onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
+          onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
+          onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
+          onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}
+          onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>)}
+      </div>}}
       {showF?<div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:4}}>
         <input value={model} onChange={e=>setMod(e.target.value)} placeholder="Modelo (ex: Honda Civic 2020)"
           style={{flex:"1 1 160px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
@@ -4890,7 +4906,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus}
         onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"}
         division={division||"performance"} onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>;
-      return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
+      return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`}}>
         {/* Section header */}
         <div onClick={()=>toggle(key)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",background:B.gray900,userSelect:"none"}}>
           <div style={{width:36,height:36,borderRadius:9,background:emp?`${B.orange}22`:B.gray700,border:`1px solid ${emp?B.orange+"44":B.gray600}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -9194,7 +9210,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.08.31.6";
+const APP_VERSION = "2026.08.31.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12620,14 +12636,15 @@ export default function App() {
           // Group by mechanics — sorted alphabetically, "Sem mecânico" last
           const groups=[];
           const assignedVehicleIds=new Set();
+          const groupableVehicles=activeVehicles.concat(vehicles.filter(v=>v.status==="ready"&&!activeVehicles.find(a=>a.id===v.id)));
           [...employees].filter(e=>e.division!=="finishing").sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).forEach(emp=>{
-            const empVs=activeVehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id));
+            const empVs=groupableVehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id));
             if(empVs.length>0){
               groups.push({emp,vehicles:empVs});
               empVs.forEach(v=>assignedVehicleIds.add(v.id));
             }
           });
-          const unassigned=activeVehicles.filter(v=>!assignedVehicleIds.has(v.id));
+          const unassigned=groupableVehicles.filter(v=>!assignedVehicleIds.has(v.id));
           if(unassigned.length>0) groups.push({emp:null,vehicles:unassigned});
           const sortVehicles=vs=>[...vs].sort((a,b)=>{
             if(b.urgent&&!a.urgent) return 1;

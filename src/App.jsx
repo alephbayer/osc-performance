@@ -5712,6 +5712,119 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
   </div>);
 }
 
+// ─── Appointment PDF ──────────────────────────────────────────────────────────
+async function generateApptPDF(appt, vehicle, client, company) {
+  const jsPDF = await loadJsPDF();
+  const doc = new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  const pageW=210, marginX=14, contentW=pageW-marginX*2;
+  const black=[20,20,20], gray=[110,110,110], white=[255,255,255], orange=[234,88,12], purple=[109,40,217];
+  let y=0;
+
+  // Header bar
+  doc.setFillColor(...orange); doc.rect(0,0,pageW,28,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.setTextColor(...white);
+  doc.text("PRE-APROVACAO DE SERVICO",marginX,12);
+  doc.setFontSize(8); doc.setFont("helvetica","normal");
+  doc.text(company?.name||"OSC Performance",marginX,19);
+  doc.text(new Date().toLocaleDateString("pt-BR"),pageW-marginX,19,{align:"right"});
+  y=36;
+
+  // Vehicle + client info
+  doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(...black);
+  doc.text(vehicle?.model||appt.title,marginX,y);
+  y+=6;
+  if(vehicle?.plate){ doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...gray); doc.text(`Placa: ${vehicle.plate}`,marginX,y); y+=5; }
+  if(client?.name){ doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...gray); doc.text(`Cliente: ${client.name}${client.phone?` · ${client.phone}`:""}`,marginX,y); y+=5; }
+  if(appt.scheduledDate){ const d=new Date(appt.scheduledDate+"T12:00"); doc.text(`Data prevista: ${d.toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"})}`,marginX,y); y+=5; }
+  if(appt.notes){ doc.setTextColor(...gray); doc.text(doc.splitTextToSize(`Obs: ${appt.notes}`,contentW).join("\n"),marginX,y); y+=10; }
+  y+=4;
+
+  // Divider
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.line(marginX,y,pageW-marginX,y); y+=6;
+
+  // Services
+  doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...black);
+  doc.text("SERVICOS",marginX,y); y+=6;
+
+  let grandTotal=0;
+  const DIV_LABELS={performance:"Performance",finishing:"Finishing"};
+  const svsByDiv={};
+  (appt.services||[]).forEach(sv=>{
+    const d=sv.division||"performance";
+    if(!svsByDiv[d]) svsByDiv[d]=[];
+    svsByDiv[d].push(sv);
+  });
+
+  Object.entries(svsByDiv).forEach(([div,svs])=>{
+    if(Object.keys(svsByDiv).length>1){
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...purple);
+      doc.text(DIV_LABELS[div]||div,marginX,y); y+=5;
+    }
+    svs.forEach(sv=>{
+      if(y>265){ doc.addPage(); y=16; }
+      const matCost=(sv.materials||[]).reduce((s,m)=>s+Number(m.cost||0)*Number(m.qty||1),0);
+      const svTotal=Number(sv.estimatedValue||0)+matCost;
+      grandTotal+=svTotal;
+
+      // Service row
+      doc.setFillColor(248,248,248); doc.setDrawColor(230,230,230);
+      doc.rect(marginX,y,contentW,8,"FD");
+      doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...black);
+      doc.text(sv.label||"Serviço",marginX+3,y+5.5);
+      if(svTotal>0){ doc.setFont("helvetica","bold"); doc.text(fmtBRL(svTotal),pageW-marginX-3,y+5.5,{align:"right"}); }
+      y+=9;
+
+      // Service details (hours, category)
+      const details=[];
+      if(sv.hours>0&&sv.rate>0) details.push(`${sv.hours}h x ${fmtBRL(sv.rate)}/h = ${fmtBRL(sv.hours*sv.rate)}`);
+      else if(sv.hours>0) details.push(`${sv.hours}h estimadas`);
+      if(sv.category) details.push(sv.category);
+      if(details.length>0){
+        doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...gray);
+        doc.text(details.join("  ·  "),marginX+4,y+3); y+=5;
+      }
+
+      // Materials
+      (sv.materials||[]).forEach(m=>{
+        if(y>270){ doc.addPage(); y=16; }
+        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+        doc.setFillColor(252,252,252); doc.rect(marginX+4,y,contentW-4,7,"F");
+        const matLabel=`${m.name} x${m.qty}`;
+        doc.text(matLabel,marginX+7,y+4.5);
+        if(m.cost>0) doc.text(fmtBRL(m.cost*m.qty),pageW-marginX-3,y+4.5,{align:"right"});
+        y+=7;
+      });
+      y+=2;
+    });
+  });
+
+  // Total box
+  y+=4;
+  if(y>255){ doc.addPage(); y=16; }
+  const boxW=70, boxX=pageW-marginX-boxW;
+  doc.setFillColor(...orange); doc.roundedRect(boxX,y,boxW,12,2,2,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...white);
+  doc.text("TOTAL",boxX+4,y+8);
+  doc.text(fmtBRL(grandTotal),boxX+boxW-4,y+8,{align:"right"});
+  y+=18;
+
+  // Approval section
+  if(y>250){ doc.addPage(); y=16; }
+  doc.setDrawColor(200,200,200); doc.setLineWidth(0.3);
+  doc.line(marginX,y,pageW-marginX,y); y+=10;
+  doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+  doc.text("Ao assinar, o cliente aprova os servicos e valores acima descritos.",marginX,y); y+=8;
+  doc.text(`Cliente: ${client?.name||"_______________________________"}`,marginX,y);
+  doc.text(`Data: ___/___/______`,pageW-marginX-50,y); y+=14;
+  doc.line(marginX,y,marginX+80,y);
+  doc.setFontSize(7.5); doc.text("Assinatura do cliente",marginX,y+4); y+=12;
+  doc.setFont("helvetica","italic"); doc.setFontSize(7); doc.setTextColor(180,180,180);
+  doc.text(`Documento gerado em ${new Date().toLocaleString("pt-BR")} via OSC Performance`,marginX,y);
+
+  const vName=(vehicle?.model||appt.title||"agendamento").replace(/[^a-zA-Z0-9]/g,"-");
+  doc.save(`pre-aprovacao-${vName}.pdf`);
+}
+
 function ApptStockSearch({stock,sv,onUpdateService}){
   const [editMatSearch,setEditMatSearch]=useState("");
   const q=editMatSearch.toLowerCase();
@@ -5768,7 +5881,7 @@ function ApptManualMat({sv,onUpdateService}){
 }
 
 function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,  onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
-  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[]}) {
+  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[],company={}}) {
 
   const [showNew,setShowNew]=useState(false);
   const [expanded,setExpanded]=useState(null);
@@ -5901,7 +6014,10 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
       const isExp=expanded===a.id;
       const totalPaid=a.payments.reduce((s,p)=>s+p.amount,0);
       const sep=isFirstUndated?(<div style={{display:'flex',alignItems:'center',gap:8,margin:'12px 0 8px'}}><div style={{flex:1,height:1,background:B.gray700}}/><span style={{fontSize:10,fontWeight:700,color:B.gray500,textTransform:'uppercase',letterSpacing:.6}}>Sem data definida</span><div style={{flex:1,height:1,background:B.gray700}}/></div>):null;
-      const totalSvc=a.services.reduce((s,sv)=>s+sv.estimatedValue,0);
+      const totalSvc=a.services.reduce((s,sv)=>{
+        const matCost=(sv.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1),0);
+        return s+Number(sv.estimatedValue||0)+matCost;
+      },0);
       const balance=Math.max(0,(totalSvc||a.estimatedValue)-totalPaid);
       return(<React.Fragment key={a.id}>{sep}<div key={a.id+"c"} style={{background:B.gray900,borderRadius:14,marginBottom:10,border:`1px solid ${B.blue}22`,overflow:"hidden"}}>
         {/* Header */}
@@ -6244,6 +6360,10 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
 
           {/* Actions */}
           {canManage&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button onClick={()=>generateApptPDF(a,v,cli,company)} style={{padding:"9px 12px",borderRadius:9,background:`${B.purple}22`,border:`1px solid ${B.purple}44`,color:B.purple,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              PDF
+            </button>
             <button onClick={()=>setConvertPick(a)} style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
               <IWrench s={13} c={B.orange}/>Converter em OS
             </button>
@@ -9230,7 +9350,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.02.2";
+const APP_VERSION = "2026.09.02.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12897,7 +13017,7 @@ export default function App() {
         <AppointmentsTab
           appointments={appointments} vehicles={vehicles} clients={clients}
           employees={employees} adminRole={adminRole}
-          stock={stock} clientNotes={allClientNotes}
+          stock={stock} clientNotes={allClientNotes} company={company}
           onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));}catch(e){errToast(e);}}}
           onDelete={async id=>{try{await db.deleteAppointment(id);setAppts(p=>p.filter(a=>a.id!==id));toast_("Agendamento removido ✓");}catch(e){errToast(e);}}}

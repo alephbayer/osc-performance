@@ -5712,6 +5712,61 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
   </div>);
 }
 
+function ApptStockSearch({stock,sv,onUpdateService}){
+  const [editMatSearch,setEditMatSearch]=useState("");
+  const q=editMatSearch.toLowerCase();
+  const hits=editMatSearch.length>=1?stock.filter(s=>(s.name||"").toLowerCase().includes(q)||(s.brand||"").toLowerCase().includes(q)).slice(0,6):[];
+  return(<div style={{position:"relative"}}>
+    <input value={editMatSearch} onChange={e=>setEditMatSearch(e.target.value)} placeholder="Buscar material do estoque..."
+      style={{width:"100%",padding:"4px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none",boxSizing:"border-box"}}/>
+    {hits.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,borderRadius:7,border:`1px solid ${B.gray600}`,zIndex:50,marginTop:2}}>
+      {hits.map(s=>(
+        <div key={s.id} onClick={()=>{
+          const mats=[...(sv.materials||[]),{name:s.name,qty:1,stockId:s.id,cost:s.salePrice||0}];
+          onUpdateService(sv.id,{...sv,materials:mats});
+          setEditMatSearch("");
+        }} style={{padding:"5px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8,fontSize:11}}
+          onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+          onMouseLeave={e=>e.currentTarget.style.background="none"}>
+          <span style={{flex:1,color:B.white}}>{s.name}{s.brand?` · ${s.brand}`:""}</span>
+          <span style={{color:B.gray400}}>Estoque: {s.qty}</span>
+          {s.salePrice>0&&<span style={{color:B.amber,fontWeight:700}}>{fmtBRL(s.salePrice)}</span>}
+        </div>
+      ))}
+    </div>}
+  </div>);
+}
+
+function ApptManualMat({sv,onUpdateService}){
+  const [showEM,setShowEM]=useState(false);
+  const [em,setEm]=useState({name:"",qty:1,cost:0,markup:50});
+  return(<>
+    <button onClick={()=>setShowEM(s=>!s)} style={{fontSize:10,color:B.purple,background:"none",border:`1px solid ${B.purple}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer"}}>
+      {showEM?"✕ Fechar":"+ Material manual"}
+    </button>
+    {showEM&&<div style={{padding:"6px",background:B.gray900,borderRadius:6,border:`1px solid ${B.purple}22`,display:"flex",flexDirection:"column",gap:4}}>
+      <input value={em.name} onChange={e=>setEm(p=>({...p,name:e.target.value}))} placeholder="Nome *"
+        style={{padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+      <div style={{display:"flex",gap:4}}>
+        <input value={em.qty} type="number" min="1" onChange={e=>setEm(p=>({...p,qty:parseInt(e.target.value)||1}))}
+          style={{width:45,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+        <input value={em.cost} type="number" placeholder="Custo R$" onChange={e=>setEm(p=>({...p,cost:parseFloat(e.target.value)||0}))}
+          style={{flex:1,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+        <input value={em.markup} type="number" placeholder="Markup %" onChange={e=>setEm(p=>({...p,markup:parseFloat(e.target.value)||0}))}
+          style={{width:60,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+      </div>
+      {em.cost>0&&<span style={{fontSize:10,color:B.amber}}>Venda: {fmtBRL(em.cost*(1+em.markup/100))} · Total: {fmtBRL(em.cost*(1+em.markup/100)*em.qty)}</span>}
+      <button onClick={()=>{
+        if(!em.name.trim()) return;
+        const sale=em.cost*(1+em.markup/100);
+        const mats=[...(sv.materials||[]),{name:em.name.trim(),qty:em.qty,stockId:null,cost:sale,markup:em.markup}];
+        onUpdateService(sv.id,{...sv,materials:mats});
+        setEm({name:"",qty:1,cost:0,markup:50}); setShowEM(false);
+      }} style={{padding:"4px 0",borderRadius:5,background:B.purple,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer"}}>Adicionar</button>
+    </div>}
+  </>);
+}
+
 function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,  onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
   onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[]}) {
 
@@ -5990,63 +6045,9 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                         </div>
                       ))}
                       {/* Add material from stock - same as creation */}
-                      {(()=>{
-                        const [editMatSearch,setEditMatSearch]=useState("");
-                        return(<div style={{position:"relative"}}>
-                          <input value={editMatSearch} onChange={e=>setEditMatSearch(e.target.value)} placeholder="Buscar material do estoque..."
-                            style={{width:"100%",padding:"4px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none",boxSizing:"border-box"}}/>
-                          {editMatSearch.length>=1&&(()=>{
-                            const q=editMatSearch.toLowerCase();
-                            const hits=stock.filter(s=>(s.name||"").toLowerCase().includes(q)||(s.brand||"").toLowerCase().includes(q)).slice(0,6);
-                            if(!hits.length) return null;
-                            return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,borderRadius:7,border:`1px solid ${B.gray600}`,zIndex:50,marginTop:2}}>
-                              {hits.map(s=>(
-                                <div key={s.id} onClick={()=>{
-                                  const mats=[...(sv.materials||[]),{name:s.name,qty:1,stockId:s.id,cost:s.salePrice||0}];
-                                  onUpdateService(sv.id,{...sv,materials:mats});
-                                  setEditMatSearch("");
-                                }} style={{padding:"5px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8,fontSize:11}}
-                                  onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
-                                  onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                                  <span style={{flex:1,color:B.white}}>{s.name}{s.brand?` · ${s.brand}`:""}</span>
-                                  <span style={{color:B.gray400}}>Estoque: {s.qty}</span>
-                                  {s.salePrice>0&&<span style={{color:B.amber,fontWeight:700}}>{fmtBRL(s.salePrice)}</span>}
-                                </div>
-                              ))}
-                            </div>);
-                          })()}
-                        </div>);
-                      })()}
+                      <ApptStockSearch stock={stock} sv={sv} onUpdateService={onUpdateService}/>
                       {/* Manual material in edit mode */}
-                      {(()=>{
-                        const [showEM,setShowEM]=useState(false);
-                        const [em,setEm]=useState({name:"",qty:1,cost:0,markup:50});
-                        return(<>
-                          <button onClick={()=>setShowEM(s=>!s)} style={{fontSize:10,color:B.purple,background:"none",border:`1px solid ${B.purple}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer"}}>
-                            {showEM?"✕ Fechar":"+ Material manual"}
-                          </button>
-                          {showEM&&<div style={{padding:"6px",background:B.gray900,borderRadius:6,border:`1px solid ${B.purple}22`,display:"flex",flexDirection:"column",gap:4}}>
-                            <input value={em.name} onChange={e=>setEm(p=>({...p,name:e.target.value}))} placeholder="Nome *"
-                              style={{padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
-                            <div style={{display:"flex",gap:4}}>
-                              <input value={em.qty} type="number" min="1" onChange={e=>setEm(p=>({...p,qty:parseInt(e.target.value)||1}))}
-                                style={{width:45,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
-                              <input value={em.cost} type="number" placeholder="Custo R$" onChange={e=>setEm(p=>({...p,cost:parseFloat(e.target.value)||0}))}
-                                style={{flex:1,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
-                              <input value={em.markup} type="number" placeholder="Markup %" onChange={e=>setEm(p=>({...p,markup:parseFloat(e.target.value)||0}))}
-                                style={{width:60,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
-                            </div>
-                            {em.cost>0&&<span style={{fontSize:10,color:B.amber}}>Venda: {fmtBRL(em.cost*(1+em.markup/100))} · Total: {fmtBRL(em.cost*(1+em.markup/100)*em.qty)}</span>}
-                            <button onClick={()=>{
-                              if(!em.name.trim()) return;
-                              const sale=em.cost*(1+em.markup/100);
-                              const mats=[...(sv.materials||[]),{name:em.name.trim(),qty:em.qty,stockId:null,cost:sale,markup:em.markup}];
-                              onUpdateService(sv.id,{...sv,materials:mats});
-                              setEm({name:"",qty:1,cost:0,markup:50}); setShowEM(false);
-                            }} style={{padding:"4px 0",borderRadius:5,background:B.purple,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer"}}>Adicionar</button>
-                          </div>}
-                        </>);
-                      })()}
+                      <ApptManualMat sv={sv} onUpdateService={onUpdateService}/>
                     </div>}
                     {/* Materials */}
                     {(sv.materials||[]).length>0&&<div style={{padding:"0 10px 8px",display:"flex",flexWrap:"wrap",gap:4}}>
@@ -9229,7 +9230,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.02.1";
+const APP_VERSION = "2026.09.02.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

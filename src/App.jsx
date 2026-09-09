@@ -9350,7 +9350,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.08.2";
+const APP_VERSION = "2026.09.09.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12252,7 +12252,12 @@ export default function App() {
 
   // ── Stock
   const addStock=async(item)=>{
-    try{ const row=await db.addStock(item); setStk(p=>[...p,row]); toast_("Produto adicionado ✓"); }
+    try{
+      const row=await db.addStock(item);
+      setStk(p=>[...p,row]);
+      toast_("Produto adicionado ✓");
+      return row; // return so callers can pass to recalcStockCost
+    }
     catch(e){errToast(e);}
   };
   const updStock=async(id,patch)=>{
@@ -12292,16 +12297,24 @@ export default function App() {
       const row=await db.addPurchase(purchase);
       const newPurchases=[row,...stockPurchases];
       setStockPurchases(newPurchases);
-      // Update stock qty
-      const item=stock.find(s=>s.id===purchase.stockId);
-      if(item){
-        const newQty=item.qty+purchase.qty;
-        setStk(p=>p.map(s=>s.id===purchase.stockId?{...s,qty:newQty}:s));
-        await db.updateStock(purchase.stockId,{qty:newQty});
+      // Get latest item — use functional setter to read current state
+      let latestItem=null;
+      setStk(p=>{
+        latestItem=p.find(s=>s.id===purchase.stockId);
+        const newQty=(latestItem?.qty||0)+purchase.qty;
+        return p.map(s=>s.id===purchase.stockId?{...s,qty:newQty}:s);
+      });
+      await db.updateStock(purchase.stockId,{qty:(latestItem?.qty||0)+purchase.qty});
+      // Recalc with latest item (has correct markup)
+      if(latestItem){
+        const sorted=[...newPurchases.filter(p=>p.stockId===purchase.stockId)]
+          .sort((a,b)=>new Date(b.purchaseDate||0)-new Date(a.purchaseDate||0));
+        const lastCost=Number(sorted[0]?.unitCost||0);
+        const newSalePrice=Math.round(lastCost*(1+Number(latestItem.markup||0)/100)*100)/100;
+        setStk(p=>p.map(s=>s.id===purchase.stockId?{...s,costPrice:lastCost,salePrice:newSalePrice}:s));
+        await db.updateStock(purchase.stockId,{costPrice:lastCost,salePrice:newSalePrice});
       }
-      // Recalculate cost — pass item directly in case state hasn't flushed yet
-      await recalcStockCost(purchase.stockId, newPurchases, item||null);
-      toast_(`Compra registrada: +${purchase.qty} ${item?.name||""} ✓`);
+      toast_(`Compra registrada: +${purchase.qty} ${latestItem?.name||""} ✓`);
     }catch(e){errToast(e);}
   };
   const updatePurchase=async(id,patch)=>{

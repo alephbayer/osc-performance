@@ -4592,7 +4592,7 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
   const [orderQty,setOrderQty]=useState(String(item.minQty||1));
   const [showAdjust,setShowAdjust]=useState(false);
   const [adjustQty,setAdjustQty]=useState(String(item.qty||0));
-  const salePrice=Number(form.costPrice||0)*(1+Number(form.markup||0)/100);
+  const salePrice=Number(item.costPrice||form.costPrice||0)*(1+Number(form.markup||0)/100);
 
   const save=()=>{
     if(!form.name.trim())return;
@@ -9350,7 +9350,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.09.1";
+const APP_VERSION = "2026.09.09.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12263,14 +12263,17 @@ export default function App() {
   const updStock=async(id,patch)=>{
     setStk(p=>p.map(s=>{
       if(s.id!==id)return s;
-      const n={...s,...patch};
-      n.salePrice=Number(n.costPrice||0)*(1+Number(n.markup||0)/100);
+      // Preserve existing costPrice if patch has 0 and current has a real value
+      const costPrice=(!patch.costPrice&&s.costPrice)?s.costPrice:Number(patch.costPrice||s.costPrice||0);
+      const markup=patch.markup!==undefined?Number(patch.markup):Number(s.markup||0);
+      const n={...s,...patch,costPrice,salePrice:costPrice*(1+markup/100)};
       return n;
     }));
     try{
       const current=stock.find(s=>s.id===id);
-      const merged={...current,...patch};
-      const salePrice=Number(merged.costPrice||0)*(1+Number(merged.markup||0)/100);
+      const costPrice=(!patch.costPrice&&current?.costPrice)?current.costPrice:Number(patch.costPrice||current?.costPrice||0);
+      const markup=patch.markup!==undefined?Number(patch.markup):Number(current?.markup||0);
+      const salePrice=costPrice*(1+markup/100);
       await db.updateStock(id,{...patch,salePrice});
     }catch(e){errToast(e);}
   };

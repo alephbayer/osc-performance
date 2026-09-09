@@ -9350,7 +9350,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.02.3";
+const APP_VERSION = "2026.09.08.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12274,15 +12274,15 @@ export default function App() {
     try{ await db.deleteStock(id); toast_("Produto removido ✓"); }catch(e){errToast(e);}
   };
   // Recalculates weighted average unit cost from all purchases of a stock item
-  const recalcStockCost=async(stockId, allPurchases)=>{
+  const recalcStockCost=async(stockId, allPurchases, itemOverride=null)=>{
     const itemPurchases=allPurchases.filter(p=>p.stockId===stockId);
     if(itemPurchases.length===0) return;
-    // Use last purchase price (most recent by purchaseDate)
     const sorted=[...itemPurchases].sort((a,b)=>new Date(b.purchaseDate||0)-new Date(a.purchaseDate||0));
     const lastCost=Number(sorted[0].unitCost||0);
-    const item=stock.find(s=>s.id===stockId);
+    // Use itemOverride if provided (bypasses stale closure), otherwise find from latest state
+    const item=itemOverride||stock.find(s=>s.id===stockId);
     if(!item) return;
-    const newSalePrice=lastCost*(1+Number(item.markup||0)/100);
+    const newSalePrice=Math.round(lastCost*(1+Number(item.markup||0)/100)*100)/100;
     setStk(p=>p.map(s=>s.id===stockId?{...s,costPrice:lastCost,salePrice:newSalePrice}:s));
     try{ await db.updateStock(stockId,{costPrice:lastCost,salePrice:newSalePrice}); }catch(e){}
   };
@@ -12292,15 +12292,15 @@ export default function App() {
       const row=await db.addPurchase(purchase);
       const newPurchases=[row,...stockPurchases];
       setStockPurchases(newPurchases);
-      // Update stock balance
+      // Update stock qty
       const item=stock.find(s=>s.id===purchase.stockId);
       if(item){
         const newQty=item.qty+purchase.qty;
         setStk(p=>p.map(s=>s.id===purchase.stockId?{...s,qty:newQty}:s));
         await db.updateStock(purchase.stockId,{qty:newQty});
       }
-      // Recalculate weighted average cost
-      await recalcStockCost(purchase.stockId, newPurchases);
+      // Recalculate cost — pass item directly in case state hasn't flushed yet
+      await recalcStockCost(purchase.stockId, newPurchases, item||null);
       toast_(`Compra registrada: +${purchase.qty} ${item?.name||""} ✓`);
     }catch(e){errToast(e);}
   };

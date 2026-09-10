@@ -8373,7 +8373,7 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 }
 
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
-function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[]}) {
+function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[]}) {
   const v=vehicles.find(x=>x.id===vehicleId);
   const [timeline,setTimeline]=useState([]);
   const [tlLoaded,setTlLoaded]=useState(false);
@@ -8825,15 +8825,21 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           <div style={{...S.pad,display:"flex",flexDirection:"column",gap:6}}>
             {parts.map((p,i)=>{
               const used=isUsed(p);
+              // Find photo: from part itself, or from stock item by name match
+              const photo=p.photo||(stock.find(s=>s.name===p.name)?.photo)||null;
               return(<div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:used?B.greenBg:B.gray800,borderRadius:9,border:`1px solid ${used?B.green+"44":B.gray700}`,opacity:used?0.85:1}}>
-                <div style={{width:28,height:28,borderRadius:7,background:used?`${B.green}22`:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  {used
-                    ?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                    :<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-                  }
-                </div>
+                {photo
+                  ?<img src={photo} alt={p.name} onClick={()=>setLB({url:photo})} style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,cursor:"pointer",border:`1px solid ${B.gray600}`}}/>
+                  :<div style={{width:28,height:28,borderRadius:7,background:used?`${B.green}22`:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {used
+                      ?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                      :<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                    }
+                  </div>
+                }
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:700,fontSize:13,color:used?B.green:B.white,textDecoration:used?"line-through":"none"}}>{p.name}</div>
+                  {p.brand&&<div style={{fontSize:11,color:B.gray400}}>{p.brand}</div>}
                   {p.location&&<div style={{fontSize:11,color:B.gray400}}>{p.location}</div>}
                 </div>
                 {used
@@ -9350,7 +9356,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.09.2";
+const APP_VERSION = "2026.09.09.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11646,7 +11652,7 @@ export default function App() {
   // If public view (still needs data loaded)
   if(publicVehicleId){
     if(loading) return <LoadingScreen/>;
-    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
+    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
   }
   if(publicHistoryId){
     if(loading) return <LoadingScreen/>;
@@ -13116,7 +13122,9 @@ export default function App() {
             if(!v) return;
             const salePrice=o.costPrice!=null?o.costPrice*(1+(o.markupPct||30)/100):0;
             const existing=v.partsList||[];
-            const newPart={name:o.partName,brand:o.notesAdmin||"",qty:o.quantity,cost:o.costPrice||0,value:salePrice,location:loc||"",purchaseOrderId:o.id};
+            // Try to find photo from linked stock item via investments/purchases
+            const stockItem=stock.find(s=>purchaseOrders.find(po=>po.id===o.id&&po.stockItemId===s.id)||s.name===o.partName);
+            const newPart={name:o.partName,brand:o.notesAdmin||"",qty:o.quantity,cost:o.costPrice||0,value:salePrice,location:loc||"",purchaseOrderId:o.id,photo:stockItem?.photo||null};
             const newList=[...existing,newPart];
             setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
             try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}

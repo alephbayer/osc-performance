@@ -8823,10 +8823,31 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             {usedCount>0&&<span style={{fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",marginLeft:"auto"}}>{usedCount} instalada{usedCount!==1?"s":""}</span>}
           </div>
           <div style={{...S.pad,display:"flex",flexDirection:"column",gap:6}}>
+            {/* Photo strip if any parts have photos */}
+            {(()=>{
+              const withPhotos=parts.map(p=>{
+                const po=purchaseOrders.find(o=>o.id===p.purchaseOrderId);
+                const stockById=po?.stockItemId?stock.find(s=>s.id===po.stockItemId):null;
+                const stockByName=stock.find(s=>s.name?.toLowerCase()===p.name?.toLowerCase());
+                return {...p,_photo:p.photo||stockById?.photo||stockByName?.photo||null};
+              }).filter(p=>p._photo);
+              if(!withPhotos.length) return null;
+              return(<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8,paddingBottom:12,borderBottom:`1px solid ${B.gray700}`}}>
+                {withPhotos.map((p,i)=>(
+                  <div key={i} style={{textAlign:"center"}}>
+                    <img src={p._photo} alt={p.name} onClick={()=>setLB({url:p._photo})}
+                      style={{width:72,height:72,objectFit:"cover",borderRadius:10,cursor:"pointer",border:`1px solid ${B.gray600}`,display:"block"}}/>
+                    <div style={{fontSize:9,color:B.gray400,marginTop:3,maxWidth:72,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                  </div>
+                ))}
+              </div>);
+            })()}
             {parts.map((p,i)=>{
               const used=isUsed(p);
-              // Find photo: from part itself, or from stock item by name match
-              const photo=p.photo||(stock.find(s=>s.name===p.name)?.photo)||null;
+              const po=purchaseOrders.find(o=>o.id===p.purchaseOrderId);
+              const stockById=po?.stockItemId?stock.find(s=>s.id===po.stockItemId):null;
+              const stockByName=stock.find(s=>s.name?.toLowerCase()===p.name?.toLowerCase());
+              const photo=p.photo||stockById?.photo||stockByName?.photo||null;
               return(<div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:used?B.greenBg:B.gray800,borderRadius:9,border:`1px solid ${used?B.green+"44":B.gray700}`,opacity:used?0.85:1}}>
                 {photo
                   ?<img src={photo} alt={p.name} onClick={()=>setLB({url:photo})} style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,cursor:"pointer",border:`1px solid ${B.gray600}`}}/>
@@ -9356,7 +9377,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.09.3";
+const APP_VERSION = "2026.09.09.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

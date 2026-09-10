@@ -8826,31 +8826,29 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             {/* Photo strip if any parts have photos */}
             {(()=>{
               const withPhotos=parts.map(p=>{
-                const po=purchaseOrders.find(o=>o.id===p.purchaseOrderId);
-                const stockById=po?.stockItemId?stock.find(s=>s.id===po.stockItemId):null;
                 const stockByName=stock.find(s=>s.name?.toLowerCase()===p.name?.toLowerCase());
-                return {...p,_photo:p.photo||stockById?.photo||stockByName?.photo||null};
-              }).filter(p=>p._photo);
+                const photos=[...(p.photos||[]),...(stockByName?.photo?[stockByName.photo]:[]),...(p.photo?[p.photo]:[])].filter(Boolean);
+                return {...p,_photos:photos};
+              }).filter(p=>p._photos.length>0);
               if(!withPhotos.length) return null;
               return(<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8,paddingBottom:12,borderBottom:`1px solid ${B.gray700}`}}>
-                {withPhotos.map((p,i)=>(
-                  <div key={i} style={{textAlign:"center"}}>
-                    <img src={p._photo} alt={p.name} onClick={()=>setLB({url:p._photo})}
+                {withPhotos.flatMap((p,i)=>p._photos.map((url,j)=>(
+                  <div key={`${i}-${j}`} style={{textAlign:"center"}}>
+                    <img src={url} alt={p.name} onClick={()=>setLB({url})}
                       style={{width:72,height:72,objectFit:"cover",borderRadius:10,cursor:"pointer",border:`1px solid ${B.gray600}`,display:"block"}}/>
-                    <div style={{fontSize:9,color:B.gray400,marginTop:3,maxWidth:72,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                    {j===0&&<div style={{fontSize:9,color:B.gray400,marginTop:3,maxWidth:72,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>}
                   </div>
-                ))}
+                )))}
               </div>);
             })()}
             {parts.map((p,i)=>{
               const used=isUsed(p);
               const po=purchaseOrders.find(o=>o.id===p.purchaseOrderId);
-              const stockById=po?.stockItemId?stock.find(s=>s.id===po.stockItemId):null;
               const stockByName=stock.find(s=>s.name?.toLowerCase()===p.name?.toLowerCase());
-              const photo=p.photo||stockById?.photo||stockByName?.photo||null;
+              const allPhotos=[...(p.photos||[]),...(stockByName?.photo?[stockByName.photo]:[]),...(p.photo?[p.photo]:[])].filter(Boolean);
               return(<div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:used?B.greenBg:B.gray800,borderRadius:9,border:`1px solid ${used?B.green+"44":B.gray700}`,opacity:used?0.85:1}}>
-                {photo
-                  ?<img src={photo} alt={p.name} onClick={()=>setLB({url:photo})} style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,cursor:"pointer",border:`1px solid ${B.gray600}`}}/>
+                {allPhotos.length>0
+                  ?<img src={allPhotos[0]} alt={p.name} onClick={()=>setLB({url:allPhotos[0]})} style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,cursor:"pointer",border:`1px solid ${B.gray600}`}}/>
                   :<div style={{width:28,height:28,borderRadius:7,background:used?`${B.green}22`:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                     {used
                       ?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -9377,7 +9375,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.09.4";
+const APP_VERSION = "2026.09.10.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

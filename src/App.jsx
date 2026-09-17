@@ -1694,7 +1694,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
           mats.forEach(m => {
             doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(160,60,60);
             const noChargeLbl = m.noCharge ? " [sem cobrança]" : "";
-            doc.text(`  🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${noChargeLbl}`, marginX+6, my);
+            const ml1=doc.splitTextToSize(`  + ${m.name}${m.brand?` (${m.brand})`:""}${(m.qty||1)>1?` x${m.qty}`:""}${noChargeLbl}`,cDisc-marginX-8);ml1.forEach((l,li)=>doc.text(l,marginX+6,my+li*4.5));
             my += 5;
           });
         }
@@ -1955,17 +1955,18 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
       catTs.forEach(t => {
         const tc = taskCost(t, defaultRate);
         const mats = (t.materials||[]).filter(m=>m.name);
-        const rowH = mats.length > 0 ? 7 + mats.length * 5 : 7;
-        checkPageBreak(rowH + 2);
+        checkPageBreak(14);
 
+        // Task label — split to fit, adjust rowH
+        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...black);
+        const lbl = doc.splitTextToSize(t.label, cQty - marginX - 6);
+        const labelLines = lbl.length;
+        const rowH = Math.max(8, labelLines * 5) + (mats.length > 0 ? mats.length * 6 + 2 : 0);
+        checkPageBreak(rowH + 2);
         const rowBg = rowIdx % 2 === 0 ? [252,248,255] : [246,242,252];
         doc.setFillColor(...rowBg);
         doc.rect(marginX, y - 1, contentW, rowH + 1, "F");
-
-        // Task label
-        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...black);
-        const lbl = doc.splitTextToSize(t.label, cQty - marginX - 6);
-        doc.text(lbl[0]+(lbl.length>1?"...":""), marginX + 3, y + 4);
+        lbl.forEach((line, li) => doc.text(line, marginX + 3, y + 4 + li * 5));
 
         // Qty/hours
         const qtyVal = t.rateType==="qty" ? (t.hours||1) : (t.hours||0);
@@ -1990,17 +1991,19 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
 
         // Materials
         if (mats.length > 0) {
-          let my = y + 9;
+          let my = y + 4 + labelLines * 5;
           mats.forEach(m => {
-            doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(150,120,200);
-            const matLine = `  🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${m.estimated?" [EST.]":""}`;
-            doc.text(matLine, marginX + 5, my);
+            checkPageBreak(6);
+            doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(130,90,190);
+            const matLabel = `  + ${m.name}${m.brand?` (${m.brand})`:""}${(m.qty||1)>1?` x${m.qty}`:""}${m.estimated?" [EST.]":""}`;
+            const matLines = doc.splitTextToSize(matLabel, cDisc - marginX - 8);
+            matLines.forEach((line,li) => doc.text(line, marginX + 5, my + li*4.5));
             if (m.cost>0) {
-              const mp = Number(m.cost)*(1+(Number(m.markup||50))/100)*(m.qty||1);
-              doc.setFont("helvetica","normal"); doc.setTextColor(150,120,200);
+              const mp = Math.round(Number(m.cost)*(1+(Number(m.markup||50))/100)*(m.qty||1)*100)/100;
+              doc.setFont("helvetica","bold"); doc.setTextColor(130,90,190);
               doc.text(fmtBRL(mp), cTotal, my, { align: "right" });
             }
-            my += 5;
+            my += Math.max(5, matLines.length * 4.5);
           });
         }
 
@@ -2099,7 +2102,7 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
             let my = y + 10;
             mats.forEach(m => {
               doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(160,60,60);
-              doc.text(`  🔩 ${m.name}${m.brand?` · ${m.brand}`:""}${(m.qty||1)>1?` ×${m.qty}`:""}${m.noCharge?" [sem cobrança]":""}`, marginX+6, my);
+              const ml2=doc.splitTextToSize(`  + ${m.name}${m.brand?` (${m.brand})`:""}${(m.qty||1)>1?` x${m.qty}`:""}${m.noCharge?" [sem cobranca]":""}`,cDisc-marginX-8);ml2.forEach((l,li)=>doc.text(l,marginX+6,my+li*4.5));
               my += 5;
             });
           }
@@ -9375,7 +9378,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.10.1";
+const APP_VERSION = "2026.09.10.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

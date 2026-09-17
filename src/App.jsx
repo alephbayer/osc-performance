@@ -8499,7 +8499,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           {/* Notes */}
           {v.notes&&v.notes.trim()&&<div style={{marginTop:12,padding:"10px 12px",background:`${B.amber}10`,border:`1px solid ${B.amber}33`,borderRadius:8}}>
             <div style={{fontSize:10,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Observações</div>
-            <div style={{fontSize:13,color:B.gray200,lineHeight:1.5}}>{v.notes}</div>
+            <div style={{fontSize:13,color:B.gray200,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{v.notes}</div>
           </div>}
         </div>
       </div>
@@ -8527,7 +8527,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 </div>
                 <div style={{flex:1,paddingTop:2}}>
                   <div style={{fontSize:13,fontWeight:700,color:B.white,lineHeight:1.3}}>{ev.title}</div>
-                  {ev.body&&<div style={{fontSize:12,color:B.gray300,marginTop:2,lineHeight:1.4}}>{ev.body}</div>}
+                  {ev.body&&<div style={{fontSize:12,color:B.gray300,marginTop:2,lineHeight:1.4,whiteSpace:"pre-wrap"}}>{ev.body}</div>}
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4,alignItems:"center"}}>
                     {ev.category&&<span style={{fontSize:9,fontWeight:700,color:evColor,background:`${evColor}18`,borderRadius:4,padding:"1px 5px"}}>{ev.category}</span>}
                     {ev.actor&&<span style={{fontSize:10,color:B.gray500}}>por {ev.actor}</span>}
@@ -9378,7 +9378,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.10.3";
+const APP_VERSION = "2026.09.10.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

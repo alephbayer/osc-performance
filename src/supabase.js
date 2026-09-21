@@ -1226,6 +1226,10 @@ export const db = {
     if(error) throw error;
   },
 
+  async updateOsHistory(id, patch) {
+    const {error}=await supabase.from("os_history").update(patch).eq("id",id);
+    if(error) throw error;
+  },
   async deleteOsHistory(id) {
     const { error } = await supabase.from("os_history").delete().eq("id", id);
     if (error) throw error;

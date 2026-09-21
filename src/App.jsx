@@ -6430,7 +6430,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   </div>);
 }
 
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null,onUpdateOsHistory=null}) {
   const [search,setSearch]=useState("");
   const [osFilter,setOsFilter]=useState("all"); // all | active | available
   const [now,setNow]=useState(Date.now());
@@ -6500,7 +6500,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
       {sorted.map(v=>{
         const hasActiveOS=!!(v.enteredAt||v.enteredAtFinishing);
         return(<div key={v.id}>
-          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory} onDeleteVehicle={onDeleteVehicle}/>
+          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory} onDeleteVehicle={onDeleteVehicle} onUpdateOsHistory={onUpdateOsHistory}/>
         </div>);
       })}
     </div>}
@@ -6508,19 +6508,29 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
 }
 
 // ─── OS History Payment Panel ─────────────────────────────────────────────────
-function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpdatePayment}) {
+function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,onUpdateHistory}) {
   const [showForm,setShowForm]=useState(false);
+  const [showDiscount,setShowDiscount]=useState(false);
   const [amount,setAmount]=useState("");
   const [method,setMethod]=useState("Dinheiro");
   const [note,setNote]=useState("");
   const [paidAt,setPaidAt]=useState(new Date().toISOString().slice(0,10));
   const [editingPay,setEditingPay]=useState(null);
+  const [discType,setDiscType]=useState("pct"); // pct | value
+  const [discVal,setDiscVal]=useState("");
 
   const hPayments=payments.filter(p=>p.osHistoryId===h.id);
   const totalValue=Math.round(Number(h.total_value||0)*100)/100;
+  const laborTotal=Math.round(Number(h.labor_total||0)*100)/100; // for % calc
   const paid=Math.round(hPayments.reduce((s,p)=>s+Number(p.amount),0)*100)/100;
   const owed=Math.round(Math.max(0,totalValue-paid)*100)/100;
   const overpaid=Math.round(Math.max(0,paid-totalValue)*100)/100;
+
+  const discNum=parseFloat(String(discVal).replace(",","."))||0;
+  const discAmt=discType==="pct"
+    ? Math.round((laborTotal||totalValue)*discNum/100*100)/100
+    : Math.round(discNum*100)/100;
+  const newTotal=Math.round(Math.max(0,totalValue-discAmt)*100)/100;
 
   const save=()=>{
     const val=parseFloat(amount.replace(",","."))||0;
@@ -6530,21 +6540,37 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
     setAmount(""); setNote(""); setPaidAt(new Date().toISOString().slice(0,10)); setShowForm(false);
   };
 
+  const applyDiscount=()=>{
+    if(!discAmt||!onUpdateHistory) return;
+    const reason=discType==="pct"?`-${discNum}% m.o.`:`-${fmtBRL(discAmt)}`;
+    onUpdateHistory(h.id,{total_value:newTotal,discount_note:(h.discount_note?h.discount_note+", ":"")+reason});
+    setDiscVal(""); setShowDiscount(false);
+  };
+
   return (<div style={{marginTop:8,borderTop:`1px solid ${B.gray600}`,paddingTop:8}}>
-    {/* Balance summary */}
-    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:hPayments.length||showForm?6:0}}>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",flex:1}}>
-        <span style={{fontSize:11,color:B.gray400}}>Total: <b style={{color:B.amber}}>{fmtBRL(totalValue)}</b></span>
-        <span style={{fontSize:11,color:B.gray400}}>Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></span>
-        {owed>0&&<span style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px"}}>⚠ {fmtBRL(owed)} em aberto</span>}
-        {owed===0&&paid>0&&<span style={{fontSize:11,fontWeight:700,color:B.green,display:"inline-flex",alignItems:"center",gap:3}}><ICheck s={10} c={B.green}/>Quitado</span>}
-        {overpaid>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>+{fmtBRL(overpaid)} crédito</span>}
+    {/* Discount form */}
+    {showDiscount&&<div style={{padding:"10px",background:`${B.red}0a`,border:`1px solid ${B.red}22`,borderRadius:8,marginBottom:8}}>
+      <div style={{fontSize:11,fontWeight:700,color:B.red,marginBottom:8}}>Aplicar desconto</div>
+      <div style={{display:"flex",gap:6,marginBottom:8}}>
+        <button onClick={()=>setDiscType("pct")} style={{flex:1,padding:"5px 0",borderRadius:6,border:`2px solid ${discType==="pct"?B.red:B.gray600}`,background:discType==="pct"?`${B.red}18`:"none",color:discType==="pct"?B.red:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>% da m.o.</button>
+        <button onClick={()=>setDiscType("value")} style={{flex:1,padding:"5px 0",borderRadius:6,border:`2px solid ${discType==="value"?B.red:B.gray600}`,background:discType==="value"?`${B.red}18`:"none",color:discType==="value"?B.red:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>R$ fixo</button>
       </div>
-      {!showForm&&<button onClick={()=>setShowForm(true)}
-        style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.green,fontSize:11,fontWeight:700,flexShrink:0,display:"flex",alignItems:"center",gap:4}}>
-        <IPlus s={10} c={B.green}/>Pagamento
-      </button>}
-    </div>
+      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        <input value={discVal} onChange={e=>setDiscVal(e.target.value)} placeholder={discType==="pct"?"Ex: 15":"Ex: 500,00"}
+          style={{flex:1,padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        <span style={{fontSize:11,color:B.gray400,flexShrink:0}}>{discType==="pct"?"%":"R$"}</span>
+      </div>
+      {discAmt>0&&<div style={{marginTop:6,fontSize:11,color:B.red}}>
+        Desconto: <b>-{fmtBRL(discAmt)}</b> · Novo total: <b>{fmtBRL(newTotal)}</b>
+      </div>}
+      <div style={{display:"flex",gap:6,marginTop:8}}>
+        <button onClick={applyDiscount} disabled={!discAmt}
+          style={{flex:1,padding:"7px 0",borderRadius:7,background:discAmt?B.red:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:discAmt?"pointer":"not-allowed"}}>
+          Aplicar desconto
+        </button>
+        <button onClick={()=>{setShowDiscount(false);setDiscVal("");}} style={{padding:"7px 12px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+      </div>
+    </div>}
 
     {/* Existing payments */}
     {hPayments.length>0&&<div style={{display:"flex",flexDirection:"column",gap:3,marginBottom:showForm?6:0}}>
@@ -6603,7 +6629,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null,onUpdateOsHistory=null}) {
   const isFD = false;
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
@@ -6954,7 +6980,10 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 </div>
               </div>}
               {/* Financial panel */}
-              <OsHistoryPaymentPanel h={h} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment}/>
+              <OsHistoryPaymentPanel h={h} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment}
+                onUpdateHistory={onUpdateOsHistory?async(id,patch)=>{
+                  try{ await onUpdateOsHistory(id,patch); }catch(e){ errToast&&errToast(e); }
+                }:null}/>
             </div>);
           })}
         </div>}
@@ -9378,7 +9407,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.10.4";
+const APP_VERSION = "2026.09.10.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13108,8 +13137,8 @@ export default function App() {
         <TabHeader color={B.blue} title="Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
         <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} isOwner={adminRole==="owner"}
           onDeleteVehicle={adminRole==="owner"?async(id)=>{try{await db.deleteVehicle(id);setVeh(p=>p.filter(v=>v.id!==id));toast_("Veículo removido ✓");}catch(e){errToast(e);}}:null}
-          onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico ✓");}catch(e){errToast(e);}}}/>
-      </>}
+          onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico ✓");}catch(e){errToast(e);}}}
+          onUpdateOsHistory={async(id,patch)=>{try{await db.updateOsHistory(id,patch);setOsHistory(p=>p.map(h=>h.id===id?{...h,...patch}:h));toast_("Desconto aplicado ✓");}catch(e){errToast(e);}}}/>      </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
         <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory} internalTransfers={internalTransfers} adminRole={adminRole} sales={sales}

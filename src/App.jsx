@@ -8549,7 +8549,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               const evDate=new Date(ev.createdAt);
               const dateStr=evDate.toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"});
               const timeStr=evDate.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-              const typeIcon={task_done:"✅",task_update:"📝",materials:"📦",parts_order:"🔧",payment:"💰",photo:"📷",note:"💬"}[ev.type]||"•";
+              const typeIcon={task_done:"✅",task_added:"🔧",task_update:"📝",materials:"📦",parts_order:"🔧",payment:"💰",photo:"📷",note:"💬"}[ev.type]||"•";
               return(<div key={ev.id} style={{display:"flex",gap:12,marginBottom:i<timeline.length-1?16:0,position:"relative"}}>
                 <div style={{width:28,height:28,borderRadius:99,background:`${evColor}22`,border:`2px solid ${evColor}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1,fontSize:11,marginTop:1}}>
                   {typeIcon}
@@ -9407,7 +9407,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.10.5";
+const APP_VERSION = "2026.09.21.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12100,6 +12100,9 @@ export default function App() {
       pushToVehicleMechs(vid,`Nova tarefa — ${vModel}`,lbl,division);
       db.sendPushToAdmins(`🔧 Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});
       if(v?.clientId) db.sendPushToClient(v.clientId,`🔧 Novo serviço — ${vModel}`,lbl,`/?v=${vid}`).catch(()=>{});
+      // Timeline: task added
+      const catColor=category?(CAT_MAP?.[category]||B.blue):B.blue;
+      postTimeline(vid,{type:"task_added",title:`🔧 ${lbl}`,body:"Serviço incluído na OS",actor:adminRole==="owner"?"Gestor":"Admin",category:category||null,color:catColor});
     }catch(e){errToast(e);}
   };
   // ── Timeline helpers ─────────────────────────────────────────────────────────
@@ -12163,6 +12166,8 @@ export default function App() {
       } else {
         pushToVehicleMechs(t.vehicleId,`↩ Tarefa reaberta — ${vModel}`,t.label,t.division);
         db.sendPushToAdmins(`↩ ${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});
+        const catColor=t.category?(CAT_MAP?.[t.category]||B.amber):B.amber;
+        postTimeline(t.vehicleId,{type:"task_update",title:`↩ ${t.label}`,body:"Serviço reaberto",actor:null,category:t.category||null,color:catColor});
         const v2=vehicles.find(x=>x.id===t.vehicleId);
         if(v2?.clientId) db.sendPushToClient(v2.clientId,`🔄 ${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
       }

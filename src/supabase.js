@@ -1230,6 +1230,15 @@ export const db = {
     const {error}=await supabase.from("os_history").update(patch).eq("id",id);
     if(error) throw error;
   },
+  async getPresenca(monthKey) {
+    const {data,error}=await supabase.from("presenca").select("data").eq("month_key",monthKey).single();
+    if(error) return {};
+    return data?.data||{};
+  },
+  async setPresenca(monthKey, presencaData) {
+    const {error}=await supabase.from("presenca").upsert({month_key:monthKey,data:presencaData,updated_at:new Date().toISOString()},{onConflict:"month_key"});
+    if(error) throw error;
+  },
   async deleteOsHistory(id) {
     const { error } = await supabase.from("os_history").delete().eq("id", id);
     if (error) throw error;

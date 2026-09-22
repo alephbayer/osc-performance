@@ -9407,7 +9407,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.21.1";
+const APP_VERSION = "2026.09.21.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10790,38 +10790,49 @@ function PresencaTab({employees}) {
   const today = new Date();
   const [viewMonth,setViewMonth] = useState(today.getMonth());
   const [viewYear,setViewYear]   = useState(today.getFullYear());
-  const [data,setData]           = useState(()=>{
-    try{ return JSON.parse(localStorage.getItem(PRESENCA_KEY)||"{}"); }catch{ return {}; }
-  });
+  const [data,setData]           = useState({});
+  const [loading,setLoading]     = useState(false);
   const [markDate,setMarkDate]   = useState(today.toISOString().slice(0,10));
 
-  const save=(newData)=>{ setData(newData); localStorage.setItem(PRESENCA_KEY,JSON.stringify(newData)); };
+  const monthKey = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
+
+  // Load from Supabase when month changes
+  useEffect(()=>{
+    let cancelled=false;
+    setLoading(true);
+    db.getPresenca(monthKey).then(d=>{
+      if(!cancelled) setData(p=>({...p,[monthKey]:d||{}}));
+    }).catch(()=>{}).finally(()=>{ if(!cancelled) setLoading(false); });
+    return ()=>{ cancelled=true; };
+  },[monthKey]);
+
+  const save=async(newData, mk)=>{
+    setData(p=>({...p,[mk]:newData}));
+    try{ await db.setPresenca(mk, newData); }catch(e){ console.error("presenca save:",e); }
+  };
 
   const isWorkday=(dateStr)=>{
     const d=new Date(dateStr+"T12:00:00"); const dow=d.getDay();
-    return dow>=1&&dow<=5; // Mon–Fri
+    return dow>=1&&dow<=5;
   };
 
   const setStatus=(empId,dateStr,status)=>{
     if(!isWorkday(dateStr)) return;
-    const k=`${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
-    const nd={...data,[k]:{...(data[k]||{}),[empId]:{...(data[k]?.[empId]||{}),[dateStr]:status}}};
+    const cur=data[monthKey]||{};
+    const nd={...cur,[empId]:{...(cur[empId]||{}),[dateStr]:status}};
     if(status==="presente") {
-      delete nd[k][empId][dateStr]; // "presente" is default — remove to save space
-      if(Object.keys(nd[k][empId]).length===0) delete nd[k][empId];
-      if(Object.keys(nd[k]).length===0) delete nd[k];
+      delete nd[empId][dateStr];
+      if(Object.keys(nd[empId]).length===0) delete nd[empId];
     }
-    save(nd);
+    save(nd, monthKey);
   };
 
   const getStatus=(empId,dateStr)=>{
-    const k=`${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
-    return data[k]?.[empId]?.[dateStr]||"presente";
+    return (data[monthKey]||{})[empId]?.[dateStr]||"presente";
   };
 
   const getMonthStats=(empId)=>{
-    const k=`${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
-    const empData=data[k]?.[empId]||{};
+    const empData=(data[monthKey]||{})[empId]||{};
     let faltas=0,atrasos=0;
     Object.values(empData).forEach(s=>{
       if(s==="falta") faltas++;
@@ -10837,7 +10848,6 @@ function PresencaTab({employees}) {
     return true;
   };
 
-  // Build days for the selected month
   const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
   const days=Array.from({length:daysInMonth},(_,i)=>{
     const d=new Date(viewYear,viewMonth,i+1);
@@ -10862,7 +10872,7 @@ function PresencaTab({employees}) {
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,flexWrap:"wrap"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
         <button onClick={prevMonth} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"6px 10px",cursor:"pointer",color:B.gray300,fontSize:14}}>‹</button>
-        <div style={{fontWeight:800,fontSize:16,color:B.white,minWidth:160,textAlign:"center"}}>{MESES[viewMonth]} {viewYear}</div>
+        <div style={{fontWeight:800,fontSize:16,color:B.white,minWidth:160,textAlign:"center"}}>{MESES[viewMonth]} {viewYear}{loading&&<span style={{fontSize:10,color:B.gray500,marginLeft:6}}>…</span>}</div>
         <button onClick={nextMonth} disabled={isCurrentMonth} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"6px 10px",cursor:isCurrentMonth?"not-allowed":"pointer",color:isCurrentMonth?B.gray600:B.gray300,fontSize:14}}>›</button>
       </div>
       <div style={{fontSize:11,color:B.gray500,textAlign:"right"}}>
@@ -10870,7 +10880,7 @@ function PresencaTab({employees}) {
       </div>
     </div>
 
-    {/* Date picker for marking */}
+    {/* Date picker */}
     {isCurrentMonth&&<div style={{background:B.gray900,borderRadius:12,padding:"12px 16px",marginBottom:16,border:`1px solid ${B.gray700}`}}>
       <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Marcar presença para</div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -10892,7 +10902,6 @@ function PresencaTab({employees}) {
       const dayStatus=isCurrentMonth?getStatus(emp.id,markDate):null;
 
       return(<div key={emp.id} style={{background:B.gray900,borderRadius:14,marginBottom:10,overflow:"hidden",border:`1px solid ${ok?B.gray700:B.red+"44"}`}}>
-        {/* Employee header */}
         <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:`1px solid ${B.gray800}`}}>
           <div style={{width:36,height:36,borderRadius:10,background:ok?`${B.green}22`:`${B.red}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ok?B.green:B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -10905,7 +10914,6 @@ function PresencaTab({employees}) {
               <span style={{color:ok?B.green:B.red,fontWeight:700}}>{ok?"✓ Concorre ao prêmio":"✗ Fora do prêmio"}</span>
             </div>
           </div>
-          {/* Quick mark buttons for selected date */}
           {isCurrentMonth&&<div style={{display:"flex",gap:4,flexShrink:0}}>
             {(["presente","atraso","falta"]).map(s=>{
               const sc=STATUS_CFG[s];
@@ -10918,7 +10926,6 @@ function PresencaTab({employees}) {
           </div>}
         </div>
 
-        {/* Month calendar — compact */}
         <div style={{padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:3}}>
           {days.map(d=>{
             const s=getStatus(emp.id,d.str);
@@ -10933,7 +10940,6 @@ function PresencaTab({employees}) {
       </div>);
     })}
 
-    {/* Legend */}
     <div style={{display:"flex",gap:12,marginTop:8,justifyContent:"center"}}>
       {Object.entries(STATUS_CFG).map(([k,v])=>(
         <div key={k} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:v.color}}>

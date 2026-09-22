@@ -6548,6 +6548,28 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
   };
 
   return (<div style={{marginTop:8,borderTop:`1px solid ${B.gray600}`,paddingTop:8}}>
+    {/* Balance summary */}
+    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",flex:1}}>
+        <span style={{fontSize:11,color:B.gray400}}>Total: <b style={{color:B.amber}}>{fmtBRL(totalValue)}</b></span>
+        {h.discount_note&&<span style={{fontSize:10,color:B.red,background:`${B.red}12`,borderRadius:4,padding:"1px 5px"}}>{h.discount_note}</span>}
+        <span style={{fontSize:11,color:B.gray400}}>Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></span>
+        {owed>0&&<span style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px"}}>⚠ {fmtBRL(owed)} em aberto</span>}
+        {owed===0&&paid>0&&<span style={{fontSize:11,fontWeight:700,color:B.green,display:"inline-flex",alignItems:"center",gap:3}}><ICheck s={10} c={B.green}/>Quitado</span>}
+        {overpaid>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>+{fmtBRL(overpaid)} crédito</span>}
+      </div>
+      <div style={{display:"flex",gap:5,flexShrink:0}}>
+        {owed>0&&onUpdateHistory&&!showDiscount&&<button onClick={()=>{setShowDiscount(true);setShowForm(false);}}
+          style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          Desconto
+        </button>}
+        {!showForm&&<button onClick={()=>{setShowForm(true);setShowDiscount(false);}}
+          style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.green,fontSize:11,fontWeight:700,flexShrink:0,display:"flex",alignItems:"center",gap:4}}>
+          <IPlus s={10} c={B.green}/>Pagamento
+        </button>}
+      </div>
+    </div>
     {/* Discount form */}
     {showDiscount&&<div style={{padding:"10px",background:`${B.red}0a`,border:`1px solid ${B.red}22`,borderRadius:8,marginBottom:8}}>
       <div style={{fontSize:11,fontWeight:700,color:B.red,marginBottom:8}}>Aplicar desconto</div>
@@ -9407,7 +9429,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.21.3";
+const APP_VERSION = "2026.09.21.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

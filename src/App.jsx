@@ -9407,7 +9407,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.21.2";
+const APP_VERSION = "2026.09.21.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10785,7 +10785,7 @@ const MAX_FALTAS = 1, MAX_ATRASOS = 3, MAX_FA_COMB_F = 1, MAX_FA_COMB_A = 2;
 const DIAS_SEMANA = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-function PresencaTab({employees}) {
+function PresencaTab({employees, isOwner=false}) {
   const mechs = employees.filter(e=>e.division!=="finishing");
   const today = new Date();
   const [viewMonth,setViewMonth] = useState(today.getMonth());
@@ -10818,6 +10818,8 @@ function PresencaTab({employees}) {
 
   const setStatus=(empId,dateStr,status)=>{
     if(!isWorkday(dateStr)) return;
+    // Non-owners can only mark today or future
+    if(!isOwner&&isPast(dateStr)&&dateStr!==today.toISOString().slice(0,10)) return;
     const cur=data[monthKey]||{};
     const nd={...cur,[empId]:{...(cur[empId]||{}),[dateStr]:status}};
     if(status==="presente") {
@@ -10881,14 +10883,17 @@ function PresencaTab({employees}) {
     </div>
 
     {/* Date picker */}
-    {isCurrentMonth&&<div style={{background:B.gray900,borderRadius:12,padding:"12px 16px",marginBottom:16,border:`1px solid ${B.gray700}`}}>
-      <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Marcar presença para</div>
+    {(isCurrentMonth||isOwner)&&<div style={{background:B.gray900,borderRadius:12,padding:"12px 16px",marginBottom:16,border:`1px solid ${B.gray700}`}}>
+      <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>
+        Marcar presença para
+        {isOwner&&<span style={{fontWeight:400,color:B.purple,marginLeft:6}}>· Gestor pode editar dias passados</span>}
+      </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-        {days.filter(d=>!isPast(d.str)||isToday(d.str)).slice(0,7).map(d=>(
-          <button key={d.str} onClick={()=>setMarkDate(d.str)}
-            style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${markDate===d.str?B.blue:B.gray700}`,background:markDate===d.str?`${B.blue}22`:"none",color:markDate===d.str?B.blue:isToday(d.str)?B.amber:B.gray300,fontWeight:markDate===d.str||isToday(d.str)?800:400,fontSize:12,cursor:"pointer"}}>
+        {days.filter(d=>isOwner||(!isPast(d.str)||isToday(d.str))).map(d=>(          <button key={d.str} onClick={()=>setMarkDate(d.str)}
+            style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${markDate===d.str?B.blue:isPast(d.str)&&!isToday(d.str)?B.gray700:B.gray700}`,background:markDate===d.str?`${B.blue}22`:"none",color:markDate===d.str?B.blue:isToday(d.str)?B.amber:isPast(d.str)?B.gray500:B.gray300,fontWeight:markDate===d.str||isToday(d.str)?800:400,fontSize:12,cursor:"pointer"}}>
             {DIAS_SEMANA[d.dow]} {d.num}
             {isToday(d.str)&&<span style={{fontSize:8,verticalAlign:"super",color:B.amber}}> hoje</span>}
+            {isPast(d.str)&&!isToday(d.str)&&isOwner&&markDate===d.str&&<span style={{fontSize:8,verticalAlign:"super",color:B.purple}}> passado</span>}
           </button>
         ))}
       </div>
@@ -10914,7 +10919,7 @@ function PresencaTab({employees}) {
               <span style={{color:ok?B.green:B.red,fontWeight:700}}>{ok?"✓ Concorre ao prêmio":"✗ Fora do prêmio"}</span>
             </div>
           </div>
-          {isCurrentMonth&&<div style={{display:"flex",gap:4,flexShrink:0}}>
+          {(isCurrentMonth||isOwner)&&<div style={{display:"flex",gap:4,flexShrink:0}}>
             {(["presente","atraso","falta"]).map(s=>{
               const sc=STATUS_CFG[s];
               const active=dayStatus===s||(s==="presente"&&!["atraso","falta"].includes(dayStatus));
@@ -13256,7 +13261,7 @@ export default function App() {
 
       {tab==="presenca"&&allowedTabs.includes("presenca")&&<>
         <TabHeader color={B.blue} title="Lista de Presenças" subtitle="Controle de presença, atrasos e faltas da equipe"/>
-        <PresencaTab employees={employees}/>
+        <PresencaTab employees={employees} isOwner={adminRole==="owner"}/>
       </>}
 
       {tab==="sales"&&allowedTabs.includes("sales")&&<>

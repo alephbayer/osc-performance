@@ -9429,7 +9429,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.21.4";
+const APP_VERSION = "2026.09.22.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12416,33 +12416,47 @@ export default function App() {
     }catch(e){errToast(e);}
   };
   const updatePurchase=async(id,patch)=>{
+    const oldPurchase=stockPurchases.find(p=>p.id===id);
     const newPurchases=stockPurchases.map(x=>x.id===id?{...x,...patch}:x);
     setStockPurchases(newPurchases);
     try{
       await db.updatePurchase(id,patch);
-      // Recalculate qty and cost after edit
-      const affected=newPurchases.find(p=>p.id===id);
-      if(affected){
-        const newQty=newPurchases.filter(p=>p.stockId===affected.stockId).reduce((s,p)=>s+Number(p.qty||0),0);
-        setStk(p=>p.map(s=>s.id===affected.stockId?{...s,qty:newQty}:s));
-        await db.updateStock(affected.stockId,{qty:newQty});
-        await recalcStockCost(affected.stockId,newPurchases);
+      if(oldPurchase&&patch.qty!==undefined){
+        // Apply only the delta to preserve consumed stock
+        const delta=Number(patch.qty||0)-Number(oldPurchase.qty||0);
+        let latestItem=null;
+        setStk(p=>{
+          latestItem=p.find(s=>s.id===oldPurchase.stockId);
+          if(!latestItem) return p;
+          const newQty=Math.max(0,(latestItem.qty||0)+delta);
+          return p.map(s=>s.id===oldPurchase.stockId?{...s,qty:newQty}:s);
+        });
+        if(latestItem) await db.updateStock(oldPurchase.stockId,{qty:Math.max(0,(latestItem.qty||0)+delta)});
+        await recalcStockCost(oldPurchase.stockId,newPurchases,latestItem);
+      } else if(oldPurchase){
+        await recalcStockCost(oldPurchase.stockId,newPurchases);
       }
       toast_("Compra atualizada ✓");
     }catch(e){errToast(e);}
   };
   const deletePurchase=async(id)=>{
-    const affected=stockPurchases.find(p=>p.id===id);
+    const oldPurchase=stockPurchases.find(p=>p.id===id);
     const newPurchases=stockPurchases.filter(x=>x.id!==id);
     setStockPurchases(newPurchases);
     try{
       await db.deletePurchase(id);
-      if(affected){
-        // Recalculate qty from remaining purchases
-        const newQty=newPurchases.filter(p=>p.stockId===affected.stockId).reduce((s,p)=>s+Number(p.qty||0),0);
-        setStk(p=>p.map(s=>s.id===affected.stockId?{...s,qty:newQty}:s));
-        await db.updateStock(affected.stockId,{qty:newQty});
-        await recalcStockCost(affected.stockId,newPurchases);
+      if(oldPurchase){
+        // Remove only the deleted purchase qty — preserve consumed stock
+        const delta=-Number(oldPurchase.qty||0);
+        let latestItem=null;
+        setStk(p=>{
+          latestItem=p.find(s=>s.id===oldPurchase.stockId);
+          if(!latestItem) return p;
+          const newQty=Math.max(0,(latestItem.qty||0)+delta);
+          return p.map(s=>s.id===oldPurchase.stockId?{...s,qty:newQty}:s);
+        });
+        if(latestItem) await db.updateStock(oldPurchase.stockId,{qty:Math.max(0,(latestItem.qty||0)+delta)});
+        await recalcStockCost(oldPurchase.stockId,newPurchases,latestItem);
       }
       toast_("Compra excluída ✓");
     }catch(e){errToast(e);}

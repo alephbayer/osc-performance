@@ -9429,7 +9429,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.22.1";
+const APP_VERSION = "2026.09.22.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12395,15 +12395,16 @@ export default function App() {
       const row=await db.addPurchase(purchase);
       const newPurchases=[row,...stockPurchases];
       setStockPurchases(newPurchases);
-      // Get latest item — use functional setter to read current state
-      let latestItem=null;
+      // Read current qty and update via functional setter
+      let latestItem=null; let newQty=0;
       setStk(p=>{
         latestItem=p.find(s=>s.id===purchase.stockId);
-        const newQty=(latestItem?.qty||0)+purchase.qty;
+        newQty=(latestItem?.qty||0)+Number(purchase.qty||0);
         return p.map(s=>s.id===purchase.stockId?{...s,qty:newQty}:s);
       });
-      await db.updateStock(purchase.stockId,{qty:(latestItem?.qty||0)+purchase.qty});
-      // Recalc with latest item (has correct markup)
+      await new Promise(r=>setTimeout(r,0));
+      await db.updateStock(purchase.stockId,{qty:newQty});
+      // Recalc salePrice with latest markup
       if(latestItem){
         const sorted=[...newPurchases.filter(p=>p.stockId===purchase.stockId)]
           .sort((a,b)=>new Date(b.purchaseDate||0)-new Date(a.purchaseDate||0));
@@ -12422,16 +12423,17 @@ export default function App() {
     try{
       await db.updatePurchase(id,patch);
       if(oldPurchase&&patch.qty!==undefined){
-        // Apply only the delta to preserve consumed stock
         const delta=Number(patch.qty||0)-Number(oldPurchase.qty||0);
-        let latestItem=null;
+        let latestQty=0; let latestItem=null;
         setStk(p=>{
           latestItem=p.find(s=>s.id===oldPurchase.stockId);
           if(!latestItem) return p;
-          const newQty=Math.max(0,(latestItem.qty||0)+delta);
-          return p.map(s=>s.id===oldPurchase.stockId?{...s,qty:newQty}:s);
+          latestQty=Math.max(0,(latestItem.qty||0)+delta);
+          return p.map(s=>s.id===oldPurchase.stockId?{...s,qty:latestQty}:s);
         });
-        if(latestItem) await db.updateStock(oldPurchase.stockId,{qty:Math.max(0,(latestItem.qty||0)+delta)});
+        // Wait for setState to flush before reading latestQty
+        await new Promise(r=>setTimeout(r,0));
+        await db.updateStock(oldPurchase.stockId,{qty:latestQty});
         await recalcStockCost(oldPurchase.stockId,newPurchases,latestItem);
       } else if(oldPurchase){
         await recalcStockCost(oldPurchase.stockId,newPurchases);
@@ -12446,16 +12448,16 @@ export default function App() {
     try{
       await db.deletePurchase(id);
       if(oldPurchase){
-        // Remove only the deleted purchase qty — preserve consumed stock
         const delta=-Number(oldPurchase.qty||0);
-        let latestItem=null;
+        let latestQty=0; let latestItem=null;
         setStk(p=>{
           latestItem=p.find(s=>s.id===oldPurchase.stockId);
           if(!latestItem) return p;
-          const newQty=Math.max(0,(latestItem.qty||0)+delta);
-          return p.map(s=>s.id===oldPurchase.stockId?{...s,qty:newQty}:s);
+          latestQty=Math.max(0,(latestItem.qty||0)+delta);
+          return p.map(s=>s.id===oldPurchase.stockId?{...s,qty:latestQty}:s);
         });
-        if(latestItem) await db.updateStock(oldPurchase.stockId,{qty:Math.max(0,(latestItem.qty||0)+delta)});
+        await new Promise(r=>setTimeout(r,0));
+        await db.updateStock(oldPurchase.stockId,{qty:latestQty});
         await recalcStockCost(oldPurchase.stockId,newPurchases,latestItem);
       }
       toast_("Compra excluída ✓");

@@ -7943,6 +7943,7 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
 // ─── InternalTransfersPanel ────────────────────────────────────────────────────
 function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[],onAdd,onDelete}) {
   const [showForm,setShowForm]=useState(false);
+  const [open,setOpen]=useState(false);
   const [form,setForm]=useState({vehicleId:"",divisionFrom:"performance",divisionTo:"finishing",amount:"",reason:"",date:new Date().toISOString().slice(0,10)});
   const [confirmDel,setConfirmDel]=useState(null);
   const [vSearch,setVSearch]=useState("");
@@ -7975,16 +7976,19 @@ function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[
   const divColor=(d)=>d==="finishing"?FD.primary:B.orange;
 
   return(<div style={{background:B.gray900,borderRadius:14,border:`1px solid ${B.purple}33`,overflow:"hidden",marginTop:16}}>
-    <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
+    <div onClick={()=>setOpen(o=>!o)} style={{padding:"12px 16px",borderBottom:open?`1px solid ${B.gray700}`:"none",display:"flex",alignItems:"center",gap:10,cursor:"pointer",userSelect:"none"}}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
       <div style={{flex:1}}>
         <div style={{fontWeight:800,fontSize:14,color:B.white}}>Acertos Internos</div>
-        <div style={{fontSize:11,color:B.gray400}}>Transferências entre Performance e Finishing · Uso interno</div>
+        <div style={{fontSize:11,color:B.gray400}}>Transferências entre Performance e Finishing · {transfers.length} registro{transfers.length!==1?"s":""}</div>
       </div>
-      <button onClick={()=>setShowForm(f=>!f)} style={{background:`${B.purple}22`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"5px 12px",cursor:"pointer",color:B.purple,fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:4}}>
+      {open&&<button onClick={e=>{e.stopPropagation();setShowForm(f=>!f);}} style={{background:`${B.purple}22`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"5px 12px",cursor:"pointer",color:B.purple,fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:4}}>
         <IPlus s={11} c={B.purple}/>{showForm?"Fechar":"Novo acerto"}
-      </button>
+      </button>}
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,opacity:.6,transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}><polyline points="6 9 12 15 18 9"/></svg>
     </div>
+
+    {open&&<>
 
     {showForm&&<div style={{padding:"14px 16px",background:`${B.purple}08`,borderBottom:`1px solid ${B.gray700}`}}>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
@@ -8073,6 +8077,7 @@ function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[
       })}
     </div>}
     {confirmDel&&<ConfirmModal title="Excluir acerto?" message="Remover este acerto interno permanentemente?" confirmLabel="Excluir" onConfirm={()=>{onDelete(confirmDel);setConfirmDel(null);}} onCancel={()=>setConfirmDel(null)}/>}
+    </>}
   </div>);
 }
 
@@ -9429,7 +9434,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.21.4";
+const APP_VERSION = "2026.09.27.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12395,15 +12400,16 @@ export default function App() {
       const row=await db.addPurchase(purchase);
       const newPurchases=[row,...stockPurchases];
       setStockPurchases(newPurchases);
-      // Get latest item — use functional setter to read current state
-      let latestItem=null;
+      // Read current qty and update via functional setter
+      let latestItem=null; let newQty=0;
       setStk(p=>{
         latestItem=p.find(s=>s.id===purchase.stockId);
-        const newQty=(latestItem?.qty||0)+purchase.qty;
+        newQty=(latestItem?.qty||0)+Number(purchase.qty||0);
         return p.map(s=>s.id===purchase.stockId?{...s,qty:newQty}:s);
       });
-      await db.updateStock(purchase.stockId,{qty:(latestItem?.qty||0)+purchase.qty});
-      // Recalc with latest item (has correct markup)
+      await new Promise(r=>setTimeout(r,0));
+      await db.updateStock(purchase.stockId,{qty:newQty});
+      // Recalc salePrice with latest markup
       if(latestItem){
         const sorted=[...newPurchases.filter(p=>p.stockId===purchase.stockId)]
           .sort((a,b)=>new Date(b.purchaseDate||0)-new Date(a.purchaseDate||0));
@@ -12416,33 +12422,48 @@ export default function App() {
     }catch(e){errToast(e);}
   };
   const updatePurchase=async(id,patch)=>{
+    const oldPurchase=stockPurchases.find(p=>p.id===id);
     const newPurchases=stockPurchases.map(x=>x.id===id?{...x,...patch}:x);
     setStockPurchases(newPurchases);
     try{
       await db.updatePurchase(id,patch);
-      // Recalculate qty and cost after edit
-      const affected=newPurchases.find(p=>p.id===id);
-      if(affected){
-        const newQty=newPurchases.filter(p=>p.stockId===affected.stockId).reduce((s,p)=>s+Number(p.qty||0),0);
-        setStk(p=>p.map(s=>s.id===affected.stockId?{...s,qty:newQty}:s));
-        await db.updateStock(affected.stockId,{qty:newQty});
-        await recalcStockCost(affected.stockId,newPurchases);
+      if(oldPurchase&&patch.qty!==undefined){
+        const delta=Number(patch.qty||0)-Number(oldPurchase.qty||0);
+        let latestQty=0; let latestItem=null;
+        setStk(p=>{
+          latestItem=p.find(s=>s.id===oldPurchase.stockId);
+          if(!latestItem) return p;
+          latestQty=Math.max(0,(latestItem.qty||0)+delta);
+          return p.map(s=>s.id===oldPurchase.stockId?{...s,qty:latestQty}:s);
+        });
+        // Wait for setState to flush before reading latestQty
+        await new Promise(r=>setTimeout(r,0));
+        await db.updateStock(oldPurchase.stockId,{qty:latestQty});
+        await recalcStockCost(oldPurchase.stockId,newPurchases,latestItem);
+      } else if(oldPurchase){
+        await recalcStockCost(oldPurchase.stockId,newPurchases);
       }
       toast_("Compra atualizada ✓");
     }catch(e){errToast(e);}
   };
   const deletePurchase=async(id)=>{
-    const affected=stockPurchases.find(p=>p.id===id);
+    const oldPurchase=stockPurchases.find(p=>p.id===id);
     const newPurchases=stockPurchases.filter(x=>x.id!==id);
     setStockPurchases(newPurchases);
     try{
       await db.deletePurchase(id);
-      if(affected){
-        // Recalculate qty from remaining purchases
-        const newQty=newPurchases.filter(p=>p.stockId===affected.stockId).reduce((s,p)=>s+Number(p.qty||0),0);
-        setStk(p=>p.map(s=>s.id===affected.stockId?{...s,qty:newQty}:s));
-        await db.updateStock(affected.stockId,{qty:newQty});
-        await recalcStockCost(affected.stockId,newPurchases);
+      if(oldPurchase){
+        const delta=-Number(oldPurchase.qty||0);
+        let latestQty=0; let latestItem=null;
+        setStk(p=>{
+          latestItem=p.find(s=>s.id===oldPurchase.stockId);
+          if(!latestItem) return p;
+          latestQty=Math.max(0,(latestItem.qty||0)+delta);
+          return p.map(s=>s.id===oldPurchase.stockId?{...s,qty:latestQty}:s);
+        });
+        await new Promise(r=>setTimeout(r,0));
+        await db.updateStock(oldPurchase.stockId,{qty:latestQty});
+        await recalcStockCost(oldPurchase.stockId,newPurchases,latestItem);
       }
       toast_("Compra excluída ✓");
     }catch(e){errToast(e);}

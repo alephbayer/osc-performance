@@ -3487,17 +3487,34 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
 function VoiceTaskBtn({onResult}) {
   const [listening,setListening]=useState(false);
   const srRef=useRef(null);
-  const SR=typeof window!=="undefined"&&(window.SpeechRecognition||window.webkitSpeechRecognition);
-  if(!SR) return null;
+
+  const hasSupport=()=>!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+
   const toggle=()=>{
-    if(listening){ srRef.current?.stop(); setListening(false); return; }
+    if(listening){
+      srRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){ alert("Reconhecimento de voz não suportado neste navegador."); return; }
     const sr=new SR();
-    sr.lang="pt-BR"; sr.interimResults=false; sr.continuous=false;
-    sr.onresult=e=>onResult(e.results[0][0].transcript);
-    sr.onerror=()=>setListening(false);
+    sr.lang="pt-BR";
+    sr.interimResults=false;
+    sr.continuous=false;
+    sr.onresult=e=>{
+      const txt=e.results[0][0].transcript;
+      onResult(txt);
+      setListening(false);
+    };
+    sr.onerror=e=>{ console.warn("SpeechRecognition error:",e.error); setListening(false); };
     sr.onend=()=>setListening(false);
-    sr.start(); srRef.current=sr; setListening(true);
+    try{ sr.start(); srRef.current=sr; setListening(true); }
+    catch(e){ console.error(e); setListening(false); }
   };
+
+  if(typeof window==="undefined") return null;
+
   return(<button onClick={toggle} title={listening?"Parar":"Ditar tarefa"}
     style={{padding:"7px 10px",borderRadius:7,background:listening?`${B.red}22`:B.gray800,border:`1px solid ${listening?B.red:B.gray600}`,color:listening?B.red:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all .2s",flexShrink:0}}>
     {listening
@@ -9459,7 +9476,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.3";
+const APP_VERSION = "2026.09.27.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -9949,7 +9949,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.13";
+const APP_VERSION = "2026.09.28.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13058,31 +13058,35 @@ export default function App() {
   const mkSvg=(d)=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={Array.isArray(d)?d[0]:d}/>{Array.isArray(d)&&d.slice(1).map((p,i)=><path key={i} d={p}/>)}</svg>;
   const NAV_ITEMS_BY_ROLE={
     owner:[
-      {id:"home",    label:"Início",   svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
-      {id:"oficina", label:"Oficina",  svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
-      {id:"compras", label:"Compras",  svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
-      {id:"gestao",  label:"Gestão",   svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
-      {id:"mais",    label:"Mais",     svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
+      {id:"home",      label:"Início",    svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
+      {id:"oficina",   label:"Oficina",   svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
+      {id:"cadastros", label:"Cadastros", svgIcon:mkSvg(["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2","M9 3a4 4 0 010 8","M23 21v-2a4 4 0 00-3-3.87","M16 3.13a4 4 0 010 7.75"])},
+      {id:"compras",   label:"Compras",   svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
+      {id:"gestao",    label:"Gestão",    svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
+      {id:"mais",      label:"Mais",      svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
     ],
     admin:[
-      {id:"home",    label:"Início",   svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
-      {id:"oficina", label:"Oficina",  svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
-      {id:"compras", label:"Compras",  svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
-      {id:"gestao",  label:"Gestão",   svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
-      {id:"mais",    label:"Mais",     svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
+      {id:"home",      label:"Início",    svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
+      {id:"oficina",   label:"Oficina",   svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
+      {id:"cadastros", label:"Cadastros", svgIcon:mkSvg(["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2","M9 3a4 4 0 010 8","M23 21v-2a4 4 0 00-3-3.87","M16 3.13a4 4 0 010 7.75"])},
+      {id:"compras",   label:"Compras",   svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
+      {id:"gestao",    label:"Gestão",    svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
+      {id:"mais",      label:"Mais",      svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
     ],
     supervisor:[
-      {id:"home",    label:"Início",   svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
-      {id:"oficina", label:"Oficina",  svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
-      {id:"compras", label:"Compras",  svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
-      {id:"gestao",  label:"Gestão",   svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
-      {id:"mais",    label:"Mais",     svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
+      {id:"home",      label:"Início",    svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
+      {id:"oficina",   label:"Oficina",   svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
+      {id:"cadastros", label:"Cadastros", svgIcon:mkSvg(["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2","M9 3a4 4 0 010 8","M23 21v-2a4 4 0 00-3-3.87","M16 3.13a4 4 0 010 7.75"])},
+      {id:"compras",   label:"Compras",   svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
+      {id:"gestao",    label:"Gestão",    svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
+      {id:"mais",      label:"Mais",      svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
     ],
   };
   const navItems=NAV_ITEMS_BY_ROLE[adminRole]||NAV_ITEMS_BY_ROLE.owner;
 
   // Tab grouping by nav section
-  const OFICINA_TABS=["clients","finishing","appointments","vehicles","clientsMonitor","mechanics"];
+  const OFICINA_TABS=["clients","finishing","appointments","mechanics"];
+  const CADASTROS_TABS=["vehicles","clientsMonitor","mechanics"];
   const GESTAO_TABS=["finance","investments","sales","presenca"];
   const COMPRAS_TABS=["stock","materiais","purchases"];
 
@@ -13451,7 +13455,8 @@ export default function App() {
       {sidebarItems.map(item=>(
         <button key={item.id} onClick={()=>{
           setNavSectionPersist(item.id);
-          if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
+          if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab(allowedTabs.includes("clients")?"clients":"finishing");
+          if(item.id==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("clientsMonitor")?"clientsMonitor":allowedTabs.includes("vehicles")?"vehicles":"mechanics");
           if(item.id==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
           if(item.id==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");
           mainScrollRef.current?.scrollTo({top:0});
@@ -13492,15 +13497,17 @@ export default function App() {
       {/* ══ MAIS ══ */}
       {navSection==="mais"&&<MaisPage/>}
 
-      {(navSection==="oficina"||navSection==="gestao"||navSection==="compras")&&<>
+      {(navSection==="oficina"||navSection==="cadastros"||navSection==="gestao"||navSection==="compras")&&<>
         <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
           <div style={{display:"flex",gap:3,background:B.gray900,padding:4,borderRadius:12,border:`1px solid ${B.gray700}`,flexWrap:"wrap",justifyContent:"center"}}>
             {navSection==="oficina"&&<>
               {allowedTabs.includes("clients")&&tabBtn("clients","OSC Performance",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,B.orange)}
               {allowedTabs.includes("finishing")&&tabBtn("finishing","OSC Finishing Division",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>,FD.primary)}
               {allowedTabs.includes("appointments")&&tabBtn("appointments","Agendamentos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,"#8b5cf6")}
-              {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos",<ICar s={13}/>,B.blue)}
+            </>}
+            {navSection==="cadastros"&&<>
               {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
+              {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos",<ICar s={13}/>,B.blue)}
               {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
             </>}
             {navSection==="gestao"&&<>
@@ -13519,7 +13526,7 @@ export default function App() {
       </>}
 
       {/* ══ TAB CONTENT ══ */}
-      {(navSection==="oficina"||navSection==="gestao"||navSection==="compras")&&<>
+      {(navSection==="oficina"||navSection==="cadastros"||navSection==="gestao"||navSection==="compras")&&<>
 
       {/* ══ MECHANICS ══ */}
       {tab==="mechanics"&&allowedTabs.includes("mechanics")&&<>

@@ -9949,7 +9949,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.10";
+const APP_VERSION = "2026.09.28.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13256,8 +13256,8 @@ export default function App() {
     const [files,setFiles]=useState([]);
     const [loading,setLoading]=useState(true);
     const [uploading,setUploading]=useState(false);
-    const [copiedId,setCopiedId]=useState(null);
-    const [confirmDel,setConfirmDel]=useState(null);
+    const [msgTemplate,setMsgTemplate]=useState("OSC Performance  |  Portfólio\n");
+    const [editingMsg,setEditingMsg]=useState(false);
     const fileRef=useRef(null);
 
     useEffect(()=>{
@@ -13293,9 +13293,12 @@ export default function App() {
           body:JSON.stringify({url:longUrl})
         });
         const d=await r.json();
-        navigator.clipboard.writeText(d.short||longUrl);
+        const shortUrl=d.short||longUrl;
+        const text=msgTemplate.trim()?`${msgTemplate.trim()}\n${shortUrl}`:shortUrl;
+        navigator.clipboard.writeText(text);
       }catch{
-        navigator.clipboard.writeText(longUrl);
+        const text=msgTemplate.trim()?`${msgTemplate.trim()}\n${longUrl}`:longUrl;
+        navigator.clipboard.writeText(text);
       }
       setCopiedId(name); setTimeout(()=>setCopiedId(null),2000);
     };
@@ -13323,6 +13326,23 @@ export default function App() {
             ?<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Enviando…</>
             :<><IPlus s={12} c={B.orange}/>PDF</>}
         </button>
+      </div>
+      {/* Message template */}
+      <div style={{padding:"10px 16px",borderBottom:`1px solid ${B.gray700}`,background:B.gray900}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:editingMsg?8:0}}>
+          <div style={{fontSize:11,color:B.gray400,fontWeight:700,flex:1}}>Mensagem ao copiar link</div>
+          <button onClick={()=>setEditingMsg(e=>!e)} style={{fontSize:11,color:B.blue,background:"none",border:"none",cursor:"pointer",fontWeight:700}}>
+            {editingMsg?"Fechar":"Editar"}
+          </button>
+        </div>
+        {editingMsg
+          ?<textarea value={msgTemplate} onChange={e=>setMsgTemplate(e.target.value)} rows={3}
+              placeholder="Ex: OSC Performance  |  Portfólio"
+              style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+          :<div style={{fontSize:12,color:B.gray300,fontStyle:msgTemplate.trim()?"normal":"italic"}}>
+            {msgTemplate.trim()||"Sem mensagem — só o link será copiado"}
+          </div>
+        }
       </div>
       {loading&&<div style={{padding:"24px 0",textAlign:"center",color:B.gray500,fontSize:13}}>Carregando…</div>}
       {!loading&&files.length===0&&<div style={{padding:"32px 0",textAlign:"center",color:B.gray500,fontSize:13}}>

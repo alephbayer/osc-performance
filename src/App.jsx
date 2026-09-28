@@ -5997,8 +5997,17 @@ function QuoteItemStockSearch({stock=[],onAdd}) {
 }
 
 function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,onDelete,onConvertToAppointment,defaultRate=0,stock=[]}) {
-  const [showNew,setShowNew]=useState(false);
-  const [form,setForm]=useState({tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
+  const DRAFT_KEY="osc_quote_draft";
+  const [showNew,setShowNew]=useState(()=>{ try{return !!sessionStorage.getItem(DRAFT_KEY);}catch{return false;} });
+  const [form,setForm]=useState(()=>{ try{const s=sessionStorage.getItem(DRAFT_KEY);return s?JSON.parse(s):{tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]};}catch{return {tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]};} });
+
+  // Persist form to sessionStorage on every change
+  useEffect(()=>{
+    try{
+      if(showNew) sessionStorage.setItem(DRAFT_KEY,JSON.stringify(form));
+      else sessionStorage.removeItem(DRAFT_KEY);
+    }catch{}
+  },[form,showNew]);
   const [clientSearch,setClientSearch]=useState("");
   const [clientOpen,setClientOpen]=useState(false);
   const [vehicleSearch,setVehicleSearch]=useState("");
@@ -6056,6 +6065,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
   const save=async()=>{
     const payload={...form,status:"draft",createdAt:new Date().toISOString()};
     await onAdd(payload);
+    try{sessionStorage.removeItem(DRAFT_KEY);}catch{}
     setForm({tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
     setShowNew(false);
   };
@@ -6176,7 +6186,14 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
                 <div key={mi} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,fontSize:11,color:B.gray300}}>
                   <span style={{flex:1}}>{m.name}{m.brand?` · ${m.brand}`:""}</span>
                   <input value={m.qty} type="number" min="1" onChange={e=>{
-                    const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,qty:parseInt(e.target.value)||1};items[i]={...it,materials:mats};setForm(p=>({...p,items}));
+                    const items=[...form.items];const mats=[...(items[i].materials||[])];
+                    mats[mi]={...m,qty:e.target.value===''?'':parseInt(e.target.value)||1};
+                    items[i]={...it,materials:mats};setForm(p=>({...p,items}));
+                  }} onBlur={e=>{
+                    if(!e.target.value||parseInt(e.target.value)<1){
+                      const items=[...form.items];const mats=[...(items[i].materials||[])];
+                      mats[mi]={...m,qty:1};items[i]={...it,materials:mats};setForm(p=>({...p,items}));
+                    }
                   }} style={{width:40,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
                   <span style={{color:B.amber,fontWeight:700}}>{fmtBRL(m.cost*m.qty)}</span>
                   <button onClick={()=>{const items=[...form.items];items[i]={...it,materials:(it.materials||[]).filter((_,j)=>j!==mi)};setForm(p=>({...p,items}));}}
@@ -9841,7 +9858,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.13";
+const APP_VERSION = "2026.09.27.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11926,8 +11943,10 @@ export default function App() {
   const [shelfItems,setShelfItems]=useState([]);
   const [sales,setSales]=useState([]);
   const [company,setCompany]=useState({name:"OSC Performance",address:"",phone:"",document:""});
-  const [tab,      setTab]=useState("clients");
-  const [navSection,setNavSection]=useState("home");
+  const [tab,setTab]=useState(()=>{ try{return sessionStorage.getItem("osc_tab")||"clients";}catch{return "clients";} });
+  const [navSection,setNavSection]=useState(()=>{ try{return sessionStorage.getItem("osc_nav")||"home";}catch{return "home";} });
+  const setNavSectionPersist=(v)=>{ try{sessionStorage.setItem("osc_nav",v);}catch{} setNavSection(v); };
+  const setTabPersist=(v)=>{ try{sessionStorage.setItem("osc_tab",v);}catch{} setTab(v); };
   const [scrollY,setScrollY]=useState(0);
   const [showQuickSheet,setShowQuickSheet]=useState(false);
   const [showQuickPedidoOS,setShowQuickPedidoOS]=useState(false);
@@ -12978,7 +12997,7 @@ export default function App() {
   const COMPRAS_TABS=["stock","materiais","purchases"];
 
   const goSection=(section,tab)=>{
-    setNavSection(section);
+    setNavSectionPersist(section);
     if(tab) setTimeout(()=>setTab(tab),0);
     mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});
   };
@@ -13211,7 +13230,7 @@ export default function App() {
       </div>
       {sidebarItems.map(item=>(
         <button key={item.id} onClick={()=>{
-          setNavSection(item.id);
+          setNavSectionPersist(item.id);
           if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
           if(item.id==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
           if(item.id==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");

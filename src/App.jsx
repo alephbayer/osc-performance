@@ -3483,6 +3483,30 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
   </div>);
 }
 
+// ─── VoiceTaskBtn ─────────────────────────────────────────────────────────────
+function VoiceTaskBtn({onResult}) {
+  const [listening,setListening]=useState(false);
+  const srRef=useRef(null);
+  const SR=typeof window!=="undefined"&&(window.SpeechRecognition||window.webkitSpeechRecognition);
+  if(!SR) return null;
+  const toggle=()=>{
+    if(listening){ srRef.current?.stop(); setListening(false); return; }
+    const sr=new SR();
+    sr.lang="pt-BR"; sr.interimResults=false; sr.continuous=false;
+    sr.onresult=e=>onResult(e.results[0][0].transcript);
+    sr.onerror=()=>setListening(false);
+    sr.onend=()=>setListening(false);
+    sr.start(); srRef.current=sr; setListening(true);
+  };
+  return(<button onClick={toggle} title={listening?"Parar":"Ditar tarefa"}
+    style={{padding:"7px 10px",borderRadius:7,background:listening?`${B.red}22`:B.gray800,border:`1px solid ${listening?B.red:B.gray600}`,color:listening?B.red:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all .2s",flexShrink:0}}>
+    {listening
+      ?<><svg width="12" height="12" viewBox="0 0 24 24" fill={B.red} stroke={B.red} strokeWidth="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg><span style={{fontSize:10,fontWeight:700}}>parar</span></>
+      :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    }
+  </button>);
+}
+
 function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}) {
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
@@ -3869,6 +3893,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
           <input value={newT} onChange={e=>setNewT(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addT()} placeholder="Nova tarefa…"
             style={{flex:1,minWidth:130,padding:"7px 11px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
+          <VoiceTaskBtn onResult={txt=>setNewT(p=>p?p+" "+txt:txt)}/>
           <button onClick={addT} style={{padding:"7px 13px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5}}><IPlus s={14} c={B.white}/>Add</button>
           <button onClick={doAI} disabled={aiL} style={{padding:"7px 10px",borderRadius:7,background:aiL?B.gray700:`${B.orange}22`,border:`1px solid ${B.orange}55`,color:aiL?B.gray400:B.orange,cursor:aiL?"not-allowed":"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:4}}>
             <IAI s={13} c={aiL?B.gray400:B.orange}/>{aiL?"…":"IA"}
@@ -9434,7 +9459,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.1";
+const APP_VERSION = "2026.09.27.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

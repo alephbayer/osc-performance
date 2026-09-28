@@ -5967,7 +5967,7 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
 }
 
 // ─── QuotesTab ────────────────────────────────────────────────────────────────
-function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,onDelete,onConvertToAppointment}) {
+function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,onDelete,onConvertToAppointment,defaultRate=0}) {
   const [showNew,setShowNew]=useState(false);
   const [form,setForm]=useState({tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
   const [clientSearch,setClientSearch]=useState("");
@@ -5975,7 +5975,10 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
   const [vehicleSearch,setVehicleSearch]=useState("");
   const [vehicleOpen,setVehicleOpen]=useState(false);
   const [aiLoading,setAiLoading]=useState(false);
-  const [newItem,setNewItem]=useState({label:"",description:"",hours:0,price:0});
+  const [newItem,setNewItem]=useState({label:"",description:"",hours:1,price:defaultRate});
+
+  // Recalc price when hours change in newItem
+  const setNewItemHours=(h)=>setNewItem(p=>({...p,hours:h,price:Math.round(h*defaultRate*100)/100}));
   const [copiedId,setCopiedId]=useState(null);
 
   const isNewClient=!form.clientId;
@@ -6006,7 +6009,14 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       console.log("ai-quote raw response:",txt);
       try{
         const d=JSON.parse(txt);
-        if(d.items&&d.items.length>0) setForm(p=>({...p,items:[...p.items,...d.items]}));
+        if(d.items&&d.items.length>0){
+          const enriched=d.items.map(it=>({
+            ...it,
+            // Use defaultRate × hours if IA gave no price or gave 0
+            price: Number(it.price)||Math.round(Number(it.hours||0)*defaultRate*100)/100,
+          }));
+          setForm(p=>({...p,items:[...p.items,...enriched]}));
+        }
         else if(d.error) toast_(`IA: ${d.error}`);
         else toast_("IA não retornou itens. Tente descrever melhor o serviço.");
       }catch(pe){ toast_(`Erro ao processar resposta: ${txt.slice(0,100)}`); }
@@ -6116,7 +6126,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
               <input value={it.label} onChange={e=>{const items=[...form.items];items[i]={...it,label:e.target.value};setForm(p=>({...p,items}));}}
                 style={{width:"100%",background:"none",border:"none",color:B.white,fontSize:13,fontWeight:700,outline:"none",padding:0,marginBottom:3}}/>
               <div style={{display:"flex",gap:6}}>
-                <input value={it.hours||""} type="number" placeholder="horas" onChange={e=>{const items=[...form.items];items[i]={...it,hours:parseFloat(e.target.value)||0};setForm(p=>({...p,items}));}}
+                <input value={it.hours||""} type="number" placeholder="horas" onChange={e=>{const h=parseFloat(e.target.value)||0;const items=[...form.items];items[i]={...it,hours:h,price:Math.round(h*defaultRate*100)/100};setForm(p=>({...p,items}));}}
                   style={{width:60,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
                 <input value={it.price||""} type="number" placeholder="R$" onChange={e=>{const items=[...form.items];items[i]={...it,price:parseFloat(e.target.value)||0};setForm(p=>({...p,items}));}}
                   style={{width:80,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
@@ -6139,7 +6149,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
         <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
           <input value={newItem.label} onChange={e=>setNewItem(p=>({...p,label:e.target.value}))} placeholder="Nome do serviço"
             style={{flex:2,minWidth:120,padding:"6px 8px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-          <input value={newItem.hours||""} type="number" placeholder="h" onChange={e=>setNewItem(p=>({...p,hours:parseFloat(e.target.value)||0}))}
+          <input value={newItem.hours||""} type="number" placeholder="h" onChange={e=>setNewItemHours(parseFloat(e.target.value)||0)}
             style={{width:50,padding:"6px 8px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
           <input value={newItem.price||""} type="number" placeholder="R$" onChange={e=>setNewItem(p=>({...p,price:parseFloat(e.target.value)||0}))}
             style={{width:70,padding:"6px 8px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
@@ -6210,7 +6220,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
 }
 
 function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,  onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
-  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[],company={},
+  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[],company={},defaultRate=0,
   quotes=[],onAddQuote,onUpdateQuote,onDeleteQuote,onConvertQuoteToAppointment}) {
   const [subTab,setSubTab]=useState("appointments"); // "appointments"|"quotes"
 
@@ -6258,7 +6268,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
         </button>
       ))}
     </div>
-    {subTab==="quotes"&&<QuotesTab quotes={quotes} clients={clients} vehicles={vehicles} adminRole={adminRole}
+    {subTab==="quotes"&&<QuotesTab quotes={quotes} clients={clients} vehicles={vehicles} adminRole={adminRole} defaultRate={defaultRate||0}
       onAdd={onAddQuote} onUpdate={onUpdateQuote} onDelete={onDeleteQuote} onConvertToAppointment={onConvertQuoteToAppointment}/>}
     {subTab==="appointments"&&<>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
@@ -9775,7 +9785,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.11";
+const APP_VERSION = "2026.09.27.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13513,7 +13523,7 @@ export default function App() {
         <AppointmentsTab
           appointments={appointments} vehicles={vehicles} clients={clients}
           employees={employees} adminRole={adminRole}
-          stock={stock} clientNotes={allClientNotes} company={company}
+          stock={stock} clientNotes={allClientNotes} company={company} defaultRate={defaultRate}
           onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));}catch(e){errToast(e);}}}
           onDelete={async id=>{try{await db.deleteAppointment(id);setAppts(p=>p.filter(a=>a.id!==id));toast_("Agendamento removido ✓");}catch(e){errToast(e);}}}

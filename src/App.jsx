@@ -3688,12 +3688,12 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       {/* ── Button bar ── */}
       <div style={{padding:"8px 10px",background:B.gray800,borderBottom:`1px solid ${B.gray700}66`}} onClick={e=>e.stopPropagation()}>
 
-        {/* Tier 1 — Destaque: Link · PDF · Pronto · Conta */}
-        {managerMode&&<div style={{display:"flex",gap:4,marginBottom:5}}>
-          <button onClick={copyLink} style={{flex:1,background:cpLink?B.greenBg:`${B.purple}15`,border:`1px solid ${cpLink?B.green:B.purple}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:cpLink?B.green:B.purple,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
-            <ILink s={12} c={cpLink?B.green:B.purple}/>{cpLink?"Copiado":"Link"}
+        {/* Tier 1 — Destaque: Link · PDF · Pronto · Conta — estética pill sólida */}
+        {managerMode&&<div style={{display:"flex",gap:4,marginBottom:7}}>
+          <button onClick={copyLink} style={{flex:1,background:cpLink?B.green:`${B.purple}33`,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:cpLink?B.white:B.purple,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800,transition:"all .15s"}}>
+            <ILink s={12} c={cpLink?B.white:B.purple}/>{cpLink?"Copiado":"Link"}
           </button>
-          <button onClick={doPDF} disabled={pdfLoading} style={{flex:1,background:pdfLoading?B.gray700:`${B.amber}15`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"5px 0",cursor:pdfLoading?"wait":"pointer",color:pdfLoading?B.gray400:B.amber,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+          <button onClick={doPDF} disabled={pdfLoading} style={{flex:1,background:pdfLoading?B.gray700:`${B.amber}33`,border:"none",borderRadius:8,padding:"7px 0",cursor:pdfLoading?"wait":"pointer",color:pdfLoading?B.gray400:B.amber,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
             <IFileText s={12} c={pdfLoading?B.gray400:B.amber}/>{pdfLoading?"…":"PDF"}
           </button>
           {(()=>{
@@ -3702,28 +3702,28 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(division==="finishing"?t.division==="finishing":(t.division||"performance")==="performance"));
             const hasEstimated=vTasks.some(t=>(t.materials||[]).some(m=>m.estimated));
             if(curStatus==="ready"&&!deliveredField&&isOwner&&onDeliver) return(
-              <button onClick={()=>setConfirmDeliver(true)} style={{flex:1,background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
-                <ICar2 s={12} c={B.green}/>Entregar
+              <button onClick={()=>setConfirmDeliver(true)} style={{flex:1,background:B.green,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.white,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
+                <ICar2 s={12} c={B.white}/>Entregar
               </button>);
             if(curStatus==="ready") return(
-              <button onClick={()=>onSetStatus&&onSetStatus(vehicle.id,"active")} style={{flex:1,background:`${B.orange}15`,border:`1px solid ${B.orange}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+              <button onClick={()=>onSetStatus&&onSetStatus(vehicle.id,"active")} style={{flex:1,background:`${B.orange}33`,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
                 <IUndo s={12} c={B.orange}/>Reabrir
               </button>);
             return(
               <button onClick={()=>{
                 if(hasEstimated){alert("⚠️ Há materiais estimados. Confirme antes de marcar como pronto.");return;}
                 onSetStatus&&onSetStatus(vehicle.id,"ready");
-              }} style={{flex:1,background:hasEstimated?`${B.amber}15`:B.blueBg,border:`1px solid ${hasEstimated?B.amber:B.blue}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+              }} style={{flex:1,background:hasEstimated?`${B.amber}33`:`${B.blue}33`,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
                 {hasEstimated?<><IWarning s={12} c={B.amber}/>Estimados</>:<><ICheck s={12} c={B.blue}/>Pronto</>}
               </button>);
           })()}
-          <button onClick={()=>setSA(true)} style={{flex:1,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+          <button onClick={()=>setSA(true)} style={{flex:1,background:`${B.green}33`,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
             <IBank s={12} c={B.green}/>Conta
           </button>
         </div>}
 
-        {/* Tier 2 — Primários + menu "···" */}
-        <div style={{display:"flex",gap:4,flexWrap:"nowrap",alignItems:"center",position:"relative"}}>
+        {/* Tier 2 — Primários, permite wrap em múltiplas linhas */}
+        <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
           {/* Urgente */}
           {managerMode&&<button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{urgent:!vehicle.urgent})}
             style={{background:vehicle.urgent?`${B.red}22`:"none",border:`1px solid ${vehicle.urgent?B.red:B.gray600}`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:vehicle.urgent?B.red:B.gray500,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
@@ -3750,7 +3750,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           </button>}
 
           {/* ··· Menu dropdown — secundários */}
-          {managerMode&&<div style={{position:"relative",marginLeft:"auto",flex:"0 0 auto"}}>
+          {managerMode&&<div style={{position:"relative",flex:"0 0 auto"}}>
             <button ref={moreMenuRef} onClick={(e)=>{
               e.stopPropagation();
               if(showMoreMenu){setShowMoreMenu(false);return;}
@@ -9988,7 +9988,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.20";
+const APP_VERSION = "2026.09.28.21";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

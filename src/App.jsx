@@ -3592,7 +3592,12 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const [showPOForm,setShowPOForm]=useState(false);
   const [confirmDelV,setConfirmDelV]=useState(false);
   const [confirmDeliver,setConfirmDeliver]=useState(false);
-  const [showNextVisit,setShowNextVisit]=useState(false);
+  useEffect(()=>{
+    if(!showMoreMenu) return;
+    const close=()=>setShowMoreMenu(false);
+    document.addEventListener("click",close);
+    return ()=>document.removeEventListener("click",close);
+  },[showMoreMenu]);
   const [showTLNote,setShowTLNote]=useState(false);
   const [tlNoteText,setTLNoteText]=useState("");
   const [pdfLoading,setPdfLoading]=useState(false);
@@ -3676,103 +3681,124 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         </div>
       </div>
 
-      {/* Button bar — 4 per row, always visible */}
-      <div style={{padding:"6px 10px",background:B.gray800,borderBottom:`1px solid ${B.gray700}66`,display:"flex",flexWrap:"wrap",gap:4}} onClick={e=>e.stopPropagation()}>
-        {/* Urgent toggle — gestor/admin/supervisor */}
-        {managerMode&&<button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{urgent:!vehicle.urgent})}
-          style={{background:vehicle.urgent?`${B.red}22`:"none",border:`1px solid ${vehicle.urgent?B.red:B.gray600}`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:vehicle.urgent?B.red:B.gray500,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill={vehicle.urgent?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-          {vehicle.urgent?"Urgente":"Prioridade"}
-        </button>}
-        {/* Row 1 */}
-        {managerMode&&<button onClick={doPDF} disabled={pdfLoading} style={{background:pdfLoading?B.gray700:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:pdfLoading?"wait":"pointer",color:pdfLoading?B.gray400:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <IFileText s={12} c={pdfLoading?B.gray400:B.amber}/>{pdfLoading?"Gerando…":"PDF"}
-        </button>}
-        <button onClick={()=>setSCL(p=>!p)} style={{background:showChecklist?`${B.blue}22`:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Checklist
-        </button>
-        <button onClick={()=>setShowParts(p=>!p)} style={{background:showParts?`${B.purple}22`:`${B.purple}10`,border:`1px solid ${B.purple}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          {(()=>{
-            const pendingMats=vts.filter(t=>!t.done&&!t.warranty).flatMap(t=>(t.materials||[]).filter(m=>m.name&&!m.noCharge));
-            const count=pendingMats.length;
-            return <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Peças{count>0&&<span style={{background:`${B.purple}33`,borderRadius:99,padding:"0px 6px",fontSize:10,fontWeight:900}}>{count}</span>}</>;
-          })()}
-        </button>
-        {onAddPurchaseOrder&&<button onClick={()=>setShowPOForm(p=>!p)} style={{background:showPOForm?`${B.amber}22`:`${B.amber}10`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length>0?` (${purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length})`:""} Pedidos
-        </button>}
-        {managerMode&&<button onClick={()=>setSA(true)} style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <IBank s={12} c={B.green}/>Conta
-        </button>}
-        {managerMode&&clientNotes.length>0&&<button onClick={()=>setShowClientNotes(p=>!p)} style={{background:showClientNotes?`${B.amber}22`:`${B.amber}15`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""}
-        </button>}
-        {managerMode&&<button onClick={copyLink} style={{background:cpLink?B.greenBg:B.purpleBg,border:`1px solid ${cpLink?B.green:B.purple}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:cpLink?B.green:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <ILink s={12} c={cpLink?B.green:B.purple}/>{cpLink?"Copiado!":"Link"}
-        </button>}
-        <button onClick={()=>setSP(p=>!p)} style={{background:showPhotos?B.purpleBg:`${B.purple}15`,border:`1px solid ${B.purple}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <IPhoto s={12} c={B.purple}/>Fotos
-        </button>
-        {/* Row 2 — manager buttons */}
-        {!hideManagerButtons&&<button onClick={()=>setXfO(true)} style={{background:B.blueBg,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <IUser s={12} c={B.blue}/>Cliente
-        </button>}
-        {!hideManagerButtons&&<button onClick={()=>setXfM(true)} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <IWrench s={12} c={B.orange}/>+ Mec.
-        </button>}
-        {!hideManagerButtons&&isOwner&&onOpenOS&&!vehicle.osNumber&&division==="performance"&&<button onClick={()=>onOpenOS(vehicle.id,null,null)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
-          <IWrench s={12} c={B.green}/>Abrir OS
-        </button>}
-        {!hideManagerButtons&&isOwner&&onSetStatus&&<>
+      {/* ── Button bar ── */}
+      <div style={{padding:"8px 10px",background:B.gray800,borderBottom:`1px solid ${B.gray700}66`}} onClick={e=>e.stopPropagation()}>
+
+        {/* Tier 1 — Destaque: Link · PDF · Pronto · Conta */}
+        {managerMode&&<div style={{display:"flex",gap:4,marginBottom:5}}>
+          <button onClick={copyLink} style={{flex:1,background:cpLink?B.greenBg:`${B.purple}15`,border:`1px solid ${cpLink?B.green:B.purple}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:cpLink?B.green:B.purple,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+            <ILink s={12} c={cpLink?B.green:B.purple}/>{cpLink?"Copiado":"Link"}
+          </button>
+          <button onClick={doPDF} disabled={pdfLoading} style={{flex:1,background:pdfLoading?B.gray700:`${B.amber}15`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"5px 0",cursor:pdfLoading?"wait":"pointer",color:pdfLoading?B.gray400:B.amber,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+            <IFileText s={12} c={pdfLoading?B.gray400:B.amber}/>{pdfLoading?"…":"PDF"}
+          </button>
           {(()=>{
             const curStatus=division==="finishing"?(vehicle.statusFinishing||"active"):vehicle.status;
             const deliveredField=division==="finishing"?vehicle.deliveredAtFinishing:vehicle.deliveredAt;
-            return(<>
-              {curStatus!=="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"paused")} style={{background:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                <IPause s={12} c={B.amber}/>Pausar
-              </button>}
-              {curStatus==="paused"&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                <IPlay s={12} c={B.green}/>Retomar
-              </button>}
-              {(()=>{
-                const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(division==="finishing"?t.division==="finishing":(t.division||"performance")==="performance"));
-                const hasEstimated=vTasks.some(t=>(t.materials||[]).some(m=>m.estimated));
-                return(<>
-                  {curStatus!=="ready"&&<button onClick={()=>{
-                    if(hasEstimated){alert("⚠️ Existem materiais estimados nesta OS. Confirme ou remova-os antes de marcar como pronto.");return;}
-                    onSetStatus(vehicle.id,"ready");
-                  }} title={hasEstimated?"Há materiais estimados a confirmar":""} style={{background:hasEstimated?`${B.amber}22`:B.blueBg,border:`1px solid ${hasEstimated?B.amber:B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                    {hasEstimated?<><IWarning s={12} c={B.amber}/>Estimados</>:<><ICheck s={12} c={B.blue}/>Pronto</>}
-                  </button>}
-                  {curStatus==="ready"&&!deliveredField&&<button onClick={()=>onSetStatus(vehicle.id,"active")} style={{background:`${B.orange}22`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-                    <IUndo s={12} c={B.orange}/>Reabrir
-                  </button>}
-                  {curStatus==="ready"&&!deliveredField&&isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:800,flex:"0 0 auto"}}>
-                    <ICar2 s={12} c={B.green}/>Entregar
-                  </button>}
-                </>);
-              })()}
-            </>);
+            const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(division==="finishing"?t.division==="finishing":(t.division||"performance")==="performance"));
+            const hasEstimated=vTasks.some(t=>(t.materials||[]).some(m=>m.estimated));
+            if(curStatus==="ready"&&!deliveredField&&isOwner&&onDeliver) return(
+              <button onClick={()=>setConfirmDeliver(true)} style={{flex:1,background:`${B.green}22`,border:`1px solid ${B.green}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
+                <ICar2 s={12} c={B.green}/>Entregar
+              </button>);
+            if(curStatus==="ready") return(
+              <button onClick={()=>onSetStatus&&onSetStatus(vehicle.id,"active")} style={{flex:1,background:`${B.orange}15`,border:`1px solid ${B.orange}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+                <IUndo s={12} c={B.orange}/>Reabrir
+              </button>);
+            return(
+              <button onClick={()=>{
+                if(hasEstimated){alert("⚠️ Há materiais estimados. Confirme antes de marcar como pronto.");return;}
+                onSetStatus&&onSetStatus(vehicle.id,"ready");
+              }} style={{flex:1,background:hasEstimated?`${B.amber}15`:B.blueBg,border:`1px solid ${hasEstimated?B.amber:B.blue}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+                {hasEstimated?<><IWarning s={12} c={B.amber}/>Estimados</>:<><ICheck s={12} c={B.blue}/>Pronto</>}
+              </button>);
           })()}
+          <button onClick={()=>setSA(true)} style={{flex:1,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:7,padding:"5px 0",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:700}}>
+            <IBank s={12} c={B.green}/>Conta
+          </button>
+        </div>}
+
+        {/* Tier 2 — Primários + menu "···" */}
+        <div style={{display:"flex",gap:4,flexWrap:"nowrap",alignItems:"center",position:"relative"}}>
+          {/* Urgente */}
+          {managerMode&&<button onClick={()=>onUpdateVehicle&&onUpdateVehicle(vehicle.id,{urgent:!vehicle.urgent})}
+            style={{background:vehicle.urgent?`${B.red}22`:"none",border:`1px solid ${vehicle.urgent?B.red:B.gray600}`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:vehicle.urgent?B.red:B.gray500,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill={vehicle.urgent?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            {vehicle.urgent?"Urgente":"Prioridade"}
+          </button>}
+          {/* Checklist */}
+          <button onClick={()=>setSCL(p=>!p)} style={{background:showChecklist?`${B.blue}22`:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Checklist
+          </button>
+          {/* Fotos */}
+          <button onClick={()=>setSP(p=>!p)} style={{background:showPhotos?B.purpleBg:`${B.purple}15`,border:`1px solid ${B.purple}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+            <IPhoto s={12} c={B.purple}/>Fotos
+          </button>
+          {/* Pedidos */}
+          {onAddPurchaseOrder&&<button onClick={()=>setShowPOForm(p=>!p)} style={{background:showPOForm?`${B.amber}22`:`${B.amber}10`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+            Pedidos{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length>0&&<span style={{background:`${B.amber}33`,borderRadius:99,padding:"0 5px",fontSize:10,fontWeight:900}}>{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length}</span>}
+          </button>}
+          {/* Nota cliente */}
+          {managerMode&&onPostTimeline&&<button onClick={()=>setShowTLNote(true)} style={{background:`${B.blue}15`,border:`1px solid ${B.blue}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            Nota cliente
+          </button>}
+
+          {/* ··· Menu dropdown — secundários */}
+          {managerMode&&<div style={{position:"relative",marginLeft:"auto",flex:"0 0 auto"}}>
+            <button onClick={()=>setShowMoreMenu(p=>!p)}
+              style={{background:showMoreMenu?B.gray700:"none",border:`1px solid ${B.gray600}`,borderRadius:6,padding:"4px 10px",cursor:"pointer",color:B.gray400,display:"flex",alignItems:"center",gap:3,fontSize:13,fontWeight:700}}>
+              ···
+            </button>
+            {showMoreMenu&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",right:0,top:"calc(100% + 4px)",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10,zIndex:200,minWidth:160,boxShadow:"0 8px 32px rgba(0,0,0,.6)",overflow:"hidden"}}>
+              {/* Peças */}
+              <button onClick={()=>{setShowParts(p=>!p);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                {(()=>{const count=vts.filter(t=>!t.done&&!t.warranty).flatMap(t=>(t.materials||[]).filter(m=>m.name&&!m.noCharge)).length;return<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Peças{count>0&&<span style={{marginLeft:"auto",background:`${B.purple}33`,borderRadius:99,padding:"0 6px",fontSize:10}}>{count}</span>}</>;})()}
+              </button>
+              {/* Cliente */}
+              {!hideManagerButtons&&<button onClick={()=>{setXfO(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                <IUser s={13} c={B.blue}/>Cliente
+              </button>}
+              {/* + Mecânico */}
+              {!hideManagerButtons&&<button onClick={()=>{setXfM(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                <IWrench s={13} c={B.orange}/>+ Mecânico
+              </button>}
+              {/* Pausar / Retomar */}
+              {!hideManagerButtons&&isOwner&&onSetStatus&&(()=>{
+                const curStatus=division==="finishing"?(vehicle.statusFinishing||"active"):vehicle.status;
+                if(curStatus==="paused") return <button onClick={()=>{onSetStatus(vehicle.id,"active");setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}><IPlay s={13} c={B.green}/>Retomar</button>;
+                return <button onClick={()=>{onSetStatus(vehicle.id,"paused");setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}><IPause s={13} c={B.amber}/>Pausar</button>;
+              })()}
+              {/* Próxima visita */}
+              {!hideManagerButtons&&<button onClick={()=>{setShowNextVisit(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/></svg>
+                Próxima visita
+              </button>}
+              {/* Notas do cliente (alert) */}
+              {clientNotes.length>0&&<button onClick={()=>{setShowClientNotes(p=>!p);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                {clientNotes.length} nota{clientNotes.length!==1?"s":""}
+              </button>}
+              {/* Abrir OS */}
+              {!hideManagerButtons&&isOwner&&onOpenOS&&!vehicle.osNumber&&division==="performance"&&<button onClick={()=>{onOpenOS(vehicle.id,null,null);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                <IWrench s={13} c={B.green}/>Abrir OS
+              </button>}
+              {/* Excluir OS */}
+              {!hideManagerButtons&&<button onClick={()=>{setConfirmDelV(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                <ITrash s={13} c={B.red}/>Excluir OS
+              </button>}
+            </div>}
+          </div>}
+
+          {/* Entregue badge */}
           {vehicle.deliveredAt&&division!=="finishing"&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
+            ✓ Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
           </span>}
           {vehicle.deliveredAtFinishing&&division==="finishing"&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Entregue {new Date(vehicle.deliveredAtFinishing).toLocaleDateString("pt-BR")}
+            ✓ Entregue {new Date(vehicle.deliveredAtFinishing).toLocaleDateString("pt-BR")}
           </span>}
-        </>}
-        {!hideManagerButtons&&managerMode&&<button onClick={()=>setShowNextVisit(true)} style={{background:`${B.purple}15`,border:`1px solid ${B.purple}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/></svg>
-          Próxima visita
-        </button>}
-        {!hideManagerButtons&&managerMode&&onPostTimeline&&<button onClick={()=>setShowTLNote(true)} style={{background:`${B.blue}15`,border:`1px solid ${B.blue}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-          Nota cliente
-        </button>}
-        {!hideManagerButtons&&managerMode&&<button onClick={()=>setConfirmDelV(true)} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}
-          onMouseEnter={e=>{e.currentTarget.style.background=`${B.red}33`;}} onMouseLeave={e=>{e.currentTarget.style.background=`${B.red}15`;}}>
-          <ITrash s={12} c={B.red}/>Excluir OS
-        </button>}
+        </div>
       </div>
 
       {/* Photos panel */}
@@ -9949,7 +9975,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.17";
+const APP_VERSION = "2026.09.28.18";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

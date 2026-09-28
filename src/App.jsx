@@ -9944,7 +9944,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.4";
+const APP_VERSION = "2026.09.28.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13426,9 +13426,6 @@ export default function App() {
             ? allActive.filter(v=>
                 v.model.toLowerCase().includes(osSearch.toLowerCase())||
                 v.plate.toLowerCase().includes(osSearch.toLowerCase())||
-                (v.color||"").toLowerCase().includes(osSearch.toLowerCase())||
-                employees.filter(e=>(v.mechanicIds||[]).includes(e.id)).some(e=>e.name.toLowerCase().includes(osSearch.toLowerCase()))||
-                tasks.filter(t=>t.vehicleId===v.id).some(t=>t.label.toLowerCase().includes(osSearch.toLowerCase()))||
                 (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase())
               )
             : allActive;
@@ -13460,7 +13457,7 @@ export default function App() {
           });
           return <><div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
             <div style={{position:"relative",flex:1}}>
-            <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder="Buscar veículo, cliente, mecânico ou tarefa…"
+            <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
               style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
             <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
             {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
@@ -13612,7 +13609,7 @@ export default function App() {
         {/* Search */}
         <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
           <div style={{position:"relative",flex:1}}>
-          <input value={finSearch} onChange={e=>setFinSearch(e.target.value)} placeholder="Buscar veículo, cliente, mecânico ou tarefa…"
+          <input value={finSearch} onChange={e=>setFinSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
             style={{width:"100%",padding:"10px 36px 10px 14px",borderRadius:9,border:`1px solid ${finSearch?FD.border:B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           {finSearch&&<button onClick={()=>setFinSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
           </div>
@@ -13626,8 +13623,6 @@ export default function App() {
           const filtered=finSearch?activeFin.filter(v=>
             v.model.toLowerCase().includes(finSearch.toLowerCase())||
             v.plate.toLowerCase().includes(finSearch.toLowerCase())||
-            employees.filter(e=>(v.mechanicIds||[]).includes(e.id)&&e.division==="finishing").some(e=>e.name.toLowerCase().includes(finSearch.toLowerCase()))||
-            tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing").some(t=>t.label.toLowerCase().includes(finSearch.toLowerCase()))||
             (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(finSearch.toLowerCase())
           ):activeFin;
           if(activeFin.length===0) return (<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { db, resizeAndUpload, subscribeToChanges } from "./supabase.js";
+import { db, resizeAndUpload, subscribeToChanges, supabase as supabaseClient } from "./supabase.js";
 
 // ─── Brand ───────────────────────────────────────────────────────────────────
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -9949,7 +9949,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.7";
+const APP_VERSION = "2026.09.28.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13251,6 +13251,103 @@ export default function App() {
   };
 
   // Mais page
+  // ─── Portfolio / Arquivos ────────────────────────────────────────────────────
+  const PortfolioSection=()=>{
+    const [files,setFiles]=useState([]);
+    const [loading,setLoading]=useState(true);
+    const [uploading,setUploading]=useState(false);
+    const [copiedId,setCopiedId]=useState(null);
+    const [confirmDel,setConfirmDel]=useState(null);
+    const fileRef=useRef(null);
+
+    useEffect(()=>{
+      supabaseClient.storage.from("portfolio").list("",{sortBy:{column:"created_at",order:"desc"}})
+        .then(({data})=>setFiles(data||[]))
+        .catch(()=>{})
+        .finally(()=>setLoading(false));
+    },[]);
+
+    const upload=async(e)=>{
+      const file=e.target.files?.[0]; if(!file) return;
+      if(file.type!=="application/pdf"){toast_("Apenas PDFs são aceitos.");return;}
+      setUploading(true);
+      const safeName=`${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+      const {error}=await supabaseClient.storage.from("portfolio").upload(safeName,file,{contentType:"application/pdf",upsert:false});
+      if(error){errToast(error);}else{
+        const {data}=await supabaseClient.storage.from("portfolio").list("",{sortBy:{column:"created_at",order:"desc"}});
+        setFiles(data||[]);
+        toast_("PDF enviado ✓");
+      }
+      setUploading(false);
+      e.target.value="";
+    };
+
+    const getUrl=(name)=>supabaseClient.storage.from("portfolio").getPublicUrl(name).data.publicUrl;
+
+    const copyLink=(name)=>{
+      navigator.clipboard.writeText(getUrl(name));
+      setCopiedId(name); setTimeout(()=>setCopiedId(null),2000);
+    };
+
+    const del=async(name)=>{
+      await supabaseClient.storage.from("portfolio").remove([name]);
+      setFiles(p=>p.filter(f=>f.name!==name));
+      setConfirmDel(null);
+      toast_("Arquivo removido ✓");
+    };
+
+    const fmtSize=(b)=>b<1024*1024?`${(b/1024).toFixed(0)} KB`:`${(b/1024/1024).toFixed(1)} MB`;
+    const fmtDate=(str)=>str?new Date(str).toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"}):"";
+
+    return(<div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden",marginBottom:10}}>
+      <div style={{padding:"14px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:14,color:B.white}}>Portfólio e Arquivos</div>
+          <div style={{fontSize:11,color:B.gray400,marginTop:1}}>PDFs para compartilhar com clientes</div>
+        </div>
+        <input ref={fileRef} type="file" accept="application/pdf" onChange={upload} style={{display:"none"}}/>
+        <button onClick={()=>fileRef.current?.click()} disabled={uploading}
+          style={{padding:"7px 14px",borderRadius:9,background:uploading?B.gray700:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:uploading?B.gray500:B.orange,fontWeight:700,fontSize:12,cursor:uploading?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+          {uploading
+            ?<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Enviando…</>
+            :<><IPlus s={12} c={B.orange}/>PDF</>}
+        </button>
+      </div>
+      {loading&&<div style={{padding:"24px 0",textAlign:"center",color:B.gray500,fontSize:13}}>Carregando…</div>}
+      {!loading&&files.length===0&&<div style={{padding:"32px 0",textAlign:"center",color:B.gray500,fontSize:13}}>
+        <div style={{fontSize:32,marginBottom:8}}>📁</div>
+        Nenhum arquivo ainda. Clique em "+ PDF" para enviar.
+      </div>}
+      {files.filter(f=>f.name&&f.name!==".emptyFolderPlaceholder").map(f=>(
+        <div key={f.name} style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray800}`,display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:36,height:36,borderRadius:9,background:`${B.red}18`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:600,fontSize:13,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {f.name.replace(/^\d+_/,"").replace(/_/g," ")}
+            </div>
+            <div style={{fontSize:11,color:B.gray500,marginTop:2,display:"flex",gap:8}}>
+              {f.metadata?.size&&<span>{fmtSize(f.metadata.size)}</span>}
+              {f.created_at&&<span>{fmtDate(f.created_at)}</span>}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:5,flexShrink:0}}>
+            <button onClick={()=>copyLink(f.name)}
+              style={{padding:"5px 10px",borderRadius:7,background:copiedId===f.name?`${B.green}22`:`${B.blue}18`,border:`1px solid ${copiedId===f.name?B.green:B.blue}33`,color:copiedId===f.name?B.green:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              {copiedId===f.name?"✓ Copiado":"🔗 Link"}
+            </button>
+            <button onClick={()=>setConfirmDel(f.name)}
+              style={{padding:"5px 8px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center"}}>
+              <ITrash s={12}/>
+            </button>
+          </div>
+        </div>
+      ))}
+      {confirmDel&&<ConfirmModal title="Remover arquivo?" message={`Remover "${confirmDel.replace(/^\d+_/,"").replace(/_/g," ")}"? Não pode ser desfeito.`} confirmLabel="Remover" onConfirm={()=>del(confirmDel)} onCancel={()=>setConfirmDel(null)}/>}
+    </div>);
+  };
+
   const MaisPage=()=>{
     const adminLogout=()=>{setAdminRole(null);try{sessionStorage.removeItem(ADMIN_SESSION_KEY);}catch{}};
     const themeLabel=themePref==="auto"?"🌗 Automático":themePref==="dark"?"🌙 Escuro":"☀️ Claro";
@@ -13294,6 +13391,8 @@ export default function App() {
         <Item icon={<IUser s={14} c={B.blue}/>} label="Portal do cliente" sub={clientPortalUrl} color={B.blue} onClick={()=>navigator.clipboard?.writeText(clientPortalUrl).then(()=>toast_("Link copiado ✓")).catch(()=>{})}/>
         <Item icon={<IWrench s={14} c={B.purple}/>} label="Portal do mecânico" sub={mechPortalUrl} color={B.purple} onClick={()=>navigator.clipboard?.writeText(mechPortalUrl).then(()=>toast_("Link copiado ✓")).catch(()=>{})}/>
         <Item icon={<ILogout s={14} c={B.red}/>} label="Sair" sub="Encerrar sessão" color={B.red} onClick={adminLogout}/>
+        <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10,marginTop:20}}>Arquivos</div>
+        <PortfolioSection/>
       </>}
       <div style={{textAlign:"center",marginTop:24,fontSize:10,color:B.gray700}}>v{APP_VERSION}</div>
     </div>);

@@ -4956,7 +4956,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus}
         onDeliver={deliverVehicle} onDeliverFinishing={deliverVehicleFinishing} isOwner={adminRole==="owner"}
         division={division||"performance"} onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} onOpenOS={onOpenOS}/>;
-      return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`}}>
+      return (<div key={key} style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
         <div onClick={()=>toggle(key)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",background:B.gray900,borderRadius:`14px 14px 0 0`,userSelect:"none"}}>
           <div style={{width:36,height:36,borderRadius:9,background:emp?`${B.orange}22`:B.gray700,border:`1px solid ${emp?B.orange+"44":B.gray600}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <IWrench s={17} c={emp?B.orange:B.gray500}/>
@@ -9459,7 +9459,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.2";
+const APP_VERSION = "2026.09.27.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

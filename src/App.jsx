@@ -9949,7 +9949,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.14";
+const APP_VERSION = "2026.09.28.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11215,7 +11215,7 @@ function LiquidNav({active,setActive,navItems,scrollY,theme}){
             return(
               <button key={n.id} onClick={()=>setActive(n.id)} style={{
                 display:"flex",alignItems:"center",justifyContent:"center",
-                padding:"9px 16px",
+                padding:`9px ${navItems.length>5?"10px":"16px"}`,
                 borderRadius:99,border:"none",cursor:"pointer",
                 background:on?"rgba(255,107,0,0.18)":"transparent",
                 color:on?B.orange:B.gray400,
@@ -14338,8 +14338,9 @@ export default function App() {
       return <QuickMatSortidosModal/>;
     })()}}
     <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} theme={theme} setActive={(s)=>{
-      setNavSection(s);
-      if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab("clients");
+      setNavSectionPersist(s);
+      if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab(allowedTabs.includes("clients")?"clients":"finishing");
+      if(s==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("clientsMonitor")?"clientsMonitor":allowedTabs.includes("vehicles")?"vehicles":"mechanics");
       if(s==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
       if(s==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");
       mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});

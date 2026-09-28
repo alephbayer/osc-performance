@@ -5997,12 +5997,13 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
     if(!form.description.trim()) return;
     setAiLoading(true);
     try{
-      const prompt=`Você é um assistente de oficina automotiva premium. Com base na descrição abaixo, gere uma lista de serviços para um orçamento. Retorne APENAS JSON válido, sem explicações.\n\nVeículo: ${form.tempModel||selectedVehicle?.model||"não informado"}\nDescrição: ${form.description}\n\nResponda com: {"items":[{"label":"nome do serviço","description":"detalhe breve","hours":número,"price":valor_em_reais}]}`;
-      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:800,messages:[{role:"user",content:prompt}]})});
+      const r=await fetch("https://lchfmoeyzgbepunetuch.supabase.co/functions/v1/ai-quote",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjaGZtb2V5emdiZXB1bmV0dWNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NjM1OTEsImV4cCI6MjA5OTQzOTU5MX0.GFe_P6r9OC1gkiMt2bDQp_jMSH7r5Ow9yGpJvJVnSB4"},
+        body:JSON.stringify({description:form.description,model:form.tempModel||selectedVehicle?.model||""})
+      });
       const d=await r.json();
-      const txt=(d.content||[]).map(c=>c.text||"").join("").replace(/```json|```/g,"").trim();
-      const parsed=JSON.parse(txt);
-      if(parsed.items) setForm(p=>({...p,items:[...p.items,...parsed.items]}));
+      if(d.items) setForm(p=>({...p,items:[...p.items,...d.items]}));
     }catch(e){console.error(e);}
     setAiLoading(false);
   };
@@ -9768,7 +9769,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.8";
+const APP_VERSION = "2026.09.27.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

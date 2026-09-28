@@ -6148,6 +6148,8 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
   // Recalc price when hours change in newItem
   const setNewItemHours=(h)=>setNewItem(p=>({...p,hours:h,price:Math.round(h*defaultRate*100)/100}));
   const [copiedId,setCopiedId]=useState(null);
+  const [expandedQuotes,setExpandedQuotes]=useState({});
+  const toggleQuote=(id)=>setExpandedQuotes(p=>({...p,[id]:!p[id]}));
 
   const isNewClient=!form.clientId;
   const selectedClient=clients.find(c=>c.id===form.clientId);
@@ -6385,41 +6387,51 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       const total=(q.items||[]).reduce((s,it)=>s+Number(it.price||0),0);
       const clientName=q.clientId?clients.find(c=>c.id===q.clientId)?.name:q.tempName;
       const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
-      const link=`${window.location.origin}/?q=${q.id}`;
-      return(<div key={q.id} style={{background:B.gray900,borderRadius:12,marginBottom:10,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
-        <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+      const isConverted=q.status==="approved"&&q.appointmentId;
+      const isExpanded=isConverted?!!expandedQuotes[q.id]:true;
+      return(<div key={q.id} style={{background:B.gray900,borderRadius:12,marginBottom:10,border:`1px solid ${isConverted?B.gray700+"55":B.gray700}`,overflow:"hidden",opacity:isConverted?0.7:1}}>
+        {/* Header */}
+        <div onClick={isConverted?()=>toggleQuote(q.id):undefined}
+          style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:isConverted?"pointer":"default"}}>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontWeight:800,fontSize:14,color:B.white}}>{vModel||"Veículo"}</div>
-            {clientName&&<div style={{fontSize:12,color:B.gray400}}>{clientName}{q.tempPhone?` · ${q.tempPhone}`:""}</div>}
-            <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{new Date(q.createdAt).toLocaleDateString("pt-BR")}</div>
+            <div style={{fontWeight:800,fontSize:14,color:isConverted?B.gray400:B.white,display:"flex",alignItems:"center",gap:6}}>
+              {vModel||"Veículo"}
+              {isConverted&&<span style={{fontSize:10,color:B.green,fontWeight:700,background:`${B.green}15`,borderRadius:99,padding:"1px 7px"}}>✓ Convertido</span>}
+            </div>
+            {clientName&&<div style={{fontSize:12,color:B.gray500}}>{clientName}{q.tempPhone?` · ${q.tempPhone}`:""}</div>}
+            <div style={{fontSize:11,color:B.gray600,marginTop:2}}>{new Date(q.createdAt).toLocaleDateString("pt-BR")}</div>
           </div>
-          <div style={{textAlign:"right",flexShrink:0}}>
-            <div style={{fontSize:11,fontWeight:700,color:cfg.color,background:`${cfg.color}18`,borderRadius:99,padding:"2px 8px",marginBottom:4}}>{cfg.label}</div>
-            {total>0&&<div style={{fontSize:13,fontWeight:800,color:B.orange}}>{fmtBRL(total)}</div>}
+          <div style={{textAlign:"right",flexShrink:0,display:"flex",alignItems:"center",gap:8}}>
+            {!isConverted&&<>
+              <div style={{fontSize:11,fontWeight:700,color:cfg.color,background:`${cfg.color}18`,borderRadius:99,padding:"2px 8px"}}>{cfg.label}</div>
+              {total>0&&<div style={{fontSize:13,fontWeight:800,color:B.orange}}>{fmtBRL(total)}</div>}
+            </>}
+            {isConverted&&total>0&&<div style={{fontSize:12,color:B.gray500}}>{fmtBRL(total)}</div>}
+            {isConverted&&<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform:isExpanded?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}><polyline points="6 9 12 15 18 9"/></svg>}
           </div>
         </div>
-        {q.description&&<div style={{padding:"0 14px 10px",fontSize:12,color:B.gray400,lineHeight:1.4}}>{q.description.slice(0,120)}{q.description.length>120?"…":""}</div>}
-        <div style={{padding:"8px 14px",borderTop:`1px solid ${B.gray800}`,display:"flex",gap:6,flexWrap:"wrap"}}>
-          <button onClick={()=>copyLink(q.id)}
-            style={{padding:"5px 10px",borderRadius:7,background:`${B.blue}18`,border:`1px solid ${B.blue}33`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-            {copiedId===q.id?"✓ Copiado":"🔗 Copiar link"}
-          </button>
-          {(q.status==="draft"||q.status==="sent")&&<button onClick={()=>{onUpdate(q.id,{status:"sent"});copyLink(q.id);}}
-            style={{padding:"5px 10px",borderRadius:7,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,color:B.amber,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-            📤 Enviar
-          </button>}
-          {q.status==="approved"&&!q.appointmentId&&<button onClick={()=>onConvertToAppointment(q)}
-            style={{padding:"5px 10px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}33`,color:B.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-            ✅ Converter em agendamento
-          </button>}
-          {q.status==="approved"&&q.appointmentId&&<span style={{fontSize:11,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
-            ✓ Convertido em agendamento
-          </span>}
-          <button onClick={()=>onDelete(q.id)}
-            style={{padding:"5px 10px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",marginLeft:"auto"}}>
-            <ITrash s={11}/>
-          </button>
-        </div>
+        {/* Expandable content */}
+        {isExpanded&&<>
+          {q.description&&<div style={{padding:"0 14px 10px",fontSize:12,color:B.gray400,lineHeight:1.4}}>{q.description.slice(0,120)}{q.description.length>120?"…":""}</div>}
+          <div style={{padding:"8px 14px",borderTop:`1px solid ${B.gray800}`,display:"flex",gap:6,flexWrap:"wrap"}}>
+            {!isConverted&&<button onClick={()=>copyLink(q.id)}
+              style={{padding:"5px 10px",borderRadius:7,background:`${B.blue}18`,border:`1px solid ${B.blue}33`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              {copiedId===q.id?"✓ Copiado":"🔗 Copiar link"}
+            </button>}
+            {(q.status==="draft"||q.status==="sent")&&<button onClick={()=>{onUpdate(q.id,{status:"sent"});copyLink(q.id);}}
+              style={{padding:"5px 10px",borderRadius:7,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,color:B.amber,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              📤 Enviar
+            </button>}
+            {q.status==="approved"&&!q.appointmentId&&<button onClick={()=>onConvertToAppointment(q)}
+              style={{padding:"5px 10px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}33`,color:B.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              ✅ Converter em agendamento
+            </button>}
+            <button onClick={()=>onDelete(q.id)}
+              style={{padding:"5px 10px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",marginLeft:"auto"}}>
+              <ITrash s={11}/>
+            </button>
+          </div>
+        </>}
       </div>);
     })}
   </div>);
@@ -9991,7 +10003,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.28";
+const APP_VERSION = "2026.09.28.29";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

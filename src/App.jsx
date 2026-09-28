@@ -3614,7 +3614,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const cli   = clients.find(c=>c.id===vehicle.clientId);
   const tasksTotal = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
   const towTotal    = managerMode?(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0):0;
-  const fuelTotal   = managerMode?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
+  const fuelTotal   = managerMode&&!isFD?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
   const freightTotal= managerMode?(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
   const parseDiscount=v=>parseFloat(String(v||0).replace(",","."))||0;
   const laborSum    = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
@@ -3999,7 +3999,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             <IAI s={13} c={aiL?B.gray400:B.orange}/>{aiL?"…":"IA"}
           </button>
         </div>
-        {managerMode&&<div style={{marginTop:10,padding:"10px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,display:"flex",flexDirection:"column",gap:8}}>
+        {managerMode&&!isFD&&<div style={{marginTop:10,padding:"10px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,display:"flex",flexDirection:"column",gap:8}}>
           {/* Fuels array */}
           <div>
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
@@ -9991,7 +9991,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.26";
+const APP_VERSION = "2026.09.28.27";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

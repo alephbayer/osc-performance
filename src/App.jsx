@@ -3487,12 +3487,12 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
 function VoiceTaskBtn({onResult}) {
   const [listening,setListening]=useState(false);
   const srRef=useRef(null);
-
-  const hasSupport=()=>!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+  const onResultRef=useRef(onResult);
+  useEffect(()=>{ onResultRef.current=onResult; },[onResult]);
 
   const toggle=()=>{
     if(listening){
-      srRef.current?.stop();
+      srRef.current?.abort();
       setListening(false);
       return;
     }
@@ -3500,20 +3500,22 @@ function VoiceTaskBtn({onResult}) {
     if(!SR){ alert("Reconhecimento de voz não suportado neste navegador."); return; }
     const sr=new SR();
     sr.lang="pt-BR";
-    sr.interimResults=false;
+    sr.interimResults=true;
     sr.continuous=false;
+    sr.maxAlternatives=1;
     sr.onresult=e=>{
-      const txt=e.results[0][0].transcript;
-      onResult(txt);
-      setListening(false);
+      // Read all results, prefer final
+      let txt="";
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal) txt+=e.results[i][0].transcript;
+      }
+      if(txt.trim()) onResultRef.current(txt.trim());
     };
-    sr.onerror=e=>{ console.warn("SpeechRecognition error:",e.error); setListening(false); };
+    sr.onerror=e=>{ console.warn("SR error:",e.error); setListening(false); };
     sr.onend=()=>setListening(false);
     try{ sr.start(); srRef.current=sr; setListening(true); }
-    catch(e){ console.error(e); setListening(false); }
+    catch(e){ console.error("SR start error:",e); setListening(false); }
   };
-
-  if(typeof window==="undefined") return null;
 
   return(<button onClick={toggle} title={listening?"Parar":"Ditar tarefa"}
     style={{padding:"7px 10px",borderRadius:7,background:listening?`${B.red}22`:B.gray800,border:`1px solid ${listening?B.red:B.gray600}`,color:listening?B.red:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all .2s",flexShrink:0}}>
@@ -3910,7 +3912,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
           <input value={newT} onChange={e=>setNewT(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addT()} placeholder="Nova tarefa…"
             style={{flex:1,minWidth:130,padding:"7px 11px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-          <VoiceTaskBtn onResult={txt=>setNewT(p=>p?p+" "+txt:txt)}/>
+          <VoiceTaskBtn onResult={txt=>setNewT(prev=>prev?prev+" "+txt:txt)}/>
           <button onClick={addT} style={{padding:"7px 13px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5}}><IPlus s={14} c={B.white}/>Add</button>
           <button onClick={doAI} disabled={aiL} style={{padding:"7px 10px",borderRadius:7,background:aiL?B.gray700:`${B.orange}22`,border:`1px solid ${B.orange}55`,color:aiL?B.gray400:B.orange,cursor:aiL?"not-allowed":"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:4}}>
             <IAI s={13} c={aiL?B.gray400:B.orange}/>{aiL?"…":"IA"}
@@ -9476,7 +9478,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.4";
+const APP_VERSION = "2026.09.27.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

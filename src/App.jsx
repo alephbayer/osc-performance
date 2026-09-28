@@ -3701,14 +3701,14 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
             const deliveredField=division==="finishing"?vehicle.deliveredAtFinishing:vehicle.deliveredAt;
             const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(division==="finishing"?t.division==="finishing":(t.division||"performance")==="performance"));
             const hasEstimated=vTasks.some(t=>(t.materials||[]).some(m=>m.estimated));
-            if(curStatus==="ready"&&!deliveredField&&isOwner&&onDeliver) return(
-              <button onClick={()=>setConfirmDeliver(true)} style={{flex:1,background:B.green,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.white,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
-                <ICar2 s={12} c={B.white}/>Entregar
-              </button>);
-            if(curStatus==="ready") return(
+            if(curStatus==="ready"&&!deliveredField) return(<>
               <button onClick={()=>onSetStatus&&onSetStatus(vehicle.id,"active")} style={{flex:1,background:`${B.orange}33`,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
                 <IUndo s={12} c={B.orange}/>Reabrir
-              </button>);
+              </button>
+              {isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{flex:1,background:B.green,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.white,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
+                <ICar2 s={12} c={B.white}/>Entregar
+              </button>}
+            </>);
             return(
               <button onClick={()=>{
                 if(hasEstimated){alert("⚠️ Há materiais estimados. Confirme antes de marcar como pronto.");return;}
@@ -9991,7 +9991,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.25";
+const APP_VERSION = "2026.09.28.26";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

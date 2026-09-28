@@ -418,6 +418,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   const cliAppts=appointments.filter(a=>cliVehicleIds.has(a.vehicleId)&&a.status==="open");
   const cliQuotes=quotes.filter(q=>q.clientId===client.id||cliVehicleIds.has(q.vehicleId));
   const pendingQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent");
+  const activeQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent"||(q.status==="approved"&&!q.appointmentId));
   const cliHistory=osHistory
     .filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id))
     .sort((a,b)=>new Date(b.delivered_at||b.deliveredAt||0)-new Date(a.delivered_at||a.deliveredAt||0));
@@ -480,7 +481,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         {tabBtn("history","Histórico",<IFileText s={15}/>)}
         {tabBtn("account","Conta",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>)}
         {cliAppts.length>0&&tabBtn("appts","Agendamentos",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>)}
-        {cliQuotes.length>0&&<button onClick={()=>setTab("quotes")} style={{flex:1,padding:"8px 4px 6px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:700,background:tab==="quotes"?blue:"transparent",color:tab==="quotes"?B.white:B.gray400,display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:0,position:"relative"}}>
+        {activeQuotes.length>0&&<button onClick={()=>setTab("quotes")} style={{flex:1,padding:"8px 4px 6px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:700,background:tab==="quotes"?blue:"transparent",color:tab==="quotes"?B.white:B.gray400,display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:0,position:"relative"}}>
           <span style={{display:"flex",alignItems:"center",justifyContent:"center",opacity:tab==="quotes"?1:.7,position:"relative"}}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             {pendingQuotes.length>0&&<span style={{position:"absolute",top:-4,right:-6,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 2px"}}>{pendingQuotes.length}</span>}
@@ -10003,7 +10004,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.29";
+const APP_VERSION = "2026.09.28.30";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

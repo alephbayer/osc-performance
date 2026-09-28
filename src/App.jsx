@@ -9949,7 +9949,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.6";
+const APP_VERSION = "2026.09.28.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13446,7 +13446,13 @@ export default function App() {
           // Group by mechanics — active vehicles + ready vehicles separately
           const groups=[];
           const assignedVehicleIds=new Set();
-          const readyVehicles=vehicles.filter(v=>v.status==="ready"&&v.enteredAt);
+          const readyVehiclesAll=vehicles.filter(v=>v.status==="ready"&&v.enteredAt);
+          const readyVehicles=osSearch
+            ? readyVehiclesAll.filter(v=>
+                v.model.toLowerCase().includes(osSearch.toLowerCase())||
+                v.plate.toLowerCase().includes(osSearch.toLowerCase())||
+                (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase()))
+            : readyVehiclesAll;
           const allGroupable=[...activeVehicles,...readyVehicles.filter(r=>!activeVehicles.find(a=>a.id===r.id))];
           [...employees].filter(e=>e.division!=="finishing").sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).forEach(emp=>{
             const empVs=allGroupable.filter(v=>(v.mechanicIds||[]).includes(emp.id));

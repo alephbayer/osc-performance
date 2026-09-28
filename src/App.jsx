@@ -3722,6 +3722,9 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
           </button>
         </div>}
 
+        {/* Divider */}
+        {managerMode&&<div style={{height:1,background:`${B.gray600}55`,margin:"6px 0"}}/>}
+
         {/* Tier 2 — Primários, permite wrap em múltiplas linhas */}
         <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
           {/* Urgente */}
@@ -9988,7 +9991,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.21";
+const APP_VERSION = "2026.09.28.22";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

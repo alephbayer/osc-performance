@@ -4178,8 +4178,13 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
     setEditing(false);
   };
   const [doneOpen,setDoneOpen]=useState(false);
-  const empV=[...vehicles.filter(v=>(v.mechanicIds||[v.employeeId]).includes(employee.id)&&v.status!=="delivered")]
-    .sort((a,b)=>{
+  const empV=[...vehicles.filter(v=>{
+    if(!(v.mechanicIds||[v.employeeId]).includes(employee.id)) return false;
+    if(v.status==="delivered") return false;
+    // Only show if OS is open for this mechanic's division
+    if(employee.division==="finishing") return !!v.enteredAtFinishing;
+    return !!v.enteredAt;
+  })].sort((a,b)=>{
     const orderDiff=Number(a.sortOrder||0)-Number(b.sortOrder||0);
     if(orderDiff!==0) return orderDiff;
     return (a.status==="paused"?1:0)-(b.status==="paused"?1:0);
@@ -13423,7 +13428,7 @@ export default function App() {
         {(()=>{
           const allActive=vehicles.filter(v=>
             v.status!=="delivered"&&
-            (v.enteredAt||tasks.some(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance")));
+            !!v.enteredAt);
           const activeVehicles=osSearch
             ? allActive.filter(v=>
                 v.model.toLowerCase().includes(osSearch.toLowerCase())||

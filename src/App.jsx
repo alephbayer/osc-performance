@@ -3592,6 +3592,8 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const [showPOForm,setShowPOForm]=useState(false);
   const [confirmDelV,setConfirmDelV]=useState(false);
   const [confirmDeliver,setConfirmDeliver]=useState(false);
+  const [showMoreMenu,setShowMoreMenu]=useState(false);
+  const [showNextVisit,setShowNextVisit]=useState(false);
   useEffect(()=>{
     if(!showMoreMenu) return;
     const close=()=>setShowMoreMenu(false);
@@ -9975,7 +9977,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.18";
+const APP_VERSION = "2026.09.28.19";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

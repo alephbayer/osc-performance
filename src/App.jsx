@@ -9991,7 +9991,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.27";
+const APP_VERSION = "2026.09.28.28";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13923,7 +13923,7 @@ export default function App() {
                 setCli(p=>[...p,newCli]); clientId=newCli.id;
               }
               if(!vehicleId&&quote.tempModel){
-                const newV=await db.createVehicle({model:quote.tempModel,plate:quote.tempPlate||"",clientId,status:"active"});
+                const newV=await db.addVehicle({model:quote.tempModel,plate:quote.tempPlate||"",clientId,status:"active"});
                 setVeh(p=>[...p,newV]); vehicleId=newV.id;
               }
               // Create appointment

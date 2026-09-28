@@ -375,7 +375,7 @@ function PixPaymentBox() {
   );
 }
 
-function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[]}) {
+function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote}) {
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
   const [showDebtPopup,setShowDebtPopup]=useState(false);
@@ -416,6 +416,8 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   const activeVehicles=cliVehicles.filter(v=>v.enteredAt||v.enteredAtFinishing||tasks.some(t=>t.vehicleId===v.id&&!t.done));
   const cliVehicleIds=new Set(cliVehicles.map(v=>v.id));
   const cliAppts=appointments.filter(a=>cliVehicleIds.has(a.vehicleId)&&a.status==="open");
+  const cliQuotes=quotes.filter(q=>q.clientId===client.id||cliVehicleIds.has(q.vehicleId));
+  const pendingQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent");
   const cliHistory=osHistory
     .filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id))
     .sort((a,b)=>new Date(b.delivered_at||b.deliveredAt||0)-new Date(a.delivered_at||a.deliveredAt||0));
@@ -478,6 +480,13 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         {tabBtn("history","Histórico",<IFileText s={15}/>)}
         {tabBtn("account","Conta",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>)}
         {cliAppts.length>0&&tabBtn("appts","Agendamentos",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>)}
+        {cliQuotes.length>0&&<button onClick={()=>setTab("quotes")} style={{flex:1,padding:"8px 4px 6px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:700,background:tab==="quotes"?blue:"transparent",color:tab==="quotes"?B.white:B.gray400,display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:0,position:"relative"}}>
+          <span style={{display:"flex",alignItems:"center",justifyContent:"center",opacity:tab==="quotes"?1:.7,position:"relative"}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            {pendingQuotes.length>0&&<span style={{position:"absolute",top:-4,right:-6,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 2px"}}>{pendingQuotes.length}</span>}
+          </span>
+          <span style={{fontSize:10,lineHeight:1.2,textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>Orçamentos</span>
+        </button>}
         {tabBtn("notes","Anotações",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>)}
       </div>
     </div>
@@ -787,6 +796,80 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
       {/* ── Notes ── */}
       {tab==="notes"&&<ClientNotesTab client={client} vehicles={cliVehicles}/>}
+
+      {tab==="quotes"&&<div>
+        <div style={{fontSize:13,fontWeight:700,color:B.gray400,marginBottom:14}}>
+          {cliQuotes.length} orçamento{cliQuotes.length!==1?"s":""}
+          {pendingQuotes.length>0&&<span style={{marginLeft:8,background:`${B.amber}22`,color:B.amber,borderRadius:99,padding:"2px 8px",fontSize:11}}>
+            {pendingQuotes.length} aguardando aprovação
+          </span>}
+        </div>
+        {cliQuotes.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray500,fontSize:13}}>Nenhum orçamento encontrado.</div>}
+        {[...cliQuotes].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).map(q=>{
+          const items=q.items||[];
+          const total=items.reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1),0),0);
+          const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
+          const isPending=q.status==="draft"||q.status==="sent";
+          const statusCfg={draft:{label:"Pendente",color:B.amber},sent:{label:"Aguardando aprovação",color:B.blue},approved:{label:"Aprovado",color:B.green},rejected:{label:"Recusado",color:B.red}};
+          const cfg=statusCfg[q.status]||statusCfg.draft;
+          return(<div key={q.id} style={{background:B.gray900,borderRadius:14,marginBottom:12,overflow:"hidden",border:`1px solid ${isPending?B.amber+"44":B.gray700}`}}>
+            {/* Header */}
+            <div style={{padding:"14px 16px",borderBottom:`1px solid ${B.gray800}`}}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:6}}>
+                <div style={{fontWeight:800,fontSize:15,color:B.white}}>{vModel||"Veículo"}</div>
+                <span style={{fontSize:11,fontWeight:700,color:cfg.color,background:`${cfg.color}18`,borderRadius:99,padding:"3px 10px",flexShrink:0}}>{cfg.label}</span>
+              </div>
+              {q.description&&<div style={{fontSize:13,color:B.gray300,lineHeight:1.5,marginBottom:6}}>{q.description}</div>}
+              <div style={{fontSize:11,color:B.gray500}}>{new Date(q.createdAt).toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"})}</div>
+            </div>
+            {/* Items */}
+            {items.length>0&&<div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray800}`}}>
+              {items.map((it,i)=>{
+                const matTotal=(it.materials||[]).reduce((s,m)=>s+Number(m.cost||0)*Number(m.qty||1),0);
+                return(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:i<items.length-1?10:0}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:13,color:B.white}}>{it.label}</div>
+                    {it.description&&<div style={{fontSize:11,color:B.gray400,marginTop:1}}>{it.description}</div>}
+                    {it.hours>0&&<div style={{fontSize:11,color:B.gray500,marginTop:1}}>{it.hours}h estimadas</div>}
+                    {(it.materials||[]).length>0&&<div style={{fontSize:11,color:B.purple,marginTop:2}}>
+                      + {(it.materials||[]).map(m=>`${m.name} ×${m.qty}`).join(", ")}
+                    </div>}
+                  </div>
+                  <div style={{fontWeight:700,fontSize:13,color:B.orange,flexShrink:0}}>
+                    {fmtBRL(Number(it.price||0)+matTotal)}
+                  </div>
+                </div>);
+              })}
+              <div style={{borderTop:`1px solid ${B.gray700}`,marginTop:10,paddingTop:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Total estimado</span>
+                <span style={{fontSize:16,fontWeight:900,color:B.orange}}>{fmtBRL(total)}</span>
+              </div>
+            </div>}
+            {/* Notes */}
+            {q.notes&&<div style={{padding:"10px 16px",background:`${B.amber}08`,borderBottom:`1px solid ${B.gray800}`}}>
+              <div style={{fontSize:11,color:B.gray500,marginBottom:2}}>Observações</div>
+              <div style={{fontSize:12,color:B.gray300,whiteSpace:"pre-wrap"}}>{q.notes}</div>
+            </div>}
+            {/* Actions */}
+            {isPending&&<div style={{padding:"12px 16px",display:"flex",gap:8}}>
+              <button onClick={async()=>{await onApproveQuote(q.id,items);}}
+                style={{flex:1,padding:"11px 0",borderRadius:10,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                ✅ Aprovar orçamento
+              </button>
+              <button onClick={async()=>{await onRejectQuote(q.id);}}
+                style={{padding:"11px 14px",borderRadius:10,background:"none",border:`2px solid ${B.red}`,color:B.red,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                Recusar
+              </button>
+            </div>}
+            {q.status==="approved"&&<div style={{padding:"12px 16px",textAlign:"center",fontSize:13,color:B.green,fontWeight:700}}>
+              ✅ Orçamento aprovado — entraremos em contato para confirmar o agendamento.
+            </div>}
+            {q.status==="rejected"&&<div style={{padding:"12px 16px",textAlign:"center",fontSize:13,color:B.red}}>
+              Orçamento recusado.
+            </div>}
+          </div>);
+        })}
+      </div>}
     </div>
     </div>{/* end scroll */}
   </div>);
@@ -9861,7 +9944,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.1";
+const APP_VERSION = "2026.09.28.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12231,7 +12314,7 @@ export default function App() {
           : clients.find(c=>c.id===clientSession.id)||clientSession)
       : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
+    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──

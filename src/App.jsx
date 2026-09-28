@@ -13256,8 +13256,10 @@ export default function App() {
     const [files,setFiles]=useState([]);
     const [loading,setLoading]=useState(true);
     const [uploading,setUploading]=useState(false);
-    const [msgTemplate,setMsgTemplate]=useState("OSC Performance  |  Portfólio\n");
+    const [msgTemplate,setMsgTemplate]=useState(()=>{try{return localStorage.getItem("osc_portfolio_msg")||"OSC Performance  |  Portfólio";}catch{return "OSC Performance  |  Portfólio";}});
     const [editingMsg,setEditingMsg]=useState(false);
+    const [copiedId,setCopiedId]=useState(null);
+    const [confirmDel,setConfirmDel]=useState(null);
     const fileRef=useRef(null);
 
     useEffect(()=>{
@@ -13336,7 +13338,7 @@ export default function App() {
           </button>
         </div>
         {editingMsg
-          ?<textarea value={msgTemplate} onChange={e=>setMsgTemplate(e.target.value)} rows={3}
+          ?<textarea value={msgTemplate} onChange={e=>{setMsgTemplate(e.target.value);try{localStorage.setItem("osc_portfolio_msg",e.target.value);}catch{}}} rows={3}
               placeholder="Ex: OSC Performance  |  Portfólio"
               style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
           :<div style={{fontSize:12,color:B.gray300,fontStyle:msgTemplate.trim()?"normal":"italic"}}>

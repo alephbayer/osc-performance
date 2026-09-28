@@ -5967,7 +5967,36 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
 }
 
 // ─── QuotesTab ────────────────────────────────────────────────────────────────
-function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,onDelete,onConvertToAppointment,defaultRate=0}) {
+function QuoteItemStockSearch({stock=[],onAdd}) {
+  const [q,setQ]=useState("");
+  const [open,setOpen]=useState(false);
+  const hits=q.length>=1?stock.filter(s=>(s.name||"").toLowerCase().includes(q.toLowerCase())||(s.brand||"").toLowerCase().includes(q.toLowerCase())).slice(0,6):[];
+  return(<div style={{position:"relative",marginTop:4}}>
+    <input value={q} onChange={e=>{setQ(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),150)}
+      placeholder="+ Material do estoque (opcional)"
+      style={{width:"100%",padding:"4px 8px",borderRadius:6,border:`1px solid ${B.gray700}`,background:B.gray900,color:B.white,fontSize:11,outline:"none",boxSizing:"border-box"}}/>
+    {open&&hits.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:7,zIndex:50,marginTop:2,maxHeight:150,overflowY:"auto",boxShadow:"0 8px 24px rgba(0,0,0,.5)"}}>
+      {hits.map(s=>(
+        <div key={s.id} onMouseDown={()=>{onAdd({name:s.name,brand:s.brand||"",qty:1,cost:s.salePrice||0,stockId:s.id});setQ("");setOpen(false);}}
+          style={{padding:"6px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8,fontSize:11}}
+          onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+          onMouseLeave={e=>e.currentTarget.style.background="none"}>
+          <span style={{flex:1,color:B.white,fontWeight:600}}>{s.name}{s.brand?` · ${s.brand}`:""}</span>
+          <span style={{color:B.gray400}}>Estq: {s.qty}</span>
+          {s.salePrice>0&&<span style={{color:B.amber,fontWeight:700}}>{fmtBRL(s.salePrice)}</span>}
+        </div>
+      ))}
+      <div onMouseDown={()=>{onAdd({name:q.trim(),brand:"",qty:1,cost:0,stockId:null});setQ("");setOpen(false);}}
+        style={{padding:"6px 10px",cursor:"pointer",fontSize:11,color:B.purple,fontStyle:"italic"}}
+        onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+        onMouseLeave={e=>e.currentTarget.style.background="none"}>
+        + Adicionar "{q.trim()}" manualmente
+      </div>
+    </div>}
+  </div>);
+}
+
+function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,onDelete,onConvertToAppointment,defaultRate=0,stock=[]}) {
   const [showNew,setShowNew]=useState(false);
   const [form,setForm]=useState({tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
   const [clientSearch,setClientSearch]=useState("");
@@ -6120,26 +6149,53 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       {/* Items */}
       {form.items.length>0&&<div style={{marginBottom:10}}>
         <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Itens do orçamento</div>
-        {form.items.map((it,i)=>(
-          <div key={i} style={{background:B.gray800,borderRadius:8,padding:"8px 10px",marginBottom:6,display:"flex",gap:8,alignItems:"flex-start"}}>
-            <div style={{flex:1}}>
-              <input value={it.label} onChange={e=>{const items=[...form.items];items[i]={...it,label:e.target.value};setForm(p=>({...p,items}));}}
-                style={{width:"100%",background:"none",border:"none",color:B.white,fontSize:13,fontWeight:700,outline:"none",padding:0,marginBottom:3}}/>
-              <div style={{display:"flex",gap:6}}>
-                <input value={it.hours||""} type="number" placeholder="horas" onChange={e=>{const h=parseFloat(e.target.value)||0;const items=[...form.items];items[i]={...it,hours:h,price:Math.round(h*defaultRate*100)/100};setForm(p=>({...p,items}));}}
-                  style={{width:60,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
-                <input value={it.price||""} type="number" placeholder="R$" onChange={e=>{const items=[...form.items];items[i]={...it,price:parseFloat(e.target.value)||0};setForm(p=>({...p,items}));}}
-                  style={{width:80,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+        {form.items.map((it,i)=>{
+          const matTotal=(it.materials||[]).reduce((s,m)=>s+Number(m.cost||0)*Number(m.qty||1),0);
+          const itemTotal=Number(it.price||0)+matTotal;
+          return(<div key={i} style={{background:B.gray800,borderRadius:8,padding:"8px 10px",marginBottom:8}}>
+            <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+              <div style={{flex:1}}>
+                <input value={it.label} onChange={e=>{const items=[...form.items];items[i]={...it,label:e.target.value};setForm(p=>({...p,items}));}}
+                  style={{width:"100%",background:"none",border:"none",color:B.white,fontSize:13,fontWeight:700,outline:"none",padding:0,marginBottom:3}}/>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  <input value={it.hours||""} type="number" placeholder="horas" onChange={e=>{const h=parseFloat(e.target.value)||0;const items=[...form.items];items[i]={...it,hours:h,price:Math.round(h*defaultRate*100)/100};setForm(p=>({...p,items}));}}
+                    style={{width:60,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+                  <input value={it.price||""} type="number" placeholder="M.O. R$" onChange={e=>{const items=[...form.items];items[i]={...it,price:parseFloat(e.target.value)||0};setForm(p=>({...p,items}));}}
+                    style={{width:80,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+                  {itemTotal>0&&<span style={{fontSize:11,color:B.orange,fontWeight:700,alignSelf:"center"}}>= {fmtBRL(itemTotal)}</span>}
+                </div>
               </div>
+              <button onClick={()=>setForm(p=>({...p,items:p.items.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0,flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}>
+                <ITrash s={13}/>
+              </button>
             </div>
-            <button onClick={()=>setForm(p=>({...p,items:p.items.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0}}
-              onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}>
-              <ITrash s={13}/>
-            </button>
-          </div>
-        ))}
+            {/* Materials for this item */}
+            <div style={{marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`}}>
+              {(it.materials||[]).map((m,mi)=>(
+                <div key={mi} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,fontSize:11,color:B.gray300}}>
+                  <span style={{flex:1}}>{m.name}{m.brand?` · ${m.brand}`:""}</span>
+                  <input value={m.qty} type="number" min="1" onChange={e=>{
+                    const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,qty:parseInt(e.target.value)||1};items[i]={...it,materials:mats};setForm(p=>({...p,items}));
+                  }} style={{width:40,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
+                  <span style={{color:B.amber,fontWeight:700}}>{fmtBRL(m.cost*m.qty)}</span>
+                  <button onClick={()=>{const items=[...form.items];items[i]={...it,materials:(it.materials||[]).filter((_,j)=>j!==mi)};setForm(p=>({...p,items}));}}
+                    style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0}}
+                    onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}>
+                    <ITrash s={10}/>
+                  </button>
+                </div>
+              ))}
+              <QuoteItemStockSearch stock={stock} onAdd={mat=>{
+                const items=[...form.items];
+                items[i]={...it,materials:[...(it.materials||[]),mat]};
+                setForm(p=>({...p,items}));
+              }}/>
+            </div>
+          </div>);
+        })}
         <div style={{textAlign:"right",fontSize:13,fontWeight:800,color:B.orange,marginTop:4}}>
-          Total: {fmtBRL(form.items.reduce((s,it)=>s+Number(it.price||0),0))}
+          Total: {fmtBRL(form.items.reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1),0),0))}
         </div>
       </div>}
 
@@ -6268,7 +6324,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
         </button>
       ))}
     </div>
-    {subTab==="quotes"&&<QuotesTab quotes={quotes} clients={clients} vehicles={vehicles} adminRole={adminRole} defaultRate={defaultRate||0}
+    {subTab==="quotes"&&<QuotesTab quotes={quotes} clients={clients} vehicles={vehicles} adminRole={adminRole} defaultRate={defaultRate||0} stock={stock}
       onAdd={onAddQuote} onUpdate={onUpdateQuote} onDelete={onDeleteQuote} onConvertToAppointment={onConvertQuoteToAppointment}/>}
     {subTab==="appointments"&&<>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
@@ -9785,7 +9841,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.12";
+const APP_VERSION = "2026.09.27.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

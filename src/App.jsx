@@ -5883,8 +5883,329 @@ function ApptManualMat({sv,onUpdateService}){
   </>);
 }
 
+// ─── PublicQuoteView ──────────────────────────────────────────────────────────
+function PublicQuoteView({quoteId,onApprove,onReject}) {
+  const [quote,setQuote]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [done,setDone]=useState(null); // "approved"|"rejected"
+  const [selected,setSelected]=useState(null); // null=all or Set of item ids
+
+  useEffect(()=>{
+    db.getQuote(quoteId).then(q=>{setQuote(q);setLoading(false);}).catch(()=>setLoading(false));
+  },[quoteId]);
+
+  if(loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#f8f9fa",color:"#333",fontSize:15}}>Carregando orçamento…</div>;
+  if(!quote) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#f8f9fa",color:"#333",fontSize:15}}>Orçamento não encontrado.</div>;
+
+  const items=quote.items||[];
+  const total=items.reduce((s,it)=>s+Number(it.price||0),0);
+  const alreadyAnswered=quote.status==="approved"||quote.status==="rejected"||done;
+  const statusColor=quote.status==="approved"||done==="approved"?B.green:quote.status==="rejected"||done==="rejected"?B.red:B.amber;
+  const statusLabel=quote.status==="approved"||done==="approved"?"✅ Aprovado":quote.status==="rejected"||done==="rejected"?"❌ Recusado":"⏳ Aguardando aprovação";
+
+  return(<div style={{minHeight:"100vh",background:"#f0f0f5",fontFamily:"'Inter','Segoe UI',sans-serif",padding:"0 0 60px"}}>
+    {/* Header */}
+    <div style={{background:"#ff6b00",padding:"20px 20px 24px",color:"#fff"}}>
+      <div style={{fontSize:11,fontWeight:700,opacity:.8,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Orçamento de Serviço</div>
+      <div style={{fontSize:20,fontWeight:900}}>{quote.tempModel||"Veículo"}{quote.tempPlate?` · ${quote.tempPlate}`:""}</div>
+      {quote.tempName&&<div style={{fontSize:13,opacity:.9,marginTop:2}}>{quote.tempName}{quote.tempPhone?` · ${quote.tempPhone}`:""}</div>}
+      <div style={{marginTop:10,display:"inline-block",background:"rgba(255,255,255,.2)",borderRadius:99,padding:"4px 12px",fontSize:12,fontWeight:700}}>{statusLabel}</div>
+    </div>
+
+    <div style={{padding:"16px 16px 0"}}>
+      {/* Description */}
+      {quote.description&&<div style={{background:"#fff",borderRadius:12,padding:"14px 16px",marginBottom:12,fontSize:13,color:"#333",lineHeight:1.6,whiteSpace:"pre-wrap",border:"1px solid #e0e0e8"}}>
+        {quote.description}
+      </div>}
+
+      {/* Items */}
+      {items.length>0&&<div style={{background:"#fff",borderRadius:12,marginBottom:12,overflow:"hidden",border:"1px solid #e0e0e8"}}>
+        <div style={{padding:"12px 16px",borderBottom:"1px solid #f0f0f5",fontSize:11,fontWeight:800,color:"#888",textTransform:"uppercase",letterSpacing:.8}}>Serviços e itens</div>
+        {items.map((it,i)=>(
+          <div key={i} style={{padding:"12px 16px",borderBottom:i<items.length-1?"1px solid #f0f0f5":"none",display:"flex",alignItems:"center",gap:10}}>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:"#222"}}>{it.label}</div>
+              {it.description&&<div style={{fontSize:12,color:"#888",marginTop:2}}>{it.description}</div>}
+              {it.hours>0&&<div style={{fontSize:11,color:"#aaa",marginTop:2}}>{it.hours}h estimadas</div>}
+            </div>
+            {it.price>0&&<div style={{fontWeight:800,fontSize:14,color:"#ff6b00",flexShrink:0}}>{fmtBRL(it.price)}</div>}
+          </div>
+        ))}
+        <div style={{padding:"12px 16px",background:"#fafafa",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontWeight:700,fontSize:13,color:"#555"}}>Total estimado</span>
+          <span style={{fontWeight:900,fontSize:16,color:"#ff6b00"}}>{fmtBRL(total)}</span>
+        </div>
+      </div>}
+
+      {/* Notes */}
+      {quote.notes&&<div style={{background:"#fffbea",borderRadius:12,padding:"12px 16px",marginBottom:12,fontSize:13,color:"#666",border:"1px solid #f0e68c",whiteSpace:"pre-wrap"}}>
+        <div style={{fontWeight:700,color:"#888",fontSize:11,marginBottom:4}}>OBSERVAÇÕES</div>
+        {quote.notes}
+      </div>}
+
+      {/* Actions */}
+      {!alreadyAnswered&&<div style={{display:"flex",flexDirection:"column",gap:10,marginTop:8}}>
+        <button onClick={async()=>{setDone("approved");await onApprove(quoteId,items);}}
+          style={{padding:"14px 0",borderRadius:12,background:"#16a34a",border:"none",color:"#fff",fontWeight:800,fontSize:16,cursor:"pointer"}}>
+          ✅ Aprovar orçamento
+        </button>
+        <button onClick={async()=>{setDone("rejected");await onReject(quoteId);}}
+          style={{padding:"14px 0",borderRadius:12,background:"#fff",border:"2px solid #ef4444",color:"#ef4444",fontWeight:700,fontSize:15,cursor:"pointer"}}>
+          ❌ Recusar
+        </button>
+        <div style={{textAlign:"center",fontSize:11,color:"#aaa",marginTop:4}}>Ao aprovar, você concorda com os serviços e valores listados acima.</div>
+      </div>}
+
+      {(done==="approved"||quote.status==="approved")&&<div style={{textAlign:"center",padding:"24px 0",fontSize:15,color:B.green,fontWeight:700}}>
+        Orçamento aprovado! Em breve entraremos em contato para agendar.
+      </div>}
+      {(done==="rejected"||quote.status==="rejected")&&<div style={{textAlign:"center",padding:"24px 0",fontSize:15,color:"#ef4444",fontWeight:700}}>
+        Orçamento recusado. Obrigado pelo retorno!
+      </div>}
+    </div>
+  </div>);
+}
+
+// ─── QuotesTab ────────────────────────────────────────────────────────────────
+function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,onDelete,onConvertToAppointment}) {
+  const [showNew,setShowNew]=useState(false);
+  const [form,setForm]=useState({tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
+  const [clientSearch,setClientSearch]=useState("");
+  const [clientOpen,setClientOpen]=useState(false);
+  const [vehicleSearch,setVehicleSearch]=useState("");
+  const [vehicleOpen,setVehicleOpen]=useState(false);
+  const [aiLoading,setAiLoading]=useState(false);
+  const [newItem,setNewItem]=useState({label:"",description:"",hours:0,price:0});
+  const [copiedId,setCopiedId]=useState(null);
+
+  const isNewClient=!form.clientId;
+  const selectedClient=clients.find(c=>c.id===form.clientId);
+  const selectedVehicle=vehicles.find(v=>v.id===form.vehicleId);
+
+  const clientHits=clients.filter(c=>{
+    const q=clientSearch.toLowerCase();
+    return !q||c.name?.toLowerCase().includes(q)||(c.phone||"").includes(q);
+  }).slice(0,6);
+
+  const vehicleHits=vehicles.filter(v=>{
+    const q=vehicleSearch.toLowerCase();
+    const cli=clients.find(c=>c.id===v.clientId);
+    return !q||v.model?.toLowerCase().includes(q)||v.plate?.toLowerCase().includes(q)||cli?.name?.toLowerCase().includes(q);
+  }).slice(0,6);
+
+  const generateWithAI=async()=>{
+    if(!form.description.trim()) return;
+    setAiLoading(true);
+    try{
+      const prompt=`Você é um assistente de oficina automotiva premium. Com base na descrição abaixo, gere uma lista de serviços para um orçamento. Retorne APENAS JSON válido, sem explicações.\n\nVeículo: ${form.tempModel||selectedVehicle?.model||"não informado"}\nDescrição: ${form.description}\n\nResponda com: {"items":[{"label":"nome do serviço","description":"detalhe breve","hours":número,"price":valor_em_reais}]}`;
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:800,messages:[{role:"user",content:prompt}]})});
+      const d=await r.json();
+      const txt=(d.content||[]).map(c=>c.text||"").join("").replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(txt);
+      if(parsed.items) setForm(p=>({...p,items:[...p.items,...parsed.items]}));
+    }catch(e){console.error(e);}
+    setAiLoading(false);
+  };
+
+  const save=async()=>{
+    const payload={...form,status:"draft",createdAt:new Date().toISOString()};
+    await onAdd(payload);
+    setForm({tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
+    setShowNew(false);
+  };
+
+  const copyLink=(id)=>{
+    navigator.clipboard.writeText(`${window.location.origin}/?q=${id}`);
+    setCopiedId(id); setTimeout(()=>setCopiedId(null),2000);
+  };
+
+  const statusCfg={draft:{label:"Rascunho",color:B.gray500},sent:{label:"Enviado",color:B.blue},approved:{label:"Aprovado",color:B.green},rejected:{label:"Recusado",color:B.red}};
+
+  return(<div>
+    {/* Header */}
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:800,fontSize:16,color:B.white}}>Orçamentos</div>
+        <div style={{fontSize:12,color:B.gray400}}>{quotes.length} orçamento{quotes.length!==1?"s":""}</div>
+      </div>
+      <button onClick={()=>setShowNew(s=>!s)} style={{padding:"8px 14px",borderRadius:9,background:showNew?B.gray700:`${B.orange}22`,border:`1px solid ${showNew?B.gray600:B.orange}44`,color:showNew?B.gray300:B.orange,fontWeight:700,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+        <IPlus s={13} c={showNew?B.gray300:B.orange}/>{showNew?"Fechar":"Novo orçamento"}
+      </button>
+    </div>
+
+    {/* New quote form */}
+    {showNew&&<div style={{background:B.gray900,borderRadius:14,padding:"16px",marginBottom:16,border:`1px solid ${B.orange}33`}}>
+      <div style={{fontWeight:800,fontSize:14,color:B.white,marginBottom:12}}>Novo orçamento</div>
+
+      {/* Client */}
+      <div style={{marginBottom:10}}>
+        <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>Cliente</div>
+        <div style={{position:"relative"}}>
+          <input value={clientOpen?clientSearch:(selectedClient?selectedClient.name:form.clientId?"":form.tempName)}
+            onChange={e=>{setClientSearch(e.target.value);if(!clientOpen)setClientOpen(true);if(!form.clientId)setForm(p=>({...p,tempName:e.target.value}));}}
+            onFocus={()=>setClientOpen(true)} onBlur={()=>setTimeout(()=>setClientOpen(false),150)}
+            placeholder="Buscar cliente existente ou digitar novo nome"
+            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${selectedClient?B.orange:B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+          {clientOpen&&clientHits.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:8,zIndex:50,marginTop:2,maxHeight:160,overflowY:"auto"}}>
+            {clientHits.map(c=><div key={c.id} onMouseDown={()=>{setForm(p=>({...p,clientId:c.id,tempName:"",tempPhone:""}));setClientSearch("");setClientOpen(false);}}
+              style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
+              onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+              onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}>{c.name}</div>
+              {c.phone&&<div style={{fontSize:11,color:B.gray400}}>{c.phone}</div>}
+            </div>)}
+          </div>}
+        </div>
+        {!form.clientId&&<div style={{display:"flex",gap:6,marginTop:6}}>
+          <input value={form.tempPhone} onChange={e=>setForm(p=>({...p,tempPhone:e.target.value}))} placeholder="Telefone (opcional)"
+            style={{flex:1,padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        </div>}
+        {form.clientId&&<button onClick={()=>{setForm(p=>({...p,clientId:"",vehicleId:""}));setClientSearch("");}} style={{marginTop:4,fontSize:11,color:B.gray500,background:"none",border:"none",cursor:"pointer"}}>✕ Limpar cliente</button>}
+      </div>
+
+      {/* Vehicle */}
+      <div style={{marginBottom:10}}>
+        <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>Veículo</div>
+        {form.clientId?<div style={{position:"relative"}}>
+          <input value={vehicleOpen?vehicleSearch:(selectedVehicle?`${selectedVehicle.model}${selectedVehicle.plate?` · ${selectedVehicle.plate}`:""}`:"")}
+            onChange={e=>{setVehicleSearch(e.target.value);setVehicleOpen(true);}}
+            onFocus={()=>setVehicleOpen(true)} onBlur={()=>setTimeout(()=>setVehicleOpen(false),150)}
+            placeholder="Buscar veículo do cliente"
+            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${selectedVehicle?B.orange:B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+          {vehicleOpen&&vehicleHits.filter(v=>v.clientId===form.clientId).length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:8,zIndex:50,marginTop:2,maxHeight:140,overflowY:"auto"}}>
+            {vehicleHits.filter(v=>v.clientId===form.clientId).map(v=><div key={v.id} onMouseDown={()=>{setForm(p=>({...p,vehicleId:v.id,tempModel:"",tempPlate:""}));setVehicleSearch("");setVehicleOpen(false);}}
+              style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
+              onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
+              onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+            </div>)}
+          </div>}
+        </div>:<div style={{display:"flex",gap:6}}>
+          <input value={form.tempModel} onChange={e=>setForm(p=>({...p,tempModel:e.target.value}))} placeholder="Modelo do veículo *"
+            style={{flex:2,padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+          <input value={form.tempPlate} onChange={e=>setForm(p=>({...p,tempPlate:e.target.value}))} placeholder="Placa"
+            style={{flex:1,padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+        </div>}
+      </div>
+
+      {/* Description + AI */}
+      <div style={{marginBottom:10}}>
+        <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>Descrição do serviço</div>
+        <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} rows={3}
+          placeholder="Ex: Revisão completa, troca de fluidos, verificação de suspensão…"
+          style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+        <button onClick={generateWithAI} disabled={!form.description.trim()||aiLoading}
+          style={{marginTop:6,padding:"7px 14px",borderRadius:8,background:form.description.trim()&&!aiLoading?`${B.purple}22`:B.gray700,border:`1px solid ${form.description.trim()&&!aiLoading?B.purple:B.gray600}`,color:form.description.trim()&&!aiLoading?B.purple:B.gray500,cursor:form.description.trim()&&!aiLoading?"pointer":"not-allowed",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
+          <IAI s={12} c={form.description.trim()&&!aiLoading?B.purple:B.gray500}/>{aiLoading?"Gerando itens…":"Gerar itens com IA"}
+        </button>
+      </div>
+
+      {/* Items */}
+      {form.items.length>0&&<div style={{marginBottom:10}}>
+        <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Itens do orçamento</div>
+        {form.items.map((it,i)=>(
+          <div key={i} style={{background:B.gray800,borderRadius:8,padding:"8px 10px",marginBottom:6,display:"flex",gap:8,alignItems:"flex-start"}}>
+            <div style={{flex:1}}>
+              <input value={it.label} onChange={e=>{const items=[...form.items];items[i]={...it,label:e.target.value};setForm(p=>({...p,items}));}}
+                style={{width:"100%",background:"none",border:"none",color:B.white,fontSize:13,fontWeight:700,outline:"none",padding:0,marginBottom:3}}/>
+              <div style={{display:"flex",gap:6}}>
+                <input value={it.hours||""} type="number" placeholder="horas" onChange={e=>{const items=[...form.items];items[i]={...it,hours:parseFloat(e.target.value)||0};setForm(p=>({...p,items}));}}
+                  style={{width:60,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+                <input value={it.price||""} type="number" placeholder="R$" onChange={e=>{const items=[...form.items];items[i]={...it,price:parseFloat(e.target.value)||0};setForm(p=>({...p,items}));}}
+                  style={{width:80,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+              </div>
+            </div>
+            <button onClick={()=>setForm(p=>({...p,items:p.items.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0}}
+              onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}>
+              <ITrash s={13}/>
+            </button>
+          </div>
+        ))}
+        <div style={{textAlign:"right",fontSize:13,fontWeight:800,color:B.orange,marginTop:4}}>
+          Total: {fmtBRL(form.items.reduce((s,it)=>s+Number(it.price||0),0))}
+        </div>
+      </div>}
+
+      {/* Add item manually */}
+      <div style={{marginBottom:10}}>
+        <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>Adicionar item manualmente</div>
+        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+          <input value={newItem.label} onChange={e=>setNewItem(p=>({...p,label:e.target.value}))} placeholder="Nome do serviço"
+            style={{flex:2,minWidth:120,padding:"6px 8px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+          <input value={newItem.hours||""} type="number" placeholder="h" onChange={e=>setNewItem(p=>({...p,hours:parseFloat(e.target.value)||0}))}
+            style={{width:50,padding:"6px 8px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+          <input value={newItem.price||""} type="number" placeholder="R$" onChange={e=>setNewItem(p=>({...p,price:parseFloat(e.target.value)||0}))}
+            style={{width:70,padding:"6px 8px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+          <button onClick={()=>{if(!newItem.label.trim())return;setForm(p=>({...p,items:[...p.items,{...newItem}]}));setNewItem({label:"",hours:0,price:0});}}
+            style={{padding:"6px 12px",borderRadius:7,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+            + Adicionar
+          </button>
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div style={{marginBottom:14}}>
+        <textarea value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} rows={2} placeholder="Observações internas (não aparecem no link do cliente)"
+          style={{width:"100%",padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+      </div>
+
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={save} disabled={!form.tempModel&&!form.vehicleId}
+          style={{flex:1,padding:"10px 0",borderRadius:9,background:form.tempModel||form.vehicleId?B.orange:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:form.tempModel||form.vehicleId?"pointer":"not-allowed"}}>
+          Criar orçamento
+        </button>
+        <button onClick={()=>setShowNew(false)} style={{padding:"10px 16px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:13}}>Cancelar</button>
+      </div>
+    </div>}
+
+    {/* Quote list */}
+    {quotes.length===0&&!showNew&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray500,fontSize:13}}>Nenhum orçamento criado ainda.</div>}
+    {[...quotes].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).map(q=>{
+      const cfg=statusCfg[q.status]||statusCfg.draft;
+      const total=(q.items||[]).reduce((s,it)=>s+Number(it.price||0),0);
+      const clientName=q.clientId?clients.find(c=>c.id===q.clientId)?.name:q.tempName;
+      const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
+      const link=`${window.location.origin}/?q=${q.id}`;
+      return(<div key={q.id} style={{background:B.gray900,borderRadius:12,marginBottom:10,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
+        <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:800,fontSize:14,color:B.white}}>{vModel||"Veículo"}</div>
+            {clientName&&<div style={{fontSize:12,color:B.gray400}}>{clientName}{q.tempPhone?` · ${q.tempPhone}`:""}</div>}
+            <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{new Date(q.createdAt).toLocaleDateString("pt-BR")}</div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0}}>
+            <div style={{fontSize:11,fontWeight:700,color:cfg.color,background:`${cfg.color}18`,borderRadius:99,padding:"2px 8px",marginBottom:4}}>{cfg.label}</div>
+            {total>0&&<div style={{fontSize:13,fontWeight:800,color:B.orange}}>{fmtBRL(total)}</div>}
+          </div>
+        </div>
+        {q.description&&<div style={{padding:"0 14px 10px",fontSize:12,color:B.gray400,lineHeight:1.4}}>{q.description.slice(0,120)}{q.description.length>120?"…":""}</div>}
+        <div style={{padding:"8px 14px",borderTop:`1px solid ${B.gray800}`,display:"flex",gap:6,flexWrap:"wrap"}}>
+          <button onClick={()=>copyLink(q.id)}
+            style={{padding:"5px 10px",borderRadius:7,background:`${B.blue}18`,border:`1px solid ${B.blue}33`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+            {copiedId===q.id?"✓ Copiado":"🔗 Copiar link"}
+          </button>
+          {(q.status==="draft"||q.status==="sent")&&<button onClick={()=>{onUpdate(q.id,{status:"sent"});copyLink(q.id);}}
+            style={{padding:"5px 10px",borderRadius:7,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,color:B.amber,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            📤 Enviar
+          </button>}
+          {q.status==="approved"&&!q.appointmentId&&<button onClick={()=>onConvertToAppointment(q)}
+            style={{padding:"5px 10px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}33`,color:B.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            ✅ Converter em agendamento
+          </button>}
+          <button onClick={()=>onDelete(q.id)}
+            style={{padding:"5px 10px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",marginLeft:"auto"}}>
+            <ITrash s={11}/>
+          </button>
+        </div>
+      </div>);
+    })}
+  </div>);
+}
+
 function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],adminRole,  onAdd,onUpdate,onDelete,onAddService,onUpdateService,onDeleteService,
-  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[],company={}}) {
+  onAddPayment,onDeletePayment,onConvertToOS,onAddExpense,stock=[],clientNotes=[],company={},
+  quotes=[],onAddQuote,onUpdateQuote,onDeleteQuote,onConvertQuoteToAppointment}) {
+  const [subTab,setSubTab]=useState("appointments"); // "appointments"|"quotes"
 
   const [showNew,setShowNew]=useState(false);
   const [expanded,setExpanded]=useState(null);
@@ -5921,6 +6242,18 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   };
 
   return(<div>
+    {/* Sub-tabs */}
+    <div style={{display:"flex",gap:6,marginBottom:16}}>
+      {[["appointments","Agendamentos",appointments.length],["quotes","Orçamentos",quotes.length]].map(([id,label,count])=>(
+        <button key={id} onClick={()=>setSubTab(id)}
+          style={{flex:1,padding:"8px 0",borderRadius:9,border:`1px solid ${subTab===id?B.orange:B.gray700}`,background:subTab===id?`${B.orange}22`:"none",color:subTab===id?B.orange:B.gray400,fontWeight:subTab===id?800:500,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+          {label}<span style={{fontSize:10,background:subTab===id?`${B.orange}33`:B.gray700,borderRadius:99,padding:"1px 6px"}}>{count}</span>
+        </button>
+      ))}
+    </div>
+    {subTab==="quotes"&&<QuotesTab quotes={quotes} clients={clients} vehicles={vehicles} adminRole={adminRole}
+      onAdd={onAddQuote} onUpdate={onUpdateQuote} onDelete={onDeleteQuote} onConvertToAppointment={onConvertQuoteToAppointment}/>}
+    {subTab==="appointments"&&<>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
       <div style={{fontSize:13,color:B.gray400}}>{openAppts.length} em aberto</div>
       {canManage&&<button onClick={()=>setShowNew(s=>!s)} style={{padding:"7px 14px",borderRadius:9,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
@@ -6427,6 +6760,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
     </div>}
 
     {confirmDel&&<ConfirmModal title="Cancelar agendamento?" message="O agendamento e todos os dados serão removidos." confirmLabel="Cancelar agendamento" onConfirm={async()=>{await onDelete(confirmDel);setConfirmDel(null);}} onCancel={()=>setConfirmDel(null)}/>}
+    </>}
   </div>);
 }
 
@@ -9434,7 +9768,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.7";
+const APP_VERSION = "2026.09.27.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11487,6 +11821,7 @@ export default function App() {
   // Check for public vehicle link
   const params=new URLSearchParams(window.location.search);
   const publicVehicleId=params.get("v");
+  const publicQuoteId=params.get("q");
   const publicHistoryId=params.get("vh");
   const isMechanicPortal=params.get("portal")==="mecanico";
   const isClientPortal=params.get("portal")==="cliente";
@@ -11504,6 +11839,7 @@ export default function App() {
   const [expenses,setExpenses]=useState([]);
   const [internalTransfers,setInternalTransfers]=useState([]);
   const [appointments,setAppts]=useState([]);
+  const [quotes,setQuotes]=useState([]);
   const [allClientNotes,setAllClientNotes]=useState([]);
   const [calendarEvents,setCalEvents]=useState([]);
   const [showCalendar,setShowCalendar]=useState(false);
@@ -11641,6 +11977,7 @@ export default function App() {
       db.loadExpenses().then(setExpenses).catch(()=>{});
       db.loadInternalTransfers().then(setInternalTransfers).catch(()=>{});
       db.loadAppointments().then(setAppts).catch(()=>{});
+      db.loadQuotes().then(setQuotes).catch(()=>{});
       db.loadAllClientVehicleNotes().then(setAllClientNotes).catch(()=>{});
       db.loadCalendarEvents().then(setCalEvents).catch(()=>{});
       db.loadReminders().then(setReminders).catch(()=>{});
@@ -11739,6 +12076,26 @@ export default function App() {
   },[]);
 
   // If public view (still needs data loaded)
+  if(publicQuoteId){
+    return <><ErrorBoundary><PublicQuoteView quoteId={publicQuoteId} onApprove={async(qid,approvedItems)=>{
+      try{
+        const q=quotes.find(x=>x.id===qid)||await db.getQuote(qid);
+        if(!q) return;
+        // Create client if temp
+        let clientId=q.clientId;
+        if(!clientId&&q.tempName){
+          const newCli=await db.addClient(q.tempName,q.tempPhone||"",q.tempEmail||"");
+          clientId=newCli.id;
+        }
+        // Update quote status
+        await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems,clientId});
+        setQuotes(p=>p.map(x=>x.id===qid?{...x,status:"approved",approvedItems,clientId}:x));
+      }catch(e){console.error(e);}
+    }} onReject={async(qid)=>{
+      await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});
+      setQuotes(p=>p.map(x=>x.id===qid?{...x,status:"rejected"}:x));
+    }}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
+  }
   if(publicVehicleId){
     if(loading) return <LoadingScreen/>;
     return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
@@ -13166,27 +13523,45 @@ export default function App() {
               const finSvcs=a.services.filter(s=>s.division==="finishing");
               if(perfSvcs.length>0||a.services.length===0) await openNewOS(v.id,mechanicId||null,null);
               if(finSvcs.length>0) await openNewOSFinishing(v.id,null,null);
-              // Create tasks from services
               for(const sv of a.services){
-                const taskPayload={
-                  vehicleId:v.id, label:sv.label,
-                  category:sv.category||null,
-                  division:sv.division||"performance",
-                  materials:sv.materials||[],
-                  hours:sv.hours||0,
-                  ratePerHour:sv.rate||defaultRate,
-                  done:false, outsourced:false, warranty:false, discount:0,
-                };
-                try{
-                  const newTask=await db.addTask(taskPayload);
-                  setTsk(p=>[...p,newTask]);
-                }catch(e){ console.error("Erro ao criar tarefa:",e); }
+                const taskPayload={vehicleId:v.id,label:sv.label,category:sv.category||null,division:sv.division||"performance",materials:sv.materials||[],hours:sv.hours||0,ratePerHour:sv.rate||defaultRate,done:false,outsourced:false,warranty:false,discount:0};
+                try{const newTask=await db.addTask(taskPayload);setTsk(p=>[...p,newTask]);}catch(e){console.error("Erro ao criar tarefa:",e);}
               }
-              // Mark as converted
               await db.updateAppointment(a.id,{status:"converted",convertedAt:new Date().toISOString()});
               setAppts(p=>p.map(x=>x.id===a.id?{...x,status:"converted",convertedAt:new Date().toISOString()}:x));
               toast_(`OS aberta para ${v.model} com ${a.services.length} tarefa(s) ✓`);
               setTab("clients");
+            }catch(e){errToast(e);}
+          }}
+          quotes={quotes}
+          onAddQuote={async q=>{try{const r=await db.addQuote(q);setQuotes(p=>[r,...p]);toast_("Orçamento criado ✓");return r;}catch(e){errToast(e);}}}
+          onUpdateQuote={async(id,patch)=>{try{await db.updateQuote(id,patch);setQuotes(p=>p.map(q=>q.id===id?{...q,...patch}:q));}catch(e){errToast(e);}}}
+          onDeleteQuote={async id=>{try{await db.deleteQuote(id);setQuotes(p=>p.filter(q=>q.id!==id));toast_("Orçamento removido ✓");}catch(e){errToast(e);}}}
+          onConvertQuoteToAppointment={async(quote)=>{
+            try{
+              // Create client if temp
+              let clientId=quote.clientId;
+              let vehicleId=quote.vehicleId;
+              if(!clientId&&quote.tempName){
+                const newCli=await db.addClient(quote.tempName,quote.tempPhone||"",quote.tempEmail||"");
+                setCli(p=>[...p,newCli]); clientId=newCli.id;
+              }
+              if(!vehicleId&&quote.tempModel){
+                const newV=await db.createVehicle({model:quote.tempModel,plate:quote.tempPlate||"",clientId,status:"active"});
+                setVeh(p=>[...p,newV]); vehicleId=newV.id;
+              }
+              // Create appointment from quote items
+              const apptData={vehicleId,clientId,title:quote.description||"Orçamento aprovado",scheduledDate:null,notes:quote.notes||"",status:"pending"};
+              const newAppt=await db.addAppointment(apptData);
+              const approvedItems=quote.approvedItems?.length?quote.approvedItems:quote.items;
+              for(const item of approvedItems){
+                await db.addAppointmentService({appointmentId:newAppt.id,...item});
+              }
+              const fullAppt=await db.loadAppointmentById(newAppt.id);
+              setAppts(p=>[fullAppt,...p]);
+              await db.updateQuote(quote.id,{status:"approved",appointmentId:newAppt.id,clientId,approvedAt:new Date().toISOString()});
+              setQuotes(p=>p.map(q=>q.id===quote.id?{...q,status:"approved",appointmentId:newAppt.id}:q));
+              toast_("Orçamento convertido em agendamento ✓");
             }catch(e){errToast(e);}
           }}
         />

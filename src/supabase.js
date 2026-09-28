@@ -1230,6 +1230,65 @@ export const db = {
     const {error}=await supabase.from("os_history").update(patch).eq("id",id);
     if(error) throw error;
   },
+  async loadQuotes() {
+    const {data,error}=await supabase.from("quotes").select("*").order("created_at",{ascending:false});
+    if(error) throw error;
+    return (data||[]).map(q=>({
+      id:q.id, createdAt:q.created_at, updatedAt:q.updated_at,
+      clientId:q.client_id, vehicleId:q.vehicle_id,
+      tempName:q.temp_name||"", tempPhone:q.temp_phone||"", tempEmail:q.temp_email||"",
+      tempModel:q.temp_model||"", tempPlate:q.temp_plate||"",
+      description:q.description||"", division:q.division||"performance",
+      status:q.status||"draft", notes:q.notes||"",
+      items:q.items||[], approvedItems:q.approved_items||[],
+      approvedAt:q.approved_at, rejectedAt:q.rejected_at,
+      appointmentId:q.appointment_id,
+    }));
+  },
+  async getQuote(id) {
+    const {data,error}=await supabase.from("quotes").select("*").eq("id",id).single();
+    if(error) throw error;
+    return {id:data.id,createdAt:data.created_at,clientId:data.client_id,vehicleId:data.vehicle_id,
+      tempName:data.temp_name||"",tempPhone:data.temp_phone||"",tempEmail:data.temp_email||"",
+      tempModel:data.temp_model||"",tempPlate:data.temp_plate||"",
+      description:data.description||"",division:data.division||"performance",
+      status:data.status||"draft",notes:data.notes||"",
+      items:data.items||[],approvedItems:data.approved_items||[],
+      approvedAt:data.approved_at,rejectedAt:data.rejected_at,appointmentId:data.appointment_id};
+  },
+  async addQuote(q) {
+    const {data,error}=await supabase.from("quotes").insert({
+      client_id:q.clientId||null, vehicle_id:q.vehicleId||null,
+      temp_name:q.tempName||null, temp_phone:q.tempPhone||null, temp_email:q.tempEmail||null,
+      temp_model:q.tempModel||null, temp_plate:q.tempPlate||null,
+      description:q.description||"", division:q.division||"performance",
+      status:"draft", notes:q.notes||"", items:q.items||[],
+    }).select().single();
+    if(error) throw error;
+    return {id:data.id,createdAt:data.created_at,clientId:data.client_id,vehicleId:data.vehicle_id,
+      tempName:data.temp_name||"",tempPhone:data.temp_phone||"",tempModel:data.temp_model||"",tempPlate:data.temp_plate||"",
+      description:data.description||"",division:data.division||"performance",status:data.status||"draft",
+      notes:data.notes||"",items:data.items||[],approvedItems:[],approvedAt:null,rejectedAt:null,appointmentId:null};
+  },
+  async updateQuote(id,patch) {
+    const map={};
+    if(patch.status!==undefined) map.status=patch.status;
+    if(patch.items!==undefined) map.items=patch.items;
+    if(patch.approvedItems!==undefined) map.approved_items=patch.approvedItems;
+    if(patch.approvedAt!==undefined) map.approved_at=patch.approvedAt;
+    if(patch.rejectedAt!==undefined) map.rejected_at=patch.rejectedAt;
+    if(patch.appointmentId!==undefined) map.appointment_id=patch.appointmentId;
+    if(patch.clientId!==undefined) map.client_id=patch.clientId;
+    if(patch.notes!==undefined) map.notes=patch.notes;
+    if(patch.description!==undefined) map.description=patch.description;
+    map.updated_at=new Date().toISOString();
+    const {error}=await supabase.from("quotes").update(map).eq("id",id);
+    if(error) throw error;
+  },
+  async deleteQuote(id) {
+    const {error}=await supabase.from("quotes").delete().eq("id",id);
+    if(error) throw error;
+  },
   async getPresenca(monthKey) {
     const {data,error}=await supabase.from("presenca").select("data").eq("month_key",monthKey).single();
     if(error) return {};

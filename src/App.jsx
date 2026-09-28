@@ -9949,7 +9949,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.16";
+const APP_VERSION = "2026.09.28.17";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13457,7 +13457,7 @@ export default function App() {
         <button key={item.id} onClick={()=>{
           setNavSectionPersist(item.id);
           if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab(allowedTabs.includes("clients")?"clients":"finishing");
-          if(item.id==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("clientsMonitor")?"clientsMonitor":allowedTabs.includes("vehicles")?"vehicles":"mechanics");
+          if(item.id==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("vehicles")?"vehicles":allowedTabs.includes("clientsMonitor")?"clientsMonitor":"mechanics");
           if(item.id==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
           if(item.id==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");
           mainScrollRef.current?.scrollTo({top:0});
@@ -13507,8 +13507,8 @@ export default function App() {
               {allowedTabs.includes("appointments")&&tabBtn("appointments","Agendamentos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,"#8b5cf6")}
             </>}
             {navSection==="cadastros"&&<>
-              {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
               {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos",<ICar s={13}/>,B.blue)}
+              {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
               {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
             </>}
             {navSection==="gestao"&&<>
@@ -14341,7 +14341,7 @@ export default function App() {
     <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} theme={theme} setActive={(s)=>{
       setNavSectionPersist(s);
       if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab(allowedTabs.includes("clients")?"clients":"finishing");
-      if(s==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("clientsMonitor")?"clientsMonitor":allowedTabs.includes("vehicles")?"vehicles":"mechanics");
+      if(s==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("vehicles")?"vehicles":allowedTabs.includes("clientsMonitor")?"clientsMonitor":"mechanics");
       if(s==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
       if(s==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");
       mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});

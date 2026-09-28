@@ -3660,6 +3660,9 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
               :(vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>)}
             {cli&&<span style={{color:B.blue,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
             {mechs.length>0&&<span style={{color:B.orange,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
+            {!hideManagerButtons&&managerMode&&<button onClick={e=>{e.stopPropagation();setXfM(true);}} style={{background:"none",border:`1px solid ${B.orange}55`,borderRadius:5,padding:"0px 6px",cursor:"pointer",color:B.orange,display:"inline-flex",alignItems:"center",gap:2,fontSize:10,fontWeight:700,lineHeight:"18px"}}>
+              <IWrench s={9} c={B.orange}/>+ Mec.
+            </button>}
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}>{sc.icon}{sc.label}</span>
             {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
             {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Obs.</span>}
@@ -3773,10 +3776,6 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
                 {/* Cliente */}
                 {!hideManagerButtons&&<button onClick={()=>{setXfO(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
                   <IUser s={13} c={B.blue}/>Cliente
-                </button>}
-                {/* + Mecânico */}
-                {!hideManagerButtons&&<button onClick={()=>{setXfM(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
-                  <IWrench s={13} c={B.orange}/>+ Mecânico
                 </button>}
                 {/* Pausar / Retomar */}
                 {!hideManagerButtons&&isOwner&&onSetStatus&&(()=>{
@@ -9991,7 +9990,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.23";
+const APP_VERSION = "2026.09.28.24";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

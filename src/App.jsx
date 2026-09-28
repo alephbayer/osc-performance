@@ -3486,6 +3486,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
 // ─── VoiceTaskBtn ─────────────────────────────────────────────────────────────
 function VoiceTaskBtn({onResult}) {
   const [listening,setListening]=useState(false);
+  const [debug,setDebug]=useState("");
   const srRef=useRef(null);
   const onResultRef=useRef(onResult);
   useEffect(()=>{ onResultRef.current=onResult; },[onResult]);
@@ -3494,36 +3495,45 @@ function VoiceTaskBtn({onResult}) {
     if(listening){
       srRef.current?.abort();
       setListening(false);
+      setDebug("");
       return;
     }
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR){ alert("Reconhecimento de voz não suportado neste navegador."); return; }
+    if(!SR){ setDebug("❌ SR não suportado"); return; }
+    setDebug("🔴 iniciando...");
     const sr=new SR();
     sr.lang="pt-BR";
     sr.interimResults=true;
     sr.continuous=false;
     sr.maxAlternatives=1;
+    sr.onstart=()=>setDebug("🎙 ouvindo...");
+    sr.onspeechstart=()=>setDebug("🎙 voz detectada");
+    sr.onspeechend=()=>setDebug("⏸ processando...");
     sr.onresult=e=>{
-      // Read all results, prefer final
-      let txt="";
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        if(e.results[i].isFinal) txt+=e.results[i][0].transcript;
+      let interim="", final="";
+      for(let i=0;i<e.results.length;i++){
+        if(e.results[i].isFinal) final+=e.results[i][0].transcript;
+        else interim+=e.results[i][0].transcript;
       }
-      if(txt.trim()) onResultRef.current(txt.trim());
+      setDebug(`📝 "${final||interim}"`);
+      if(final.trim()) onResultRef.current(final.trim());
     };
-    sr.onerror=e=>{ console.warn("SR error:",e.error); setListening(false); };
-    sr.onend=()=>setListening(false);
+    sr.onerror=e=>{ setDebug(`❌ erro: ${e.error}`); setListening(false); };
+    sr.onend=()=>{ setListening(false); setTimeout(()=>setDebug(""),3000); };
     try{ sr.start(); srRef.current=sr; setListening(true); }
-    catch(e){ console.error("SR start error:",e); setListening(false); }
+    catch(e){ setDebug(`❌ start: ${e.message}`); setListening(false); }
   };
 
-  return(<button onClick={toggle} title={listening?"Parar":"Ditar tarefa"}
-    style={{padding:"7px 10px",borderRadius:7,background:listening?`${B.red}22`:B.gray800,border:`1px solid ${listening?B.red:B.gray600}`,color:listening?B.red:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all .2s",flexShrink:0}}>
-    {listening
-      ?<><svg width="12" height="12" viewBox="0 0 24 24" fill={B.red} stroke={B.red} strokeWidth="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg><span style={{fontSize:10,fontWeight:700}}>parar</span></>
-      :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-    }
-  </button>);
+  return(<div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+    <button onClick={toggle} title={listening?"Parar":"Ditar tarefa"}
+      style={{padding:"7px 10px",borderRadius:7,background:listening?`${B.red}22`:B.gray800,border:`1px solid ${listening?B.red:B.gray600}`,color:listening?B.red:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all .2s"}}>
+      {listening
+        ?<><svg width="12" height="12" viewBox="0 0 24 24" fill={B.red} stroke={B.red} strokeWidth="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg><span style={{fontSize:10,fontWeight:700}}>parar</span></>
+        :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      }
+    </button>
+    {debug&&<div style={{fontSize:9,color:B.amber,background:`${B.amber}18`,borderRadius:5,padding:"2px 6px",maxWidth:120,wordBreak:"break-all"}}>{debug}</div>}
+  </div>);
 }
 
 function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}) {
@@ -9478,7 +9488,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.5";
+const APP_VERSION = "2026.09.27.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -9949,7 +9949,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.9";
+const APP_VERSION = "2026.09.28.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13287,11 +13287,14 @@ export default function App() {
     const copyLink=async(name)=>{
       const longUrl=getUrl(name);
       try{
-        const r=await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`);
-        const short=await r.text();
-        navigator.clipboard.writeText(short.trim());
+        const r=await fetch("https://lchfmoeyzgbepunetuch.supabase.co/functions/v1/shorten-url",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjaGZtb2V5emdiZXB1bmV0dWNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NzEzOTUsImV4cCI6MjA5ODM0NzM5NX0.2RTbc1Dd_VWGT56ak1T41HH2zGXCS6MDbnXe4EY3SYQ"},
+          body:JSON.stringify({url:longUrl})
+        });
+        const d=await r.json();
+        navigator.clipboard.writeText(d.short||longUrl);
       }catch{
-        // Fallback to long URL if TinyURL fails
         navigator.clipboard.writeText(longUrl);
       }
       setCopiedId(name); setTimeout(()=>setCopiedId(null),2000);

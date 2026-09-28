@@ -6002,9 +6002,15 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
         headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjaGZtb2V5emdiZXB1bmV0dWNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NzEzOTUsImV4cCI6MjA5ODM0NzM5NX0.2RTbc1Dd_VWGT56ak1T41HH2zGXCS6MDbnXe4EY3SYQ"},
         body:JSON.stringify({description:form.description,model:form.tempModel||selectedVehicle?.model||""})
       });
-      const d=await r.json();
-      if(d.items) setForm(p=>({...p,items:[...p.items,...d.items]}));
-    }catch(e){console.error(e);}
+      const txt=await r.text();
+      console.log("ai-quote raw response:",txt);
+      try{
+        const d=JSON.parse(txt);
+        if(d.items&&d.items.length>0) setForm(p=>({...p,items:[...p.items,...d.items]}));
+        else if(d.error) toast_(`IA: ${d.error}`);
+        else toast_("IA não retornou itens. Tente descrever melhor o serviço.");
+      }catch(pe){ toast_(`Erro ao processar resposta: ${txt.slice(0,100)}`); }
+    }catch(e){ toast_(`Erro: ${e.message}`); }
     setAiLoading(false);
   };
 
@@ -9769,7 +9775,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.10";
+const APP_VERSION = "2026.09.27.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

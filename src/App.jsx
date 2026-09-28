@@ -6282,6 +6282,9 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
             style={{padding:"5px 10px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}33`,color:B.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>
             ✅ Converter em agendamento
           </button>}
+          {q.status==="approved"&&q.appointmentId&&<span style={{fontSize:11,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+            ✓ Convertido em agendamento
+          </span>}
           <button onClick={()=>onDelete(q.id)}
             style={{padding:"5px 10px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",marginLeft:"auto"}}>
             <ITrash s={11}/>
@@ -9858,7 +9861,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.27.14";
+const APP_VERSION = "2026.09.28.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13642,15 +13645,26 @@ export default function App() {
                 const newV=await db.createVehicle({model:quote.tempModel,plate:quote.tempPlate||"",clientId,status:"active"});
                 setVeh(p=>[...p,newV]); vehicleId=newV.id;
               }
-              // Create appointment from quote items
+              // Create appointment
               const apptData={vehicleId,clientId,title:quote.description||"Orçamento aprovado",scheduledDate:null,notes:quote.notes||"",status:"pending"};
               const newAppt=await db.addAppointment(apptData);
-              const approvedItems=quote.approvedItems?.length?quote.approvedItems:quote.items;
+              // Add services — map price → estimatedValue
+              const approvedItems=quote.approvedItems?.length?quote.approvedItems:quote.items||[];
               for(const item of approvedItems){
-                await db.addAppointmentService({appointmentId:newAppt.id,...item});
+                await db.addAppointmentService({
+                  appointmentId:newAppt.id,
+                  label:item.label||"Serviço",
+                  category:item.category||null,
+                  division:quote.division||"performance",
+                  estimatedValue:Number(item.price||0),
+                  notes:item.description||"",
+                  materials:item.materials||[],
+                });
               }
-              const fullAppt=await db.loadAppointmentById(newAppt.id);
-              setAppts(p=>[fullAppt,...p]);
+              // Reload appointments to get full data with services
+              const allAppts=await db.loadAppointments();
+              setAppts(allAppts);
+              // Mark quote as converted
               await db.updateQuote(quote.id,{status:"approved",appointmentId:newAppt.id,clientId,approvedAt:new Date().toISOString()});
               setQuotes(p=>p.map(q=>q.id===quote.id?{...q,status:"approved",appointmentId:newAppt.id}:q));
               toast_("Orçamento convertido em agendamento ✓");

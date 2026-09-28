@@ -9944,7 +9944,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.3";
+const APP_VERSION = "2026.09.28.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11192,33 +11192,32 @@ class ErrorBoundary extends React.Component {
 
 // ─── Liquid Glass Bottom Nav ──────────────────────────────────────────────────
 function LiquidNav({active,setActive,navItems,scrollY,theme}){
-  const scrolled=scrollY>40;
   return(
-    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent",paddingBottom:"calc(4px + env(safe-area-inset-bottom))"}}>
-      <div style={{padding:"2px 0",display:"flex",justifyContent:"center",width:"100%"}}>
+    <div className="osc-liquid-nav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:200,flexDirection:"column",alignItems:"center",background:"transparent",paddingBottom:"calc(8px + env(safe-area-inset-bottom))"}}>
+      <div style={{padding:"4px 0",display:"flex",justifyContent:"center",width:"100%"}}>
         <div style={{
           display:"flex",borderRadius:99,
-          background:theme==="light"?"rgba(240,240,245,0.85)":"rgba(16,16,20,0.55)",
+          background:theme==="light"?"rgba(240,240,245,0.92)":"rgba(16,16,20,0.65)",
           backdropFilter:"blur(40px) saturate(1.8)",WebkitBackdropFilter:"blur(40px) saturate(1.8)",
-          border:theme==="light"?"1px solid rgba(0,0,0,0.10)":"1px solid rgba(255,255,255,0.10)",
-          boxShadow:theme==="light"?"0 4px 20px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.80)":"0 4px 20px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.10)",
-          padding:"3px",position:"relative",overflow:"hidden",
+          border:theme==="light"?"1px solid rgba(0,0,0,0.12)":"1px solid rgba(255,255,255,0.12)",
+          boxShadow:theme==="light"?"0 6px 28px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.85)":"0 6px 28px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12)",
+          padding:"5px",position:"relative",overflow:"hidden",
           transition:"all .3s cubic-bezier(.4,0,.2,1)",
         }}>
-          <div style={{position:"absolute",top:0,left:"15%",right:"15%",height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)",borderRadius:99,pointerEvents:"none"}}/>
+          <div style={{position:"absolute",top:0,left:"15%",right:"15%",height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent)",borderRadius:99,pointerEvents:"none"}}/>
           {navItems.map(n=>{
             const on=active===n.id;
             return(
               <button key={n.id} onClick={()=>setActive(n.id)} style={{
                 display:"flex",alignItems:"center",justifyContent:"center",
-                padding:`6px 12px`,
+                padding:"9px 16px",
                 borderRadius:99,border:"none",cursor:"pointer",
                 background:on?"rgba(255,107,0,0.18)":"transparent",
                 color:on?B.orange:B.gray400,
                 position:"relative",transition:"all .25s cubic-bezier(.4,0,.2,1)",
               }}>
                 {on&&<div style={{position:"absolute",inset:2,borderRadius:99,background:"rgba(255,107,0,0.06)"}}/>}
-                <div style={{position:"relative",transform:on?"scale(0.94)":"scale(0.83)",transition:"transform .2s"}}>
+                <div style={{position:"relative",transform:on?"scale(1.05)":"scale(0.92)",transition:"transform .2s"}}>
                   {n.svgIcon}
                 </div>
               </button>
@@ -13051,7 +13050,7 @@ export default function App() {
   const IGear2=()=><Svg d="M12 15a3 3 0 100-6 3 3 0 000 6z" d2="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" s={17} c={B.amber}/>;
 
   // Nav items by role
-  const mkSvg=(d)=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={Array.isArray(d)?d[0]:d}/>{Array.isArray(d)&&d.slice(1).map((p,i)=><path key={i} d={p}/>)}</svg>;
+  const mkSvg=(d)=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={Array.isArray(d)?d[0]:d}/>{Array.isArray(d)&&d.slice(1).map((p,i)=><path key={i} d={p}/>)}</svg>;
   const NAV_ITEMS_BY_ROLE={
     owner:[
       {id:"home",    label:"Início",   svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},

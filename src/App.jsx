@@ -9944,7 +9944,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.5";
+const APP_VERSION = "2026.09.28.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13421,7 +13421,9 @@ export default function App() {
       {tab==="clients"&&allowedTabs.includes("clients")&&<>
         <TabHeader color={B.orange} title="OSC Performance" subtitle={`OS em andamento · Taxa: ${fmtBRL(defaultRate)}/h`}/>
         {(()=>{
-          const allActive=vehicles.filter(v=>v.enteredAt||tasks.some(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"));
+          const allActive=vehicles.filter(v=>
+            v.status!=="delivered"&&
+            (v.enteredAt||tasks.some(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance")));
           const activeVehicles=osSearch
             ? allActive.filter(v=>
                 v.model.toLowerCase().includes(osSearch.toLowerCase())||
@@ -13619,7 +13621,7 @@ export default function App() {
           </button>
         </div>
         {(()=>{
-          const activeFin=vehicles.filter(v=>v.enteredAtFinishing);
+          const activeFin=vehicles.filter(v=>v.status!=="delivered"&&v.enteredAtFinishing);
           const filtered=finSearch?activeFin.filter(v=>
             v.model.toLowerCase().includes(finSearch.toLowerCase())||
             v.plate.toLowerCase().includes(finSearch.toLowerCase())||

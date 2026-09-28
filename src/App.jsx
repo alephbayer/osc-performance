@@ -3593,6 +3593,8 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const [confirmDelV,setConfirmDelV]=useState(false);
   const [confirmDeliver,setConfirmDeliver]=useState(false);
   const [showMoreMenu,setShowMoreMenu]=useState(false);
+  const [moreMenuPos,setMoreMenuPos]=useState({top:0,right:0});
+  const moreMenuRef=useRef(null);
   const [showNextVisit,setShowNextVisit]=useState(false);
   useEffect(()=>{
     if(!showMoreMenu) return;
@@ -3749,48 +3751,57 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 
           {/* ··· Menu dropdown — secundários */}
           {managerMode&&<div style={{position:"relative",marginLeft:"auto",flex:"0 0 auto"}}>
-            <button onClick={()=>setShowMoreMenu(p=>!p)}
+            <button ref={moreMenuRef} onClick={(e)=>{
+              e.stopPropagation();
+              if(showMoreMenu){setShowMoreMenu(false);return;}
+              const rect=moreMenuRef.current?.getBoundingClientRect();
+              if(rect) setMoreMenuPos({top:rect.bottom+4,right:window.innerWidth-rect.right});
+              setShowMoreMenu(true);
+            }}
               style={{background:showMoreMenu?B.gray700:"none",border:`1px solid ${B.gray600}`,borderRadius:6,padding:"4px 10px",cursor:"pointer",color:B.gray400,display:"flex",alignItems:"center",gap:3,fontSize:13,fontWeight:700}}>
               ···
             </button>
-            {showMoreMenu&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",right:0,top:"calc(100% + 4px)",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10,zIndex:200,minWidth:160,boxShadow:"0 8px 32px rgba(0,0,0,.6)",overflow:"hidden"}}>
-              {/* Peças */}
-              <button onClick={()=>{setShowParts(p=>!p);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
-                {(()=>{const count=vts.filter(t=>!t.done&&!t.warranty).flatMap(t=>(t.materials||[]).filter(m=>m.name&&!m.noCharge)).length;return<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Peças{count>0&&<span style={{marginLeft:"auto",background:`${B.purple}33`,borderRadius:99,padding:"0 6px",fontSize:10}}>{count}</span>}</>;})()}
-              </button>
-              {/* Cliente */}
-              {!hideManagerButtons&&<button onClick={()=>{setXfO(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
-                <IUser s={13} c={B.blue}/>Cliente
-              </button>}
-              {/* + Mecânico */}
-              {!hideManagerButtons&&<button onClick={()=>{setXfM(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
-                <IWrench s={13} c={B.orange}/>+ Mecânico
-              </button>}
-              {/* Pausar / Retomar */}
-              {!hideManagerButtons&&isOwner&&onSetStatus&&(()=>{
-                const curStatus=division==="finishing"?(vehicle.statusFinishing||"active"):vehicle.status;
-                if(curStatus==="paused") return <button onClick={()=>{onSetStatus(vehicle.id,"active");setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}><IPlay s={13} c={B.green}/>Retomar</button>;
-                return <button onClick={()=>{onSetStatus(vehicle.id,"paused");setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}><IPause s={13} c={B.amber}/>Pausar</button>;
-              })()}
-              {/* Próxima visita */}
-              {!hideManagerButtons&&<button onClick={()=>{setShowNextVisit(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/></svg>
-                Próxima visita
-              </button>}
-              {/* Notas do cliente (alert) */}
-              {clientNotes.length>0&&<button onClick={()=>{setShowClientNotes(p=>!p);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                {clientNotes.length} nota{clientNotes.length!==1?"s":""}
-              </button>}
-              {/* Abrir OS */}
-              {!hideManagerButtons&&isOwner&&onOpenOS&&!vehicle.osNumber&&division==="performance"&&<button onClick={()=>{onOpenOS(vehicle.id,null,null);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
-                <IWrench s={13} c={B.green}/>Abrir OS
-              </button>}
-              {/* Excluir OS */}
-              {!hideManagerButtons&&<button onClick={()=>{setConfirmDelV(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"9px 14px",background:"none",border:"none",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
-                <ITrash s={13} c={B.red}/>Excluir OS
-              </button>}
-            </div>}
+            {showMoreMenu&&createPortal(
+              <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:moreMenuPos.top,right:moreMenuPos.right,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10,zIndex:9999,minWidth:170,boxShadow:"0 8px 32px rgba(0,0,0,.7)",overflow:"hidden"}}>
+                {/* Peças */}
+                <button onClick={()=>{setShowParts(p=>!p);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                  {(()=>{const count=vts.filter(t=>!t.done&&!t.warranty).flatMap(t=>(t.materials||[]).filter(m=>m.name&&!m.noCharge)).length;return<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Peças{count>0&&<span style={{marginLeft:"auto",background:`${B.purple}33`,borderRadius:99,padding:"0 6px",fontSize:10}}>{count}</span>}</>;})()}
+                </button>
+                {/* Cliente */}
+                {!hideManagerButtons&&<button onClick={()=>{setXfO(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                  <IUser s={13} c={B.blue}/>Cliente
+                </button>}
+                {/* + Mecânico */}
+                {!hideManagerButtons&&<button onClick={()=>{setXfM(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                  <IWrench s={13} c={B.orange}/>+ Mecânico
+                </button>}
+                {/* Pausar / Retomar */}
+                {!hideManagerButtons&&isOwner&&onSetStatus&&(()=>{
+                  const curStatus=division==="finishing"?(vehicle.statusFinishing||"active"):vehicle.status;
+                  if(curStatus==="paused") return <button onClick={()=>{onSetStatus(vehicle.id,"active");setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}><IPlay s={13} c={B.green}/>Retomar</button>;
+                  return <button onClick={()=>{onSetStatus(vehicle.id,"paused");setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}><IPause s={13} c={B.amber}/>Pausar</button>;
+                })()}
+                {/* Próxima visita */}
+                {!hideManagerButtons&&<button onClick={()=>{setShowNextVisit(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Próxima visita
+                </button>}
+                {/* Notas do cliente */}
+                {clientNotes.length>0&&<button onClick={()=>{setShowClientNotes(p=>!p);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                  {clientNotes.length} nota{clientNotes.length!==1?"s":""}
+                </button>}
+                {/* Abrir OS */}
+                {!hideManagerButtons&&isOwner&&onOpenOS&&!vehicle.osNumber&&division==="performance"&&<button onClick={()=>{onOpenOS(vehicle.id,null,null);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                  <IWrench s={13} c={B.green}/>Abrir OS
+                </button>}
+                {/* Excluir OS */}
+                {!hideManagerButtons&&<button onClick={()=>{setConfirmDelV(true);setShowMoreMenu(false);}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",cursor:"pointer",color:B.red,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,textAlign:"left"}}>
+                  <ITrash s={13} c={B.red}/>Excluir OS
+                </button>}
+              </div>,
+              document.body
+            )}
           </div>}
 
           {/* Entregue badge */}
@@ -9977,7 +9988,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.19";
+const APP_VERSION = "2026.09.28.20";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

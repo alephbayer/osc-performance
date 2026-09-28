@@ -9949,7 +9949,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.11";
+const APP_VERSION = "2026.09.28.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13285,24 +13285,23 @@ export default function App() {
     };
 
     const getUrl=(name)=>supabaseClient.storage.from("portfolio").getPublicUrl(name).data.publicUrl;
+    const getPreviewUrl=(name)=>`${window.location.origin}/api/pdf/${encodeURIComponent(name)}`;
 
     const copyLink=async(name)=>{
-      const longUrl=getUrl(name);
+      const previewUrl=getPreviewUrl(name);
+      let finalUrl=previewUrl;
       try{
         const r=await fetch("https://lchfmoeyzgbepunetuch.supabase.co/functions/v1/shorten-url",{
           method:"POST",
           headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjaGZtb2V5emdiZXB1bmV0dWNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NzEzOTUsImV4cCI6MjA5ODM0NzM5NX0.2RTbc1Dd_VWGT56ak1T41HH2zGXCS6MDbnXe4EY3SYQ"},
-          body:JSON.stringify({url:longUrl})
+          body:JSON.stringify({url:previewUrl})
         });
         const d=await r.json();
-        const shortUrl=d.short||longUrl;
-        const text=msgTemplate.trim()?`${msgTemplate.trim()}\n${shortUrl}`:shortUrl;
-        navigator.clipboard.writeText(text);
-      }catch{
-        const text=msgTemplate.trim()?`${msgTemplate.trim()}\n${longUrl}`:longUrl;
-        navigator.clipboard.writeText(text);
-      }
-      setCopiedId(name); setTimeout(()=>setCopiedId(null),2000);
+        if(d.short) finalUrl=d.short;
+      }catch{}
+      const text=msgTemplate.trim()?`${msgTemplate.trim()}\n${finalUrl}`:finalUrl;
+      navigator.clipboard.writeText(text);
+      setCopiedId(name); setTimeout(()=>setCopiedId(null),2500);
     };
 
     const del=async(name)=>{

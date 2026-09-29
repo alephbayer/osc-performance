@@ -10068,7 +10068,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.21";
+const APP_VERSION = "2026.09.29.22";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12166,21 +12166,6 @@ export default function App() {
   const matDebounce=useRef({});
   const [theme,setTheme]=useState(getTheme);
   const [themePref,setThemePref]=useState(getThemePref);
-  const [showChangelog,setShowChangelog]=useState(false);
-
-  // Version check — show changelog when new version detected
-  useEffect(()=>{
-    const lastSeen=localStorage.getItem("osc_version_seen");
-    if(lastSeen!==APP_VERSION){
-      // Small delay so the app renders first
-      const t=setTimeout(()=>{
-        setShowChangelog(true);
-        localStorage.setItem("osc_version_seen",APP_VERSION);
-      }, 1500);
-      return()=>clearTimeout(t);
-    }
-  },[]);
-
   // Listen for system theme changes when in auto mode
   useEffect(()=>{
     if(themePref!=="auto") return;
@@ -14210,7 +14195,7 @@ export default function App() {
       try{ const row=await db.addPayment({vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance"}); setPay(p=>[...p,row]); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); }catch(e){errToast(e);}
     }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
-    {showChangelog&&adminRole&&null}
+    
     {showQuickSheet&&<QuickActionSheet onClose={()=>setShowQuickSheet(false)} adminRole={adminRole} theme={theme}
       onFuel={()=>setFuelModal(true)}
       onTask={()=>setQuickTaskModal(true)} onMat={()=>setQuickMatModal(true)}

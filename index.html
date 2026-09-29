@@ -107,11 +107,12 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.09.29.18";
+        const CURRENT = "2026.09.29.19";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){
           if(window.__oscUpdatePending) return;
+          if(localStorage.getItem("osc_update_clicked")==="1") return;
           window.__oscUpdatePending = true;
           // Mark as seen immediately so reload doesn't re-trigger
           localStorage.setItem("osc_deployed_version", CURRENT);
@@ -125,7 +126,7 @@
                 </div>
                 <div style="font-weight:900;font-size:18px;color:#f0f0f8;margin-bottom:8px;letter-spacing:-.3px">Nova versão disponível</div>
                 <div style="font-size:13px;color:#9999bb;margin-bottom:28px;line-height:1.5">O sistema foi atualizado. Recarregue para continuar usando a versão mais recente.</div>
-                <button onclick="localStorage.removeItem('osc_deployed_version');window.__oscUpdatePending=false;window.location.href=window.location.pathname+'?v='+Date.now();" style="width:100%;padding:14px 0;border-radius:14px;background:#ff6b00;border:none;color:#fff;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit">
+                <button onclick="localStorage.setItem('osc_update_clicked','1');window.location.reload();" style="width:100%;padding:14px 0;border-radius:14px;background:#ff6b00;border:none;color:#fff;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                   Atualizar agora
                 </button>
@@ -137,6 +138,7 @@
         }
 
         // Strategy 1: HTML-embedded check (works when HTML is fresh)
+        localStorage.removeItem("osc_update_clicked");
         if(stored && stored !== CURRENT){
           localStorage.setItem("osc_deployed_version", CURRENT);
           showBanner();

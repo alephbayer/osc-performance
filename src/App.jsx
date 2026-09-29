@@ -58,6 +58,7 @@ const B = {
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
 const fmtBRL=n  => `R$ ${fmtR2(n)}`;
+const quoteTotal=items=>(items||[]).reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100),0),0);
 const fmtOS  =n  => n!=null ? `OS-${String(n).padStart(3,"0")}` : "";
 const fmtOSFD=n  => n!=null ? `FD-${String(n).padStart(3,"0")}` : "";
 
@@ -849,7 +850,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         {cliQuotes.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray500,fontSize:13}}>Nenhum orçamento encontrado.</div>}
         {[...cliQuotes].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).map(q=>{
           const items=q.items||[];
-          const total=items.reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1),0),0);
+          const total=quoteTotal(items);
           const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
           const isPending=q.status==="draft"||q.status==="sent";
           const statusCfg={draft:{label:"Pendente",color:B.amber},sent:{label:"Aguardando aprovação",color:B.blue},approved:{label:"Aprovado",color:B.green},rejected:{label:"Recusado",color:B.red}};
@@ -6093,7 +6094,7 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
   if(!quote) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#f8f9fa",color:"#333",fontSize:15}}>Orçamento não encontrado.</div>;
 
   const items=quote.items||[];
-  const total=items.reduce((s,it)=>s+Number(it.price||0),0);
+  const total=quoteTotal(items);
   const alreadyAnswered=quote.status==="approved"||quote.status==="rejected"||done;
   const statusColor=quote.status==="approved"||done==="approved"?B.green:quote.status==="rejected"||done==="rejected"?B.red:B.amber;
   const statusLabel=quote.status==="approved"||done==="approved"?"✅ Aprovado":quote.status==="rejected"||done==="rejected"?"❌ Recusado":"⏳ Aguardando aprovação";
@@ -6426,7 +6427,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
           </div>);
         })}
         <div style={{textAlign:"right",fontSize:13,fontWeight:800,color:B.orange,marginTop:4}}>
-          Total: {fmtBRL(form.items.reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100),0),0))}
+          Total: {fmtBRL(quoteTotal(form.items))}
         </div>
       </div>}
 
@@ -6466,7 +6467,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
     {quotes.length===0&&!showNew&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray500,fontSize:13}}>Nenhum orçamento criado ainda.</div>}
     {[...quotes].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).map(q=>{
       const cfg=statusCfg[q.status]||statusCfg.draft;
-      const total=(q.items||[]).reduce((s,it)=>s+Number(it.price||0),0);
+      const total=quoteTotal(q.items);
       const clientName=q.clientId?clients.find(c=>c.id===q.clientId)?.name:q.tempName;
       const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
       const isConverted=q.status==="approved"&&q.appointmentId;
@@ -10085,7 +10086,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.24";
+const APP_VERSION = "2026.09.29.25";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13984,7 +13985,7 @@ export default function App() {
             // Notify client
             const clientId=q.clientId||null;
             const vModel=q.tempModel||(q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:"seu veículo")||"seu veículo";
-            const total=(q.items||[]).reduce((s,it)=>s+Number(it.price||0),0);
+            const total=quoteTotal(q.items);
             if(clientId){
               db.sendPushToClient(clientId,`📋 Orçamento disponível — ${vModel}`,`Um orçamento de ${fmtBRL(total)} está aguardando sua aprovação.`,"/?portal=cliente").catch(()=>{});
             }

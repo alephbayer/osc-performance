@@ -107,7 +107,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.09.29.22";
+        const CURRENT = "2026.09.29.23";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){
@@ -142,11 +142,12 @@
         }
 
         // Strategy 1: HTML-embedded check (works when HTML is fresh)
-        localStorage.removeItem("osc_update_clicked");
         if(stored && stored !== CURRENT){
           localStorage.setItem("osc_deployed_version", CURRENT);
           showBanner();
         } else {
+          // Version is current — safe to clear sentinel
+          localStorage.removeItem("osc_update_clicked");
           localStorage.setItem("osc_deployed_version", CURRENT);
         }
 
@@ -161,6 +162,8 @@
                 localStorage.setItem("osc_deployed_version", data.version);
                 showBanner();
               } else {
+                // Version is current — safe to clear sentinel
+                localStorage.removeItem("osc_update_clicked");
                 localStorage.setItem("osc_deployed_version", data.version);
               }
             }).catch(()=>{});

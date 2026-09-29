@@ -419,8 +419,8 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   const cliQuotes=quotes.filter(q=>q.clientId===client.id||cliVehicleIds.has(q.vehicleId));
   const pendingQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent");
   const activeQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent"||(q.status==="approved"&&!q.appointmentId));
-  // Peças reservadas de veículos ativos do cliente
-  const cliParts=activeVehicles.flatMap(v=>{
+  // Peças reservadas de todos os veículos do cliente que tenham peças
+  const cliParts=cliVehicles.flatMap(v=>{
     const parts=[...(v.partsList||[]),...(v.partsListFinishing||[])].filter(p=>p.name);
     return parts.map(p=>({...p,_vehicle:v}));
   });
@@ -808,7 +808,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         <div style={{fontSize:13,fontWeight:700,color:B.gray400,marginBottom:14}}>
           {cliParts.length} peça{cliParts.length!==1?"s":""} reservada{cliParts.length!==1?"s":""}
         </div>
-        {activeVehicles.map(v=>{
+        {cliVehicles.map(v=>{
           const vParts=[...(v.partsList||[]),...(v.partsListFinishing||[])].filter(p=>p.name);
           if(!vParts.length) return null;
           const allMats=tasks.filter(t=>t.vehicleId===v.id).flatMap(t=>t.materials||[]);
@@ -10052,7 +10052,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.1";
+const APP_VERSION = "2026.09.29.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

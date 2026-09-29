@@ -419,6 +419,11 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   const cliQuotes=quotes.filter(q=>q.clientId===client.id||cliVehicleIds.has(q.vehicleId));
   const pendingQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent");
   const activeQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent"||(q.status==="approved"&&!q.appointmentId));
+  // Peças reservadas de veículos ativos do cliente
+  const cliParts=activeVehicles.flatMap(v=>{
+    const parts=[...(v.partsList||[]),...(v.partsListFinishing||[])].filter(p=>p.name);
+    return parts.map(p=>({...p,_vehicle:v}));
+  });
   const cliHistory=osHistory
     .filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id))
     .sort((a,b)=>new Date(b.delivered_at||b.deliveredAt||0)-new Date(a.delivered_at||a.deliveredAt||0));
@@ -481,6 +486,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         {tabBtn("history","Histórico",<IFileText s={15}/>)}
         {tabBtn("account","Conta",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>)}
         {cliAppts.length>0&&tabBtn("appts","Agendamentos",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>)}
+        {cliParts.length>0&&tabBtn("parts","Peças",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>)}
         {activeQuotes.length>0&&<button onClick={()=>setTab("quotes")} style={{flex:1,padding:"8px 4px 6px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:700,background:tab==="quotes"?blue:"transparent",color:tab==="quotes"?B.white:B.gray400,display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:0,position:"relative"}}>
           <span style={{display:"flex",alignItems:"center",justifyContent:"center",opacity:tab==="quotes"?1:.7,position:"relative"}}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -797,6 +803,48 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
       {/* ── Notes ── */}
       {tab==="notes"&&<ClientNotesTab client={client} vehicles={cliVehicles}/>}
+
+      {tab==="parts"&&<div>
+        <div style={{fontSize:13,fontWeight:700,color:B.gray400,marginBottom:14}}>
+          {cliParts.length} peça{cliParts.length!==1?"s":""} reservada{cliParts.length!==1?"s":""}
+        </div>
+        {activeVehicles.map(v=>{
+          const vParts=[...(v.partsList||[]),...(v.partsListFinishing||[])].filter(p=>p.name);
+          if(!vParts.length) return null;
+          const allMats=tasks.filter(t=>t.vehicleId===v.id).flatMap(t=>t.materials||[]);
+          const usedPOIds=new Set(allMats.map(m=>m.purchaseOrderId).filter(Boolean));
+          const isUsed=(p)=>p.purchaseOrderId&&usedPOIds.has(p.purchaseOrderId);
+          return(<div key={v.id} style={{background:B.gray900,borderRadius:14,marginBottom:14,overflow:"hidden",border:`1px solid ${B.gray700}`}}>
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray800}`,display:"flex",alignItems:"center",gap:8}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <span style={{fontWeight:800,fontSize:14,color:B.white}}>{v.model}</span>
+              {v.plate&&<span style={{fontSize:11,color:B.gray500}}>{v.plate}</span>}
+            </div>
+            <div style={{padding:"10px 16px",display:"flex",flexDirection:"column",gap:8}}>
+              {vParts.map((p,i)=>{
+                const used=isUsed(p);
+                return(<div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:used?`${B.green}12`:B.gray800,borderRadius:9,border:`1px solid ${used?B.green+"33":B.gray700}`}}>
+                  {p.photos?.[0]
+                    ?<img src={p.photos[0]} alt={p.name} style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>
+                    :<div style={{width:44,height:44,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                    </div>}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13,color:used?B.green:B.white}}>{p.name}</div>
+                    {p.brand&&<div style={{fontSize:11,color:B.gray400}}>{p.brand}</div>}
+                    {p.qty>1&&<div style={{fontSize:11,color:B.gray500}}>Qty: {p.qty}</div>}
+                  </div>
+                  <div style={{flexShrink:0}}>
+                    {used
+                      ?<span style={{fontSize:11,fontWeight:700,color:B.green,background:`${B.green}18`,borderRadius:6,padding:"3px 8px"}}>✓ Instalada</span>
+                      :<span style={{fontSize:11,fontWeight:700,color:B.amber,background:`${B.amber}18`,borderRadius:6,padding:"3px 8px"}}>Aguardando</span>}
+                  </div>
+                </div>);
+              })}
+            </div>
+          </div>);
+        })}
+      </div>}
 
       {tab==="quotes"&&<div>
         <div style={{fontSize:13,fontWeight:700,color:B.gray400,marginBottom:14}}>
@@ -10004,7 +10052,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.28.30";
+const APP_VERSION = "2026.09.29.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

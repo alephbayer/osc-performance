@@ -375,7 +375,7 @@ function PixPaymentBox() {
   );
 }
 
-function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote}) {
+function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark"}) {
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
   const [showDebtPopup,setShowDebtPopup]=useState(false);
@@ -908,7 +908,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
     {/* Bottom LiquidNav */}
     <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:200,display:"flex",justifyContent:"center",paddingBottom:"calc(8px + env(safe-area-inset-bottom))"}}>
-      <div style={{display:"flex",borderRadius:99,background:"rgba(16,16,20,0.75)",backdropFilter:"blur(40px) saturate(1.8)",WebkitBackdropFilter:"blur(40px) saturate(1.8)",border:"1px solid rgba(255,255,255,0.12)",boxShadow:"0 6px 28px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.10)",padding:"5px",gap:0}}>
+      <div style={{display:"flex",borderRadius:99,background:theme==="light"?"rgba(240,240,245,0.92)":"rgba(16,16,20,0.75)",backdropFilter:"blur(40px) saturate(1.8)",WebkitBackdropFilter:"blur(40px) saturate(1.8)",border:theme==="light"?"1px solid rgba(0,0,0,0.12)":"1px solid rgba(255,255,255,0.12)",boxShadow:theme==="light"?"0 6px 28px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.85)":"0 6px 28px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.10)",padding:"5px",gap:0}}>
         {[
           {id:"active",  icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>},
           {id:"history", icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>},
@@ -920,7 +920,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         ].map(n=>{
           const on=tab===n.id;
           return(<button key={n.id} onClick={()=>setTab(n.id)}
-            style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"9px 14px",borderRadius:99,border:"none",cursor:"pointer",background:on?`${blue}28`:"transparent",color:on?blue:B.gray400,position:"relative",transition:"all .2s"}}>
+            style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"9px 14px",borderRadius:99,border:"none",cursor:"pointer",background:on?`${blue}28`:"transparent",color:on?blue:theme==="light"?B.gray500:B.gray400,position:"relative",transition:"all .2s"}}>
             <div style={{transform:on?"scale(1.05)":"scale(0.9)",transition:"transform .2s"}}>{n.icon}</div>
             {n.badge>0&&<span style={{position:"absolute",top:5,right:8,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 2px"}}>{n.badge}</span>}
           </button>);
@@ -10058,7 +10058,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.3";
+const APP_VERSION = "2026.09.29.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12427,7 +12427,7 @@ export default function App() {
           : clients.find(c=>c.id===clientSession.id)||clientSession)
       : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
+    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──

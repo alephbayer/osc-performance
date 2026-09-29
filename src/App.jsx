@@ -10127,7 +10127,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.26";
+const APP_VERSION = "2026.09.29.27";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14032,7 +14032,18 @@ export default function App() {
             }
             toast_("Orçamento criado ✓");return r;
           }catch(e){errToast(e);}}}
-          onUpdateQuote={async(id,patch)=>{try{await db.updateQuote(id,patch);setQuotes(p=>p.map(q=>q.id===id?{...q,...patch}:q));}catch(e){errToast(e);}}}
+          onUpdateQuote={async(id,patch)=>{try{
+            await db.updateQuote(id,patch);
+            setQuotes(p=>p.map(q=>q.id===id?{...q,...patch}:q));
+            // Reenviar push ao cliente se alterou itens ou descrição
+            if(patch.items||patch.description){
+              const q=quotes.find(x=>x.id===id);
+              const clientId=patch.clientId||q?.clientId;
+              const vModel=q?.tempModel||(q?.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:null)||"seu veículo";
+              const total=quoteTotal(patch.items||q?.items||[]);
+              if(clientId) db.sendPushToClient(clientId,`📋 Orçamento atualizado — ${vModel}`,`O orçamento foi revisado${total>0?` · ${fmtBRL(total)}`:""}. Confira as alterações.`,"/?portal=cliente").catch(()=>{});
+            }
+          }catch(e){errToast(e);}}}
           onDeleteQuote={async id=>{try{await db.deleteQuote(id);setQuotes(p=>p.filter(q=>q.id!==id));toast_("Orçamento removido ✓");}catch(e){errToast(e);}}}
           onConvertQuoteToAppointment={async(quote)=>{
             try{

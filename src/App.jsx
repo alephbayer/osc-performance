@@ -6261,8 +6261,14 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
   };
 
   const save=async()=>{
-    const payload={...form,status:"draft",createdAt:new Date().toISOString()};
-    await onAdd(payload);
+    if(form._editing){
+      // Update existing quote
+      const {_editing,...patch}=form;
+      await onUpdate(_editing,{items:patch.items,description:patch.description,notes:patch.notes,tempName:patch.tempName,tempPhone:patch.tempPhone,tempModel:patch.tempModel,tempPlate:patch.tempPlate,clientId:patch.clientId||null,vehicleId:patch.vehicleId||null});
+    } else {
+      const payload={...form,status:"draft",createdAt:new Date().toISOString()};
+      await onAdd(payload);
+    }
     try{sessionStorage.removeItem(DRAFT_KEY);}catch{}
     setForm({tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
     setShowNew(false);
@@ -6289,7 +6295,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
 
     {/* New quote form */}
     {showNew&&<div style={{background:B.gray900,borderRadius:14,padding:"16px",marginBottom:16,border:`1px solid ${B.orange}33`}}>
-      <div style={{fontWeight:800,fontSize:14,color:B.white,marginBottom:12}}>Novo orçamento</div>
+      <div style={{fontWeight:800,fontSize:14,color:B.white,marginBottom:12}}>{form._editing?"Editar orçamento":"Novo orçamento"}</div>
 
       {/* Client */}
       <div style={{marginBottom:10}}>
@@ -6457,7 +6463,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       <div style={{display:"flex",gap:8}}>
         <button onClick={save} disabled={!form.tempModel&&!form.vehicleId}
           style={{flex:1,padding:"10px 0",borderRadius:9,background:form.tempModel||form.vehicleId?B.orange:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:form.tempModel||form.vehicleId?"pointer":"not-allowed"}}>
-          Criar orçamento
+          {form._editing?"Salvar alterações":"Criar orçamento"}
         </button>
         <button onClick={()=>setShowNew(false)} style={{padding:"10px 16px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.white,cursor:"pointer",fontSize:13}}>Cancelar</button>
       </div>
@@ -6471,11 +6477,12 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       const clientName=q.clientId?clients.find(c=>c.id===q.clientId)?.name:q.tempName;
       const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
       const isConverted=q.status==="approved"&&q.appointmentId;
-      const isExpanded=isConverted?!!expandedQuotes[q.id]:true;
+      const isEditable=q.status==="draft"||q.status==="sent";
+      const isExpanded=!!expandedQuotes[q.id];
       return(<div key={q.id} style={{background:B.gray900,borderRadius:12,marginBottom:10,border:`1px solid ${isConverted?B.gray700+"55":B.gray700}`,overflow:"hidden",opacity:isConverted?0.7:1}}>
-        {/* Header */}
-        <div onClick={isConverted?()=>toggleQuote(q.id):undefined}
-          style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:isConverted?"pointer":"default"}}>
+        {/* Header — always clickable */}
+        <div onClick={()=>toggleQuote(q.id)}
+          style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontWeight:800,fontSize:14,color:isConverted?B.gray400:B.white,display:"flex",alignItems:"center",gap:6}}>
               {vModel||"Veículo"}
@@ -6485,29 +6492,63 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
             <div style={{fontSize:11,color:B.gray600,marginTop:2}}>{new Date(q.createdAt).toLocaleDateString("pt-BR")}</div>
           </div>
           <div style={{textAlign:"right",flexShrink:0,display:"flex",alignItems:"center",gap:8}}>
-            {!isConverted&&<>
-              <div style={{fontSize:11,fontWeight:700,color:cfg.color,background:`${cfg.color}18`,borderRadius:99,padding:"2px 8px"}}>{cfg.label}</div>
-              {total>0&&<div style={{fontSize:13,fontWeight:800,color:B.orange}}>{fmtBRL(total)}</div>}
-            </>}
-            {isConverted&&total>0&&<div style={{fontSize:12,color:B.gray500}}>{fmtBRL(total)}</div>}
-            {isConverted&&<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform:isExpanded?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}><polyline points="6 9 12 15 18 9"/></svg>}
+            <div style={{fontSize:11,fontWeight:700,color:cfg.color,background:`${cfg.color}18`,borderRadius:99,padding:"2px 8px"}}>{cfg.label}</div>
+            {total>0&&<div style={{fontSize:13,fontWeight:800,color:isConverted?B.gray500:B.orange}}>{fmtBRL(total)}</div>}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform:isExpanded?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s",flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
           </div>
         </div>
-        {/* Expandable content */}
+
+        {/* Expanded content */}
         {isExpanded&&<>
-          {q.description&&<div style={{padding:"0 14px 10px",fontSize:12,color:B.gray400,lineHeight:1.4}}>{q.description.slice(0,120)}{q.description.length>120?"…":""}</div>}
+          {/* Description */}
+          {q.description&&<div style={{padding:"0 14px 10px",fontSize:12,color:B.gray400,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{q.description}</div>}
+
+          {/* Items detail */}
+          {(q.items||[]).length>0&&<div style={{padding:"0 14px 10px"}}>
+            {(q.items||[]).map((it,i)=>{
+              const matT=(it.materials||[]).reduce((s,m)=>s+Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100),0);
+              return(<div key={i} style={{background:B.gray800,borderRadius:8,padding:"8px 10px",marginBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:13,color:it.outsourced?B.purple:B.white}}>
+                      {it.outsourced&&<span style={{fontSize:9,background:`${B.purple}22`,color:B.purple,borderRadius:4,padding:"1px 5px",marginRight:5}}>TERCEIRIZADO</span>}
+                      {it.label}
+                    </div>
+                    {it.hours>0&&!it.outsourced&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>{it.hours}h × {fmtBRL(it.hours>0?it.price/it.hours:0)}/h</div>}
+                    {(it.materials||[]).length>0&&<div style={{marginTop:4}}>
+                      {(it.materials||[]).map((m,mi)=>{
+                        const mt=Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100);
+                        return(<div key={mi} style={{fontSize:11,color:B.gray400,display:"flex",justifyContent:"space-between"}}>
+                          <span>{m.name}{m.brand?` · ${m.brand}`:""} ×{m.qty}{m.markup>0?` (+${m.markup}%)`:""}</span>
+                          <span style={{color:B.amber}}>{fmtBRL(mt)}</span>
+                        </div>);
+                      })}
+                    </div>}
+                  </div>
+                  <div style={{fontWeight:800,fontSize:13,color:B.orange,flexShrink:0}}>{fmtBRL(Number(it.price||0)+matT)}</div>
+                </div>
+              </div>);
+            })}
+            <div style={{textAlign:"right",fontSize:13,fontWeight:900,color:B.orange,marginTop:4,paddingRight:4}}>Total: {fmtBRL(total)}</div>
+          </div>}
+
+          {/* Actions */}
           <div style={{padding:"8px 14px",borderTop:`1px solid ${B.gray800}`,display:"flex",gap:6,flexWrap:"wrap"}}>
+            {isEditable&&<button onClick={()=>{setShowNew(true);setForm({...q,_editing:q.id});setExpandedQuotes(p=>({...p,[q.id]:false}));}}
+              style={{padding:"5px 10px",borderRadius:7,background:`${B.orange}18`,border:`1px solid ${B.orange}33`,color:B.orange,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              ✏️ Editar
+            </button>}
             {!isConverted&&<button onClick={()=>copyLink(q.id)}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.blue}18`,border:`1px solid ${B.blue}33`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              {copiedId===q.id?"✓ Copiado":"🔗 Copiar link"}
+              {copiedId===q.id?"✓ Copiado":"🔗 Link"}
             </button>}
-            {(q.status==="draft"||q.status==="sent")&&<button onClick={()=>{onUpdate(q.id,{status:"sent"});copyLink(q.id);}}
+            {isEditable&&<button onClick={()=>{onUpdate(q.id,{status:"sent"});copyLink(q.id);}}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,color:B.amber,fontSize:11,fontWeight:700,cursor:"pointer"}}>
               📤 Enviar
             </button>}
             {q.status==="approved"&&!q.appointmentId&&<button onClick={()=>onConvertToAppointment(q)}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}33`,color:B.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-              ✅ Converter em agendamento
+              ✅ Converter
             </button>}
             <button onClick={()=>onDelete(q.id)}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",marginLeft:"auto"}}>
@@ -10086,7 +10127,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.25";
+const APP_VERSION = "2026.09.29.26";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

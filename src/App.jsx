@@ -10068,7 +10068,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.14";
+const APP_VERSION = "2026.09.29.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14210,26 +14210,7 @@ export default function App() {
       try{ const row=await db.addPayment({vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance"}); setPay(p=>[...p,row]); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); }catch(e){errToast(e);}
     }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
-    {showChangelog&&adminRole&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:24}}>
-      <div style={{background:B.gray900,borderRadius:24,border:`1px solid ${B.orange}44`,padding:"32px 28px",maxWidth:320,width:"100%",textAlign:"center",boxShadow:"0 24px 64px rgba(0,0,0,.6)"}}>
-        <div style={{width:64,height:64,borderRadius:18,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={B.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-          </svg>
-        </div>
-        <div style={{fontWeight:900,fontSize:18,color:B.white,marginBottom:6,letterSpacing:-.3}}>Nova versão disponível</div>
-        <div style={{fontSize:13,color:B.gray400,marginBottom:28,lineHeight:1.5}}>O sistema foi atualizado. Recarregue para continuar usando a versão mais recente.</div>
-        <button onClick={()=>window.location.reload()}
-          style={{width:"100%",padding:"14px 0",borderRadius:14,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-          </svg>
-          Atualizar agora
-        </button>
-      </div>
-    </div>}
+    {showChangelog&&adminRole&&null}
     {showQuickSheet&&<QuickActionSheet onClose={()=>setShowQuickSheet(false)} adminRole={adminRole} theme={theme}
       onFuel={()=>setFuelModal(true)}
       onTask={()=>setQuickTaskModal(true)} onMat={()=>setQuickMatModal(true)}

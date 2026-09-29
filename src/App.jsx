@@ -469,37 +469,21 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </div>
     </div>}
     {/* Header */}
-    <div style={{background:B.gray900,borderBottom:`2px solid ${blue}`,padding:"0 18px",paddingTop:"env(safe-area-inset-top)",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
-      <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",height:58,gap:12}}>
-        <div style={{width:36,height:36,borderRadius:9,background:blue,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={18} c={B.white}/></div>
+    <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"0 18px",paddingTop:"calc(16px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+      <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",paddingBottom:14,gap:14}}>
+        <div style={{width:42,height:42,borderRadius:11,background:blue,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.white}/></div>
         <div>
-          <div style={{fontWeight:800,fontSize:14,color:B.white}}>{client.name}</div>
-          <div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Portal do Cliente</div>
+          <div style={{fontWeight:900,fontSize:18,color:B.white,letterSpacing:-.3}}>{client.name}</div>
+          <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,marginTop:1}}>Portal do Cliente</div>
         </div>
-        <button onClick={onLogout} style={{marginLeft:"auto",padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
+        <button onClick={onLogout} style={{marginLeft:"auto",padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
           <ILogout s={13} c={B.gray300}/>Sair
         </button>
-      </div>
-      {/* Tabs */}
-      <div style={{maxWidth:680,margin:"0 auto",display:"flex",gap:2,paddingBottom:6}}>
-        {tabBtn("active","Em andamento",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>)}
-        {tabBtn("history","Histórico",<IFileText s={15}/>)}
-        {tabBtn("account","Conta",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>)}
-        {cliAppts.length>0&&tabBtn("appts","Agendamentos",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>)}
-        {cliParts.length>0&&tabBtn("parts","Peças",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>)}
-        {activeQuotes.length>0&&<button onClick={()=>setTab("quotes")} style={{flex:1,padding:"8px 4px 6px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:700,background:tab==="quotes"?blue:"transparent",color:tab==="quotes"?B.white:B.gray400,display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:0,position:"relative"}}>
-          <span style={{display:"flex",alignItems:"center",justifyContent:"center",opacity:tab==="quotes"?1:.7,position:"relative"}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            {pendingQuotes.length>0&&<span style={{position:"absolute",top:-4,right:-6,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 2px"}}>{pendingQuotes.length}</span>}
-          </span>
-          <span style={{fontSize:10,lineHeight:1.2,textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>Orçamentos</span>
-        </button>}
-        {tabBtn("notes","Anotações",<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>)}
       </div>
     </div>
 
     <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black}}>
-    <div style={{maxWidth:680,margin:"0 auto",padding:"20px 14px",paddingBottom:"calc(40px + env(safe-area-inset-bottom))",minHeight:"100vh"}}>
+    <div style={{maxWidth:680,margin:"0 auto",padding:"20px 14px",paddingBottom:"calc(90px + env(safe-area-inset-bottom))",minHeight:"100vh"}}>
       {pushStatus==="asking"&&VAPID_PUBLIC_KEY&&<div style={{marginBottom:14,padding:"10px 14px",background:`${B.blue}12`,border:`1px solid ${B.blue}33`,borderRadius:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
         <div style={{flex:1,minWidth:0}}>
@@ -921,6 +905,28 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </div>}
     </div>
     </div>{/* end scroll */}
+
+    {/* Bottom LiquidNav */}
+    <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:200,display:"flex",justifyContent:"center",paddingBottom:"calc(8px + env(safe-area-inset-bottom))"}}>
+      <div style={{display:"flex",borderRadius:99,background:"rgba(16,16,20,0.75)",backdropFilter:"blur(40px) saturate(1.8)",WebkitBackdropFilter:"blur(40px) saturate(1.8)",border:"1px solid rgba(255,255,255,0.12)",boxShadow:"0 6px 28px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.10)",padding:"5px",gap:0}}>
+        {[
+          {id:"active",  icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>},
+          {id:"history", icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>},
+          {id:"account", icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>},
+          ...(cliAppts.length>0?[{id:"appts",  icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}]:[]),
+          ...(cliParts.length>0?[{id:"parts",  icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>}]:[]),
+          ...(activeQuotes.length>0?[{id:"quotes",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,badge:pendingQuotes.length}]:[]),
+          {id:"notes",   icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>},
+        ].map(n=>{
+          const on=tab===n.id;
+          return(<button key={n.id} onClick={()=>setTab(n.id)}
+            style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"9px 14px",borderRadius:99,border:"none",cursor:"pointer",background:on?`${blue}28`:"transparent",color:on?blue:B.gray400,position:"relative",transition:"all .2s"}}>
+            <div style={{transform:on?"scale(1.05)":"scale(0.9)",transition:"transform .2s"}}>{n.icon}</div>
+            {n.badge>0&&<span style={{position:"absolute",top:5,right:8,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 2px"}}>{n.badge}</span>}
+          </button>);
+        })}
+      </div>
+    </div>
   </div>);
 }
 
@@ -10052,7 +10058,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.2";
+const APP_VERSION = "2026.09.29.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

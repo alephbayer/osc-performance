@@ -107,12 +107,13 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.09.29.16";
+        const CURRENT = "2026.09.29.17";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){
           if(window.__oscUpdatePending) return;
           window.__oscUpdatePending = true;
+          // Mark as seen immediately so reload doesn't re-trigger
           localStorage.setItem("osc_deployed_version", CURRENT);
           function render(){
             const overlay = document.createElement("div");
@@ -136,17 +137,26 @@
         }
 
         // Strategy 1: HTML-embedded check (works when HTML is fresh)
-        if(stored && stored !== CURRENT) showBanner();
-        else localStorage.setItem("osc_deployed_version", CURRENT);
+        if(stored && stored !== CURRENT){
+          localStorage.setItem("osc_deployed_version", CURRENT);
+          showBanner();
+        } else {
+          localStorage.setItem("osc_deployed_version", CURRENT);
+        }
 
         // Strategy 2: Poll version.json (works on iOS PWA where HTML is cached)
         function pollVersion(){
+          if(window.__oscUpdatePending) return;
           fetch("/version.json?t="+Date.now(), {cache:"no-store"})
             .then(r=>r.json())
             .then(data=>{
               const s = localStorage.getItem("osc_deployed_version");
-              if(s && s !== data.version) showBanner();
-              else localStorage.setItem("osc_deployed_version", data.version);
+              if(s && s !== data.version){
+                localStorage.setItem("osc_deployed_version", data.version);
+                showBanner();
+              } else {
+                localStorage.setItem("osc_deployed_version", data.version);
+              }
             }).catch(()=>{});
         }
         // Run immediately and every 30s

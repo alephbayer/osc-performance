@@ -375,7 +375,7 @@ function PixPaymentBox() {
   );
 }
 
-function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark"}) {
+function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref}) {
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
   const [showDebtPopup,setShowDebtPopup]=useState(false);
@@ -469,14 +469,15 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </div>
     </div>}
     {/* Header */}
-    <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"0 18px",paddingTop:"calc(16px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+    <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"0 18px",paddingTop:"calc(28px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",paddingBottom:14,gap:14}}>
-        <div style={{width:42,height:42,borderRadius:11,background:blue,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.white}/></div>
-        <div>
-          <div style={{fontWeight:900,fontSize:18,color:B.white,letterSpacing:-.3}}>{client.name}</div>
+        <div style={{width:40,height:40,borderRadius:11,background:blue,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={19} c={B.white}/></div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:800,fontSize:15,color:B.white,letterSpacing:-.2}}>{client.name}</div>
           <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,marginTop:1}}>Portal do Cliente</div>
         </div>
-        <button onClick={onLogout} style={{marginLeft:"auto",padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+        <ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/>
+        <button onClick={onLogout} style={{padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
           <ILogout s={13} c={B.gray300}/>Sair
         </button>
       </div>
@@ -10058,7 +10059,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.5";
+const APP_VERSION = "2026.09.29.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12427,7 +12428,7 @@ export default function App() {
           : clients.find(c=>c.id===clientSession.id)||clientSession)
       : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
+    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──

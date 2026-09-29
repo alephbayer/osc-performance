@@ -107,7 +107,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.09.29.13";
+        const CURRENT = "2026.09.29.14";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){
@@ -115,11 +115,22 @@
           window.__oscUpdatePending = true;
           localStorage.setItem("osc_deployed_version", CURRENT);
           function render(){
-            const div = document.createElement("div");
-            div.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#ff6b00;color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;font-size:13px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.4);cursor:pointer;font-family:sans-serif;white-space:nowrap";
-            div.textContent = "🔄 Nova versão disponível — toque para atualizar";
-            div.onclick = () => window.location.reload();
-            document.body.appendChild(div);
+            const overlay = document.createElement("div");
+            overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:99999;padding:24px;font-family:-apple-system,'Inter',sans-serif";
+            overlay.innerHTML = `
+              <div style="background:#1a1a24;border-radius:24px;border:1px solid rgba(255,107,0,.3);padding:32px 28px;max-width:320px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.6)">
+                <div style="width:64px;height:64px;border-radius:18px;background:rgba(255,107,0,.15);border:1px solid rgba(255,107,0,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ff6b00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                </div>
+                <div style="font-weight:900;font-size:18px;color:#f0f0f8;margin-bottom:8px;letter-spacing:-.3px">Nova versão disponível</div>
+                <div style="font-size:13px;color:#9999bb;margin-bottom:28px;line-height:1.5">O sistema foi atualizado. Recarregue para continuar usando a versão mais recente.</div>
+                <button onclick="window.location.reload()" style="width:100%;padding:14px 0;border-radius:14px;background:#ff6b00;border:none;color:#fff;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                  Atualizar agora
+                </button>
+              </div>
+            `;
+            document.body.appendChild(overlay);
           }
           if(document.body) render(); else window.addEventListener("DOMContentLoaded", render);
         }

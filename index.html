@@ -107,7 +107,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.09.29.20";
+        const CURRENT = "2026.09.29.21";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){
@@ -118,6 +118,7 @@
           localStorage.setItem("osc_deployed_version", CURRENT);
           function render(){
             const overlay = document.createElement("div");
+            overlay.setAttribute("data-overlay","1");
             overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:99999;padding:24px;font-family:-apple-system,'Inter',sans-serif";
             overlay.innerHTML = `
               <div style="background:#1a1a24;border-radius:24px;border:1px solid rgba(255,107,0,.3);padding:32px 28px;max-width:320px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.6)">
@@ -129,6 +130,9 @@
                 <button onclick="localStorage.setItem('osc_update_clicked','1');window.location.reload();" style="width:100%;padding:14px 0;border-radius:14px;background:#ff6b00;border:none;color:#fff;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                   Atualizar agora
+                </button>
+                <button onclick="this.closest('[data-overlay]').remove();window.__oscUpdatePending=false;" data-dismiss style="width:100%;padding:11px 0;border-radius:14px;background:transparent;border:1px solid rgba(255,255,255,.15);color:#9999bb;font-weight:600;font-size:13px;cursor:pointer;margin-top:8px;font-family:inherit">
+                  Lembrar mais tarde
                 </button>
               </div>
             `;

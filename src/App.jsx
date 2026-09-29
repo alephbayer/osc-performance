@@ -929,7 +929,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         ].map(n=>{
           const on=tab===n.id;
           return(<button key={n.id} onClick={()=>setTab(n.id)}
-            style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"8px 12px",borderRadius:12,border:"none",cursor:"pointer",background:"transparent",color:on?blue:theme==="light"?B.gray500:B.gray400,position:"relative",transition:"all .2s",gap:3,minWidth:0}}>
+            style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"8px 12px",borderRadius:99,border:"none",cursor:"pointer",background:"transparent",color:on?blue:theme==="light"?B.gray500:B.gray400,position:"relative",transition:"all .2s",gap:3,minWidth:0}}>
             <div style={{transform:on?"scale(1.05)":"scale(0.9)",transition:"transform .2s"}}>{n.icon}</div>
             <span style={{fontSize:9,fontWeight:on?800:500,letterSpacing:.2,whiteSpace:"nowrap"}}>{n.label}</span>
             {n.badge>0&&<span style={{position:"absolute",top:5,right:6,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 2px"}}>{n.badge}</span>}
@@ -10068,7 +10068,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.11";
+const APP_VERSION = "2026.09.29.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

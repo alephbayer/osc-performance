@@ -6357,18 +6357,24 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       {form.items.length>0&&<div style={{marginBottom:10}}>
         <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Itens do orçamento</div>
         {form.items.map((it,i)=>{
-          const matTotal=(it.materials||[]).reduce((s,m)=>s+Number(m.cost||0)*Number(m.qty||1),0);
+          const matTotal=(it.materials||[]).reduce((s,m)=>s+Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100),0);
           const itemTotal=Number(it.price||0)+matTotal;
-          return(<div key={i} style={{background:B.gray800,borderRadius:8,padding:"8px 10px",marginBottom:8}}>
+          return(<div key={i} style={{background:B.gray800,borderRadius:8,padding:"8px 10px",marginBottom:8,border:it.outsourced?`1px solid ${B.purple}44`:`1px solid transparent`}}>
             <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
               <div style={{flex:1}}>
-                <input value={it.label} onChange={e=>{const items=[...form.items];items[i]={...it,label:e.target.value};setForm(p=>({...p,items}));}}
-                  style={{width:"100%",background:"none",border:"none",color:B.white,fontSize:13,fontWeight:700,outline:"none",padding:0,marginBottom:3}}/>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                  <input value={it.label} onChange={e=>{const items=[...form.items];items[i]={...it,label:e.target.value};setForm(p=>({...p,items}));}}
+                    style={{flex:1,background:"none",border:"none",color:B.white,fontSize:13,fontWeight:700,outline:"none",padding:0}}/>
+                  <button onClick={()=>{const items=[...form.items];items[i]={...it,outsourced:!it.outsourced};setForm(p=>({...p,items}));}}
+                    style={{background:it.outsourced?`${B.purple}33`:"none",border:`1px solid ${it.outsourced?B.purple:B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:it.outsourced?B.purple:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
+                    {it.outsourced?"🔧 Terceirizado":"Terceirizar"}
+                  </button>
+                </div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  <input value={it.hours||""} type="number" placeholder="horas" onChange={e=>{const h=parseFloat(e.target.value)||0;const items=[...form.items];items[i]={...it,hours:h,price:Math.round(h*defaultRate*100)/100};setForm(p=>({...p,items}));}}
-                    style={{width:60,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
-                  <input value={it.price||""} type="number" placeholder="M.O. R$" onChange={e=>{const items=[...form.items];items[i]={...it,price:parseFloat(e.target.value)||0};setForm(p=>({...p,items}));}}
-                    style={{width:80,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+                  {!it.outsourced&&<input value={it.hours||""} type="number" placeholder="horas" onChange={e=>{const h=parseFloat(e.target.value)||0;const items=[...form.items];items[i]={...it,hours:h,price:Math.round(h*defaultRate*100)/100};setForm(p=>({...p,items}));}}
+                    style={{width:60,padding:"3px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>}
+                  <input value={it.price||""} type="number" placeholder={it.outsourced?"Valor R$":"M.O. R$"} onChange={e=>{const items=[...form.items];items[i]={...it,price:parseFloat(e.target.value)||0};setForm(p=>({...p,items}));}}
+                    style={{width:90,padding:"3px 6px",borderRadius:5,border:`1px solid ${it.outsourced?B.purple:B.gray600}`,background:B.gray900,color:it.outsourced?B.purple:B.white,fontSize:11,outline:"none"}}/>
                   {itemTotal>0&&<span style={{fontSize:11,color:B.orange,fontWeight:700,alignSelf:"center"}}>= {fmtBRL(itemTotal)}</span>}
                 </div>
               </div>
@@ -6377,39 +6383,50 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
                 <ITrash s={13}/>
               </button>
             </div>
-            {/* Materials for this item */}
+            {/* Materials */}
             <div style={{marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`}}>
-              {(it.materials||[]).map((m,mi)=>(
-                <div key={mi} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,fontSize:11,color:B.gray300}}>
-                  <span style={{flex:1}}>{m.name}{m.brand?` · ${m.brand}`:""}</span>
-                  <input value={m.qty} type="number" min="1" onChange={e=>{
+              {(it.materials||[]).map((m,mi)=>{
+                const mTotal=Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100);
+                return(<div key={mi} style={{display:"flex",alignItems:"center",gap:4,marginBottom:5,flexWrap:"wrap"}}>
+                  <input value={m.name} onChange={e=>{const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,name:e.target.value};items[i]={...it,materials:mats};setForm(p=>({...p,items}));}}
+                    placeholder="Nome" style={{flex:"1 1 80px",minWidth:60,padding:"2px 5px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
+                  <input value={m.qty} type="number" min="1" title="Qty" onChange={e=>{
                     const items=[...form.items];const mats=[...(items[i].materials||[])];
                     mats[mi]={...m,qty:e.target.value===''?'':parseInt(e.target.value)||1};
                     items[i]={...it,materials:mats};setForm(p=>({...p,items}));
-                  }} onBlur={e=>{
-                    if(!e.target.value||parseInt(e.target.value)<1){
-                      const items=[...form.items];const mats=[...(items[i].materials||[])];
-                      mats[mi]={...m,qty:1};items[i]={...it,materials:mats};setForm(p=>({...p,items}));
-                    }
-                  }} style={{width:40,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
-                  <span style={{color:B.amber,fontWeight:700}}>{fmtBRL(m.cost*m.qty)}</span>
+                  }} onBlur={e=>{if(!e.target.value||parseInt(e.target.value)<1){const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,qty:1};items[i]={...it,materials:mats};setForm(p=>({...p,items}));}}}
+                    style={{width:34,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
+                  <input value={m.cost||""} type="number" placeholder="Custo" title="Custo R$" onChange={e=>{const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,cost:parseFloat(e.target.value)||0};items[i]={...it,materials:mats};setForm(p=>({...p,items}));}}
+                    style={{width:58,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
+                  <div style={{display:"flex",alignItems:"center",gap:1}}>
+                    <input value={m.markup||""} type="number" placeholder="0" title="Markup %" onChange={e=>{const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,markup:parseFloat(e.target.value)||0};items[i]={...it,materials:mats};setForm(p=>({...p,items}));}}
+                      style={{width:36,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.amber,fontSize:10,outline:"none"}}/>
+                    <span style={{fontSize:9,color:B.gray500}}>%</span>
+                  </div>
+                  <span style={{color:B.amber,fontWeight:700,fontSize:10,minWidth:50,textAlign:"right"}}>{fmtBRL(mTotal)}</span>
                   <button onClick={()=>{const items=[...form.items];items[i]={...it,materials:(it.materials||[]).filter((_,j)=>j!==mi)};setForm(p=>({...p,items}));}}
                     style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0}}
                     onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray600}>
                     <ITrash s={10}/>
                   </button>
-                </div>
-              ))}
-              <QuoteItemStockSearch stock={stock} onAdd={mat=>{
-                const items=[...form.items];
-                items[i]={...it,materials:[...(it.materials||[]),mat]};
-                setForm(p=>({...p,items}));
-              }}/>
+                </div>);
+              })}
+              <div style={{display:"flex",gap:5,marginTop:4}}>
+                <QuoteItemStockSearch stock={stock} onAdd={mat=>{
+                  const items=[...form.items];
+                  items[i]={...it,materials:[...(it.materials||[]),{...mat,markup:0}]};
+                  setForm(p=>({...p,items}));
+                }}/>
+                <button onClick={()=>{const items=[...form.items];items[i]={...it,materials:[...(it.materials||[]),{name:"",brand:"",qty:1,cost:0,markup:0,stockId:null}]};setForm(p=>({...p,items}));}}
+                  style={{padding:"3px 8px",borderRadius:5,background:`${B.purple}18`,border:`1px solid ${B.purple}33`,color:B.purple,fontSize:10,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+                  + Manual
+                </button>
+              </div>
             </div>
           </div>);
         })}
         <div style={{textAlign:"right",fontSize:13,fontWeight:800,color:B.orange,marginTop:4}}>
-          Total: {fmtBRL(form.items.reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1),0),0))}
+          Total: {fmtBRL(form.items.reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100),0),0))}
         </div>
       </div>}
 
@@ -10068,7 +10085,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.23";
+const APP_VERSION = "2026.09.29.24";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

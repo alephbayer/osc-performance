@@ -6195,7 +6195,7 @@ function QuoteItemStockSearch({stock=[],onAdd}) {
 function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,onDelete,onConvertToAppointment,defaultRate=0,stock=[]}) {
   const DRAFT_KEY="osc_quote_draft";
   const [showNew,setShowNew]=useState(()=>{ try{return !!sessionStorage.getItem(DRAFT_KEY);}catch{return false;} });
-  const [form,setForm]=useState(()=>{ try{const s=sessionStorage.getItem(DRAFT_KEY);return s?JSON.parse(s):{tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]};}catch{return {tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]};} });
+  const [form,setForm]=useState(()=>{ try{const s=sessionStorage.getItem(DRAFT_KEY);return s?JSON.parse(s):{tempName:"",tempPhone:"",tempModel:"",tempYear:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]};}catch{return {tempName:"",tempPhone:"",tempModel:"",tempYear:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]};} });
 
   // Persist form to sessionStorage on every change
   useEffect(()=>{
@@ -6239,7 +6239,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       const r=await fetch("https://lchfmoeyzgbepunetuch.supabase.co/functions/v1/ai-quote",{
         method:"POST",
         headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjaGZtb2V5emdiZXB1bmV0dWNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NzEzOTUsImV4cCI6MjA5ODM0NzM5NX0.2RTbc1Dd_VWGT56ak1T41HH2zGXCS6MDbnXe4EY3SYQ"},
-        body:JSON.stringify({description:form.description,model:form.tempModel||selectedVehicle?.model||""})
+        body:JSON.stringify({description:form.description,model:form.tempModel||selectedVehicle?.model||"",year:form.tempYear||selectedVehicle?.year||""})
       });
       const txt=await r.text();
       console.log("ai-quote raw response:",txt);
@@ -6270,7 +6270,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       await onAdd(payload);
     }
     try{sessionStorage.removeItem(DRAFT_KEY);}catch{}
-    setForm({tempName:"",tempPhone:"",tempModel:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
+    setForm({tempName:"",tempPhone:"",tempModel:"",tempYear:"",tempPlate:"",description:"",notes:"",division:"performance",clientId:"",vehicleId:"",items:[]});
     setShowNew(false);
   };
 
@@ -6340,11 +6340,13 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
               <div style={{fontWeight:700,fontSize:12,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
             </div>)}
           </div>}
-        </div>:<div style={{display:"flex",gap:6}}>
+        </div>:<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           <input value={form.tempModel} onChange={e=>setForm(p=>({...p,tempModel:e.target.value}))} placeholder="Modelo do veículo *"
-            style={{flex:2,padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+            style={{flex:"2 1 120px",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+          <input value={form.tempYear||""} onChange={e=>setForm(p=>({...p,tempYear:e.target.value}))} placeholder="Ano"
+            style={{flex:"0 0 60px",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
           <input value={form.tempPlate} onChange={e=>setForm(p=>({...p,tempPlate:e.target.value}))} placeholder="Placa"
-            style={{flex:1,padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+            style={{flex:"1 1 80px",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
         </div>}
       </div>
 
@@ -10127,7 +10129,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.27";
+const APP_VERSION = "2026.09.29.28";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

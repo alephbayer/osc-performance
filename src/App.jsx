@@ -8887,7 +8887,10 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
 
   // Internal transfers (owner only)
   if(adminRole==="owner"&&internalTransfers.length>0){
-    const filtered=internalTransfers.filter(t=>inRange(t.createdAt));
+    const filtered=internalTransfers.filter(t=>
+      inRange(t.createdAt)&&
+      (t.fromDivision===finDiv||t.toDivision===finDiv)
+    );
     if(filtered.length>0){
       sectionHeader(`ACERTOS INTERNOS (${filtered.length})`);
       filtered.forEach(t=>{
@@ -10129,7 +10132,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.28";
+const APP_VERSION = "2026.09.29.29";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

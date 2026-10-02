@@ -7903,6 +7903,11 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
         style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.green}22`,border:`1px solid ${B.green}44`,color:B.green,fontSize:12,fontWeight:800,cursor:"pointer",minWidth:80}}>
         🎉 Recebido
       </button>}
+      {canBuy&&inv.status==="bought"&&<button onClick={()=>onUpdate(inv.id,{status:"pending",link:""})}
+        style={{padding:"9px 12px",borderRadius:9,background:`${B.amber}15`,border:`1px solid ${B.amber}33`,color:B.amber,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        Novo link
+      </button>}
       {canEdit&&inv.status!=="bought"&&<button onClick={()=>onStartEdit(inv)}
         style={{padding:"9px 16px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
         <IEdit s={13}/>Editar
@@ -10132,7 +10137,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.02.4";
+const APP_VERSION = "2026.10.02.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

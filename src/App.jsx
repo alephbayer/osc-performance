@@ -3138,7 +3138,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
         {task.outsourced&&<div style={{marginTop:5,padding:"5px 10px",background:"#a78bfa10",border:"1px solid #a78bfa33",borderRadius:7,fontSize:11,color:"#c4b5fd"}}>
           ℹ️ Este serviço é realizado por um terceiro. Não é necessária a sua execução.
         </div>}
-        {task.description&&<div style={{fontSize:11,color:B.gray400,fontStyle:"italic",marginTop:2}}>{task.description}</div>}
+        {task.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:B.gray800,borderRadius:7,padding:"7px 10px",borderLeft:`2px solid ${B.gray600}`,lineHeight:1.55,whiteSpace:"pre-wrap"}}>{task.description}</div>}
         {signer&&task.done&&<div style={{marginTop:2}}>
           <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
         </div>}
@@ -10132,7 +10132,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.09.29.29";
+const APP_VERSION = "2026.10.02.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

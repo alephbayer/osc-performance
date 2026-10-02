@@ -9422,7 +9422,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                           <span style={{fontSize:14,color:t.done?B.gray400:t.outsourced?"#c4b5fd":B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
                           {t.outsourced&&<span style={{fontSize:10,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
                         </div>
-                        {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
+                        {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:B.gray800,borderRadius:7,padding:"7px 10px",borderLeft:`2px solid ${B.gray600}`,lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
                         {(t.materials||[]).filter(m=>m.name).map((m,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
                             <span style={{fontSize:11,color:m.imported?"#60a5fa":B.gray500}}>🔩</span>
@@ -9496,7 +9496,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     <span style={{fontSize:18,flexShrink:0,marginTop:1}}>{t.done?"✅":"⬜"}</span>
                     <div style={{flex:1,minWidth:0}}>
                       <span style={{fontSize:14,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
-                      {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
+                      {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:B.gray800,borderRadius:7,padding:"7px 10px",borderLeft:`2px solid ${B.gray600}`,lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
                       {(t.materials||[]).filter(m=>m.name).map((m,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
                           <span style={{fontSize:11,color:B.gray500}}>🔩</span>
@@ -9652,7 +9652,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     <span style={{fontSize:18,flexShrink:0}}>🔴</span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:14,color:B.gray100,fontWeight:600}}>{t.label}</div>
-                      {t.description&&<div style={{fontSize:12,color:B.gray500,fontStyle:"italic",marginTop:3}}>{t.description}</div>}
+                      {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:B.gray800,borderRadius:7,padding:"7px 10px",borderLeft:`2px solid ${B.gray600}`,lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
                       {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
                         <div key={mi} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
                           <span style={{fontSize:11,color:m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
@@ -10132,7 +10132,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.02.1";
+const APP_VERSION = "2026.10.02.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10361,7 +10361,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
               <span style={{fontSize:15,flexShrink:0}}>{t.done?"✅":"⬜"}</span>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600}}>{t.label}</div>
-                {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
+                {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:B.gray800,borderRadius:7,padding:"7px 10px",borderLeft:`2px solid ${B.gray600}`,lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
                 {(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
                   <span style={{color:m.estimated?"#eab308":m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</span>
                   {m.estimated&&<span style={{fontSize:9,fontWeight:800,color:"#eab308",background:"#eab30820",border:"1px solid #eab30844",borderRadius:4,padding:"1px 5px",letterSpacing:.3}}>ESTIMADO</span>}
@@ -10466,7 +10466,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
                         <span style={{fontSize:15,flexShrink:0}}>🔴</span>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:13,color:B.gray100,fontWeight:600}}>{t.label}</div>
-                          {t.description&&<div style={{fontSize:11,color:B.gray500,fontStyle:"italic",marginTop:2}}>{t.description}</div>}
+                          {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:B.gray800,borderRadius:7,padding:"7px 10px",borderLeft:`2px solid ${B.gray600}`,lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
                           {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
                             <div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
                               <span style={{color:m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>

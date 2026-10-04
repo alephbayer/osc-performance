@@ -10137,7 +10137,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.02.7";
+const APP_VERSION = "2026.10.02.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13319,14 +13319,14 @@ export default function App() {
 
       // Clientes com veículo entregue e conta em aberto
       const devedores=osHistory.filter(os=>{
-        if(!os.deliveredAt) return false;
+        if(!os.delivered_at&&!os.deliveredAt) return false;
         const paid=(payments||[]).filter(p=>p.osHistoryId===os.id).reduce((s,p)=>s+Number(p.amount||0),0);
-        const owed=Number(os.total||0)-paid-Number(os.discount||0);
+        const owed=Number(os.total_value||os.total||0)-paid;
         return owed>0.01;
       }).map(os=>{
-        const cli=clients.find(c=>c.id===os.clientId);
+        const cli=clients.find(c=>c.id===(os.client_id||os.clientId));
         const paid=(payments||[]).filter(p=>p.osHistoryId===os.id).reduce((s,p)=>s+Number(p.amount||0),0);
-        const owed=Number(os.total||0)-paid-Number(os.discount||0);
+        const owed=Number(os.total_value||os.total||0)-paid;
         return {os,cli,owed};
       });
       const totalDevido=devedores.reduce((s,d)=>s+d.owed,0);
@@ -13355,7 +13355,7 @@ export default function App() {
                   onClick={()=>goSection("gestao","finance")}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:13,color:B.white}}>{cli?.name||"Cliente"}</div>
-                    <div style={{fontSize:11,color:B.gray500,marginTop:1}}>{os.osNumber?`OS-${os.osNumber} · `:""}{os.model||""}{os.deliveredAt?` · Entregue ${new Date(os.deliveredAt).toLocaleDateString("pt-BR")}`:""}</div>
+                    <div style={{fontSize:11,color:B.gray500,marginTop:1}}>{os.os_number?`OS-${os.os_number} · `:""}{os.model||""}{(os.delivered_at||os.deliveredAt)?` · Entregue ${new Date(os.delivered_at||os.deliveredAt).toLocaleDateString("pt-BR")}`:""}</div>
                   </div>
                   <div style={{fontWeight:800,fontSize:13,color:B.red,flexShrink:0}}>{fmtBRL(owed)}</div>
                 </div>

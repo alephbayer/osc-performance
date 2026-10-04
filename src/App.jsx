@@ -10137,7 +10137,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.02.8";
+const APP_VERSION = "2026.10.02.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13318,7 +13318,8 @@ export default function App() {
       const todayCalEvents=(calendarEvents||[]).filter(e=>e.date===todayStr);
 
       // Clientes com veículo entregue e conta em aberto
-      const devedores=osHistory.filter(os=>{
+      // Agrupar OSs com saldo em aberto por cliente, ordem alfabética
+      const osComSaldo=osHistory.filter(os=>{
         if(!os.delivered_at&&!os.deliveredAt) return false;
         const paid=(payments||[]).filter(p=>p.osHistoryId===os.id).reduce((s,p)=>s+Number(p.amount||0),0);
         const owed=Number(os.total_value||os.total||0)-paid;
@@ -13329,7 +13330,17 @@ export default function App() {
         const owed=Number(os.total_value||os.total||0)-paid;
         return {os,cli,owed};
       });
-      const totalDevido=devedores.reduce((s,d)=>s+d.owed,0);
+      // Agrupar por cliente
+      const devedoresMap=new Map();
+      osComSaldo.forEach(({os,cli,owed})=>{
+        const key=cli?.id||os.client_id||os.clientId||"sem-cliente";
+        if(!devedoresMap.has(key)) devedoresMap.set(key,{cli,osList:[],totalOwed:0});
+        const g=devedoresMap.get(key);
+        g.osList.push({os,owed});
+        g.totalOwed+=owed;
+      });
+      const devedores=[...devedoresMap.values()].sort((a,b)=>(a.cli?.name||"").localeCompare(b.cli?.name||"","pt-BR"));
+      const totalDevido=devedores.reduce((s,d)=>s+d.totalOwed,0);
 
       if(!hasPurchases&&!hasInvest&&!hasNotes&&lowStock===0&&pendingMateriais===0&&approvedMateriais===0&&boughtMateriais===0&&todayCalEvents.length===0&&devedores.length===0) return(
         <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${B.gray700}`,textAlign:"center",color:B.gray600,fontSize:13}}>✅ Nenhum alerta no momento</div>
@@ -13350,14 +13361,31 @@ export default function App() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s",flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
             </div>
             {open&&<div style={{borderTop:`1px solid ${B.gray700}`}}>
-              {devedores.map(({os,cli,owed},i)=>(
-                <div key={os.id} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:i<devedores.length-1?`1px solid ${B.gray800}`:""}}
-                  onClick={()=>goSection("gestao","finance")}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:700,fontSize:13,color:B.white}}>{cli?.name||"Cliente"}</div>
-                    <div style={{fontSize:11,color:B.gray500,marginTop:1}}>{os.os_number?`OS-${os.os_number} · `:""}{os.model||""}{(os.delivered_at||os.deliveredAt)?` · Entregue ${new Date(os.delivered_at||os.deliveredAt).toLocaleDateString("pt-BR")}`:""}</div>
+              {devedores.map(({cli,osList,totalOwed},i)=>(
+                <div key={cli?.id||i} style={{borderBottom:i<devedores.length-1?`1px solid ${B.gray700}`:""}}>
+                  {/* Cliente header */}
+                  <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:B.gray900}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:800,fontSize:13,color:B.white}}>{cli?.name||"Cliente"}</div>
+                      <div style={{fontSize:11,color:B.gray500}}>{osList.length} OS{osList.length!==1?"s":""} em aberto</div>
+                    </div>
+                    <div style={{fontWeight:900,fontSize:14,color:B.red,flexShrink:0}}>{fmtBRL(totalOwed)}</div>
                   </div>
-                  <div style={{fontWeight:800,fontSize:13,color:B.red,flexShrink:0}}>{fmtBRL(owed)}</div>
+                  {/* OSs empilhadas */}
+                  {osList.map(({os,owed})=>(
+                    <div key={os.id} onClick={()=>goSection("gestao","finance")}
+                      style={{padding:"7px 16px 7px 28px",display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:B.gray800}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:11,color:B.gray300}}>
+                          {os.os_number?`OS-${os.os_number}`:"OS"}{os.model?` · ${os.model}`:""}
+                        </div>
+                        <div style={{fontSize:10,color:B.gray500}}>
+                          {(os.delivered_at||os.deliveredAt)?`Entregue ${new Date(os.delivered_at||os.deliveredAt).toLocaleDateString("pt-BR")}`:""}
+                        </div>
+                      </div>
+                      <div style={{fontSize:12,fontWeight:700,color:B.red,flexShrink:0}}>{fmtBRL(owed)}</div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>}

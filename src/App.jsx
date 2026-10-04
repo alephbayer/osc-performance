@@ -3291,13 +3291,13 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
             </span>}
           </div>
           {/* Description — optional */}
-          <div style={Object.assign({marginTop:3},task.description?{background:"rgba(128,128,128,0.1)",borderRadius:7,padding:"6px 10px",borderLeft:"2px solid rgba(128,128,128,0.3)"}:{})}>
+          <div style={Object.assign({marginTop:3},task.description?{background:"rgba(128,128,128,0.1)",borderRadius:7,padding:"6px 10px",borderLeft:"2px solid rgba(128,128,128,0.3)",color:B.white}:{})}>
             <InlineEdit
               multiline
               value={task.description||""}
               onSave={v=>onUpdate(task.id,{description:v.trim()})}
               placeholder="+ Descrição (opcional)"
-              textStyle={{textAlign:"left",whiteSpace:"pre-wrap",fontSize:12,color:"inherit"}}/>
+              textStyle={{textAlign:"left",whiteSpace:"pre-wrap",fontSize:12}}/>
           </div>
           {/* Warranty info box */}
           {task.warranty&&<div style={{marginTop:5,padding:"5px 10px",background:`${B.red}10`,border:`1px solid ${B.red}33`,borderRadius:7,fontSize:11,color:B.red}}>
@@ -10137,7 +10137,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.02.5";
+const APP_VERSION = "2026.10.02.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

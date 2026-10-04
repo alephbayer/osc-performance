@@ -10137,7 +10137,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.02.6";
+const APP_VERSION = "2026.10.02.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13316,22 +13316,70 @@ export default function App() {
       const boughtMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="bought").length;
       const todayStr=new Date().toISOString().slice(0,10);
       const todayCalEvents=(calendarEvents||[]).filter(e=>e.date===todayStr);
-      if(!hasPurchases&&!hasInvest&&!hasNotes&&lowStock===0&&pendingMateriais===0&&approvedMateriais===0&&boughtMateriais===0&&todayCalEvents.length===0) return(
+
+      // Clientes com veículo entregue e conta em aberto
+      const devedores=osHistory.filter(os=>{
+        if(!os.deliveredAt) return false;
+        const paid=(payments||[]).filter(p=>p.osHistoryId===os.id).reduce((s,p)=>s+Number(p.amount||0),0);
+        const owed=Number(os.total||0)-paid-Number(os.discount||0);
+        return owed>0.01;
+      }).map(os=>{
+        const cli=clients.find(c=>c.id===os.clientId);
+        const paid=(payments||[]).filter(p=>p.osHistoryId===os.id).reduce((s,p)=>s+Number(p.amount||0),0);
+        const owed=Number(os.total||0)-paid-Number(os.discount||0);
+        return {os,cli,owed};
+      });
+      const totalDevido=devedores.reduce((s,d)=>s+d.owed,0);
+
+      if(!hasPurchases&&!hasInvest&&!hasNotes&&lowStock===0&&pendingMateriais===0&&approvedMateriais===0&&boughtMateriais===0&&todayCalEvents.length===0&&devedores.length===0) return(
         <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${B.gray700}`,textAlign:"center",color:B.gray600,fontSize:13}}>✅ Nenhum alerta no momento</div>
       );
-      return(<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.gray700}`}}>
-        {todayCalEvents.map(e=>{
-          const calColor=CAL_TYPES[e.type]?.color||B.purple;
-          const calIcon=<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-          return(<DashAlert key={e.id} color={calColor} icon={calIcon} label={e.title} sub={`${CAL_TYPES[e.type]?.label||"Evento"}${e.time?` · ${e.time}`:""}`} onClick={()=>setShowCalendar(true)}/>);
-        })}
-        {hasPurchases&&<DashAlert color={B.amber} icon={iconCart} label={`${pendingPurchaseCount} pedido${pendingPurchaseCount!==1?"s":""} de peça aguardando compra`} sub="Pedidos de Compras" onClick={()=>goSection("gestao","purchases")}/>}
-        {pendingMateriais>0&&<DashAlert color={B.blue} icon={iconBox} label={`${pendingMateriais} ${pendingMateriais!==1?"materiais sortidos":"material sortido"} para aprovar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
-        {approvedMateriais>0&&<DashAlert color={B.amber} icon={iconBox} label={`${approvedMateriais} ${approvedMateriais!==1?"materiais sortidos":"material sortido"} para comprar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
-        {boughtMateriais>0&&<DashAlert color={B.green} icon={iconBox} label={`${boughtMateriais} ${boughtMateriais!==1?"materiais sortidos":"material sortido"} para receber`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
-        {hasNotes&&<DashAlert color={B.orange} icon={iconBell} label={`${pendingNotesCount} anotaç${pendingNotesCount!==1?"ões":"ão"} de cliente pendente${pendingNotesCount!==1?"s":""}`} sub="Aba Veículos" onClick={()=>goSection("oficina","vehicles")}/>}
-        {lowStock>0&&<DashAlert color={B.red} icon={iconBox} label={`${lowStock} item${lowStock!==1?"s":""} com estoque baixo`} sub="Estoque" onClick={()=>goSection("gestao","stock")}/>}
-        {hasInvest&&<DashAlert color={B.blue} icon={iconStar} label={`${pendingInvestmentCount} investimento${pendingInvestmentCount!==1?"s":""} para aprovar`} sub="Investimentos" onClick={()=>goSection("gestao","investments")}/>}
+      return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {/* Devedores card */}
+        {devedores.length>0&&(()=>{
+          const [open,setOpen]=React.useState(false);
+          return(<div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.red}44`,overflow:"hidden"}}>
+            <div onClick={()=>setOpen(p=>!p)} style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+              <div style={{width:34,height:34,borderRadius:9,background:`${B.red}20`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:800,fontSize:13,color:B.red}}>{devedores.length} cliente{devedores.length!==1?"s":""} com saldo em aberto</div>
+                <div style={{fontSize:11,color:B.gray400,marginTop:1}}>Total: {fmtBRL(totalDevido)}</div>
+              </div>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s",flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            {open&&<div style={{borderTop:`1px solid ${B.gray700}`}}>
+              {devedores.map(({os,cli,owed},i)=>(
+                <div key={os.id} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:i<devedores.length-1?`1px solid ${B.gray800}`:""}}
+                  onClick={()=>goSection("gestao","finance")}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13,color:B.white}}>{cli?.name||"Cliente"}</div>
+                    <div style={{fontSize:11,color:B.gray500,marginTop:1}}>{os.osNumber?`OS-${os.osNumber} · `:""}{os.model||""}{os.deliveredAt?` · Entregue ${new Date(os.deliveredAt).toLocaleDateString("pt-BR")}`:""}</div>
+                  </div>
+                  <div style={{fontWeight:800,fontSize:13,color:B.red,flexShrink:0}}>{fmtBRL(owed)}</div>
+                </div>
+              ))}
+            </div>}
+          </div>);
+        })()}
+
+        {/* Existing alerts */}
+        {(hasPurchases||hasInvest||hasNotes||lowStock>0||pendingMateriais>0||approvedMateriais>0||boughtMateriais>0||todayCalEvents.length>0)&&
+        <div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.gray700}`}}>
+          {todayCalEvents.map(e=>{
+            const calColor=CAL_TYPES[e.type]?.color||B.purple;
+            const calIcon=<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+            return(<DashAlert key={e.id} color={calColor} icon={calIcon} label={e.title} sub={`${CAL_TYPES[e.type]?.label||"Evento"}${e.time?` · ${e.time}`:""}`} onClick={()=>setShowCalendar(true)}/>);
+          })}
+          {hasPurchases&&<DashAlert color={B.amber} icon={iconCart} label={`${pendingPurchaseCount} pedido${pendingPurchaseCount!==1?"s":""} de peça aguardando compra`} sub="Pedidos de Compras" onClick={()=>goSection("gestao","purchases")}/>}
+          {pendingMateriais>0&&<DashAlert color={B.blue} icon={iconBox} label={`${pendingMateriais} ${pendingMateriais!==1?"materiais sortidos":"material sortido"} para aprovar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
+          {approvedMateriais>0&&<DashAlert color={B.amber} icon={iconBox} label={`${approvedMateriais} ${approvedMateriais!==1?"materiais sortidos":"material sortido"} para comprar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
+          {boughtMateriais>0&&<DashAlert color={B.green} icon={iconBox} label={`${boughtMateriais} ${boughtMateriais!==1?"materiais sortidos":"material sortido"} para receber`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
+          {hasNotes&&<DashAlert color={B.orange} icon={iconBell} label={`${pendingNotesCount} anotaç${pendingNotesCount!==1?"ões":"ão"} de cliente pendente${pendingNotesCount!==1?"s":""}`} sub="Aba Veículos" onClick={()=>goSection("oficina","vehicles")}/>}
+          {lowStock>0&&<DashAlert color={B.red} icon={iconBox} label={`${lowStock} item${lowStock!==1?"s":""} com estoque baixo`} sub="Estoque" onClick={()=>goSection("gestao","stock")}/>}
+          {hasInvest&&<DashAlert color={B.blue} icon={iconStar} label={`${pendingInvestmentCount} investimento${pendingInvestmentCount!==1?"s":""} para aprovar`} sub="Investimentos" onClick={()=>goSection("gestao","investments")}/>}
+        </div>}
       </div>);
     };
 

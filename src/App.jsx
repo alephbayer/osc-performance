@@ -376,7 +376,7 @@ function PixPaymentBox() {
   );
 }
 
-function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref}) {
+function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[]}) {
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
   const [showDebtPopup,setShowDebtPopup]=useState(false);
@@ -633,6 +633,20 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
       {/* ── Account ── */}
       {tab==="account"&&<>
+        {(()=>{
+          const cliCredit=(quotes.length>=0?[]:[]); // placeholder
+          const totalCredit=(clientCredits||[]).filter(c=>c.clientId===client.id).reduce((s,c)=>s+Number(c.amount),0);
+          if(totalCredit<=0) return null;
+          return(<div style={{background:`${B.blue}15`,border:`1px solid ${B.blue}33`,borderRadius:12,padding:"14px 16px",marginBottom:14,display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:38,height:38,borderRadius:10,background:`${B.blue}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={B.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <div>
+              <div style={{fontWeight:800,fontSize:15,color:B.blue}}>{fmtBRL(totalCredit)}</div>
+              <div style={{fontSize:11,color:B.gray400,marginTop:1}}>Crédito disponível · será aplicado na próxima OS</div>
+            </div>
+          </div>);
+        })()}
         <PixPaymentBox/>
         {cliVehicles.map(v=>{
           const vPayments=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId);
@@ -7125,7 +7139,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   </div>);
 }
 
-function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null,onUpdateOsHistory=null}) {
+function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehicle,osHistory=[],onOpenOS,onOpenOSFinishing,company,onCreateVehicle,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null,onUpdateOsHistory=null,clientCredits=[],onAddClientCredit,onDeleteClientCredit}) {
   const [search,setSearch]=useState("");
   const [osFilter,setOsFilter]=useState("all"); // all | active | available
   const [now,setNow]=useState(Date.now());
@@ -7195,7 +7209,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
       {sorted.map(v=>{
         const hasActiveOS=!!(v.enteredAt||v.enteredAtFinishing);
         return(<div key={v.id}>
-          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory} onDeleteVehicle={onDeleteVehicle} onUpdateOsHistory={onUpdateOsHistory}/>
+          <VehicleHistoryCard vehicle={v} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={onUpdateVehicle} now={now} osHistory={osHistory.filter(h=>h.vehicle_id===v.id)} onOpenOS={onOpenOS} onOpenOSFinishing={onOpenOSFinishing} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} isOwner={isOwner} onDeleteOsHistory={onDeleteOsHistory} onDeleteVehicle={onDeleteVehicle} onUpdateOsHistory={onUpdateOsHistory} clientCredits={clientCredits} onAddClientCredit={onAddClientCredit} onDeleteClientCredit={onDeleteClientCredit}/>
         </div>);
       })}
     </div>}
@@ -7203,7 +7217,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
 }
 
 // ─── OS History Payment Panel ─────────────────────────────────────────────────
-function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,onUpdateHistory}) {
+function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,onUpdateHistory,clientCredits=[],onAddClientCredit,onDeleteClientCredit}) {
   const [showForm,setShowForm]=useState(false);
   const [showDiscount,setShowDiscount]=useState(false);
   const [amount,setAmount]=useState("");
@@ -7213,6 +7227,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
   const [editingPay,setEditingPay]=useState(null);
   const [discType,setDiscType]=useState("pct"); // pct | value
   const [discVal,setDiscVal]=useState("");
+  const [creditApply,setCreditApply]=useState("");
 
   const hPayments=payments.filter(p=>p.osHistoryId===h.id);
   const totalValue=Math.round(Number(h.total_value||0)*100)/100;
@@ -7251,9 +7266,17 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
         <span style={{fontSize:11,color:B.gray400}}>Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></span>
         {owed>0&&<span style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px"}}>⚠ {fmtBRL(owed)} em aberto</span>}
         {owed===0&&paid>0&&<span style={{fontSize:11,fontWeight:700,color:B.green,display:"inline-flex",alignItems:"center",gap:3}}><ICheck s={10} c={B.green}/>Quitado</span>}
-        {overpaid>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>+{fmtBRL(overpaid)} crédito</span>}
+        {overpaid>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>+{fmtBRL(overpaid)} excedente</span>}
+        {(()=>{const cliCredit=clientCredits.filter(c=>c.clientId===h.client_id).reduce((s,c)=>s+c.amount,0);return cliCredit>0&&<span style={{fontSize:11,fontWeight:700,color:B.blue,background:`${B.blue}15`,borderRadius:5,padding:"1px 7px"}}>💳 {fmtBRL(cliCredit)} crédito disponível</span>;})()}
       </div>
       <div style={{display:"flex",gap:5,flexShrink:0}}>
+        {overpaid>0&&onAddClientCredit&&<button onClick={async()=>{
+          await onAddClientCredit(h.client_id,overpaid,`Excedente OS-${h.os_number||h.id?.slice(0,6)}`);
+          // Register offsetting payment to zero the balance
+          onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:-(overpaid),method:"Crédito",paidAt:new Date().toISOString(),note:"Convertido em crédito de cliente",division:h.division||"performance"});
+        }} style={{background:`${B.blue}15`,border:`1px solid ${B.blue}33`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.blue,fontSize:11,fontWeight:700}}>
+          💳 Salvar crédito
+        </button>}
         {owed>0&&onUpdateHistory&&!showDiscount&&<button onClick={()=>{setShowDiscount(true);setShowForm(false);}}
           style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
@@ -7328,6 +7351,44 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
       ))}
     </div>}
 
+    {/* Apply available credit */}
+    {(()=>{
+      const availableCredits=clientCredits.filter(c=>c.clientId===h.client_id);
+      const totalCredit=availableCredits.reduce((s,c)=>s+c.amount,0);
+      if(totalCredit<=0||owed<=0||!onAddPayment) return null;
+      return(<div style={{marginBottom:8,padding:"10px",background:`${B.blue}0a`,border:`1px solid ${B.blue}22`,borderRadius:8}}>
+        <div style={{fontSize:11,fontWeight:700,color:B.blue,marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
+          💳 Crédito disponível: {fmtBRL(totalCredit)}
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <input value={creditApply} onChange={e=>setCreditApply(e.target.value)} type="number" step="0.01"
+            placeholder={`Usar até ${fmtBRL(Math.min(totalCredit,owed))}`}
+            style={{flex:"1 1 120px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.blue}44`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+          <button onClick={async()=>{
+            const val=Math.min(parseFloat(creditApply)||Math.min(totalCredit,owed),totalCredit,owed);
+            if(val<=0) return;
+            // Consume credits oldest first
+            let remaining=val;
+            for(const cr of availableCredits){
+              if(remaining<=0) break;
+              const use=Math.min(cr.amount,remaining);
+              if(use>=cr.amount) await onDeleteClientCredit(cr.id);
+              else await onAddClientCredit(cr.clientId,-(use),`Usado em OS-${h.os_number||""}`);
+              remaining-=use;
+            }
+            onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:val,method:"Crédito",paidAt:new Date().toISOString(),note:"Crédito de cliente aplicado",division:h.division||"performance"});
+            setCreditApply("");
+          }} style={{padding:"5px 12px",borderRadius:6,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>
+            Aplicar
+          </button>
+          <button onClick={()=>setCreditApply(String(Math.min(totalCredit,owed)))}
+            style={{padding:"5px 8px",borderRadius:6,background:`${B.blue}18`,border:`1px solid ${B.blue}33`,color:B.blue,fontSize:11,cursor:"pointer"}}>
+            Usar tudo
+          </button>
+        </div>
+      </div>);
+    })()}
+
     {/* Add payment form */}
     {showForm&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"8px 10px",background:B.gray900,borderRadius:8,border:`1px solid ${B.gray700}`}}>
       <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Valor R$" type="number"
@@ -7346,7 +7407,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
   </div>);
 }
 
-function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null,onUpdateOsHistory=null}) {
+function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdateVehicle,now,osHistory=[],onOpenOS,onOpenOSFinishing,company,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,isOwner=false,onDeleteOsHistory=null,onDeleteVehicle=null,onUpdateOsHistory=null,clientCredits=[],onAddClientCredit,onDeleteClientCredit}) {
   const isFD = false;
   const [open,setOpen]=useState(false);
   const [showHistory,setShowHistory]=useState(false);
@@ -7698,6 +7759,9 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
               </div>}
               {/* Financial panel */}
               <OsHistoryPaymentPanel h={h} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment}
+                clientCredits={clientCredits||[]}
+                onAddClientCredit={onAddClientCredit}
+                onDeleteClientCredit={onDeleteClientCredit}
                 onUpdateHistory={onUpdateOsHistory?async(id,patch)=>{
                   try{ await onUpdateOsHistory(id,patch); }catch(e){ errToast&&errToast(e); }
                 }:null}/>
@@ -10137,7 +10201,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.02.9";
+const APP_VERSION = "2026.10.02.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12200,6 +12264,7 @@ export default function App() {
   const [tasks,    setTsk]=useState([]);
   const [stock,    setStk]=useState([]);
   const [payments, setPay]=useState([]);
+  const [clientCredits,setClientCredits]=useState([]);
   const [stockPurchases, setStockPurchases]=useState([]);
   const [vehicleOwners, setVehicleOwners]=useState([]);
   const [osHistory, setOsHistory]=useState([]);
@@ -12324,6 +12389,7 @@ export default function App() {
     db.loadAll().then(d=>{
       setEmp(d.employees); setCli(d.clients); setVeh(d.vehicles);
       setTsk(d.tasks); setStk(d.stock); setDR(d.defaultRate); setPay(d.payments||[]);
+      db.getClientCredits().then(setClientCredits).catch(()=>{});
       if(d.company) setCompany(d.company);
       setStockPurchases(d.stockPurchases||[]);
       setVehicleOwners(d.vehicleOwners||[]);
@@ -12491,7 +12557,7 @@ export default function App() {
           : clients.find(c=>c.id===clientSession.id)||clientSession)
       : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
+    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={clientCredits} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──
@@ -14177,7 +14243,11 @@ export default function App() {
         <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} isOwner={adminRole==="owner"}
           onDeleteVehicle={adminRole==="owner"?async(id)=>{try{await db.deleteVehicle(id);setVeh(p=>p.filter(v=>v.id!==id));toast_("Veículo removido ✓");}catch(e){errToast(e);}}:null}
           onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico ✓");}catch(e){errToast(e);}}}
-          onUpdateOsHistory={async(id,patch)=>{try{await db.updateOsHistory(id,patch);setOsHistory(p=>p.map(h=>h.id===id?{...h,...patch}:h));toast_("Desconto aplicado ✓");}catch(e){errToast(e);}}}/>      </>}
+          onUpdateOsHistory={async(id,patch)=>{try{await db.updateOsHistory(id,patch);setOsHistory(p=>p.map(h=>h.id===id?{...h,...patch}:h));toast_("Desconto aplicado ✓");}catch(e){errToast(e);}}}
+          clientCredits={clientCredits}
+          onAddClientCredit={async(clientId,amount,note)=>{try{const id=await db.addClientCredit(clientId,amount,note,adminRole);setClientCredits(p=>[...p,{id,clientId,amount,note,createdAt:new Date().toISOString()}]);toast_("Crédito salvo ✓");}catch(e){errToast(e);}}}
+          onDeleteClientCredit={async(id)=>{try{await db.deleteClientCredit(id);setClientCredits(p=>p.filter(c=>c.id!==id));}catch(e){errToast(e);}}}
+        />      </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
         <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory} internalTransfers={internalTransfers} adminRole={adminRole} sales={sales}

@@ -651,6 +651,21 @@ export const db = {
     const { error } = await supabase.from("payments").update(map).eq("id", id);
     if (error) throw error;
   },
+  // ─── Client Credits ──────────────────────────────────────────────────────────
+  async getClientCredits() {
+    const { data, error } = await supabase.from("client_credits").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data || []).map(r => ({ id: r.id, clientId: r.client_id, amount: Number(r.amount), note: r.note || "", createdAt: r.created_at, createdBy: r.created_by }));
+  },
+  async addClientCredit(clientId, amount, note = "", createdBy = "") {
+    const { data, error } = await supabase.from("client_credits").insert({ client_id: clientId, amount, note, created_by: createdBy }).select("id").single();
+    if (error) throw error;
+    return data.id;
+  },
+  async deleteClientCredit(id) {
+    const { error } = await supabase.from("client_credits").delete().eq("id", id);
+    if (error) throw error;
+  },
   // Migrate existing vehicle payments to a specific OS history record
   async migratePaymentsToHistory(vehicleId, osHistoryId) {
     const { error } = await supabase.from("payments")

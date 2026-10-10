@@ -75,8 +75,16 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#0a0a0a" id="theme-color-meta" />
 
+    <!-- Manifest PWA com ícones adaptativos -->
+    <link rel="manifest" href="/manifest.json" />
+
     <!-- Ícones — PNG obrigatório para iOS Safari -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/osc-icon-180.png" />
+    <!-- iOS light mode: logo escuro no fundo branco -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/osc-icon-light-180.png" media="(prefers-color-scheme: light)" />
+    <!-- iOS dark mode: logo branco no fundo preto -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/osc-icon-dark-180.png" media="(prefers-color-scheme: dark)" />
+    <!-- Fallback sem media query (para sistemas que não suportam) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/osc-icon-dark-180.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/osc-icon-192.png" />
     <link rel="icon" type="image/svg+xml" href="/osc-icon.svg" />
   </head>
@@ -107,7 +115,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.10.02.10";
+        const CURRENT = "2026.10.10.1";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

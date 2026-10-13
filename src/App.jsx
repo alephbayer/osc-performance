@@ -2406,6 +2406,64 @@ const IWarehouse=({s=18,c="currentColor"})=><Svg d="M3 9l9-7 9 7v11a2 2 0 01-2 2
 const ITag   =({s=16,c="currentColor"})=><Svg d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01" s={s} c={c}/>;
 const IEye   =({s=16,c="currentColor"})=><Svg d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" d2="M12 9a3 3 0 100 6 3 3 0 000-6z" s={s} c={c}/>;
 const IX     =({s=14,c="currentColor"})=><Svg d="M18 6L6 18M6 6l12 12" s={s} c={c}/>;
+
+// Foto com zoom próprio: pinça, toque duplo e arrastar (roda do mouse no desktop).
+// O zoom nativo do app inteiro é travado em index.html — as fotos são a única exceção.
+function ZoomImg({src,style,alt=""}) {
+  const ref=useRef(null);
+  const S=useRef({s:1,x:0,y:0});
+  useEffect(()=>{
+    const el=ref.current; if(!el) return;
+    const z=S.current; z.s=1;z.x=0;z.y=0;
+    const apply=()=>{el.style.transform=`translate(${z.x}px,${z.y}px) scale(${z.s})`;};
+    const fit=()=>{
+      z.s=Math.min(5,Math.max(1,z.s));
+      if(z.s===1){z.x=0;z.y=0;return;}
+      const mx=el.offsetWidth*(z.s-1)/2, my=el.offsetHeight*(z.s-1)/2;
+      z.x=Math.min(mx,Math.max(-mx,z.x)); z.y=Math.min(my,Math.max(-my,z.y));
+    };
+    apply();
+    let mode=null,d0=0,s0=1,px=0,py=0,lastTap=0,moved=false;
+    const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+    const toggle=()=>{if(z.s>1){z.s=1;}else{z.s=2.5;}fit();apply();};
+    const start=e=>{
+      if(e.touches.length===2){mode="pinch";d0=dist(e.touches);s0=z.s;moved=true;}
+      else if(e.touches.length===1){mode="pan";px=e.touches[0].clientX;py=e.touches[0].clientY;moved=false;}
+    };
+    const move=e=>{
+      e.preventDefault();
+      if(mode==="pinch"&&e.touches.length===2){z.s=s0*dist(e.touches)/d0;fit();apply();}
+      else if(mode==="pan"&&e.touches.length===1){
+        const t=e.touches[0],dx=t.clientX-px,dy=t.clientY-py;
+        if(Math.abs(dx)+Math.abs(dy)>4) moved=true;
+        px=t.clientX;py=t.clientY;
+        if(z.s>1){z.x+=dx;z.y+=dy;fit();apply();}
+      }
+    };
+    const end=e=>{
+      if(e.touches.length===0){
+        if(mode==="pan"&&!moved){const now=Date.now();if(now-lastTap<300){toggle();lastTap=0;}else lastTap=now;}
+        if(z.s<1.05){z.s=1;fit();apply();}
+        mode=null;
+      } else if(e.touches.length===1){mode="pan";px=e.touches[0].clientX;py=e.touches[0].clientY;moved=true;}
+    };
+    const wheel=e=>{e.preventDefault();z.s*=e.deltaY<0?1.15:1/1.15;fit();apply();};
+    el.addEventListener("touchstart",start,{passive:true});
+    el.addEventListener("touchmove",move,{passive:false});
+    el.addEventListener("touchend",end);
+    el.addEventListener("touchcancel",end);
+    el.addEventListener("wheel",wheel,{passive:false});
+    el.addEventListener("dblclick",toggle);
+    return()=>{
+      el.removeEventListener("touchstart",start);el.removeEventListener("touchmove",move);
+      el.removeEventListener("touchend",end);el.removeEventListener("touchcancel",end);
+      el.removeEventListener("wheel",wheel);el.removeEventListener("dblclick",toggle);
+    };
+  },[src]);
+  return <img ref={ref} src={src} alt={alt} draggable={false}
+    onClick={e=>e.stopPropagation()}
+    style={{...style,touchAction:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none",transformOrigin:"center center",willChange:"transform"}}/>;
+}
 const ILock  =({s=18,c="currentColor"})=><Svg d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" d2="M7 11V7a5 5 0 0110 0v4" s={s} c={c}/>;
 const ILogout=({s=18,c="currentColor"})=><Svg d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" d2="M16 17l5-5-5-5M21 12H9" s={s} c={c}/>;
 const IHistory=({s=18,c="currentColor"})=><Svg d="M12 8v4l3 3" d2="M3.05 11a9 9 0 1 0 .5-3M3 4v4h4" s={s} c={c}/>;
@@ -2569,7 +2627,7 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
     </div>
     {lightbox&&(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
-        <img src={lightbox.url} alt="" style={{maxWidth:"95vw",maxHeight:"85vh",objectFit:"contain",borderRadius:8}}/>
+        <ZoomImg src={lightbox.url} style={{maxWidth:"95vw",maxHeight:"85vh",objectFit:"contain",borderRadius:8}}/>
         {(lightbox.caption||tasks.find(t=>t.id===lightbox.taskId))&&<div style={{textAlign:"center",color:B.gray200,fontSize:13}}>
           {tasks.find(t=>t.id===lightbox.taskId)&&<div style={{color:B.purple,fontWeight:700,marginBottom:2}} style={{display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>{tasks.find(t=>t.id===lightbox.taskId).label}</div>}
           {lightbox.caption&&<div>{lightbox.caption}</div>}
@@ -4733,7 +4791,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       </div>}
 
     {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
-      <img src={lightbox} alt="" style={{maxWidth:"95vw",maxHeight:"95vh",objectFit:"contain",borderRadius:8}}/>
+      <ZoomImg src={lightbox} style={{maxWidth:"95vw",maxHeight:"95vh",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
 
@@ -7804,7 +7862,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       </div>}
     </div>}
     {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightbox(null)}>
-      <img src={lightbox} alt="" style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
+      <ZoomImg src={lightbox} style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLightbox(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.15)",border:"none",borderRadius:99,padding:"8px 12px",cursor:"pointer",color:"#fff",fontSize:16}}>✕</button>
     </div>}
   </div>);
@@ -9972,7 +10030,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
     {/* Lightbox */}
     {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
-      <img src={lb.url||lb} alt="" style={{maxWidth:"95vw",maxHeight:"75vh",objectFit:"contain",borderRadius:8}}/>
+      <ZoomImg src={lb.url||lb} style={{maxWidth:"95vw",maxHeight:"75vh",objectFit:"contain",borderRadius:8}}/>
       {(lb.caption||(lb.taskId&&ts.find(t=>t.id===lb.taskId)))&&<div style={{textAlign:"center",padding:"0 20px"}}>
         {ts.find(t=>t.id===lb.taskId)&&<div style={{color:"#c4b5fd",fontWeight:700,fontSize:13,marginBottom:2}}>🔗 {ts.find(t=>t.id===lb.taskId).label}</div>}
         {lb.caption&&<div style={{color:B.gray200,fontSize:13}}>{lb.caption}</div>}
@@ -10201,7 +10259,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.02.10";
+const APP_VERSION = "2026.10.13.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11079,7 +11137,7 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
       </div>
     </div>
     {lbPhoto&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLbPhoto(null)}>
-      <img src={lbPhoto} alt="" style={{maxWidth:"95vw",maxHeight:"92vh",objectFit:"contain",borderRadius:8}}/>
+      <ZoomImg src={lbPhoto} style={{maxWidth:"95vw",maxHeight:"92vh",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLbPhoto(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
   </div>);

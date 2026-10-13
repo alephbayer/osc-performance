@@ -2,11 +2,13 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>OSC Performance — Gestão de Oficina</title>
     <style>
       /* Prevent iOS auto-zoom on input focus */
       input, textarea, select { font-size: 16px !important; }
+      /* Sem zoom por toque duplo (as fotos têm zoom próprio — ZoomImg em App.jsx) */
+      html, body { touch-action: manipulation; }
 
       html, body {
         margin: 0; padding: 0;
@@ -29,6 +31,14 @@
       ::-webkit-scrollbar { display: none; }
     </style>
 
+    <script>
+      // Zoom travado no app inteiro (iOS ignora user-scalable=no no Safari; estes eventos pegam a pinça).
+      // As fotos usam ZoomImg, com zoom próprio, então não dependem do zoom nativo.
+      ['gesturestart','gesturechange','gestureend'].forEach(function(t){
+        document.addEventListener(t,function(e){e.preventDefault();},{passive:false});
+      });
+      document.addEventListener('touchmove',function(e){if(e.touches.length>1)e.preventDefault();},{passive:false});
+    </script>
     <script>
       // Set body class based on URL — public links get normal scroll
       (function() {
@@ -107,7 +117,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.10.10.3";
+        const CURRENT = "2026.10.13.1";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

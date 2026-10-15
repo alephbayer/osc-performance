@@ -10491,7 +10491,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.10";
+const APP_VERSION = "2026.10.15.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11558,7 +11558,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
 // ─── Quick Payment Modal ──────────────────────────────────────────────────────
 const PAY_METHODS = ["Dinheiro","PIX","Cartão de Débito","Cartão de Crédito","TED / DOC","Outro"];
 
-function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
+function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[],payments=[]}) {
   const activeVehicles=vehicles.filter(v=>v.enteredAt||v.enteredAtFinishing||tasks.some(t=>t.vehicleId===v.id));
   const [selectedId,setSelectedId]=useState(activeVehicles.length===1?activeVehicles[0].id:"");
   const [payDiv,setPayDiv]=useState("performance");
@@ -11568,6 +11568,23 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
   const [date,setDate]=useState(new Date().toLocaleDateString("pt-BR"));
   const [search,setSearch]=useState("");
   const [saving,setSaving]=useState(false);
+  const [target,setTarget]=useState("open"); // open = OS aberta | closed = OS fechada (histórico)
+  const [histId,setHistId]=useState("");
+  const [showSettled,setShowSettled]=useState(false);
+
+  // OS fechadas com saldo (e, opcionalmente, as já quitadas)
+  const histAll=osHistory.map(h=>{
+    const total=Number(h.total_value||h.totalValue||0);
+    const paid=payments.filter(pp=>pp.osHistoryId===h.id).reduce((a,pp)=>a+Number(pp.amount),0);
+    const v=vehicles.find(x=>x.id===(h.vehicle_id||h.vehicleId));
+    const cli=clients.find(c=>c.id===(h.client_id||v?.clientId));
+    return {h,total,paid,owed:Math.round((total-paid)*100)/100,v,cli};
+  });
+  const histRows=histAll.filter(r=>showSettled||r.owed>=0.01)
+    .filter(r=>{const q=search.toLowerCase();return !q||(r.v?.model||"").toLowerCase().includes(q)||(r.v?.plate||"").toLowerCase().includes(q)||(r.cli?.name||"").toLowerCase().includes(q);})
+    .sort((a,b)=>String(b.h.delivered_at||"").localeCompare(String(a.h.delivered_at||"")));
+  const selHist=histAll.find(r=>r.h.id===histId);
+  const selOwed=selHist?Math.max(0,selHist.owed):0;
 
   const filtered=activeVehicles.filter(v=>
     !search||
@@ -11581,12 +11598,14 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
   const selectedVehicle=vehicles.find(v=>v.id===selectedId);
   const client=selectedVehicle?clients.find(c=>c.id===selectedVehicle.clientId):null;
 
+  const ready=target==="closed"?!!selHist&&!!amountNum:!!selectedId&&!!amountNum;
   const save=async()=>{
-    if(!selectedId||!amountNum) return;
+    if(!ready) return;
     setSaving(true);
     const [d,m,y]=date.split("/");
     const paidAt=`${y}-${m?.padStart(2,"0")}-${d?.padStart(2,"0")}T12:00:00`;
-    await onAddPayment(selectedId,{amount:amountNum,method,note:note.trim(),paidAt,division:payDiv});
+    if(target==="closed") await onAddPayment(selHist.h.vehicle_id||selHist.h.vehicleId,{amount:amountNum,method,note:note.trim(),paidAt,division:selHist.h.division||"performance",osHistoryId:selHist.h.id});
+    else await onAddPayment(selectedId,{amount:amountNum,method,note:note.trim(),paidAt,division:payDiv});
     onClose();
   };
 
@@ -11604,8 +11623,44 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
       </div>
 
       <div style={{padding:18,overflowY:"auto",flex:1,display:"flex",flexDirection:"column",gap:14}}>
+        {/* Destino: OS aberta ou fechada */}
+        <div style={{display:"flex",gap:6}}>
+          {[{id:"open",label:"OS aberta"},{id:"closed",label:"OS fechada"}].map(o=>(
+            <button key={o.id} onClick={()=>{setTarget(o.id);setSearch("");}}
+              style={{flex:1,padding:"8px 0",borderRadius:8,border:`1px solid ${target===o.id?B.green+"66":B.gray600}`,background:target===o.id?`${B.green}22`:"none",color:target===o.id?B.green:B.gray400,cursor:"pointer",fontSize:12,fontWeight:700}}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {target==="closed"&&<div>
+          <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>OS fechada</label>
+          <div style={{position:"relative",marginBottom:8}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar modelo, placa ou cliente…"
+              style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:200,overflowY:"auto"}}>
+            {histRows.length===0&&<div style={{fontSize:12,color:B.gray500,textAlign:"center",padding:"10px 0"}}>{showSettled?"Nenhuma OS fechada encontrada":"Nenhuma OS fechada com saldo em aberto"}</div>}
+            {histRows.map(r=>{
+              const sel=histId===r.h.id;
+              const dt=r.h.delivered_at?new Date(r.h.delivered_at).toLocaleDateString("pt-BR"):"";
+              return (<button key={r.h.id} onClick={()=>setHistId(r.h.id)}
+                style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${sel?B.green:B.gray600}`,background:sel?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:700,color:sel?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.v?`${r.v.model} · ${r.v.plate}`:"Veículo"}</div>
+                  <div style={{fontSize:11,color:B.gray400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.cli?.name||"Sem cliente"}{dt?` · entregue ${dt}`:""}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:13,fontWeight:800,color:r.owed>=0.01?B.amber:B.green}}>{r.owed>=0.01?fmtBRL(r.owed):"Quitada ✓"}</div>
+                  {r.owed>=0.01&&<div style={{fontSize:9,color:B.gray500}}>saldo</div>}
+                </div>
+              </button>);
+            })}
+          </div>
+          <button onClick={()=>setShowSettled(x=>!x)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:11,fontWeight:700,marginTop:6,padding:0}}>{showSettled?"Ocultar quitadas":"Mostrar também as quitadas"}</button>
+        </div>}
         {/* Vehicle selector */}
-        <div>
+        {target==="open"&&<div>
           <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Veículo</label>
           {activeVehicles.length>3&&<div style={{position:"relative",marginBottom:8}}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar modelo, placa, cor ou cliente…"
@@ -11626,10 +11681,10 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
               </button>);
             })}
           </div>
-        </div>
+        </div>}
 
         {/* Division */}
-        <div>
+        {target==="open"&&<div>
           <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Empresa</label>
           <div style={{display:"flex",gap:6}}>
             {[{id:"performance",label:"Performance",color:B.orange},{id:"finishing",label:"Finishing",color:FD.primary}].map(d=>(
@@ -11639,7 +11694,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
 
         {/* Method */}
         <div>
@@ -11660,6 +11715,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
             <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Valor R$</label>
             <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0,00" type="number"
               style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${amountNum>0?B.green:B.gray600}`,background:B.gray900,color:B.white,fontSize:18,fontWeight:700,outline:"none",boxSizing:"border-box"}}/>
+            {target==="closed"&&selOwed>=0.01&&<button onClick={()=>setAmount(String(selOwed))} style={{marginTop:6,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:800}}>Quitar saldo · {fmtBRL(selOwed)}</button>}
           </div>
           <div style={{flex:1}}>
             <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Data</label>
@@ -11676,8 +11732,8 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment}) {
         </div>
 
         {/* Save */}
-        <button onClick={save} disabled={!selectedId||!amountNum||saving}
-          style={{width:"100%",padding:"13px 0",borderRadius:10,background:selectedId&&amountNum?B.green:B.gray700,border:"none",color:selectedId&&amountNum?B.white:B.gray500,fontWeight:800,fontSize:15,cursor:selectedId&&amountNum&&!saving?"pointer":"not-allowed"}}>
+        <button onClick={save} disabled={!ready||saving}
+          style={{width:"100%",padding:"13px 0",borderRadius:10,background:ready?B.green:B.gray700,border:"none",color:ready?B.white:B.gray500,fontWeight:800,fontSize:15,cursor:ready&&!saving?"pointer":"not-allowed"}}>
           {saving?"Registrando…":`💰 Registrar ${amountNum>0?fmtBRL(amountNum):""}`}
         </button>
       </div>
@@ -14711,8 +14767,8 @@ export default function App() {
       setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
       try{ await db.updateTask(taskId,{materials:newMats}); toast_(`Material "${mat.name}" adicionado ✓`); }catch(e){errToast(e);}
     }}/>}
-    {quickPayModal&&<QuickPayModal vehicles={vehicles} tasks={tasks} clients={clients} onClose={()=>setQuickPayModal(false)} onAddPayment={async(vehicleId,payment)=>{
-      try{ const row=await db.addPayment({vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance"}); setPay(p=>[...p,row]); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); }catch(e){errToast(e);}
+    {quickPayModal&&<QuickPayModal vehicles={vehicles} tasks={tasks} clients={clients} osHistory={osHistory} payments={payments} onClose={()=>setQuickPayModal(false)} onAddPayment={async(vehicleId,payment)=>{
+      try{ const row=await db.addPayment({vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance",osHistoryId:payment.osHistoryId||null}); setPay(p=>[...p,row]); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); }catch(e){errToast(e);}
     }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
     

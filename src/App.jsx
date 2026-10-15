@@ -991,22 +991,25 @@ function executedValue(divTasks, defaultRate, discountPct, extras=0, advanceOpen
     else if(advanceOpen){ const adv=c.labor*ADVANCE_PCT/100; tot+=adv; labor+=adv; } // em andamento: 50% da M.O. contratada
   });
   const pct=parseFloat(String(discountPct||0).replace(",","."))||0;
-  // + materiais já comprados de tarefas ainda em andamento (dinheiro já gasto no carro)
-  return Math.max(0, tot+boughtPendingValue(divTasks,defaultRate)+extras-labor*pct/100);
+  // + peças de tarefas em andamento (contam como compradas com a OS aberta)
+  return Math.max(0, tot+boughtPendingValue(divTasks,defaultRate,advanceOpen)+extras-labor*pct/100);
 }
 // Material "comprado": marcado à mão (m.bought) ou vindo de pedido de peça recebido / peça reservada.
 // Material de estoque não entra (já estava na oficina). m.bought===false desmarca o automático.
-function matIsBought(m) {
+// Regra: com a OS aberta, TODA peça cobrada (fora estoque) conta como comprada automaticamente — trabalhamos com o dinheiro do cliente.
+// m.bought===false tira a peça da conta (exceção manual); m.bought===true força a inclusão.
+function matIsBought(m, osOpen=true) {
   if(!m||m.fromStock) return false;
   if(m.bought===true) return true;
-  return m.bought!==false&&(!!m.purchaseOrderId||!!m.reservedPartId);
+  if(m.bought===false) return false;
+  return osOpen;
 }
 // Valor (preço de venda, mesma fórmula do taskCost) dos materiais comprados de tarefas NÃO concluídas
-function boughtPendingValue(divTasks, defaultRate) {
+function boughtPendingValue(divTasks, defaultRate, osOpen=true) {
   let v=0;
   divTasks.filter(t=>!t.done).forEach(t=>{
     (Array.isArray(t.materials)?t.materials:[]).forEach(m=>{
-      if(!matIsBought(m)||m.noCharge) return;
+      if(!matIsBought(m,osOpen)||m.noCharge) return;
       const markup=m.markup!=null?Number(m.markup):50;
       v+=Number(m.cost||0)*(1+markup/100)*Number(m.qty||1)+Number(m.freight||0);
     });
@@ -1032,7 +1035,7 @@ function ExecutedStrip({executed,total,done,count,boughtValue=0,advance=false,pa
       <div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/>
     </div>
     <div style={{fontSize:11,color:B.gray400}}>{done} de {count} serviço{count!==1?"s":""} concluído{done!==1?"s":""} · {pct}% do total de {fmtBRL(total)}</div>
-    <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{advance?`${ADVANCE_PCT}% da mão de obra contratada + serviços concluídos`:"Serviços concluídos"}{boughtValue>0.005?` + materiais já comprados (${fmtBRL(boughtValue)})`:""}</div>
+    <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{advance?`${ADVANCE_PCT}% da mão de obra contratada + serviços concluídos`:"Serviços concluídos"}{boughtValue>0.005?` + peças da OS (${fmtBRL(boughtValue)})`:""}</div>
     {/* Comparativo: o que o cliente pagou x o que já foi investido */}
     {paid!=null&&(paid>0||ex>0)&&(()=>{
       const diff=paid-ex, tol=1;
@@ -1146,7 +1149,7 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
         </div>))}
         {r.list.length>5&&<button onClick={()=>setShowAll(s=>!s)} style={{width:"100%",background:B.gray900,border:"none",borderTop:`1px solid ${B.gray700}`,cursor:"pointer",padding:"9px",fontSize:11,fontWeight:700,color:B.gray400,fontFamily:"inherit"}}>{showAll?"Ver menos":`Ver todos (${r.list.length})`}</button>}
       </div>}
-    <div style={{fontSize:10,color:B.gray600,marginTop:6,lineHeight:1.4}}>Estimativa: "cobrar agora" = 50% da M.O. contratada + serviços concluídos + peças compradas − pagamentos. OS fechadas entram pelo saldo total.</div>
+    <div style={{fontSize:10,color:B.gray600,marginTop:6,lineHeight:1.4}}>Estimativa: "cobrar agora" = 50% da M.O. contratada + serviços concluídos + peças da OS − pagamentos. OS fechadas entram pelo saldo total.</div>
   </div>);
 }
 function vehiclePaid(vehicleId,payments,division=null) {
@@ -3289,9 +3292,9 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
         {mat.noCharge?"✓ Grátis":"Grátis?"}
       </button>
       {showCost&&!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,bought:!isBought})}
-        title={isBought?"Desmarcar compra":"Marcar como já comprado — entra no valor executado mesmo com a tarefa em andamento"}
+        title={isBought?"Peça conta como comprada (entra no investido). Toque para tirar da conta":"Peça fora da conta do investido. Toque para incluir"}
         style={{background:isBought?`${B.green}22`:"none",border:`1px solid ${isBought?B.green+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isBought?B.green:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
-        🛒 {isBought?"Comprado":"Comprado?"}
+        🛒 {isBought?"Comprado":"Fora da conta"}
       </button>}
       {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
         title={isImported?"Remover marcação de importado":"Marcar como importado"}
@@ -10464,7 +10467,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.7";
+const APP_VERSION = "2026.10.15.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -10491,7 +10491,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.13";
+const APP_VERSION = "2026.10.15.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12382,6 +12382,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
   const [selectedClient,setSelectedClient]=useState(null);
   const [selectedVehicle,setSelectedVehicle]=useState(null);
   const [isNew,setIsNew]=useState(false);
+  const [addingVehicle,setAddingVehicle]=useState(false); // novo veículo para cliente já existente
   // New client/vehicle fields
   const [clientName,setClientName]=useState("");
   const [clientPhone,setClientPhone]=useState("");
@@ -12406,17 +12407,18 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
     setSelectedVehicle(v);
     const c=clients.find(c=>c.id===v.clientId);
     setSelectedClient(c||null);
-    setIsNew(false);
+    setIsNew(false); setAddingVehicle(false);
     setStep(3);
   }
   function selectExistingClient(c){
     setSelectedClient(c);
     setSelectedVehicle(null);
     setIsNew(false);
+    setAddingVehicle(!vehicles.some(v=>v.clientId===c.id)); // cliente sem veículo: já abre o cadastro
     setStep(2);
   }
   function goNew(){
-    setIsNew(true);
+    setIsNew(true); setAddingVehicle(false);
     setSelectedClient(null);
     setSelectedVehicle(null);
     setStep(2);
@@ -12429,7 +12431,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
       await onCreateAndOpen({
         isNew,
         client:isNew?{name:clientName.trim(),phone:clientPhone.trim()}:selectedClient,
-        vehicle:isNew?{model:vModel.trim(),plate:vPlate.trim().toUpperCase(),year:vYear,color:vColor}:selectedVehicle,
+        vehicle:(isNew||addingVehicle)?{model:vModel.trim(),plate:vPlate.trim().toUpperCase(),year:vYear,color:vColor}:selectedVehicle,
         existingVehicleId:selectedVehicle?.id,
         division,
         mechanicId:mechId||null,
@@ -12440,6 +12442,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
 
   const canConfirm=division&&(
     isNew?(clientName.trim()&&vModel.trim()&&vPlate.trim()):
+    addingVehicle?(vModel.trim()&&vPlate.trim()):
     selectedVehicle
   );
 
@@ -12521,6 +12524,17 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
               <div style={{fontWeight:700,color:B.white}}>{selectedClient.name}</div>
               {selectedClient.phone&&<div style={{fontSize:11,color:subColor,marginTop:2}}>{selectedClient.phone}</div>}
             </div>
+            {addingVehicle&&<>
+              <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Novo veículo de {selectedClient.name}</div>
+              <input value={vModel} onChange={e=>setVModel(e.target.value)} placeholder="Modelo *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+              <div style={{display:"flex",gap:8,marginBottom:8}}>
+                <input value={vPlate} onChange={e=>setVPlate(e.target.value.toUpperCase())} placeholder="Placa *" style={{flex:1,padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
+                <input value={vYear} onChange={e=>setVYear(e.target.value)} placeholder="Ano" style={{width:80,padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              <input value={vColor} onChange={e=>setVColor(e.target.value)} placeholder="Cor" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
+              {vehicles.some(v=>v.clientId===selectedClient.id)&&<div onClick={()=>setAddingVehicle(false)} style={{fontSize:12,fontWeight:700,color:subColor,cursor:"pointer",marginBottom:8}}>← Escolher um veículo já cadastrado</div>}
+            </>}
+            {!addingVehicle&&<>
             <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Selecionar veículo</div>
             {vehicles.filter(v=>v.clientId===selectedClient.id).map(v=>(
               <div key={v.id} onClick={()=>{setSelectedVehicle(v);setStep(3);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:selectedVehicle?.id===v.id?`${B.orange}18`:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${selectedVehicle?.id===v.id?B.orange+"55":B.gray700}`,cursor:"pointer"}}>
@@ -12531,12 +12545,13 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
                 {selectedVehicle?.id===v.id&&<span style={{color:B.orange}}>✓</span>}
               </div>
             ))}
-            <div onClick={()=>{setIsNew(true);}} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:`${B.orange}10`,borderRadius:12,marginTop:4,border:`1px solid ${B.orange}33`,cursor:"pointer"}}>
+            <div onClick={()=>{setAddingVehicle(true);setSelectedVehicle(null);}} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:`${B.orange}10`,borderRadius:12,marginTop:4,border:`1px solid ${B.orange}33`,cursor:"pointer"}}>
               <span style={{color:B.orange,fontWeight:700,fontSize:13}}>+ Novo veículo para este cliente</span>
             </div>
+            </>}
           </>}
 
-          <button onClick={()=>setStep(3)} disabled={isNew&&(!clientName.trim()||!vModel.trim()||!vPlate.trim())} style={{width:"100%",padding:"12px",borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",marginTop:8,opacity:(isNew&&(!clientName.trim()||!vModel.trim()||!vPlate.trim()))?0.4:1}}>
+          <button onClick={()=>setStep(3)} disabled={(isNew&&(!clientName.trim()||!vModel.trim()||!vPlate.trim()))||(addingVehicle&&(!vModel.trim()||!vPlate.trim()))} style={{width:"100%",padding:"12px",borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",marginTop:8,opacity:((isNew&&(!clientName.trim()||!vModel.trim()||!vPlate.trim()))||(addingVehicle&&(!vModel.trim()||!vPlate.trim())))?0.4:1}}>
             Continuar →
           </button>
         </>}

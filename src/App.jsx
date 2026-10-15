@@ -686,7 +686,8 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
               const doneTasksAll=[...(v.enteredAt?perfTasks:[]),...(v.enteredAtFinishing?finTasks:[])];
               const executedAll=(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v)):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0):0);
               return <ExecutedStrip style={{margin:"10px 16px",borderRadius:10}} executed={executedAll} total={totalDue}
-                done={doneTasksAll.filter(t=>t.done).length} count={doneTasksAll.length}/>;
+                done={doneTasksAll.filter(t=>t.done).length} count={doneTasksAll.length}
+                boughtValue={boughtPendingValue(doneTasksAll,defaultRate)}/>;
             })()}
             {hasActiveOS&&vPayments.length>0&&<div style={{padding:"10px 16px",borderBottom:vHistory.length>0?`1px solid ${B.gray700}`:"none"}}>
               <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos — OS atual</div>
@@ -979,7 +980,27 @@ function executedValue(divTasks, defaultRate, discountPct, extras=0) {
   let tot=0, labor=0;
   divTasks.filter(t=>t.done).forEach(t=>{const c=taskCost(t,defaultRate);tot+=c.total;labor+=c.labor;});
   const pct=parseFloat(String(discountPct||0).replace(",","."))||0;
-  return Math.max(0, tot+extras-labor*pct/100);
+  // + materiais já comprados de tarefas ainda em andamento (dinheiro já gasto no carro)
+  return Math.max(0, tot+boughtPendingValue(divTasks,defaultRate)+extras-labor*pct/100);
+}
+// Material "comprado": marcado à mão (m.bought) ou vindo de pedido de peça recebido / peça reservada.
+// Material de estoque não entra (já estava na oficina). m.bought===false desmarca o automático.
+function matIsBought(m) {
+  if(!m||m.fromStock) return false;
+  if(m.bought===true) return true;
+  return m.bought!==false&&(!!m.purchaseOrderId||!!m.reservedPartId);
+}
+// Valor (preço de venda, mesma fórmula do taskCost) dos materiais comprados de tarefas NÃO concluídas
+function boughtPendingValue(divTasks, defaultRate) {
+  let v=0;
+  divTasks.filter(t=>!t.done).forEach(t=>{
+    (Array.isArray(t.materials)?t.materials:[]).forEach(m=>{
+      if(!matIsBought(m)||m.noCharge) return;
+      const markup=m.markup!=null?Number(m.markup):50;
+      v+=Number(m.cost||0)*(1+markup/100)*Number(m.qty||1)+Number(m.freight||0);
+    });
+  });
+  return v;
 }
 function vehicleExtras(v) {
   return (v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0)
@@ -987,7 +1008,7 @@ function vehicleExtras(v) {
     +(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
 }
 // Faixa "quanto já foi executado" (usada na página de acompanhamento e no portal do cliente)
-function ExecutedStrip({executed,total,done,count,style}) {
+function ExecutedStrip({executed,total,done,count,boughtValue=0,style}) {
   if(!(total>0)||!(count>0)) return null;
   const ex=Math.min(executed,total);
   const pct=Math.max(0,Math.min(100,Math.round(ex/total*100)));
@@ -1000,6 +1021,7 @@ function ExecutedStrip({executed,total,done,count,style}) {
       <div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/>
     </div>
     <div style={{fontSize:11,color:B.gray400}}>{done} de {count} serviço{count!==1?"s":""} concluído{done!==1?"s":""} · {pct}% do total de {fmtBRL(total)}</div>
+    {boughtValue>0.005&&<div style={{fontSize:11,color:B.gray400,marginTop:3}}>🛒 Inclui {fmtBRL(boughtValue)} em materiais já comprados para serviços em andamento</div>}
   </div>);
 }
 function vehiclePaid(vehicleId,payments,division=null) {
@@ -3094,6 +3116,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
   const freight = Number(mat.freight||0);
   const isImported = !!mat.imported;
   const isEstimated = !!mat.estimated;
+  const isBought = matIsBought(mat);
   const importColor = "#f59e0b";
   const importBg = "#f59e0b18";
   const estimatedColor = "#eab308";
@@ -3140,6 +3163,11 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
         style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
         {mat.noCharge?"✓ Grátis":"Grátis?"}
       </button>
+      {showCost&&!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,bought:!isBought})}
+        title={isBought?"Desmarcar compra":"Marcar como já comprado — entra no valor executado mesmo com a tarefa em andamento"}
+        style={{background:isBought?`${B.green}22`:"none",border:`1px solid ${isBought?B.green+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isBought?B.green:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        🛒 {isBought?"Comprado":"Comprado?"}
+      </button>}
       {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
         title={isImported?"Remover marcação de importado":"Marcar como importado"}
         style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
@@ -3857,7 +3885,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         {managerMode&&total>0&&<div style={{textAlign:"right",flexShrink:0,marginRight:4}}>
           <div style={{fontSize:11,color:B.gray400}}>Total OS</div>
           <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>
-          {done>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}>✓ {fmtBRL(executed)} executado</div>}
+          {executed>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}>✓ {fmtBRL(executed)} executado</div>}
           {(()=>{const bal=total-vehiclePaid(vehicle.id,payments,isFD?"finishing":"performance"); return bal>0
             ?<div style={{fontSize:10,color:B.red,fontWeight:700}}>Deve {fmtBRL(bal)}</div>
             :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;})()}
@@ -9933,7 +9961,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 executed={executedValue(perfTasks,defaultRate,v.osDiscountPct,fuelTotal+towTotal)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0)}
                 total={activeTotal}
                 done={[...perfTasks,...finTasks].filter(t=>t.done).length}
-                count={perfTasks.length+finTasks.length}/>}
+                count={perfTasks.length+finTasks.length}
+                boughtValue={boughtPendingValue([...perfTasks,...finTasks],defaultRate)}/>}
               {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                 <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
                 <div style={{display:"flex",flexDirection:"column"}}>
@@ -10309,7 +10338,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.2";
+const APP_VERSION = "2026.10.15.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

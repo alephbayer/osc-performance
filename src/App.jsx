@@ -10491,7 +10491,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.11";
+const APP_VERSION = "2026.10.15.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11871,6 +11871,9 @@ function DashAlert({color,label,sub,icon,onClick}){
 // ─── Quick Action Sheet ───────────────────────────────────────────────────────
 function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,onPedidoOS,onPecasVeiculo,onMatSortidos,theme}){
   const dk=theme!=="light";
+  // Telas largas (Mac/desktop): painel centralizado em vez de uma folha esticada na largura toda
+  const [wide,setWide]=useState(()=>typeof window!=="undefined"&&window.innerWidth>=700);
+  useEffect(()=>{const f=()=>setWide(window.innerWidth>=700);window.addEventListener("resize",f);return()=>window.removeEventListener("resize",f);},[]);
   const bg=dk?"rgba(16,16,20,0.94)":"rgba(245,245,250,0.97)";
   const border=dk?"1px solid rgba(255,255,255,.10)":"1px solid rgba(0,0,0,.08)";
   const shadow=dk?"0 -4px 48px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.10)":"0 -4px 32px rgba(0,0,0,.12)";
@@ -11894,9 +11897,9 @@ function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,
     ]}]:[]),
   ];
   return(
-    <div style={{position:"fixed",inset:0,zIndex:300,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,zIndex:300,display:"flex",flexDirection:"column",justifyContent:wide?"center":"flex-end",alignItems:wide?"center":"stretch"}} onClick={onClose}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}/>
-      <div style={{position:"relative",background:bg,backdropFilter:"blur(48px) saturate(2)",WebkitBackdropFilter:"blur(48px) saturate(2)",border,borderRadius:"24px 24px 0 0",padding:"6px 16px",paddingBottom:"calc(32px + env(safe-area-inset-bottom))",boxShadow:shadow}} onClick={e=>e.stopPropagation()}>
+      <div style={{position:"relative",background:bg,backdropFilter:"blur(48px) saturate(2)",WebkitBackdropFilter:"blur(48px) saturate(2)",border,borderRadius:wide?24:"24px 24px 0 0",padding:wide?"6px 24px 12px":"6px 16px",paddingBottom:wide?undefined:"calc(32px + env(safe-area-inset-bottom))",boxShadow:wide?"0 24px 80px rgba(0,0,0,.45)":shadow,width:wide?"100%":undefined,maxWidth:wide?480:undefined,maxHeight:"92vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{width:36,height:4,borderRadius:99,background:handleColor,margin:"10px auto 18px"}}/>
         <div style={{fontSize:11,fontWeight:800,color:labelColor,textTransform:"uppercase",letterSpacing:1.2,textAlign:"center",marginBottom:18}}>Ações rápidas</div>
         {GROUPS.map(g=>(

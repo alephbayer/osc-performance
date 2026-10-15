@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { db, resizeAndUpload, subscribeToChanges, supabase as supabaseClient } from "./supabase.js";
 
@@ -1054,6 +1054,99 @@ function ExecutedStrip({executed,total,done,count,boughtValue=0,advance=false,pa
         <div style={{marginTop:8,padding:"7px 10px",borderRadius:8,background:`${st.c}18`,border:`1px solid ${st.c}44`,fontSize:12,fontWeight:700,color:st.c}}>{st.t}</div>
       </div>);
     })()}
+  </div>);
+}
+// ─── Painel "A receber" (gestor): quem cobrar e quanto deve entrar ─────────────
+function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate) {
+  const byClient={};
+  const get=(cid)=>{const k=cid||"_none";return byClient[k]||(byClient[k]={id:k,name:(clients.find(c=>c.id===cid)?.name)||"Sem cliente",items:[],collect:0,receive:0,closed:0,credit:0});};
+  // OS abertas
+  vehicles.forEach(v=>{
+    if(!(v.enteredAt||v.enteredAtFinishing)) return;
+    const perfTasks=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
+    const finTasks=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
+    const perfTotal=v.enteredAt?vehicleTotal(v.id,perfTasks,defaultRate,v):0;
+    const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+    const finMat=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+    const finTotal=v.enteredAtFinishing?finLabor+finMat-finLabor*Number(v.osDiscountPctFinishing||0)/100:0;
+    const total=perfTotal+finTotal;
+    const invested=Math.min(total,(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),true):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,true):0));
+    const paid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((s,p)=>s+Number(p.amount),0);
+    const collect=Math.max(0,invested-paid), receive=Math.max(0,total-paid);
+    if(receive<0.01&&collect<0.01) return;
+    const c=get(v.clientId);
+    c.items.push({key:"v"+v.id,kind:"open",label:`${v.model||""} ${v.plate?`· ${v.plate}`:""}`.trim(),total,invested,paid,collect,receive});
+    c.collect+=collect; c.receive+=receive;
+  });
+  // OS fechadas com saldo
+  osHistory.forEach(h=>{
+    const total=Number(h.total_value||h.totalValue||0);
+    const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);
+    const owed=Math.round((total-paid)*100)/100;
+    if(owed<0.01) return;
+    const vid=h.vehicle_id||h.vehicleId;
+    const v=vehicles.find(x=>x.id===vid);
+    const c=get(h.client_id||v?.clientId);
+    c.items.push({key:"h"+h.id,kind:"closed",label:v?`${v.model||""} ${v.plate?`· ${v.plate}`:""}`.trim():(h.vehicle_label||"OS fechada"),total,invested:total,paid,collect:owed,receive:owed});
+    c.collect+=owed; c.receive+=owed; c.closed+=owed;
+  });
+  // crédito do cliente abate o saldo dele
+  Object.values(byClient).forEach(c=>{
+    const cr=c.id==="_none"?0:(clientCredits||[]).filter(x=>x.clientId===c.id).reduce((s,x)=>s+Number(x.amount),0);
+    c.credit=Math.min(cr,c.receive);
+    c.collect=Math.max(0,c.collect-cr); c.receive=Math.max(0,c.receive-cr);
+  });
+  const list=Object.values(byClient).filter(c=>c.receive>=0.01).sort((a,b)=>b.collect-a.collect||b.receive-a.receive);
+  return {list,collect:list.reduce((s,c)=>s+c.collect,0),receive:list.reduce((s,c)=>s+c.receive,0),closed:list.reduce((s,c)=>s+Math.min(c.closed,c.collect),0)};
+}
+function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate,hide}) {
+  const [open,setOpen]=useState(null);
+  const [showAll,setShowAll]=useState(false);
+  const r=useMemo(()=>computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate),[vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate]);
+  const m=v=>hide?"••••":fmtBRL(v);
+  const toExec=Math.max(0,r.receive-r.collect);
+  const rows=showAll?r.list:r.list.slice(0,5);
+  const box=(label,val,color,sub)=>(<div style={{background:`${color}12`,border:`1px solid ${color}33`,borderRadius:12,padding:"10px 12px",flex:"1 1 0",minWidth:0}}>
+    <div style={{fontSize:9,fontWeight:800,color,textTransform:"uppercase",letterSpacing:.5}}>{label}</div>
+    <div style={{fontSize:16,fontWeight:900,color:B.white,marginTop:3,whiteSpace:"nowrap"}}>{m(val)}</div>
+    {sub&&<div style={{fontSize:10,color:B.gray500,marginTop:2}}>{sub}</div>}
+  </div>);
+  return (<div>
+    <div style={{display:"flex",gap:8,marginBottom:10}}>
+      {box("A cobrar agora",r.collect,B.amber,r.closed>0.005?`${m(r.closed)} de OS fechadas`:"investido − pago")}
+      {box("Previsão a entrar",r.receive,B.blue,toExec>0.005?`${m(toExec)} ainda a executar`:"total das OS − pago")}
+    </div>
+    {r.list.length===0
+      ?<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"14px 16px",fontSize:13,color:B.gray400,textAlign:"center"}}>Nenhum valor em aberto 🎉</div>
+      :<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,overflow:"hidden"}}>
+        {rows.map((c,i)=>(<div key={c.id} style={{borderTop:i?`1px solid ${B.gray700}`:"none"}}>
+          <button onClick={()=>setOpen(open===c.id?null:c.id)} style={{width:"100%",background:"none",border:"none",cursor:"pointer",padding:"11px 14px",display:"flex",alignItems:"center",gap:10,textAlign:"left",fontFamily:"inherit"}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:700,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
+              <div style={{fontSize:10,color:B.gray500,marginTop:1}}>
+                {c.items.length} OS · previsão {m(c.receive)}{c.closed>0.005&&<span style={{color:B.red,fontWeight:700}}> · {m(c.closed)} fechada</span>}{c.credit>0.005&&<span style={{color:B.blue}}> · 💳 {m(c.credit)} crédito abatido</span>}
+              </div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:14,fontWeight:900,color:c.collect>=0.01?B.amber:B.gray500}}>{m(c.collect)}</div>
+              <div style={{fontSize:9,color:B.gray500}}>cobrar agora</div>
+            </div>
+          </button>
+          {open===c.id&&<div style={{padding:"0 14px 10px"}}>
+            {c.items.map(it=>(<div key={it.key} style={{background:B.gray900,borderRadius:8,padding:"8px 10px",marginTop:6,fontSize:11}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8,fontWeight:700,color:B.gray200}}>
+                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.label}</span>
+                <span style={{color:it.kind==="closed"?B.red:B.green,flexShrink:0}}>{it.kind==="closed"?"OS fechada":"OS aberta"}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",color:B.gray400,marginTop:4}}><span>Total</span><span>{m(it.total)}</span></div>
+              {it.kind==="open"&&<div style={{display:"flex",justifyContent:"space-between",color:B.gray400}}><span>Investido</span><span>{m(it.invested)}</span></div>}
+              <div style={{display:"flex",justifyContent:"space-between",color:B.gray400}}><span>Pago</span><span>{m(it.paid)}</span></div>
+            </div>))}
+          </div>}
+        </div>))}
+        {r.list.length>5&&<button onClick={()=>setShowAll(s=>!s)} style={{width:"100%",background:B.gray900,border:"none",borderTop:`1px solid ${B.gray700}`,cursor:"pointer",padding:"9px",fontSize:11,fontWeight:700,color:B.gray400,fontFamily:"inherit"}}>{showAll?"Ver menos":`Ver todos (${r.list.length})`}</button>}
+      </div>}
+    <div style={{fontSize:10,color:B.gray600,marginTop:6,lineHeight:1.4}}>Estimativa: "cobrar agora" = 50% da M.O. contratada + serviços concluídos + peças compradas − pagamentos. OS fechadas entram pelo saldo total.</div>
   </div>);
 }
 function vehiclePaid(vehicleId,payments,division=null) {
@@ -10371,7 +10464,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.6";
+const APP_VERSION = "2026.10.15.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13725,6 +13818,9 @@ export default function App() {
         <DashCard color={B.orange} icon={iconWrench} label="OSs ativas" value={activeVehicleCount} sub="Performance" onClick={()=>goSection("oficina","clients")}/>
         <DashCard color={FD.primary} icon={iconWrench} label="OSs ativas" value={finishingVehicleCount} sub="Finishing Div." onClick={()=>goSection("oficina","finishing")}/>
       </div>
+
+      <SL2 label="A receber"/>
+      <ReceivablesPanel vehicles={vehicles} tasks={tasks} payments={payments} osHistory={osHistory} clients={clients} clientCredits={clientCredits} defaultRate={defaultRate} hide={hideRevenue}/>
 
       <SL2 label="Atenção necessária"/>
       <AlertsBlock/>

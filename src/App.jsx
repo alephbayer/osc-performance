@@ -1106,7 +1106,7 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
   const [open,setOpen]=useState(null);
   const [showAll,setShowAll]=useState(false);
   const r=useMemo(()=>computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate),[vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate]);
-  const m=v=>hide?"••••":fmtBRL(v);
+  const m=v=>hide?"••••":"R$ "+Number(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
   const toExec=Math.max(0,r.receive-r.collect);
   const rows=showAll?r.list:r.list.slice(0,5);
   const box=(label,val,color,sub)=>(<div style={{background:`${color}12`,border:`1px solid ${color}33`,borderRadius:12,padding:"10px 12px",flex:"1 1 0",minWidth:0}}>
@@ -1136,15 +1136,39 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
             </div>
           </button>
           {open===c.id&&<div style={{padding:"0 14px 10px"}}>
-            {c.items.map(it=>(<div key={it.key} style={{background:B.gray900,borderRadius:8,padding:"8px 10px",marginTop:6,fontSize:11}}>
-              <div style={{display:"flex",justifyContent:"space-between",gap:8,fontWeight:700,color:B.gray200}}>
-                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.label}</span>
-                <span style={{color:it.kind==="closed"?B.red:B.green,flexShrink:0}}>{it.kind==="closed"?"OS fechada":"OS aberta"}</span>
-              </div>
-              <div style={{display:"flex",justifyContent:"space-between",color:B.gray400,marginTop:4}}><span>Total</span><span>{m(it.total)}</span></div>
-              {it.kind==="open"&&<div style={{display:"flex",justifyContent:"space-between",color:B.gray400}}><span>Investido</span><span>{m(it.invested)}</span></div>}
-              <div style={{display:"flex",justifyContent:"space-between",color:B.gray400}}><span>Pago</span><span>{m(it.paid)}</span></div>
-            </div>))}
+            {c.items.map(it=>{
+              const closed=it.kind==="closed";
+              const T=Math.max(it.total,0.01);
+              const wPaid=Math.min(100,it.paid/T*100);
+              const wCollect=Math.min(100-wPaid,it.collect/T*100);
+              const toExec=Math.max(0,it.receive-it.collect);
+              const col=(label,val,color)=>(<div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:B.gray400}}><span style={{width:8,height:8,borderRadius:99,background:color,flexShrink:0}}/>{label}</div>
+                <div style={{fontSize:13,fontWeight:800,color:B.white,marginTop:2,whiteSpace:"nowrap"}}>{m(val)}</div>
+              </div>);
+              return (<div key={it.key} style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px",marginTop:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:13,fontWeight:800,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.label}</span>
+                  <span style={{fontSize:10,fontWeight:800,color:closed?B.red:B.green,background:`${closed?B.red:B.green}18`,borderRadius:6,padding:"2px 8px",flexShrink:0}}>{closed?"OS FECHADA":"OS ABERTA"}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:10}}>
+                  <span style={{fontSize:11,color:B.gray400}}>Cobrar agora</span>
+                  <span style={{fontSize:20,fontWeight:900,color:it.collect>=0.01?B.amber:B.green,letterSpacing:-.5}}>{it.collect>=0.01?m(it.collect):"em dia ✓"}</span>
+                </div>
+                <div style={{height:8,borderRadius:99,background:B.gray700,margin:"10px 0 10px",overflow:"hidden",display:"flex"}}>
+                  <div style={{width:`${wPaid}%`,background:B.blue}}/>
+                  <div style={{width:`${wCollect}%`,background:closed?B.red:B.amber}}/>
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  {col("Pago",it.paid,B.blue)}
+                  {col(closed?"Em aberto":"Investido não pago",it.collect,closed?B.red:B.amber)}
+                  {!closed&&col("A executar",toExec,B.gray600)}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:10,paddingTop:8,borderTop:`1px solid ${B.gray700}`,fontSize:11,color:B.gray400}}>
+                  <span>Total da OS</span><span style={{fontWeight:700,color:B.gray200}}>{m(it.total)}</span>
+                </div>
+              </div>);
+            })}
           </div>}
         </div>))}
         {r.list.length>5&&<button onClick={()=>setShowAll(s=>!s)} style={{width:"100%",background:B.gray900,border:"none",borderTop:`1px solid ${B.gray700}`,cursor:"pointer",padding:"9px",fontSize:11,fontWeight:700,color:B.gray400,fontFamily:"inherit"}}>{showAll?"Ver menos":`Ver todos (${r.list.length})`}</button>}
@@ -10467,7 +10491,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.8";
+const APP_VERSION = "2026.10.15.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -684,10 +684,10 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             </div>}
             {hasActiveOS&&(()=>{
               const doneTasksAll=[...(v.enteredAt?perfTasks:[]),...(v.enteredAtFinishing?finTasks:[])];
-              const executedAll=(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v)):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0):0);
+              const executedAll=(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),true):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,true):0);
               return <ExecutedStrip style={{margin:"10px 16px",borderRadius:10}} executed={executedAll} total={totalDue}
                 done={doneTasksAll.filter(t=>t.done).length} count={doneTasksAll.length}
-                boughtValue={boughtPendingValue(doneTasksAll,defaultRate)}/>;
+                boughtValue={boughtPendingValue(doneTasksAll,defaultRate)} advance/>;
             })()}
             {hasActiveOS&&vPayments.length>0&&<div style={{padding:"10px 16px",borderBottom:vHistory.length>0?`1px solid ${B.gray700}`:"none"}}>
               <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos — OS atual</div>
@@ -976,9 +976,15 @@ function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
 }
 // Valor já EXECUTADO: tarefas concluídas (M.O. + peças + frete) menos o desconto geral sobre a M.O. concluída,
 // mais os extras já lançados (combustível, reboque, frete avulso), que já foram gastos.
-function executedValue(divTasks, defaultRate, discountPct, extras=0) {
+// % da mão de obra contratada que a oficina considera "já investida" quando o serviço é fechado (OS aberta)
+const ADVANCE_PCT = 50;
+function executedValue(divTasks, defaultRate, discountPct, extras=0, advanceOpen=false) {
   let tot=0, labor=0;
-  divTasks.filter(t=>t.done).forEach(t=>{const c=taskCost(t,defaultRate);tot+=c.total;labor+=c.labor;});
+  divTasks.forEach(t=>{
+    const c=taskCost(t,defaultRate);
+    if(t.done){ tot+=c.total; labor+=c.labor; }                                   // concluída: 100% (M.O. + peças + frete)
+    else if(advanceOpen){ const adv=c.labor*ADVANCE_PCT/100; tot+=adv; labor+=adv; } // em andamento: 50% da M.O. contratada
+  });
   const pct=parseFloat(String(discountPct||0).replace(",","."))||0;
   // + materiais já comprados de tarefas ainda em andamento (dinheiro já gasto no carro)
   return Math.max(0, tot+boughtPendingValue(divTasks,defaultRate)+extras-labor*pct/100);
@@ -1008,20 +1014,20 @@ function vehicleExtras(v) {
     +(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
 }
 // Faixa "quanto já foi executado" (usada na página de acompanhamento e no portal do cliente)
-function ExecutedStrip({executed,total,done,count,boughtValue=0,style}) {
+function ExecutedStrip({executed,total,done,count,boughtValue=0,advance=false,style}) {
   if(!(total>0)||!(count>0)) return null;
   const ex=Math.min(executed,total);
   const pct=Math.max(0,Math.min(100,Math.round(ex/total*100)));
   return (<div style={{background:`${B.green}12`,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",...style}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}}>
-      <span style={{fontSize:12,fontWeight:700,color:B.green}}>✓ Já executado</span>
+      <span style={{fontSize:12,fontWeight:700,color:B.green}}>Investido até agora</span>
       <span style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(ex)}</span>
     </div>
     <div style={{height:5,borderRadius:99,background:B.gray700,margin:"8px 0 6px",overflow:"hidden"}}>
       <div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/>
     </div>
     <div style={{fontSize:11,color:B.gray400}}>{done} de {count} serviço{count!==1?"s":""} concluído{done!==1?"s":""} · {pct}% do total de {fmtBRL(total)}</div>
-    {boughtValue>0.005&&<div style={{fontSize:11,color:B.gray400,marginTop:3}}>🛒 Inclui {fmtBRL(boughtValue)} em materiais já comprados para serviços em andamento</div>}
+    <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{advance?`${ADVANCE_PCT}% da mão de obra contratada + serviços concluídos`:"Serviços concluídos"}{boughtValue>0.005?` + materiais já comprados (${fmtBRL(boughtValue)})`:""}</div>
   </div>);
 }
 function vehiclePaid(vehicleId,payments,division=null) {
@@ -3829,7 +3835,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const laborSum    = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
   const osDiscount  = managerMode?laborSum*parseDiscount(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)/100:0;
   const total       = managerMode?tasksTotal+fuelTotal+towTotal+freightTotal-osDiscount:0;
-  const executed    = managerMode?Math.min(total,executedValue(vts,defaultRate,isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct,fuelTotal+towTotal+freightTotal)):0;
+  const executed    = managerMode?Math.min(total,executedValue(vts,defaultRate,isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct,fuelTotal+towTotal+freightTotal,isFD?!!vehicle.enteredAtFinishing:!!vehicle.enteredAt)):0;
   const photos= isFD ? (vehicle.photosFinishing||[]) : (vehicle.photos||[]);
   const pubLink=getPublicLink(vehicle.id);
   const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Perf.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
@@ -3885,7 +3891,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         {managerMode&&total>0&&<div style={{textAlign:"right",flexShrink:0,marginRight:4}}>
           <div style={{fontSize:11,color:B.gray400}}>Total OS</div>
           <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>
-          {executed>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}>✓ {fmtBRL(executed)} executado</div>}
+          {executed>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}>✓ {fmtBRL(executed)} investido</div>}
           {(()=>{const bal=total-vehiclePaid(vehicle.id,payments,isFD?"finishing":"performance"); return bal>0
             ?<div style={{fontSize:10,color:B.red,fontWeight:700}}>Deve {fmtBRL(bal)}</div>
             :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;})()}
@@ -9958,11 +9964,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 </div>
               </div>}
               {activeTotal>0&&<ExecutedStrip style={{marginBottom:10}}
-                executed={executedValue(perfTasks,defaultRate,v.osDiscountPct,fuelTotal+towTotal)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0)}
+                executed={executedValue(perfTasks,defaultRate,v.osDiscountPct,fuelTotal+towTotal,!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)}
                 total={activeTotal}
                 done={[...perfTasks,...finTasks].filter(t=>t.done).length}
                 count={perfTasks.length+finTasks.length}
-                boughtValue={boughtPendingValue([...perfTasks,...finTasks],defaultRate)}/>}
+                boughtValue={boughtPendingValue([...perfTasks,...finTasks],defaultRate)}
+                advance={!!(v.enteredAt||v.enteredAtFinishing)}/>}
               {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                 <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
                 <div style={{display:"flex",flexDirection:"column"}}>
@@ -10338,7 +10345,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.3";
+const APP_VERSION = "2026.10.15.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

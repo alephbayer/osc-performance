@@ -682,6 +682,12 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 <div style={{fontSize:15,fontWeight:800,color:balance>0?B.red:B.green}}>{balance>0?fmtBRL(balance):"✓"}</div>
               </div>
             </div>}
+            {hasActiveOS&&(()=>{
+              const doneTasksAll=[...(v.enteredAt?perfTasks:[]),...(v.enteredAtFinishing?finTasks:[])];
+              const executedAll=(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v)):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0):0);
+              return <ExecutedStrip style={{margin:"10px 16px",borderRadius:10}} executed={executedAll} total={totalDue}
+                done={doneTasksAll.filter(t=>t.done).length} count={doneTasksAll.length}/>;
+            })()}
             {hasActiveOS&&vPayments.length>0&&<div style={{padding:"10px 16px",borderBottom:vHistory.length>0?`1px solid ${B.gray700}`:"none"}}>
               <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos — OS atual</div>
               {vPayments.map((p,i)=>(
@@ -966,6 +972,35 @@ function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
   const laborSum   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor, 0);
   const osDiscount = laborSum * (parseFloat(String(vehicle.osDiscountPct||0).replace(",","."))||0) / 100;
   return tasksTotal + fuelTotal + towTotal + freightTotal2 - osDiscount;
+}
+// Valor já EXECUTADO: tarefas concluídas (M.O. + peças + frete) menos o desconto geral sobre a M.O. concluída,
+// mais os extras já lançados (combustível, reboque, frete avulso), que já foram gastos.
+function executedValue(divTasks, defaultRate, discountPct, extras=0) {
+  let tot=0, labor=0;
+  divTasks.filter(t=>t.done).forEach(t=>{const c=taskCost(t,defaultRate);tot+=c.total;labor+=c.labor;});
+  const pct=parseFloat(String(discountPct||0).replace(",","."))||0;
+  return Math.max(0, tot+extras-labor*pct/100);
+}
+function vehicleExtras(v) {
+  return (v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0)
+    +(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)
+    +(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
+}
+// Faixa "quanto já foi executado" (usada na página de acompanhamento e no portal do cliente)
+function ExecutedStrip({executed,total,done,count,style}) {
+  if(!(total>0)||!(count>0)) return null;
+  const ex=Math.min(executed,total);
+  const pct=Math.max(0,Math.min(100,Math.round(ex/total*100)));
+  return (<div style={{background:`${B.green}12`,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",...style}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}}>
+      <span style={{fontSize:12,fontWeight:700,color:B.green}}>✓ Já executado</span>
+      <span style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(ex)}</span>
+    </div>
+    <div style={{height:5,borderRadius:99,background:B.gray700,margin:"8px 0 6px",overflow:"hidden"}}>
+      <div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/>
+    </div>
+    <div style={{fontSize:11,color:B.gray400}}>{done} de {count} serviço{count!==1?"s":""} concluído{done!==1?"s":""} · {pct}% do total de {fmtBRL(total)}</div>
+  </div>);
 }
 function vehiclePaid(vehicleId,payments,division=null) {
   return payments.filter(p=>p.vehicleId===vehicleId&&!p.osHistoryId&&(division===null||(p.division||"performance")===division)).reduce((s,p)=>s+Number(p.amount),0);
@@ -3766,6 +3801,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
   const laborSum    = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
   const osDiscount  = managerMode?laborSum*parseDiscount(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)/100:0;
   const total       = managerMode?tasksTotal+fuelTotal+towTotal+freightTotal-osDiscount:0;
+  const executed    = managerMode?Math.min(total,executedValue(vts,defaultRate,isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct,fuelTotal+towTotal+freightTotal)):0;
   const photos= isFD ? (vehicle.photosFinishing||[]) : (vehicle.photos||[]);
   const pubLink=getPublicLink(vehicle.id);
   const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Perf.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
@@ -3821,6 +3857,7 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
         {managerMode&&total>0&&<div style={{textAlign:"right",flexShrink:0,marginRight:4}}>
           <div style={{fontSize:11,color:B.gray400}}>Total OS</div>
           <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>
+          {done>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}>✓ {fmtBRL(executed)} executado</div>}
           {(()=>{const bal=total-vehiclePaid(vehicle.id,payments,isFD?"finishing":"performance"); return bal>0
             ?<div style={{fontSize:10,color:B.red,fontWeight:700}}>Deve {fmtBRL(bal)}</div>
             :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;})()}
@@ -9892,6 +9929,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   <span style={{fontSize:18,fontWeight:900,color:B.amber}}>{fmtBRL(activeTotal)}</span>
                 </div>
               </div>}
+              {activeTotal>0&&<ExecutedStrip style={{marginBottom:10}}
+                executed={executedValue(perfTasks,defaultRate,v.osDiscountPct,fuelTotal+towTotal)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0)}
+                total={activeTotal}
+                done={[...perfTasks,...finTasks].filter(t=>t.done).length}
+                count={perfTasks.length+finTasks.length}/>}
               {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                 <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
                 <div style={{display:"flex",flexDirection:"column"}}>
@@ -10267,7 +10309,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.1";
+const APP_VERSION = "2026.10.15.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

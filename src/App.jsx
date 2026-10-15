@@ -10491,7 +10491,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.12";
+const APP_VERSION = "2026.10.15.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12277,8 +12277,8 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
           <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}>🗑</button>
         </div>
       ))}
-      {showShelfForm&&createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:"flex-end"}} onClick={()=>setShowShelfForm(false)}>
-        <div style={{width:"100%",background:B.gray900,borderRadius:"20px 20px 0 0",padding:"20px 16px",paddingBottom:"calc(40px + env(safe-area-inset-bottom))",border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
+      {showShelfForm&&createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:window.innerWidth>=700?"center":"flex-end",justifyContent:"center"}} onClick={()=>setShowShelfForm(false)}>
+        <div style={{width:"100%",maxWidth:window.innerWidth>=700?480:undefined,background:B.gray900,borderRadius:window.innerWidth>=700?20:"20px 20px 0 0",padding:"20px 16px",paddingBottom:window.innerWidth>=700?20:"calc(40px + env(safe-area-inset-bottom))",border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
           <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:16}}>{editItem?"Editar item":"Novo item"}</div>
           <input value={sfName} onChange={e=>setSfName(e.target.value)} placeholder="Nome do item" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
           <input type="number" value={sfPrice} onChange={e=>setSfPrice(e.target.value)} placeholder="Preço (R$)" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
@@ -12366,6 +12366,9 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
 function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme}){
   const dk=theme!=="light";
   const modalBg=dk?"rgba(14,14,18,0.97)":"rgba(248,248,252,0.98)";
+  // Telas largas (Mac/desktop): painel centralizado em vez de folha esticada
+  const [wide,setWide]=useState(()=>typeof window!=="undefined"&&window.innerWidth>=700);
+  useEffect(()=>{const f=()=>setWide(window.innerWidth>=700);window.addEventListener("resize",f);return()=>window.removeEventListener("resize",f);},[]);
   const inputBg=dk?B.gray800:"#ffffff";
   const inputBorder=dk?`1px solid ${B.gray600}`:"1px solid #d0d0d8";
   const rowBg=dk?B.gray800:"#ffffff";
@@ -12441,9 +12444,9 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
   );
 
   return(
-    <div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,zIndex:400,display:"flex",flexDirection:"column",justifyContent:wide?"center":"flex-end",alignItems:wide?"center":"stretch"}} onClick={onClose}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.6)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}/>
-      <div style={{position:"relative",background:modalBg,backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",border:dk?"1px solid rgba(255,255,255,.10)":"1px solid rgba(0,0,0,.08)",borderRadius:"24px 24px 0 0",padding:"8px 16px 40px",maxHeight:"90vh",overflowY:"auto",WebkitOverflowScrolling:"touch"}} onClick={e=>e.stopPropagation()}>
+      <div style={{position:"relative",background:modalBg,backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",border:dk?"1px solid rgba(255,255,255,.10)":"1px solid rgba(0,0,0,.08)",borderRadius:wide?24:"24px 24px 0 0",padding:wide?"8px 24px 24px":"8px 16px 40px",width:wide?"100%":undefined,maxWidth:wide?520:undefined,boxShadow:wide?"0 24px 80px rgba(0,0,0,.45)":undefined,maxHeight:"90vh",overflowY:"auto",WebkitOverflowScrolling:"touch"}} onClick={e=>e.stopPropagation()}>
         <div style={{width:36,height:4,borderRadius:99,background:handleColor,margin:"10px auto 18px"}}/>
 
         {/* Header */}

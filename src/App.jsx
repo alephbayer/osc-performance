@@ -10491,7 +10491,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.14";
+const APP_VERSION = "2026.10.15.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12491,6 +12491,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
                 <div style={{fontWeight:700,color:textColor,fontSize:13}}>{c.name}</div>
                 {c.phone&&<div style={{fontSize:11,color:subColor}}>{c.phone}</div>}
               </div>
+              <button onClick={e=>{e.stopPropagation();selectExistingClient(c);setAddingVehicle(true);}} style={{background:`${B.orange}18`,border:`1px solid ${B.orange}44`,borderRadius:8,padding:"5px 9px",color:B.orange,fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>+ Veículo</button>
               <span style={{color:subColor2,fontSize:16}}>›</span>
             </div>)}
           </>}

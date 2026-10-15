@@ -687,7 +687,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
               const executedAll=(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),true):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,true):0);
               return <ExecutedStrip style={{margin:"10px 16px",borderRadius:10}} executed={executedAll} total={totalDue}
                 done={doneTasksAll.filter(t=>t.done).length} count={doneTasksAll.length}
-                boughtValue={boughtPendingValue(doneTasksAll,defaultRate)} advance/>;
+                boughtValue={boughtPendingValue(doneTasksAll,defaultRate)} advance paid={totalPaid}/>;
             })()}
             {hasActiveOS&&vPayments.length>0&&<div style={{padding:"10px 16px",borderBottom:vHistory.length>0?`1px solid ${B.gray700}`:"none"}}>
               <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos — OS atual</div>
@@ -1014,7 +1014,7 @@ function vehicleExtras(v) {
     +(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
 }
 // Faixa "quanto já foi executado" (usada na página de acompanhamento e no portal do cliente)
-function ExecutedStrip({executed,total,done,count,boughtValue=0,advance=false,style}) {
+function ExecutedStrip({executed,total,done,count,boughtValue=0,advance=false,paid=null,style}) {
   if(!(total>0)||!(count>0)) return null;
   const ex=Math.min(executed,total);
   const pct=Math.max(0,Math.min(100,Math.round(ex/total*100)));
@@ -1028,6 +1028,27 @@ function ExecutedStrip({executed,total,done,count,boughtValue=0,advance=false,st
     </div>
     <div style={{fontSize:11,color:B.gray400}}>{done} de {count} serviço{count!==1?"s":""} concluído{done!==1?"s":""} · {pct}% do total de {fmtBRL(total)}</div>
     <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{advance?`${ADVANCE_PCT}% da mão de obra contratada + serviços concluídos`:"Serviços concluídos"}{boughtValue>0.005?` + materiais já comprados (${fmtBRL(boughtValue)})`:""}</div>
+    {/* Comparativo: o que o cliente pagou x o que já foi investido */}
+    {paid!=null&&(paid>0||ex>0)&&(()=>{
+      const diff=paid-ex, tol=1;
+      const st=diff>tol?{c:B.blue,t:`Pagamento à frente do serviço — ${fmtBRL(diff)} a mais do que o investido até agora`}
+        :diff<-tol?{c:B.amber,t:`Pagamento atrás do serviço — faltam ${fmtBRL(-diff)} para cobrir o investido até agora`}
+        :{c:B.green,t:"Pagamento em dia com o serviço"};
+      const bar=(label,val,color)=>(<div style={{marginBottom:7}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3}}>
+          <span style={{color:B.gray400}}>{label}</span><span style={{color:B.gray200,fontWeight:700}}>{fmtBRL(val)}</span>
+        </div>
+        <div style={{height:5,borderRadius:99,background:B.gray700,overflow:"hidden"}}>
+          <div style={{width:`${Math.max(0,Math.min(100,val/total*100))}%`,height:"100%",background:color,borderRadius:99,transition:"width .3s"}}/>
+        </div>
+      </div>);
+      return (<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B.green}22`}}>
+        <div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Comparativo</div>
+        {bar("Pago pelo cliente",paid,B.blue)}
+        {bar("Investido até agora",ex,B.green)}
+        <div style={{marginTop:8,padding:"7px 10px",borderRadius:8,background:`${st.c}18`,border:`1px solid ${st.c}44`,fontSize:12,fontWeight:700,color:st.c}}>{st.t}</div>
+      </div>);
+    })()}
   </div>);
 }
 function vehiclePaid(vehicleId,payments,division=null) {
@@ -9969,7 +9990,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 done={[...perfTasks,...finTasks].filter(t=>t.done).length}
                 count={perfTasks.length+finTasks.length}
                 boughtValue={boughtPendingValue([...perfTasks,...finTasks],defaultRate)}
-                advance={!!(v.enteredAt||v.enteredAtFinishing)}/>}
+                advance={!!(v.enteredAt||v.enteredAtFinishing)} paid={activePaid}/>}
               {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                 <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
                 <div style={{display:"flex",flexDirection:"column"}}>
@@ -10345,7 +10366,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.4";
+const APP_VERSION = "2026.10.15.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

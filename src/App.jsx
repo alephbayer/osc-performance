@@ -2407,6 +2407,14 @@ const ITag   =({s=16,c="currentColor"})=><Svg d="M20.59 13.41l-7.17 7.17a2 2 0 0
 const IEye   =({s=16,c="currentColor"})=><Svg d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" d2="M12 9a3 3 0 100 6 3 3 0 000-6z" s={s} c={c}/>;
 const IX     =({s=14,c="currentColor"})=><Svg d="M18 6L6 18M6 6l12 12" s={s} c={c}/>;
 
+// Avisa o gestor quando um item novo entra em "Pedidos de Compras"
+function pushNewPurchaseItem(item) {
+  try{
+    const qty=item?.quantity>1?` · ${item.quantity}x`:"";
+    db.sendPushToAdmins("🛒 Novo pedido de compra",`${item?.name||"Item"}${qty}`,"/?").catch(()=>{});
+  }catch(e){}
+}
+
 // Foto com zoom próprio: pinça, toque duplo e arrastar (roda do mouse no desktop).
 // O zoom nativo do app inteiro é travado em index.html — as fotos são a única exceção.
 function ZoomImg({src,style,alt=""}) {
@@ -10259,7 +10267,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.13.1";
+const APP_VERSION = "2026.10.15.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14185,6 +14193,7 @@ export default function App() {
             try{
               const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});
               setInvestments(p=>[...p,r]);
+              pushNewPurchaseItem(r);
               toast_(`Pedido gerado em Materiais Sortidos ✓`);
             }catch(e){errToast(e);}
           }}/>
@@ -14381,7 +14390,7 @@ export default function App() {
       {tab==="materiais"&&<>
         <TabHeader color={B.orange} title="Pedidos de Compras" subtitle="Peças e materiais avulsos para estoque da oficina"/>
         <InvestmentsTab investments={investments.filter(i=>i.category==="materiais")} adminRole={adminRole} defaultCategory="materiais"
-          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);}catch(e){errToast(e);}}}
+          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);pushNewPurchaseItem(r);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
             const r=await db.updateInvestment(id,patch);
             setInvestments(p=>p.map(i=>i.id===id?r:i));
@@ -14684,6 +14693,7 @@ export default function App() {
             const inv={name:form.name.trim(),link:form.link.trim(),value:parseFloat(form.value)||0,quantity:parseInt(form.quantity)||1,priority:parseInt(form.priority)||3,objective:form.objective.trim(),status:"pending",category:"materiais",division:"performance"};
             const r=await db.addInvestment(inv);
             setInvestments(p=>[r,...p]);
+            pushNewPurchaseItem(r);
             toast_(`Material "${form.name}" adicionado aos sortidos ✓`);
             setShowQuickMatSortidos(false);
           }catch(e){errToast(e);}

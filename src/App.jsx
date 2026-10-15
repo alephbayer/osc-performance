@@ -58,6 +58,11 @@ const B = {
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
 const fmtBRL=n  => `R$ ${fmtR2(n)}`;
+// Datas de pagamento: a coluna paid_at é DATE ("YYYY-MM-DD"). new Date("YYYY-MM-DD") lê como meia-noite UTC e, no
+// horário de Brasília, mostra o dia anterior. payDate lê data pura como meio-dia LOCAL; hora completa passa direto.
+const payDate=v=>{ if(!v) return new Date(NaN); const t=String(v); return /^\d{4}-\d{2}-\d{2}$/.test(t)?new Date(t+"T12:00:00"):new Date(t); };
+// "Hoje" no fuso local em YYYY-MM-DD (toISOString usa UTC e vira o dia seguinte depois das 21h)
+const todayLocal=()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const quoteTotal=items=>(items||[]).reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100),0),0);
 const fmtOS  =n  => n!=null ? `OS-${String(n).padStart(3,"0")}` : "";
 const fmtOSFD=n  => n!=null ? `FD-${String(n).padStart(3,"0")}` : "";
@@ -695,7 +700,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i<vPayments.length-1?`1px solid ${B.gray700}`:"none"}}>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,fontWeight:700,color:B.green,display:"flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>{fmtBRL(p.amount)}</div>
-                    <div style={{fontSize:11,color:B.gray400}}>{p.method} · {p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"—"}{p.note?` · ${p.note}`:""}</div>
+                    <div style={{fontSize:11,color:B.gray400}}>{p.method} · {p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"—"}{p.note?` · ${p.note}`:""}</div>
                   </div>
                   <span style={{fontSize:9,fontWeight:800,borderRadius:4,padding:"2px 6px",color:(p.division||"performance")==="finishing"?FD.primary:B.orange,background:(p.division||"performance")==="finishing"?FD.bg:`${B.orange}12`,border:`1px solid ${(p.division||"performance")==="finishing"?FD.border:B.orange+"33"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(p.division||"performance")==="finishing"?<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/></svg>:<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/></svg>}</span>
                 </div>
@@ -742,7 +747,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                   {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:`1px solid ${B.gray700}`}}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                     <span style={{fontSize:11,color:B.gray300,flex:1}}>{p.method}{p.note?` · ${p.note}`:""}</span>
-                    <span style={{fontSize:10,color:B.gray500}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
+                    <span style={{fontSize:10,color:B.gray500}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
                     <span style={{fontSize:11,fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
                   </div>)}
                 </div>);
@@ -1815,7 +1820,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
       doc.setDrawColor(220,220,220);
       doc.rect(marginX, y, contentW, 7, "FD");
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-      const pDate = p.paidAt ? new Date(p.paidAt).toLocaleDateString("pt-BR") : "";
+      const pDate = p.paidAt ? payDate(p.paidAt).toLocaleDateString("pt-BR") : "";
       const pLabel = [p.method, pDate, p.note].filter(Boolean).join(" · ");
       doc.text(pLabel, marginX + 3, y + 4.8);
       doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74);
@@ -1972,7 +1977,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
 
     vehiclePayments.forEach(p => {
       if (y + 7 > 282) { doc.addPage(); y = 16; }
-      const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString("pt-BR") : "";
+      const dateStr = p.paidAt ? payDate(p.paidAt).toLocaleDateString("pt-BR") : "";
       doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
       doc.text(`${p.method}${dateStr ? `   ${dateStr}` : ""}${p.note ? `   ${p.note}` : ""}`, marginX + 3, y);
       doc.setFont("helvetica","bold"); doc.setTextColor(22, 163, 74);
@@ -2399,7 +2404,7 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
 
       vPayments.forEach(p=>{
         if (y+7>282) { doc.addPage(); y=16; }
-        const dateStr = p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"";
+        const dateStr = p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"";
         doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
         doc.text(`${p.method}${dateStr?`   ${dateStr}`:""}${p.note?`   ${p.note}`:""}`, marginX+3, y);
         doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74);
@@ -4661,7 +4666,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
 
   const [amount,setAmount]=useState("");
   const [method,setMethod]=useState("Pix");
-  const [date,setDate]=useState(new Date().toISOString().slice(0,10));
+  const [date,setDate]=useState(todayLocal());
   const [note,setNote]=useState("");
   const [confirmDelPay,setConfirmDelPay]=useState(null);
   const [editingPay,setEditingPay]=useState(null); // {id, amount, method, note, paidAt}
@@ -4762,7 +4767,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
                     ?<span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 5px"}}>FD</span>
                     :<span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 5px"}}>OSC</span>}
                 </div>
-                <div style={{fontSize:11,color:B.gray400}}>{new Date(p.paidAt+"T00:00:00").toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</div>
+                <div style={{fontSize:11,color:B.gray400}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</div>
               </div>
               <button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:p.method,note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
                 style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:4,display:"flex",flexShrink:0}}
@@ -7175,7 +7180,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                 <span style={{fontWeight:700,fontSize:12,color:B.green}}>{fmtBRL(p.amount)}</span>
                 <span style={{fontSize:11,color:B.gray400}}>{p.method}</span>
                 {p.note&&<span style={{fontSize:11,color:B.gray400,flex:1}}>{p.note}</span>}
-                <span style={{fontSize:10,color:B.gray500,marginLeft:"auto"}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
+                <span style={{fontSize:10,color:B.gray500,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
                 {canManage&&<button onClick={()=>onDeletePayment(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2}}><ITrash s={11}/></button>}
               </div>
             ))}
@@ -7381,7 +7386,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
   const [amount,setAmount]=useState("");
   const [method,setMethod]=useState("Dinheiro");
   const [note,setNote]=useState("");
-  const [paidAt,setPaidAt]=useState(new Date().toISOString().slice(0,10));
+  const [paidAt,setPaidAt]=useState(todayLocal());
   const [editingPay,setEditingPay]=useState(null);
   const [discType,setDiscType]=useState("pct"); // pct | value
   const [discVal,setDiscVal]=useState("");
@@ -7405,7 +7410,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
     if(val<=0) return;
     const date=paidAt?new Date(paidAt+"T12:00:00").toISOString():new Date().toISOString();
     onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:val,method,paidAt:date,note,division:h.division||"performance"});
-    setAmount(""); setNote(""); setPaidAt(new Date().toISOString().slice(0,10)); setShowForm(false);
+    setAmount(""); setNote(""); setPaidAt(todayLocal()); setShowForm(false);
   };
 
   const applyDiscount=()=>{
@@ -7479,7 +7484,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
             <span style={{fontSize:11,color:B.green,fontWeight:700,flexShrink:0}}>{fmtBRL(p.amount)}</span>
             <span style={{fontSize:10,color:B.gray400,flexShrink:0}}>{p.method}</span>
             {p.note&&<span style={{fontSize:10,color:B.gray400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.note}</span>}
-            <span style={{fontSize:10,color:B.gray500,flexShrink:0,marginLeft:"auto"}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}</span>
+            <span style={{fontSize:10,color:B.gray500,flexShrink:0,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
             {onUpdatePayment&&<button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:p.method,note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
               style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:0,display:"flex"}}
               onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}><IEdit s={11}/></button>}
@@ -7560,7 +7565,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
       <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
         style={{flex:"1 1 120px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
       <button onClick={save} style={{padding:"5px 12px",borderRadius:6,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
-      <button onClick={()=>{setShowForm(false);setAmount("");setNote("");setPaidAt(new Date().toISOString().slice(0,10));}} style={{padding:"5px 8px",borderRadius:6,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
+      <button onClick={()=>{setShowForm(false);setAmount("");setNote("");setPaidAt(todayLocal());}} style={{padding:"5px 8px",borderRadius:6,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
     </div>}
   </div>);
 }
@@ -9088,7 +9093,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
       doc.text(fmtBRL(total),marginX+contentW-2,y+4.5,{align:"right"});
       y+=7;
       ps.forEach(p=>{
-        const dateStr=p.paidAt?new Date(p.paidAt).toLocaleDateString("pt-BR"):"";
+        const dateStr=p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"";
         row(`  ${p.method||""}`,Number(p.amount),dateStr,[22,163,74]);
       });
     });
@@ -10007,7 +10012,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                           border:`1px solid ${isFDPay?FD.border:B.orange+"33"}`}}>
                           {isFDPay?"Finishing":"Performance"}
                         </span>
-                        <span style={{fontSize:11,color:B.gray500,width:"100%",marginTop:2}}>{new Date(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</span>
+                        <span style={{fontSize:11,color:B.gray500,width:"100%",marginTop:2}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</span>
                       </div>
                       {pi<arr.length-1&&<div style={{height:1,background:`${B.green}22`}}/>}
                     </div>);
@@ -10074,7 +10079,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                           <span style={{fontSize:12,color:B.green,fontWeight:700,flexShrink:0}}>💰 {fmtBRL(p.amount)}</span>
                           <span style={{fontSize:11,color:B.gray400,marginLeft:2,flexShrink:0}}>·</span>
                           <span style={{fontSize:11,color:B.gray300,flexShrink:0,marginRight:"auto"}}>{p.method}</span>
-                          <span style={{fontSize:11,color:B.gray500,flexShrink:0}}>{new Date(p.paidAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>
+                          <span style={{fontSize:11,color:B.gray500,flexShrink:0}}>{payDate(p.paidAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>
                           {p.note&&<span style={{fontSize:11,color:B.gray500,width:"100%"}}>{p.note}</span>}
                         </div>
                         {pi<arr.length-1&&<div style={{height:1,background:settled?`${B.green}22`:B.gray700}}/>}
@@ -10366,7 +10371,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.5";
+const APP_VERSION = "2026.10.15.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13694,8 +13699,8 @@ export default function App() {
 
     // Owner
     const now=new Date();
-    const totalRevenue=payments.filter(p=>{const d=new Date(p.paidAt||p.createdAt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,p)=>s+Number(p.amount),0);
-    const weekRevenue=payments.filter(p=>{const d=new Date(p.paidAt||p.createdAt);return(now-d)<7*24*60*60*1000;}).reduce((s,p)=>s+Number(p.amount),0);
+    const totalRevenue=payments.filter(p=>{const d=payDate(p.paidAt||p.createdAt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,p)=>s+Number(p.amount),0);
+    const weekRevenue=payments.filter(p=>{const d=payDate(p.paidAt||p.createdAt);return(now-d)<7*24*60*60*1000;}).reduce((s,p)=>s+Number(p.amount),0);
     const monthTasks=tasks.filter(t=>{if(!t.completedAt) return false;const d=new Date(t.completedAt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
     const monthVehicles=new Set(monthTasks.map(t=>t.vehicleId)).size;
     return(<div>

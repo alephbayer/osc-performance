@@ -57,7 +57,7 @@ const B = {
 
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
-const fmtBRL=n  => `R$ ${fmtR2(n)}`;
+const fmtBRL=n  => `R$ ${Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`; // com separador de milhar (exibição); fmtR2 segue sem milhar para campos editáveis
 // Datas de pagamento: a coluna paid_at é DATE ("YYYY-MM-DD"). new Date("YYYY-MM-DD") lê como meia-noite UTC e, no
 // horário de Brasília, mostra o dia anterior. payDate lê data pura como meio-dia LOCAL; hora completa passa direto.
 const payDate=v=>{ if(!v) return new Date(NaN); const t=String(v); return /^\d{4}-\d{2}-\d{2}$/.test(t)?new Date(t+"T12:00:00"):new Date(t); };
@@ -1106,7 +1106,7 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
   const [open,setOpen]=useState(null);
   const [showAll,setShowAll]=useState(false);
   const r=useMemo(()=>computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate),[vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate]);
-  const m=v=>hide?"••••":"R$ "+Number(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const m=v=>hide?"••••":fmtBRL(v);
   const toExec=Math.max(0,r.receive-r.collect);
   const rows=showAll?r.list:r.list.slice(0,5);
   const box=(label,val,color,sub)=>(<div style={{background:`${color}12`,border:`1px solid ${color}33`,borderRadius:12,padding:"10px 12px",flex:"1 1 0",minWidth:0}}>
@@ -10491,7 +10491,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.9";
+const APP_VERSION = "2026.10.15.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

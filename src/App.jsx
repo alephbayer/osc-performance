@@ -696,13 +696,12 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             })()}
             {hasActiveOS&&vPayments.length>0&&<div style={{padding:"10px 16px",borderBottom:vHistory.length>0?`1px solid ${B.gray700}`:"none"}}>
               <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos — OS atual</div>
-              {vPayments.map((p,i)=>(
-                <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i<vPayments.length-1?`1px solid ${B.gray700}`:"none"}}>
+              {groupPaymentsForClient(vPayments).map((p,i,arr)=>(
+                <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i<arr.length-1?`1px solid ${B.gray700}`:"none"}}>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,fontWeight:700,color:B.green,display:"flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>{fmtBRL(p.amount)}</div>
                     <div style={{fontSize:11,color:B.gray400}}>{p.method} · {p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"—"}{p.note?` · ${p.note}`:""}</div>
                   </div>
-                  <span style={{fontSize:9,fontWeight:800,borderRadius:4,padding:"2px 6px",color:(p.division||"performance")==="finishing"?FD.primary:B.orange,background:(p.division||"performance")==="finishing"?FD.bg:`${B.orange}12`,border:`1px solid ${(p.division||"performance")==="finishing"?FD.border:B.orange+"33"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(p.division||"performance")==="finishing"?<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/></svg>:<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/></svg>}</span>
                 </div>
               ))}
             </div>}
@@ -1174,6 +1173,62 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
         {r.list.length>5&&<button onClick={()=>setShowAll(s=>!s)} style={{width:"100%",background:B.gray900,border:"none",borderTop:`1px solid ${B.gray700}`,cursor:"pointer",padding:"9px",fontSize:11,fontWeight:700,color:B.gray400,fontFamily:"inherit"}}>{showAll?"Ver menos":`Ver todos (${r.list.length})`}</button>}
       </div>}
     <div style={{fontSize:10,color:B.gray600,marginTop:6,lineHeight:1.4}}>Estimativa: "cobrar agora" = 50% da M.O. contratada + serviços concluídos + peças da OS − pagamentos. OS fechadas entram pelo saldo total.</div>
+  </div>);
+}
+// ─── Pagamento dividido entre Performance e Finishing ─────────────────────────
+const newUuid=()=>{try{if(typeof crypto!=="undefined"&&crypto.randomUUID) return crypto.randomUUID();}catch{} return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==="x"?r:(r&0x3|0x8)).toString(16);});};
+// Para o cliente: um pagamento só (lançamentos ligados por group_id; antigos sem grupo = mesmo dia + mesma forma)
+function groupPaymentsForClient(list){
+  const map=new Map(), order=[];
+  (list||[]).forEach(p=>{
+    const day=String(p.paidAt||"").slice(0,10);
+    const key=p.groupId?`g:${p.groupId}`:`d:${p.vehicleId}|${day}|${p.method||""}`;
+    let g=map.get(key);
+    if(!g){g={id:key,amount:0,method:p.method,paidAt:p.paidAt,notes:[]};map.set(key,g);order.push(g);}
+    g.amount+=Number(p.amount);
+    if(p.note&&!g.notes.includes(p.note)) g.notes.push(p.note);
+  });
+  return order.map(g=>({...g,note:g.notes.join(" · ")}));
+}
+function divisionBalances(vehicle,tasks,payments,defaultRate){
+  const perfTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(t.division||"performance")==="performance");
+  const finTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&t.division==="finishing");
+  const perfTotal=vehicleTotal(vehicle.id,perfTasks,defaultRate,vehicle);
+  const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+  const finMat=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+  const finTotal=finLabor+finMat-finLabor*Number(vehicle.osDiscountPctFinishing||0)/100;
+  const vp=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId);
+  const perfPaid=vp.filter(p=>(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
+  const finPaid=vp.filter(p=>p.division==="finishing").reduce((s,p)=>s+Number(p.amount),0);
+  return {perfTotal,finTotal,perfPaid,finPaid,hasBoth:perfTasks.length>0&&finTasks.length>0};
+}
+// Sugestão proporcional ao saldo de cada divisão; o que o gestor digitar em Performance prevalece
+function resolveSplit(total,perfStr,perfBal,finBal){
+  const r2=n=>Math.round(n*100)/100;
+  const pb=Math.max(0,perfBal), fb=Math.max(0,finBal), sum=pb+fb;
+  const auto=sum>0?r2(total*pb/sum):r2(total/2);
+  const typed=(perfStr!==""&&perfStr!=null)?parseFloat(String(perfStr).replace(",",".")):NaN;
+  const perf=Number.isFinite(typed)?typed:auto;
+  const fin=r2(total-perf);
+  return {perf:r2(perf),fin,auto,valid:total>0&&perf>=0&&fin>=0};
+}
+function SplitBox({total,perfStr,setPerfStr,perfBal,finBal}){
+  const r=resolveSplit(total,perfStr,perfBal,finBal);
+  return (<div style={{marginTop:8,background:`${B.green}0d`,border:`1px solid ${B.green}33`,borderRadius:9,padding:"10px 12px"}}>
+    <div style={{fontSize:10,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Divisão do valor entre as empresas</div>
+    <div style={{display:"flex",gap:8}}>
+      <div style={{flex:1}}>
+        <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:3}}>⚙️ Performance (R$)</div>
+        <input value={perfStr} onChange={e=>setPerfStr(e.target.value)} placeholder={fmtR2(r.auto)} type="number" step="0.01"
+          style={{width:"100%",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+      </div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:10,color:FD.primary,fontWeight:700,marginBottom:3}}>🎨 Finishing (R$)</div>
+        <div style={{padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray700}`,background:B.gray900,color:B.white,fontSize:13,fontWeight:700}}>{fmtR2(Math.max(0,r.fin))}</div>
+      </div>
+    </div>
+    <div style={{fontSize:10,color:B.gray500,marginTop:6,lineHeight:1.4}}>{total>0?"Sugestão proporcional ao saldo de cada empresa; edite o valor da Performance se precisar. ":"Informe o valor total acima. "}O cliente vê um pagamento só.</div>
+    {total>0&&!r.valid&&<div style={{fontSize:11,color:B.red,fontWeight:700,marginTop:4}}>O valor da Performance não pode passar do total.</div>}
   </div>);
 }
 function vehiclePaid(vehicleId,payments,division=null) {
@@ -4790,7 +4845,8 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const [note,setNote]=useState("");
   const [confirmDelPay,setConfirmDelPay]=useState(null);
   const [editingPay,setEditingPay]=useState(null); // {id, amount, method, note, paidAt}
-  const [payDiv,setPayDiv]=useState(hasBoth?null:hasPerformance?"performance":"finishing");
+  const [payDiv,setPayDiv]=useState(hasBoth?"split":hasPerformance?"performance":"finishing");
+  const [perfStr,setPerfStr]=useState("");
 
   const vPayments=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId).sort((a,b)=>a.paidAt<b.paidAt?1:-1);
   const perfPaid=vPayments.filter(p=>(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
@@ -4808,8 +4864,13 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const submit=()=>{
     const val=parseFloat(String(amount).replace(",","."));
     if(!val||val<=0)return;
-    onAddPayment({vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:payDiv||"performance"});
-    setAmount(""); setNote("");
+    if(payDiv==="split"){
+      const r=resolveSplit(val,perfStr,perfTotal-perfPaid,finTotal-finPaid);
+      if(!r.valid) return;
+      const parts=[{division:"performance",amount:r.perf},{division:"finishing",amount:r.fin}].filter(x=>x.amount>0);
+      onAddPayment({vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:parts[0]?.division||"performance",parts});
+    } else onAddPayment({vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:payDiv||"performance"});
+    setAmount(""); setNote(""); setPerfStr("");
   };
 
   return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:85,padding:16}} onClick={onClose}>
@@ -4867,9 +4928,11 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
           {hasFinishing&&<div style={{marginTop:8}}>
             {hasBoth&&<div style={{fontSize:10,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:5}}>⚠ Para qual divisão é este pagamento?</div>}
             <div style={{display:"flex",gap:6}}>
+              {hasBoth&&<button onClick={()=>setPayDiv("split")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="split"?B.green:B.gray600}`,background:payDiv==="split"?`${B.green}22`:"none",color:payDiv==="split"?B.green:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}>Dividir</button>}
               {hasPerformance&&<button onClick={()=>setPayDiv("performance")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="performance"?B.orange:B.gray600}`,background:payDiv==="performance"?`${B.orange}22`:"none",color:payDiv==="performance"?B.orange:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><IGear s={11} c={payDiv==="performance"?B.orange:B.gray400}/>Performance</button>}
               <button onClick={()=>setPayDiv("finishing")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="finishing"?FD.primary:B.gray600}`,background:payDiv==="finishing"?FD.bg:"none",color:payDiv==="finishing"?FD.primary:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing</button>
             </div>
+            {hasBoth&&payDiv==="split"&&<SplitBox total={parseFloat(String(amount).replace(",","."))||0} perfStr={perfStr} setPerfStr={setPerfStr} perfBal={perfTotal-perfPaid} finBal={finTotal-finPaid}/>}
           </div>}
           <button onClick={submit} disabled={hasBoth&&!payDiv} style={{marginTop:10,width:"100%",padding:"9px 0",borderRadius:8,background:hasBoth&&!payDiv?B.gray700:B.green,border:"none",color:B.white,fontWeight:800,cursor:hasBoth&&!payDiv?"not-allowed":"pointer",fontSize:13}}>{hasBoth&&!payDiv?"Selecione a divisão":"Registrar pagamento"}</button>
         </div>
@@ -10119,19 +10182,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                 <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
                 <div style={{display:"flex",flexDirection:"column"}}>
-                  {payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).map((p,pi,arr)=>{
-                    const isFDPay=p.division==="finishing";
+                  {groupPaymentsForClient(payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId)).map((p,pi,arr)=>{
                     return (<div key={p.id}>
                       <div style={{display:"flex",alignItems:"center",gap:3,flexWrap:"wrap",padding:"10px 0"}}>
                         <span style={{fontSize:12,color:B.green,fontWeight:700}}>💰 {fmtBRL(p.amount)}</span>
                         <span style={{fontSize:11,color:B.gray400,marginLeft:2}}>·</span>
                         <span style={{fontSize:11,color:B.gray300,marginRight:"auto"}}>{p.method}</span>
-                        <span style={{fontSize:9,fontWeight:800,borderRadius:4,padding:"2px 7px",
-                          color:isFDPay?FD.primary:B.orange,
-                          background:isFDPay?FD.bg:`${B.orange}12`,
-                          border:`1px solid ${isFDPay?FD.border:B.orange+"33"}`}}>
-                          {isFDPay?"Finishing":"Performance"}
-                        </span>
                         <span style={{fontSize:11,color:B.gray500,width:"100%",marginTop:2}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</span>
                       </div>
                       {pi<arr.length-1&&<div style={{height:1,background:`${B.green}22`}}/>}
@@ -10491,7 +10547,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.15";
+const APP_VERSION = "2026.10.15.16";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11558,7 +11614,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
 // ─── Quick Payment Modal ──────────────────────────────────────────────────────
 const PAY_METHODS = ["Dinheiro","PIX","Cartão de Débito","Cartão de Crédito","TED / DOC","Outro"];
 
-function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[],payments=[]}) {
+function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[],payments=[],defaultRate=0}) {
   const activeVehicles=vehicles.filter(v=>v.enteredAt||v.enteredAtFinishing||tasks.some(t=>t.vehicleId===v.id));
   const [selectedId,setSelectedId]=useState(activeVehicles.length===1?activeVehicles[0].id:"");
   const [payDiv,setPayDiv]=useState("performance");
@@ -11571,6 +11627,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
   const [target,setTarget]=useState("open"); // open = OS aberta | closed = OS fechada (histórico)
   const [histId,setHistId]=useState("");
   const [showSettled,setShowSettled]=useState(false);
+  const [perfStr,setPerfStr]=useState("");
 
   // OS fechadas com saldo (e, opcionalmente, as já quitadas)
   const histAll=osHistory.map(h=>{
@@ -11598,14 +11655,20 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
   const selectedVehicle=vehicles.find(v=>v.id===selectedId);
   const client=selectedVehicle?clients.find(c=>c.id===selectedVehicle.clientId):null;
 
-  const ready=target==="closed"?!!selHist&&!!amountNum:!!selectedId&&!!amountNum;
+  const selBal=selectedVehicle?divisionBalances(selectedVehicle,tasks,payments,defaultRate):null;
+  const splitRes=(target==="open"&&payDiv==="split"&&selBal?.hasBoth)?resolveSplit(amountNum,perfStr,selBal.perfTotal-selBal.perfPaid,selBal.finTotal-selBal.finPaid):null;
+  const ready=(target==="closed"?!!selHist&&!!amountNum:!!selectedId&&!!amountNum)&&(!splitRes||splitRes.valid);
   const save=async()=>{
     if(!ready) return;
     setSaving(true);
     const [d,m,y]=date.split("/");
     const paidAt=`${y}-${m?.padStart(2,"0")}-${d?.padStart(2,"0")}T12:00:00`;
     if(target==="closed") await onAddPayment(selHist.h.vehicle_id||selHist.h.vehicleId,{amount:amountNum,method,note:note.trim(),paidAt,division:selHist.h.division||"performance",osHistoryId:selHist.h.id});
-    else await onAddPayment(selectedId,{amount:amountNum,method,note:note.trim(),paidAt,division:payDiv});
+    else if(splitRes){
+      const parts=[{division:"performance",amount:splitRes.perf},{division:"finishing",amount:splitRes.fin}].filter(x=>x.amount>0);
+      await onAddPayment(selectedId,{amount:amountNum,method,note:note.trim(),paidAt,division:parts[0]?.division||"performance",parts});
+    }
+    else await onAddPayment(selectedId,{amount:amountNum,method,note:note.trim(),paidAt,division:payDiv==="split"?"performance":payDiv});
     onClose();
   };
 
@@ -11670,7 +11733,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
           <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:180,overflowY:"auto"}}>
             {filtered.map(v=>{
               const cli=clients.find(c=>c.id===v.clientId);
-              return (<button key={v.id} onClick={()=>setSelectedId(v.id)}
+              return (<button key={v.id} onClick={()=>{setSelectedId(v.id);setPayDiv(divisionBalances(v,tasks,payments,defaultRate).hasBoth?"split":"performance");setPerfStr("");}}
                 style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${selectedId===v.id?B.green:B.gray600}`,background:selectedId===v.id?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                 <span style={{fontSize:16,flexShrink:0}}>🚗</span>
                 <div style={{flex:1,minWidth:0}}>
@@ -11687,13 +11750,14 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
         {target==="open"&&<div>
           <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Empresa</label>
           <div style={{display:"flex",gap:6}}>
-            {[{id:"performance",label:"Performance",color:B.orange},{id:"finishing",label:"Finishing",color:FD.primary}].map(d=>(
+            {[...(selBal?.hasBoth?[{id:"split",label:"Dividir",color:B.green}]:[]),{id:"performance",label:"Performance",color:B.orange},{id:"finishing",label:"Finishing",color:FD.primary}].map(d=>(
               <button key={d.id} onClick={()=>setPayDiv(d.id)}
                 style={{flex:1,padding:"7px 0",borderRadius:8,border:`1px solid ${payDiv===d.id?d.color+"66":B.gray600}`,background:payDiv===d.id?`${d.color}22`:"none",color:payDiv===d.id?d.color:B.gray400,cursor:"pointer",fontSize:12,fontWeight:700}}>
                 {d.label}
               </button>
             ))}
           </div>
+          {splitRes&&<SplitBox total={amountNum} perfStr={perfStr} setPerfStr={setPerfStr} perfBal={selBal.perfTotal-selBal.perfPaid} finBal={selBal.finTotal-selBal.finPaid}/>}
         </div>}
 
         {/* Method */}
@@ -13627,10 +13691,23 @@ export default function App() {
 
   // ── WA
   // ── Payments (conta corrente) ──
+  // Insere o pagamento; com p.parts (Performance + Finishing) cria 2 lançamentos ligados por group_id
+  const insertPayment=async(p)=>{
+    const parts=(Array.isArray(p.parts)?p.parts:[]).filter(x=>Number(x.amount)>0);
+    if(parts.length>1){
+      const groupId=newUuid(); const rows=[];
+      try{ for(const part of parts) rows.push(await db.addPayment({...p,amount:part.amount,division:part.division,groupId})); }
+      catch(e){ for(const r of rows){ try{await db.deletePayment(r.id);}catch{} } throw e; }
+      setPay(prev=>[...prev,...rows]);
+      return parts.reduce((s,x)=>s+Number(x.amount),0);
+    }
+    const row=await db.addPayment({...p,amount:parts[0]?parts[0].amount:p.amount,division:parts[0]?.division||p.division||"performance"});
+    setPay(prev=>[...prev,row]);
+    return Number(row.amount);
+  };
   const addPayment=async(p)=>{
     try{
-      const row=await db.addPayment(p);
-      setPay(prev=>[...prev,row]);
+      await insertPayment(p);
       toast_(`Pagamento de ${fmtBRL(p.amount)} registrado ✓`);
       const v=vehicles.find(x=>x.id===p.vehicleId);
       if(v?.clientId) db.sendPushToClient(v.clientId,`💰 Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${p.method}`,`/?portal=cliente`).catch(()=>{});
@@ -14789,8 +14866,8 @@ export default function App() {
       setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
       try{ await db.updateTask(taskId,{materials:newMats}); toast_(`Material "${mat.name}" adicionado ✓`); }catch(e){errToast(e);}
     }}/>}
-    {quickPayModal&&<QuickPayModal vehicles={vehicles} tasks={tasks} clients={clients} osHistory={osHistory} payments={payments} onClose={()=>setQuickPayModal(false)} onAddPayment={async(vehicleId,payment)=>{
-      try{ const row=await db.addPayment({vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance",osHistoryId:payment.osHistoryId||null}); setPay(p=>[...p,row]); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); }catch(e){errToast(e);}
+    {quickPayModal&&<QuickPayModal vehicles={vehicles} tasks={tasks} clients={clients} osHistory={osHistory} payments={payments} defaultRate={defaultRate} onClose={()=>setQuickPayModal(false)} onAddPayment={async(vehicleId,payment)=>{
+      try{ await insertPayment({vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance",osHistoryId:payment.osHistoryId||null,parts:payment.parts}); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); }catch(e){errToast(e);}
     }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
     

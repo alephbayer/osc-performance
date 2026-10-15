@@ -237,6 +237,7 @@ const mapPaymentIn = (p) => ({
   paidAt: p.paid_at,
   division: p.division || 'performance',
   note: p.note,
+  groupId: p.group_id || null,
 });
 
 // ─── Data API ─────────────────────────────────────────────────────────────────
@@ -633,6 +634,7 @@ export const db = {
       paid_at: p.paidAt,
       note: p.note || "",
       division: p.division || "performance",
+      group_id: p.groupId || null,
     }).select().single();
     if (error) throw error;
     return mapPaymentIn(data);

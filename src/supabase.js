@@ -1332,11 +1332,6 @@ export const db = {
   _mapVehicle: mapVehicleIn,
   _mapPayment: mapPaymentIn,
   _mapStock: mapStockIn,
-  _mapPurchaseOrder: (o) => ({
-    id:o.id, vehicleId:o.vehicle_id, partName:o.part_name, notesAdmin:o.notes_admin||"",
-    link:o.link||"", quantity:o.quantity||1, costPrice:Number(o.cost_price||0),
-    status:o.status||"pending", employeeId:o.employee_id, createdAt:o.created_at,
-    receivedAt:o.received_at||null, receivedLocation:o.received_location||"",
-  }),
+  _mapPurchaseOrder: (o) => db._mapOrder(o),
   _mapEmployee: (e) => e,
 };

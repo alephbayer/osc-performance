@@ -9974,8 +9974,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
       {/* ── Pedidos de peças ── */}
       {(()=>{
-        const vPOs=purchaseOrders.filter(p=>p.vehicleId===v.id&&p.status!=="received");
-        if(!vPOs.length) return null;
+        const isInst=po=>po.status==="received"&&(!!po.consumedAt||tasks.some(t=>t.vehicleId===v.id&&(t.materials||[]).some(m=>m.purchaseOrderId===po.id)));
+        const vPOs=purchaseOrders.filter(p=>p.vehicleId===v.id&&p.status!=="received"||(p.vehicleId===v.id&&p.status==="received"&&!isInst(p)));
+        const vInst=purchaseOrders.filter(p=>p.vehicleId===v.id&&isInst(p)).sort((a,b)=>new Date(b.consumedAt||b.receivedAt||0)-new Date(a.consumedAt||a.receivedAt||0));
+        if(!vPOs.length&&!vInst.length) return null;
         const statusCfgPO={
           pending:      {label:"Aguardando aprovação", color:B.gray400,  bg:B.gray800},
           approved:     {label:"Aprovado — link em análise", color:B.blue,     bg:`${B.blue}15`},
@@ -9990,6 +9992,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             <span style={{fontSize:11,color:B.gray400}}>{vPOs.length} em andamento</span>
           </div>
           <div style={{...S.pad,display:"flex",flexDirection:"column",gap:8}}>
+            {vPOs.length===0&&<div style={{fontSize:12,color:B.gray500}}>Nenhum pedido em andamento.</div>}
             {vPOs.map(po=>{
               const sc=statusCfgPO[po.status]||statusCfgPO.pending;
               return(<div key={po.id} style={{background:sc.bg,borderRadius:10,padding:"10px 12px",border:`1px solid ${sc.color}33`}}>
@@ -10001,6 +10004,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 {po.quantity>1&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>Qtd: {po.quantity}</div>}
               </div>);
             })}
+            <InstalledPOs orders={vInst}/>
           </div>
         </div>);
       })()}
@@ -10573,7 +10577,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.16.6";
+const APP_VERSION = "2026.10.16.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11188,6 +11192,25 @@ const CHECKLIST_FINISHING = [
   {id:"f_soleira",     label:"Soleiras",                      level:"advanced"},
   {id:"f_colunas",     label:"Colunas (A, B, C)",             level:"advanced"},
 ];
+
+function InstalledPOs({orders}) {
+  const [open,setOpen]=useState(false);
+  if(!orders.length) return null;
+  return (<div>
+    <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,background:`${B.green}10`,border:`1px solid ${B.green}33`,color:B.green,fontWeight:700,fontSize:12,cursor:"pointer",textAlign:"left"}}>
+      <span style={{flex:1}}>✓ Instalados ({orders.length})</span><span style={{fontSize:10}}>{open?"▲":"▼"}</span>
+    </button>
+    {open&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>
+      {orders.map(po=>(<div key={po.id} style={{background:`${B.green}08`,borderRadius:10,padding:"8px 12px",border:`1px solid ${B.green}22`,opacity:0.85}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontWeight:700,fontSize:13,color:B.white,flex:1}}>{po.partName}{po.quantity>1?` ×${po.quantity}`:""}</span>
+          <span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}>✓ Instalada</span>
+        </div>
+        {(po.consumedAt||po.receivedAt)&&<div style={{fontSize:10,color:B.gray500,marginTop:2}}>{po.consumedAt?"Utilizada em ":"Recebida em "}{new Date(po.consumedAt||po.receivedAt).toLocaleDateString("pt-BR")}</div>}
+      </div>))}
+    </div>}
+  </div>);
+}
 
 // ─── Vehicle Parts List (inline) ─────────────────────────────────────────────
 function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=false, tasks=[]}) {

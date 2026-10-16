@@ -60,7 +60,8 @@ const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
 const partUsedQty=(part,vehicleId,tasks)=>Number(part.usedQty||0)+(tasks||[]).filter(t=>t.vehicleId===vehicleId).flatMap(t=>t.materials||[]).filter(m=>(part.id&&m.reservedPartId===part.id)||(part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);
 const partsRemaining=(part,vehicleId,tasks)=>Math.max(0,Number(part.qty||1)-partUsedQty(part,vehicleId,tasks));
 const partIsUsed=(part,vehicleId,tasks)=>partUsedQty(part,vehicleId,tasks)>=Number(part.qty||1);
-const closeKeepParts=(list,closedTasks)=>{const mats=closedTasks.flatMap(t=>t.materials||[]);return (list||[]).filter(p=>p.name).map(p=>{const u=mats.filter(m=>(p.id&&m.reservedPartId===p.id)||(p.purchaseOrderId&&m.purchaseOrderId===p.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);return u>0?{...p,usedQty:Math.min(Number(p.qty||1),Number(p.usedQty||0)+u)}:p;});};
+const closeUsedOf=(p,mats)=>mats.filter(m=>(p.id&&m.reservedPartId===p.id)||(p.purchaseOrderId&&m.purchaseOrderId===p.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);
+const closeKeepParts=(list,closedTasks)=>{const mats=closedTasks.flatMap(t=>t.materials||[]);return (list||[]).filter(p=>p.name).map(p=>{const rem=Number(p.qty||1)-Number(p.usedQty||0)-closeUsedOf(p,mats);return rem>0?{...p,qty:rem,usedQty:0}:null;}).filter(Boolean);};
 const fmtBRL=n  => `R$ ${Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`; // com separador de milhar (exibição); fmtR2 segue sem milhar para campos editáveis
 // Datas de pagamento: a coluna paid_at é DATE ("YYYY-MM-DD"). new Date("YYYY-MM-DD") lê como meia-noite UTC e, no
 // horário de Brasília, mostra o dia anterior. payDate lê data pura como meio-dia LOCAL; hora completa passa direto.
@@ -10567,7 +10568,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.16.3";
+const APP_VERSION = "2026.10.16.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13266,9 +13267,14 @@ export default function App() {
       // Pedidos recebidos já lançados nesta OS ficam consumidos (não voltam como livres)
       try{
         const closedMats=vTasks.flatMap(t=>t.materials||[]);
+        const resPOs=(v.partsList||[]).filter(p=>p.purchaseOrderId);
         for(const o of purchaseOrders.filter(x=>x.vehicleId===vid&&x.status==="received"&&!x.consumedAt)){
-          const alloc=closedMats.filter(m=>m.purchaseOrderId===o.id).reduce((a,m)=>a+Number(m.qty||1),0);
-          if(alloc>0){const u=await db.updatePurchaseOrder(o.id,{consumedAt:deliveredAt});setPurchaseOrders(pp=>pp.map(x=>x.id===o.id?u:x));}
+          const rp=resPOs.find(p=>p.purchaseOrderId===o.id);
+          const alloc=closedMats.filter(m=>m.purchaseOrderId===o.id||(rp&&rp.id&&m.reservedPartId===rp.id)).reduce((a,m)=>a+Number(m.qty||1),0);
+          if(alloc<=0) continue;
+          if(rp){ if(Number(rp.usedQty||0)+alloc<Number(rp.qty||1)) continue; }
+          else if(alloc<Number(o.quantity||1)){const u=await db.updatePurchaseOrder(o.id,{quantity:Number(o.quantity||1)-alloc});setPurchaseOrders(pp=>pp.map(x=>x.id===o.id?u:x));continue;}
+          const u=await db.updatePurchaseOrder(o.id,{consumedAt:deliveredAt});setPurchaseOrders(pp=>pp.map(x=>x.id===o.id?u:x));
         }
       }catch(e2){console.error(e2);}
       // Reload to get real os_history id and updated payments

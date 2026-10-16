@@ -8758,6 +8758,10 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
             style={{padding:"6px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
             ↩ Devolver
           </button>}
+          {(adminRole==="owner"||adminRole==="admin")&&o.status==="received"&&<button onClick={()=>{if(window.confirm(`Excluir "${o.partName}" definitivamente?\n\nO pedido e a peça reservada no veículo serão removidos.`))onDelete&&onDelete(o.id);}}
+            style={{padding:"6px 12px",borderRadius:8,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            🗑 Excluir
+          </button>}
           {(adminRole==="owner"||adminRole==="admin")&&(o.status==="bought"||o.status==="ready_to_buy")&&<button onClick={()=>setReturnModal(o)}
             style={{padding:"6px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
             ↩ Cancelar pedido
@@ -8804,6 +8808,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
                 {isInstalled&&<span style={{fontSize:10,color:B.blue,fontWeight:700,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}>✓ Instalada</span>}
                 {isReserved&&!isInstalled&&<span style={{fontSize:10,color:B.purple,fontWeight:700,background:`${B.purple}18`,padding:"2px 7px",borderRadius:6}}>📦 Reservada</span>}
                 {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>setReturnModal(o)} style={{background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:700}}>Devolver</button>}
+                {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>{if(window.confirm(`Excluir "${o.partName}" definitivamente?\n\nO pedido e a peça reservada no veículo serão removidos.`))onDelete&&onDelete(o.id);}} title="Excluir" style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:700}}>🗑</button>}
               </div>
             </div>);
   };
@@ -10568,7 +10573,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.16.4";
+const APP_VERSION = "2026.10.16.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13740,7 +13745,16 @@ export default function App() {
             }catch(err){errToast(err);}
           };
   const poDelete=async id=>{
-            try{await db.deletePurchaseOrder(id);setPurchaseOrders(p=>p.filter(o=>o.id!==id));}catch(err){errToast(err);}
+            try{
+              const po=purchaseOrders.find(o=>o.id===id);
+              await db.deletePurchaseOrder(id);setPurchaseOrders(p=>p.filter(o=>o.id!==id));
+              const v=po&&vehicles.find(x=>x.id===po.vehicleId);
+              if(v&&(v.partsList||[]).some(x=>x.purchaseOrderId===id)){
+                const nl=v.partsList.filter(x=>x.purchaseOrderId!==id);
+                setVeh(p=>p.map(x=>x.id===v.id?{...x,partsList:nl}:x));
+                await db.updateVehicle(v.id,{partsList:nl});
+              }
+            }catch(err){errToast(err);}
           };
   const poReserve=async(o,loc)=>{
             // Add to vehicle's partsList (reserved parts section)

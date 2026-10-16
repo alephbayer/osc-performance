@@ -58,6 +58,7 @@ const B = {
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
 const partUsedQty=(part,vehicleId,tasks)=>Number(part.usedQty||0)+(tasks||[]).filter(t=>t.vehicleId===vehicleId).flatMap(t=>t.materials||[]).filter(m=>(part.id&&m.reservedPartId===part.id)||(part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);
+const partsRemaining=(part,vehicleId,tasks)=>Math.max(0,Number(part.qty||1)-partUsedQty(part,vehicleId,tasks));
 const partIsUsed=(part,vehicleId,tasks)=>partUsedQty(part,vehicleId,tasks)>=Number(part.qty||1);
 const closeKeepParts=(list,closedTasks)=>{const mats=closedTasks.flatMap(t=>t.materials||[]);return (list||[]).filter(p=>p.name).map(p=>{const u=mats.filter(m=>(p.id&&m.reservedPartId===p.id)||(p.purchaseOrderId&&m.purchaseOrderId===p.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);return u>0?{...p,usedQty:Math.min(Number(p.qty||1),Number(p.usedQty||0)+u)}:p;});};
 const fmtBRL=n  => `R$ ${Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`; // com separador de milhar (exibição); fmtR2 segue sem milhar para campos editáveis
@@ -3580,16 +3581,8 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
   });
 
   // Reserved parts from partsList not yet fully used in tasks
-  const availableReserved=reservedParts.filter(p=>{
-    // Parts with purchaseOrderId — check allocated quantity
-    if(p.purchaseOrderId){
-      const usedInTasks=allTasks.flatMap(t=>t.materials||[]).filter(m=>m.purchaseOrderId===p.purchaseOrderId).reduce((s,m)=>s+Number(m.qty||1),0);
-      return Number(p.usedQty||0)+usedInTasks<Number(p.qty||1);
-    }
-    // Manual parts — check by id
-    const usedInTasks=allTasks.flatMap(t=>t.materials||[]).filter(m=>m.reservedPartId===p.id).reduce((s,m)=>s+Number(m.qty||1),0);
-    return Number(p.usedQty||0)+usedInTasks<Number(p.qty||1);
-  });
+  const remainingOf=p=>partsRemaining(p,task.vehicleId,allTasks);
+  const availableReserved=reservedParts.filter(p=>remainingOf(p)>0);
 
   const hasPickable=receivedOrders.length>0||availableReserved.length>0;
 
@@ -3610,7 +3603,9 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
   };
 
   const addFromReserved=(p)=>{
-    const newMats=[...mats,{name:p.name,brand:p.brand||"",cost:p.cost||0,value:p.value||0,qty:p.qty||1,fromStock:false,stockItemId:null,reservedPartId:p.id}];
+    const rem=remainingOf(p);
+    if(rem<=0) return;
+    const newMats=[...mats,{name:p.name,brand:p.brand||"",cost:p.cost||0,value:p.value||0,qty:rem,fromStock:false,stockItemId:null,reservedPartId:p.id||null,...(p.purchaseOrderId?{purchaseOrderId:p.purchaseOrderId}:{})}];
     onUpdate(task.id,{materials:newMats});
     setShowPOP(false);
   };
@@ -3744,7 +3739,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.purple}22`}}>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:12,fontWeight:700,color:B.white}}>{p.name}{p.brand?<span style={{color:B.gray400,fontWeight:400}}> — {p.brand}</span>:""}</div>
-            <div style={{fontSize:10,color:B.purple}}>📦 Reservado{p.location?` · ${p.location}`:""} · Qtd: {p.qty||1}{p.value?` · ${fmtBRL(p.value)}`:""}</div>
+            <div style={{fontSize:10,color:B.purple}}>📦 Reservado{p.location?` · ${p.location}`:""} · Restam: {remainingOf(p)}/{p.qty||1}{p.value?` · ${fmtBRL(p.value)}`:""}</div>
           </div>
           <button onClick={()=>addFromReserved(p)} style={{padding:"5px 12px",borderRadius:7,background:B.purple,border:"none",color:B.white,fontWeight:800,fontSize:11,cursor:"pointer",flexShrink:0}}>+ Usar</button>
         </div>
@@ -10572,7 +10567,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.16.2";
+const APP_VERSION = "2026.10.16.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

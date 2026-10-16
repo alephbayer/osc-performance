@@ -57,6 +57,9 @@ const B = {
 
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
+const partUsedQty=(part,vehicleId,tasks)=>Number(part.usedQty||0)+(tasks||[]).filter(t=>t.vehicleId===vehicleId).flatMap(t=>t.materials||[]).filter(m=>(part.id&&m.reservedPartId===part.id)||(part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);
+const partIsUsed=(part,vehicleId,tasks)=>partUsedQty(part,vehicleId,tasks)>=Number(part.qty||1);
+const closeKeepParts=(list,closedTasks)=>{const mats=closedTasks.flatMap(t=>t.materials||[]);return (list||[]).filter(p=>p.name).map(p=>{const u=mats.filter(m=>(p.id&&m.reservedPartId===p.id)||(p.purchaseOrderId&&m.purchaseOrderId===p.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);return u>0?{...p,usedQty:Math.min(Number(p.qty||1),Number(p.usedQty||0)+u)}:p;});};
 const fmtBRL=n  => `R$ ${Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`; // com separador de milhar (exibição); fmtR2 segue sem milhar para campos editáveis
 // Datas de pagamento: a coluna paid_at é DATE ("YYYY-MM-DD"). new Date("YYYY-MM-DD") lê como meia-noite UTC e, no
 // horário de Brasília, mostra o dia anterior. payDate lê data pura como meio-dia LOCAL; hora completa passa direto.
@@ -831,8 +834,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           const vParts=[...(v.partsList||[]),...(v.partsListFinishing||[])].filter(p=>p.name);
           if(!vParts.length) return null;
           const allMats=tasks.filter(t=>t.vehicleId===v.id).flatMap(t=>t.materials||[]);
-          const usedPOIds=new Set(allMats.map(m=>m.purchaseOrderId).filter(Boolean));
-          const isUsed=(p)=>p.purchaseOrderId&&usedPOIds.has(p.purchaseOrderId);
+          const isUsed=(p)=>partIsUsed(p,v.id,tasks);
           return(<div key={v.id} style={{background:B.gray900,borderRadius:14,marginBottom:14,overflow:"hidden",border:`1px solid ${B.gray700}`}}>
             <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray800}`,display:"flex",alignItems:"center",gap:8}}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -855,7 +857,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                   </div>
                   <div style={{flexShrink:0}}>
                     {used
-                      ?<span style={{fontSize:11,fontWeight:700,color:B.green,background:`${B.green}18`,borderRadius:6,padding:"3px 8px"}}>✓ Instalada</span>
+                      ?<span style={{fontSize:11,fontWeight:700,color:B.green,background:`${B.green}18`,borderRadius:6,padding:"3px 8px"}}>✓ Utilizada</span>
                       :<span style={{fontSize:11,fontWeight:700,color:B.amber,background:`${B.amber}18`,borderRadius:6,padding:"3px 8px"}}>Aguardando</span>}
                   </div>
                 </div>);
@@ -3570,7 +3572,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
 
   // Received purchase orders not yet fully allocated and NOT reserved
   const receivedOrders=purchaseOrders.filter(o=>{
-    if(o.vehicleId!==task.vehicleId||o.status!=="received") return false;
+    if(o.vehicleId!==task.vehicleId||o.status!=="received"||o.consumedAt) return false;
     // If already reserved in partsList, don't show here
     if(reservedParts.some(p=>p.purchaseOrderId===o.id)) return false;
     const allocated=allTasks.filter(t=>t.vehicleId===task.vehicleId).flatMap(t=>t.materials||[]).filter(m=>m.purchaseOrderId===o.id).reduce((s,m)=>s+(m.qty||1),0);
@@ -3582,11 +3584,11 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
     // Parts with purchaseOrderId — check allocated quantity
     if(p.purchaseOrderId){
       const usedInTasks=allTasks.flatMap(t=>t.materials||[]).filter(m=>m.purchaseOrderId===p.purchaseOrderId).reduce((s,m)=>s+Number(m.qty||1),0);
-      return usedInTasks<Number(p.qty||1);
+      return Number(p.usedQty||0)+usedInTasks<Number(p.qty||1);
     }
     // Manual parts — check by id
     const usedInTasks=allTasks.flatMap(t=>t.materials||[]).filter(m=>m.reservedPartId===p.id).reduce((s,m)=>s+Number(m.qty||1),0);
-    return usedInTasks<Number(p.qty||1);
+    return Number(p.usedQty||0)+usedInTasks<Number(p.qty||1);
   });
 
   const hasPickable=receivedOrders.length>0||availableReserved.length>0;
@@ -8655,6 +8657,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
 
   const confirmReceive=async(reserve)=>{
     const o=receiveModal;
+    if(!location.trim()){alert("Informe a localização da peça.");return;}
     await onUpdate(o.id,{status:"received"});
     if(reserve) onReserve&&onReserve(o,location.trim());
     setReceiveModal(null);
@@ -8681,7 +8684,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
       const emp=employees.find(x=>x.id===o.employeeId);
       const t=tasks.find(x=>x.id===o.taskId);
       const st=PO_STATUS[o.status];
-      const isInstalled=o.status==="received"&&tasks.filter(x=>x.vehicleId===o.vehicleId).flatMap(x=>x.materials||[]).some(m=>m.purchaseOrderId===o.id);
+      const isInstalled=o.status==="received"&&(!!o.consumedAt||tasks.filter(x=>x.vehicleId===o.vehicleId).flatMap(x=>x.materials||[]).some(m=>m.purchaseOrderId===o.id));
       const isReserved=o.status==="received"&&(v?.partsList||[]).some(p=>p.purchaseOrderId===o.id);
       const salePrice=o.costPrice!=null?o.costPrice*(1+(o.markupPct||30)/100):null;
       const isEditing=editId===o.id;
@@ -8792,7 +8795,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
             const emp=employees.find(x=>x.id===o.employeeId);
             const t=tasks.find(x=>x.id===o.taskId);
             const st=PO_STATUS[o.status];
-            const isInstalled=o.status==="received"&&tasks.filter(x=>x.vehicleId===o.vehicleId).flatMap(x=>x.materials||[]).some(m=>m.purchaseOrderId===o.id);
+            const isInstalled=o.status==="received"&&(!!o.consumedAt||tasks.filter(x=>x.vehicleId===o.vehicleId).flatMap(x=>x.materials||[]).some(m=>m.purchaseOrderId===o.id));
             const isReserved=o.status==="received"&&(v?.partsList||[]).some(p=>p.purchaseOrderId===o.id);
             return(<div key={o.id} style={{background:`${B.green}08`,border:`1px solid ${B.green}22`,borderRadius:10,padding:"10px 12px",marginBottom:6,opacity:0.8,...(tint?{background:`${tint}1f`,border:`1px solid ${tint}66`,opacity:1}:{})}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -8816,13 +8819,13 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
         <div style={{fontWeight:800,fontSize:16,color:B.white,textAlign:"center",marginBottom:4}}>Peça recebida!</div>
         <div style={{fontSize:13,color:B.gray300,textAlign:"center",marginBottom:4}}><b style={{color:B.white}}>{receiveModal.partName}</b></div>
         <div style={{fontSize:12,color:B.gray400,textAlign:"center",marginBottom:20}}>A peça está correta? O que fazer com ela?</div>
-        <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="Localização (ex: Prateleira A3) — para reserva"
+        <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="Localização da peça * (ex: Prateleira A3)"
           style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <button onClick={()=>confirmReceive(false)} style={{width:"100%",padding:"12px 0",borderRadius:10,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>
+          <button onClick={()=>confirmReceive(false)} disabled={!location.trim()} style={{opacity:location.trim()?1:0.45,width:"100%",padding:"12px 0",borderRadius:10,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>
             ✅ Instalar agora — adicionar à tarefa
           </button>
-          <button onClick={()=>confirmReceive(true)} style={{width:"100%",padding:"12px 0",borderRadius:10,background:`${B.purple}22`,border:`1px solid ${B.purple}55`,color:B.purple,fontWeight:800,fontSize:14,cursor:"pointer"}}>
+          <button onClick={()=>confirmReceive(true)} disabled={!location.trim()} style={{opacity:location.trim()?1:0.45,width:"100%",padding:"12px 0",borderRadius:10,background:`${B.purple}22`,border:`1px solid ${B.purple}55`,color:B.purple,fontWeight:800,fontSize:14,cursor:"pointer"}}>
             📦 Reservar — guardar no veículo
           </button>
           <button onClick={()=>{setReceiveModal(null);setReturnModal(receiveModal);}} style={{width:"100%",padding:"12px 0",borderRadius:10,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,fontWeight:800,fontSize:14,cursor:"pointer"}}>
@@ -10007,16 +10010,14 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         if(!parts.length) return null;
         // Check which parts are already used in tasks
         const allMats=tasks.filter(t=>t.vehicleId===v.id).flatMap(t=>t.materials||[]);
-        const usedIds=new Set(allMats.map(m=>m.reservedPartId).filter(Boolean));
-        const usedPOIds=new Set(allMats.map(m=>m.purchaseOrderId).filter(Boolean));
-        const isUsed=(p)=>usedIds.has(p.id)||(p.purchaseOrderId&&usedPOIds.has(p.purchaseOrderId));
+        const isUsed=(p)=>partIsUsed(p,v.id,tasks);
         const usedCount=parts.filter(isUsed).length;
         return(<div style={{...S.card,marginBottom:20}}>
           <div style={{...S.pad,borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
             <span style={{fontWeight:800,fontSize:13,color:B.white}}>Peças reservadas</span>
             <span style={{fontSize:11,color:B.gray400}}>{parts.length} item{parts.length!==1?"s":""}</span>
-            {usedCount>0&&<span style={{fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",marginLeft:"auto"}}>{usedCount} instalada{usedCount!==1?"s":""}</span>}
+            {usedCount>0&&<span style={{fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",marginLeft:"auto"}}>{usedCount} utilizada{usedCount!==1?"s":""}</span>}
           </div>
           <div style={{...S.pad,display:"flex",flexDirection:"column",gap:6}}>
             {/* Photo strip if any parts have photos */}
@@ -10058,7 +10059,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   {p.location&&<div style={{fontSize:11,color:B.gray400}}>{p.location}</div>}
                 </div>
                 {used
-                  ?<span style={{fontSize:10,fontWeight:700,color:B.green,flexShrink:0}}>Instalada</span>
+                  ?<span style={{fontSize:10,fontWeight:700,color:B.green,flexShrink:0}}>Utilizada</span>
                   :(p.qty||1)>1&&<span style={{fontSize:11,fontWeight:700,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"2px 7px",flexShrink:0}}>×{p.qty}</span>
                 }
               </div>);
@@ -10571,7 +10572,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.16.1";
+const APP_VERSION = "2026.10.16.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11195,9 +11196,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
 
   // Check if a part has been used in any task material
   const isInstalled=(part,idx)=>{
-    return tasks.filter(t=>t.vehicleId===vehicle.id).flatMap(t=>t.materials||[]).some(m=>
-      m.reservedPartId===part.id || (part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)
-    );
+    return partIsUsed(part,vehicle.id,tasks);
   };
   const [newName, setNewName] = useState("");
   const [newQty, setNewQty] = useState("1");
@@ -11260,7 +11259,8 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
                   ?<span style={{cursor:"pointer"}} onClick={()=>{const q=prompt("Quantidade:",part.qty);if(q)updatePart(part.id,{qty:parseInt(q)||1});}}>{part.qty}×</span>
                   :<span>{part.qty}×</span>}
               </span>
-              {installed&&<span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",flexShrink:0}}>✓ Instalada</span>}
+              {installed&&<span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",flexShrink:0}}>✓ Utilizada</span>}
+              {!installed&&partUsedQty(part,vehicle.id,tasks)>0&&<span style={{fontSize:10,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:5,padding:"1px 7px",flexShrink:0}}>{partUsedQty(part,vehicle.id,tasks)}/{part.qty||1} usada(s) · restam {Number(part.qty||1)-partUsedQty(part,vehicle.id,tasks)}</span>}
             </div>
             {part.location&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>📍 {managerMode
               ?<InlineEdit value={part.location} onSave={v=>updatePart(part.id,{location:v})} placeholder="Localização"/>
@@ -13262,11 +13262,20 @@ export default function App() {
       osDiscountPct: v.osDiscountPct||0,
       totalValue,
       photos: v.photos||[],
+      partsListKeep: closeKeepParts(v.partsList,vTasks),
     };
 
     // Don't update UI optimistically — wait for DB to confirm
     try{
       await db.archiveAndResetVehicle(vid,historyRecord);
+      // Pedidos recebidos já lançados nesta OS ficam consumidos (não voltam como livres)
+      try{
+        const closedMats=vTasks.flatMap(t=>t.materials||[]);
+        for(const o of purchaseOrders.filter(x=>x.vehicleId===vid&&x.status==="received"&&!x.consumedAt)){
+          const alloc=closedMats.filter(m=>m.purchaseOrderId===o.id).reduce((a,m)=>a+Number(m.qty||1),0);
+          if(alloc>0){const u=await db.updatePurchaseOrder(o.id,{consumedAt:deliveredAt});setPurchaseOrders(pp=>pp.map(x=>x.id===o.id?u:x));}
+        }
+      }catch(e2){console.error(e2);}
       // Reload to get real os_history id and updated payments
       const d=await db.loadAll();
       setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]);
@@ -13343,6 +13352,7 @@ export default function App() {
       tasksSnapshot:finTasks, fuelCost:0, fuels:[], tows:[],
       osDiscountPct:v.osDiscountPctFinishing||0, totalValue, division:"finishing",
       photos: v.photosFinishing||[],
+      partsListKeep: closeKeepParts(v.partsListFinishing,finTasks),
     };
     // Don't update UI optimistically — wait for DB to confirm
     try{
@@ -13739,7 +13749,7 @@ export default function App() {
             const existing=v.partsList||[];
             // Try to find photo from linked stock item via investments/purchases
             const stockItem=stock.find(s=>purchaseOrders.find(po=>po.id===o.id&&po.stockItemId===s.id)||s.name===o.partName);
-            const newPart={name:o.partName,brand:o.notesAdmin||"",qty:o.quantity,cost:o.costPrice||0,value:salePrice,location:loc||"",purchaseOrderId:o.id,photo:stockItem?.photo||null};
+            const newPart={id:"po_"+o.id,name:o.partName,brand:o.notesAdmin||"",qty:o.quantity,cost:o.costPrice||0,value:salePrice,location:loc||"",purchaseOrderId:o.id,photo:stockItem?.photo||null};
             const newList=[...existing,newPart];
             setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
             try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}

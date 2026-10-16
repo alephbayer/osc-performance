@@ -483,7 +483,7 @@ export const db = {
       fuel_cost: 0,
       fuels: [],
       checklist: [],
-      parts_list: [],
+      parts_list: historyRecord.partsListKeep || [],
       photos: [],
       os_discount_pct: 0,
       tows: [],
@@ -541,7 +541,7 @@ export const db = {
       photos_finishing: [],
       notes_finishing: "",
       checklist_finishing: [],
-      parts_list_finishing: [],
+      parts_list_finishing: historyRecord.partsListKeep || [],
       os_discount_pct_finishing: 0,
     }).eq("id", vehicleId);
     if (vErr) throw vErr;
@@ -787,6 +787,7 @@ export const db = {
       readyAt: o.ready_at,
       boughtAt: o.bought_at,
       receivedAt: o.received_at,
+      consumedAt: o.consumed_at||null,
     };
   },
   async loadPurchaseOrders() {
@@ -815,6 +816,7 @@ export const db = {
     if(patch.costPrice!==undefined) map.cost_price=patch.costPrice;
     if(patch.brand!==undefined) map.notes_admin=patch.brand; // reuse notes_admin for brand
     if(patch.notesAdmin!==undefined) map.notes_admin=patch.notesAdmin;
+    if(patch.consumedAt!==undefined) map.consumed_at=patch.consumedAt;
     if(patch.quantity!==undefined) map.quantity=patch.quantity;
     if(patch.status!==undefined) {
       map.status=patch.status;

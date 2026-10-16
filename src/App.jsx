@@ -8329,7 +8329,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
     </div>
   </div>);
 }
-function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToStock,defaultCategory=null}) {
+function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToStock,defaultCategory=null,mirror=null}) {
   const [search,setSearch]=useState("");
   const [catFilter,setCatFilter]=useState(defaultCategory||"all");
   const [divFilter,setDivFilter]=useState("all");
@@ -8384,13 +8384,24 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     </button>);
   };
 
+  // Espelho: pedidos de veículos comprados/recebidos aparecem junto dos pedidos de compra do mesmo status
+  const mirrorFor=(key)=>{
+    if(!mirror||(key!=="bought"&&key!=="received")) return [];
+    const q=search.trim().toLowerCase();
+    return (mirror.orders||[]).filter(o=>o.status===key).filter(o=>{
+      if(!q) return true;
+      const v=(mirror.vehicles||[]).find(x=>x.id===o.vehicleId);
+      return (o.partName||"").toLowerCase().includes(q)||(o.description||"").toLowerCase().includes(q)||(v?.model||"").toLowerCase().includes(q)||(v?.plate||"").toLowerCase().includes(q);
+    });
+  };
   const renderCat=(items,color,open,isMateriais=false)=>(<>
     {statusGroups.map(sg=>{
       const group=items.filter(i=>i.status===sg.key).sort((a,b)=>a.priority-b.priority);
-      if(group.length===0) return null;
+      const mir=isMateriais?mirrorFor(sg.key):[];
+      if(group.length===0&&mir.length===0) return null;
       return (<div key={sg.key} style={{marginBottom:8}}>
         <div style={{fontSize:10,fontWeight:800,color:sg.color,textTransform:"uppercase",letterSpacing:.5,padding:"4px 4px 6px",display:"flex",alignItems:"center",gap:5}}>
-          {sg.label} <span style={{color:B.gray600,fontWeight:400}}>({group.length})</span>
+          {sg.label} <span style={{color:B.gray600,fontWeight:400}}>({group.length+mir.length})</span>
         </div>
         {group.filter(inv=>editId!==inv.id).map(inv=><InvCard key={inv.id} inv={inv} adminRole={adminRole}
           onUpdate={(id,patch)=>{
@@ -8403,6 +8414,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
             patch?onUpdate(id,patch):onDelete(id);
           }}
           onStartEdit={startEdit}/>)}
+        {mir.map(o=><PurchaseOrderCard key={"po-"+o.id} o={o} compact={o.status==="received"} tint={MIRROR_TINT} vehicles={mirror.vehicles} employees={mirror.employees} tasks={mirror.tasks} adminRole={adminRole} onUpdate={mirror.onUpdate} onDelete={mirror.onDelete} onReserve={mirror.onReserve}/>)}
       </div>);
     })}
     {items.length===0&&<div style={{textAlign:"center",padding:"20px 0",color:B.gray500,fontSize:13}}>Nenhum item ainda</div>}
@@ -8441,7 +8453,8 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
 
     {/* Materiais Sortidos — only shown in dedicated materiais tab */}
     {defaultCategory==="materiais"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
-      {materiais.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray400}}>Nenhum material sortido ainda.</div>}
+      {materiais.length===0&&!(mirror&&(mirror.orders||[]).some(o=>o.status==="bought"||o.status==="received"))&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray400}}>Nenhum material sortido ainda.</div>}
+      {mirror&&(mirror.orders||[]).some(o=>o.status==="bought"||o.status==="received")&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:B.gray400}}><span style={{width:12,height:12,borderRadius:3,background:`${MIRROR_TINT}55`,border:`1px solid ${MIRROR_TINT}`,flexShrink:0}}/>Fundo azul-petróleo = pedido de veículo (espelho do card de Pedidos de Veículos)</div>}
       {renderCat(materiais,B.amber,true,true)}
     </div>}
 
@@ -8599,35 +8612,15 @@ const PO_STATUS = {
   received:      { label:"Recebido ✓",           color:"#22c55e", icon:"check", next:null,            nextLabel:null                },
 };
 
-function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,onDelete,onReserve}) {
-  const [filter,setFilter]=useState("all");
-  const [search,setSearch]=useState("");
+// Cartão de pedido de veículo (usado em "Pedidos de Veículos" e espelhado em "Pedidos de Compras").
+// Mesmo componente, mesmos dados e mesmas ações nos dois lugares; "tint" só muda a cor de fundo.
+const MIRROR_TINT="#06b6d4";
+function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,adminRole,onUpdate,onDelete,onReserve}) {
   const [editId,setEditId]=useState(null);
   const [editForm,setEditForm]=useState({});
   const [receiveModal,setReceiveModal]=useState(null);
   const [returnModal,setReturnModal]=useState(null);
   const [location,setLocation]=useState("");
-  const [openReceived,setOpenReceived]=useState(false);
-
-  const byStatus=filter==="all"?orders:orders.filter(o=>o.status===filter);
-  const filtered=search.trim()
-    ?byStatus.filter(o=>{
-        const q=search.toLowerCase();
-        const v=vehicles.find(x=>x.id===o.vehicleId);
-        const emp=employees.find(x=>x.id===o.employeeId);
-        return o.partName.toLowerCase().includes(q)
-          ||(o.description||"").toLowerCase().includes(q)
-          ||(o.notesAdmin||"").toLowerCase().includes(q)
-          ||(v?.model||"").toLowerCase().includes(q)
-          ||(v?.plate||"").toLowerCase().includes(q)
-          ||(emp?.name||"").toLowerCase().includes(q);
-      })
-    :byStatus;
-  const pendingCount=orders.filter(o=>o.status==="pending").length;
-  const approvedCount=orders.filter(o=>o.status==="approved").length;
-  const readyCount=orders.filter(o=>o.status==="ready_to_buy").length;
-  const boughtCount=orders.filter(o=>o.status==="bought").length;
-
   const startEdit=(o)=>{
     setEditId(o.id);
     setEditForm({link:o.link||"",costPrice:o.costPrice!=null?String(o.costPrice):"",brand:o.notesAdmin||"",quantity:String(o.quantity||1)});
@@ -8683,82 +8676,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
     return false;
   };
 
-  return (<div style={{padding:"20px 0"}}>
-    {/* Receive decision modal */}
-    {receiveModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReceiveModal(null)}>
-      <div style={{background:B.gray800,borderRadius:18,maxWidth:380,width:"100%",border:`1px solid ${B.green}55`,padding:24}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontSize:22,textAlign:"center",marginBottom:8}}>📦</div>
-        <div style={{fontWeight:800,fontSize:16,color:B.white,textAlign:"center",marginBottom:4}}>Peça recebida!</div>
-        <div style={{fontSize:13,color:B.gray300,textAlign:"center",marginBottom:4}}><b style={{color:B.white}}>{receiveModal.partName}</b></div>
-        <div style={{fontSize:12,color:B.gray400,textAlign:"center",marginBottom:20}}>A peça está correta? O que fazer com ela?</div>
-        <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="Localização (ex: Prateleira A3) — para reserva"
-          style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <button onClick={()=>confirmReceive(false)} style={{width:"100%",padding:"12px 0",borderRadius:10,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>
-            ✅ Instalar agora — adicionar à tarefa
-          </button>
-          <button onClick={()=>confirmReceive(true)} style={{width:"100%",padding:"12px 0",borderRadius:10,background:`${B.purple}22`,border:`1px solid ${B.purple}55`,color:B.purple,fontWeight:800,fontSize:14,cursor:"pointer"}}>
-            📦 Reservar — guardar no veículo
-          </button>
-          <button onClick={()=>{setReceiveModal(null);setReturnModal(receiveModal);}} style={{width:"100%",padding:"12px 0",borderRadius:10,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,fontWeight:800,fontSize:14,cursor:"pointer"}}>
-            ↩ Devolver — item incorreto
-          </button>
-          <button onClick={()=>setReceiveModal(null)} style={{width:"100%",padding:"9px 0",borderRadius:10,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>}
-
-    {/* Return confirmation modal */}
-    {returnModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReturnModal(null)}>
-      <div style={{background:B.gray800,borderRadius:18,maxWidth:380,width:"100%",border:`1px solid ${B.red}55`,padding:24}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontSize:22,textAlign:"center",marginBottom:8}}>↩</div>
-        <div style={{fontWeight:800,fontSize:16,color:B.white,textAlign:"center",marginBottom:4}}>Confirmar devolução?</div>
-        <div style={{fontSize:13,color:B.gray300,textAlign:"center",marginBottom:4}}><b style={{color:B.white}}>{returnModal.partName}</b></div>
-        <div style={{fontSize:12,color:B.gray400,textAlign:"center",marginBottom:20}}>O pedido voltará para o início. O administrativo precisará localizar um novo fornecedor.</div>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <button onClick={()=>confirmReturn(returnModal)} style={{width:"100%",padding:"12px 0",borderRadius:10,background:B.red,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>
-            ↩ Confirmar devolução
-          </button>
-          <button onClick={()=>setReturnModal(null)} style={{width:"100%",padding:"9px 0",borderRadius:10,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>}
-    {/* Summary pills */}
-    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10,justifyContent:"center"}}>
-      {[
-        {key:"all",label:`Todos (${orders.length})`,color:B.gray400},
-        {key:"pending",label:`⏳ Pendentes (${pendingCount})`,color:"#f59e0b"},
-        {key:"approved",label:`✓ Aprovados (${approvedCount})`,color:"#3b82f6"},
-        {key:"ready_to_buy",label:`Prontos (${readyCount})`,color:"#6366f1"},
-        {key:"bought",label:`Comprados (${boughtCount})`,color:"#8b5cf6"},
-        {key:"received",label:`Recebidos`,color:"#22c55e"},
-      ].map(f=>(
-        <button key={f.key} onClick={()=>setFilter(f.key)}
-          style={{padding:"6px 14px",borderRadius:99,border:`1px solid ${filter===f.key?f.color:B.gray700}`,background:filter===f.key?`${f.color}22`:"none",color:filter===f.key?f.color:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>
-          {f.label}
-        </button>
-      ))}
-    </div>
-
-    {/* Search box */}
-    <div style={{position:"relative",marginBottom:16}}>
-      <svg style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por peça, veículo, mecânico..."
-        style={{width:"100%",padding:"9px 12px 9px 32px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-      {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:16,lineHeight:1}}>×</button>}
-    </div>
-
-    {filtered.length===0&&<div style={{textAlign:"center",padding:"48px 0",color:B.gray400}}>
-      <div style={{marginBottom:10,display:"flex",justifyContent:"center"}}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></div>
-      <div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum pedido aqui</div>
-    </div>}
-
-    {/* Active orders */}
-    {filtered.filter(o=>o.status!=="received").map(o=>{
+  const renderActive=()=>{
       const v=vehicles.find(x=>x.id===o.vehicleId);
       const emp=employees.find(x=>x.id===o.employeeId);
       const t=tasks.find(x=>x.id===o.taskId);
@@ -8768,7 +8686,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
       const salePrice=o.costPrice!=null?o.costPrice*(1+(o.markupPct||30)/100):null;
       const isEditing=editId===o.id;
 
-      return (<div key={o.id} style={{background:B.gray800,borderRadius:14,marginBottom:12,border:`1px solid ${st.color}44`,overflow:"hidden"}}>
+      return (<div key={o.id} style={{background:B.gray800,borderRadius:14,marginBottom:12,border:`1px solid ${st.color}44`,overflow:"hidden",...(tint?{backgroundImage:`linear-gradient(${tint}22,${tint}22)`,border:`1px solid ${tint}88`}:{})}}>
         {/* Header */}
         <div style={{padding:"12px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",gap:10,alignItems:"flex-start"}}>
           {o.photoUrl&&<img src={o.photoUrl} alt="" style={{width:52,height:52,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>}
@@ -8868,27 +8786,15 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
           </button>}
         </div>
       </div>);
-    })}
-
-    {/* Received orders — collapsible */}
-    {(()=>{
-      const received=filtered.filter(o=>o.status==="received");
-      if(received.length===0) return null;
-      return(<div style={{marginTop:16}}>
-        <button onClick={()=>setOpenReceived(r=>!r)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,background:B.gray800,border:`1px solid ${B.gray700}`,cursor:"pointer",color:B.gray300,fontWeight:700,fontSize:13}}>
-          <span style={{fontSize:16}}>{openReceived?"▾":"▸"}</span>
-          <span>Pedidos Recebidos</span>
-          <span style={{marginLeft:"auto",background:`${B.green}22`,color:B.green,fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:99}}>{received.length}</span>
-        </button>
-        {openReceived&&<div style={{marginTop:8}}>
-          {received.map(o=>{
+  };
+  const renderReceived=()=>{
             const v=vehicles.find(x=>x.id===o.vehicleId);
             const emp=employees.find(x=>x.id===o.employeeId);
             const t=tasks.find(x=>x.id===o.taskId);
             const st=PO_STATUS[o.status];
             const isInstalled=o.status==="received"&&tasks.filter(x=>x.vehicleId===o.vehicleId).flatMap(x=>x.materials||[]).some(m=>m.purchaseOrderId===o.id);
             const isReserved=o.status==="received"&&(v?.partsList||[]).some(p=>p.purchaseOrderId===o.id);
-            return(<div key={o.id} style={{background:`${B.green}08`,border:`1px solid ${B.green}22`,borderRadius:10,padding:"10px 12px",marginBottom:6,opacity:0.8}}>
+            return(<div key={o.id} style={{background:`${B.green}08`,border:`1px solid ${B.green}22`,borderRadius:10,padding:"10px 12px",marginBottom:6,opacity:0.8,...(tint?{background:`${tint}1f`,border:`1px solid ${tint}66`,opacity:1}:{})}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:12,fontWeight:800,color:B.green}}>✓</span>
                 <div style={{flex:1}}>
@@ -8901,7 +8807,125 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
                 {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>setReturnModal(o)} style={{background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:700}}>Devolver</button>}
               </div>
             </div>);
-          })}
+  };
+  return (<>
+    {/* Receive decision modal */}
+    {receiveModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReceiveModal(null)}>
+      <div style={{background:B.gray800,borderRadius:18,maxWidth:380,width:"100%",border:`1px solid ${B.green}55`,padding:24}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:22,textAlign:"center",marginBottom:8}}>📦</div>
+        <div style={{fontWeight:800,fontSize:16,color:B.white,textAlign:"center",marginBottom:4}}>Peça recebida!</div>
+        <div style={{fontSize:13,color:B.gray300,textAlign:"center",marginBottom:4}}><b style={{color:B.white}}>{receiveModal.partName}</b></div>
+        <div style={{fontSize:12,color:B.gray400,textAlign:"center",marginBottom:20}}>A peça está correta? O que fazer com ela?</div>
+        <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="Localização (ex: Prateleira A3) — para reserva"
+          style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <button onClick={()=>confirmReceive(false)} style={{width:"100%",padding:"12px 0",borderRadius:10,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>
+            ✅ Instalar agora — adicionar à tarefa
+          </button>
+          <button onClick={()=>confirmReceive(true)} style={{width:"100%",padding:"12px 0",borderRadius:10,background:`${B.purple}22`,border:`1px solid ${B.purple}55`,color:B.purple,fontWeight:800,fontSize:14,cursor:"pointer"}}>
+            📦 Reservar — guardar no veículo
+          </button>
+          <button onClick={()=>{setReceiveModal(null);setReturnModal(receiveModal);}} style={{width:"100%",padding:"12px 0",borderRadius:10,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,fontWeight:800,fontSize:14,cursor:"pointer"}}>
+            ↩ Devolver — item incorreto
+          </button>
+          <button onClick={()=>setReceiveModal(null)} style={{width:"100%",padding:"9px 0",borderRadius:10,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>}
+
+    {/* Return confirmation modal */}
+    {returnModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReturnModal(null)}>
+      <div style={{background:B.gray800,borderRadius:18,maxWidth:380,width:"100%",border:`1px solid ${B.red}55`,padding:24}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:22,textAlign:"center",marginBottom:8}}>↩</div>
+        <div style={{fontWeight:800,fontSize:16,color:B.white,textAlign:"center",marginBottom:4}}>Confirmar devolução?</div>
+        <div style={{fontSize:13,color:B.gray300,textAlign:"center",marginBottom:4}}><b style={{color:B.white}}>{returnModal.partName}</b></div>
+        <div style={{fontSize:12,color:B.gray400,textAlign:"center",marginBottom:20}}>O pedido voltará para o início. O administrativo precisará localizar um novo fornecedor.</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <button onClick={()=>confirmReturn(returnModal)} style={{width:"100%",padding:"12px 0",borderRadius:10,background:B.red,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>
+            ↩ Confirmar devolução
+          </button>
+          <button onClick={()=>setReturnModal(null)} style={{width:"100%",padding:"9px 0",borderRadius:10,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>}
+    {compact?renderReceived():renderActive()}
+  </>);
+}
+
+function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,onDelete,onReserve}) {
+  const [filter,setFilter]=useState("all");
+  const [search,setSearch]=useState("");
+  const [openReceived,setOpenReceived]=useState(false);
+
+  const byStatus=filter==="all"?orders:orders.filter(o=>o.status===filter);
+  const filtered=search.trim()
+    ?byStatus.filter(o=>{
+        const q=search.toLowerCase();
+        const v=vehicles.find(x=>x.id===o.vehicleId);
+        const emp=employees.find(x=>x.id===o.employeeId);
+        return o.partName.toLowerCase().includes(q)
+          ||(o.description||"").toLowerCase().includes(q)
+          ||(o.notesAdmin||"").toLowerCase().includes(q)
+          ||(v?.model||"").toLowerCase().includes(q)
+          ||(v?.plate||"").toLowerCase().includes(q)
+          ||(emp?.name||"").toLowerCase().includes(q);
+      })
+    :byStatus;
+  const pendingCount=orders.filter(o=>o.status==="pending").length;
+  const approvedCount=orders.filter(o=>o.status==="approved").length;
+  const readyCount=orders.filter(o=>o.status==="ready_to_buy").length;
+  const boughtCount=orders.filter(o=>o.status==="bought").length;
+
+  return (<div style={{padding:"20px 0"}}>
+    {/* Summary pills */}
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10,justifyContent:"center"}}>
+      {[
+        {key:"all",label:`Todos (${orders.length})`,color:B.gray400},
+        {key:"pending",label:`⏳ Pendentes (${pendingCount})`,color:"#f59e0b"},
+        {key:"approved",label:`✓ Aprovados (${approvedCount})`,color:"#3b82f6"},
+        {key:"ready_to_buy",label:`Prontos (${readyCount})`,color:"#6366f1"},
+        {key:"bought",label:`Comprados (${boughtCount})`,color:"#8b5cf6"},
+        {key:"received",label:`Recebidos`,color:"#22c55e"},
+      ].map(f=>(
+        <button key={f.key} onClick={()=>setFilter(f.key)}
+          style={{padding:"6px 14px",borderRadius:99,border:`1px solid ${filter===f.key?f.color:B.gray700}`,background:filter===f.key?`${f.color}22`:"none",color:filter===f.key?f.color:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>
+          {f.label}
+        </button>
+      ))}
+    </div>
+
+    {/* Search box */}
+    <div style={{position:"relative",marginBottom:16}}>
+      <svg style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por peça, veículo, mecânico..."
+        style={{width:"100%",padding:"9px 12px 9px 32px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+      {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:16,lineHeight:1}}>×</button>}
+    </div>
+
+    {filtered.length===0&&<div style={{textAlign:"center",padding:"48px 0",color:B.gray400}}>
+      <div style={{marginBottom:10,display:"flex",justifyContent:"center"}}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></div>
+      <div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum pedido aqui</div>
+    </div>}
+
+    {/* Active orders */}
+    {filtered.filter(o=>o.status!=="received").map(o=><PurchaseOrderCard key={o.id} o={o} vehicles={vehicles} employees={employees} tasks={tasks} adminRole={adminRole} onUpdate={onUpdate} onDelete={onDelete} onReserve={onReserve}/>)}
+
+    {/* Received orders — collapsible */}
+    {(()=>{
+      const received=filtered.filter(o=>o.status==="received");
+      if(received.length===0) return null;
+      return(<div style={{marginTop:16}}>
+        <button onClick={()=>setOpenReceived(r=>!r)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,background:B.gray800,border:`1px solid ${B.gray700}`,cursor:"pointer",color:B.gray300,fontWeight:700,fontSize:13}}>
+          <span style={{fontSize:16}}>{openReceived?"▾":"▸"}</span>
+          <span>Pedidos Recebidos</span>
+          <span style={{marginLeft:"auto",background:`${B.green}22`,color:B.green,fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:99}}>{received.length}</span>
+        </button>
+        {openReceived&&<div style={{marginTop:8}}>
+          {received.map(o=><PurchaseOrderCard key={o.id} o={o} compact vehicles={vehicles} employees={employees} tasks={tasks} adminRole={adminRole} onUpdate={onUpdate} onDelete={onDelete} onReserve={onReserve}/>)}
         </div>}
       </div>);
     })()}
@@ -10547,7 +10571,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.15.16";
+const APP_VERSION = "2026.10.16.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13691,6 +13715,36 @@ export default function App() {
 
   // ── WA
   // ── Payments (conta corrente) ──
+  // Ações dos pedidos de veículos (usadas em Pedidos de Veículos e no espelho em Pedidos de Compras)
+  const poUpdate=async(id,patch)=>{
+            try{
+              const updated=await db.updatePurchaseOrder(id,patch);
+              setPurchaseOrders(p=>p.map(o=>o.id===id?updated:o));
+              if(patch.status){
+                const o=purchaseOrders.find(x=>x.id===id);
+                const v=vehicles.find(x=>x.id===o?.vehicleId);
+                const st=PO_STATUS[patch.status]||{icon:"↩",label:"Devolvido"};
+                if(o?.employeeId) db.sendPushToEmployee(o.employeeId,`${st.icon} Pedido atualizado — ${v?.model||"Veículo"}`,`${o.partName}: ${patch.status==="pending"?"Item devolvido — pedido reiniciado":st.label}`,"/?portal=mecanico").catch(()=>{});
+              }
+            }catch(err){errToast(err);}
+          };
+  const poDelete=async id=>{
+            try{await db.deletePurchaseOrder(id);setPurchaseOrders(p=>p.filter(o=>o.id!==id));}catch(err){errToast(err);}
+          };
+  const poReserve=async(o,loc)=>{
+            // Add to vehicle's partsList (reserved parts section)
+            const v=vehicles.find(x=>x.id===o.vehicleId);
+            if(!v) return;
+            const salePrice=o.costPrice!=null?o.costPrice*(1+(o.markupPct||30)/100):0;
+            const existing=v.partsList||[];
+            // Try to find photo from linked stock item via investments/purchases
+            const stockItem=stock.find(s=>purchaseOrders.find(po=>po.id===o.id&&po.stockItemId===s.id)||s.name===o.partName);
+            const newPart={name:o.partName,brand:o.notesAdmin||"",qty:o.quantity,cost:o.costPrice||0,value:salePrice,location:loc||"",purchaseOrderId:o.id,photo:stockItem?.photo||null};
+            const newList=[...existing,newPart];
+            setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
+            try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}
+          };
+
   // Insere o pagamento; com p.parts (Performance + Finishing) cria 2 lançamentos ligados por group_id
   const insertPayment=async(p)=>{
     const parts=(Array.isArray(p.parts)?p.parts:[]).filter(x=>Number(x.amount)>0);
@@ -14710,34 +14764,7 @@ export default function App() {
       {tab==="purchases"&&allowedTabs.includes("purchases")&&<>
         <TabHeader color={B.amber} title="Pedidos de Veículos" subtitle="Pedidos dos mecânicos · Aprovação e compra pelo gestor"/>
         <PurchaseOrdersTab orders={purchaseOrders} vehicles={vehicles} employees={employees} tasks={tasks} adminRole={adminRole}
-          onUpdate={async(id,patch)=>{
-            try{
-              const updated=await db.updatePurchaseOrder(id,patch);
-              setPurchaseOrders(p=>p.map(o=>o.id===id?updated:o));
-              if(patch.status){
-                const o=purchaseOrders.find(x=>x.id===id);
-                const v=vehicles.find(x=>x.id===o?.vehicleId);
-                const st=PO_STATUS[patch.status]||{icon:"↩",label:"Devolvido"};
-                if(o?.employeeId) db.sendPushToEmployee(o.employeeId,`${st.icon} Pedido atualizado — ${v?.model||"Veículo"}`,`${o.partName}: ${patch.status==="pending"?"Item devolvido — pedido reiniciado":st.label}`,"/?portal=mecanico").catch(()=>{});
-              }
-            }catch(err){errToast(err);}
-          }}
-          onDelete={async id=>{
-            try{await db.deletePurchaseOrder(id);setPurchaseOrders(p=>p.filter(o=>o.id!==id));}catch(err){errToast(err);}
-          }}
-          onReserve={async(o,loc)=>{
-            // Add to vehicle's partsList (reserved parts section)
-            const v=vehicles.find(x=>x.id===o.vehicleId);
-            if(!v) return;
-            const salePrice=o.costPrice!=null?o.costPrice*(1+(o.markupPct||30)/100):0;
-            const existing=v.partsList||[];
-            // Try to find photo from linked stock item via investments/purchases
-            const stockItem=stock.find(s=>purchaseOrders.find(po=>po.id===o.id&&po.stockItemId===s.id)||s.name===o.partName);
-            const newPart={name:o.partName,brand:o.notesAdmin||"",qty:o.quantity,cost:o.costPrice||0,value:salePrice,location:loc||"",purchaseOrderId:o.id,photo:stockItem?.photo||null};
-            const newList=[...existing,newPart];
-            setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
-            try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}
-          }}
+          onUpdate={poUpdate} onDelete={poDelete} onReserve={poReserve}
         />
       </>}
       {tab==="investments"&&allowedTabs.includes("investments")&&<>
@@ -14772,6 +14799,7 @@ export default function App() {
       {tab==="materiais"&&<>
         <TabHeader color={B.orange} title="Pedidos de Compras" subtitle="Peças e materiais avulsos para estoque da oficina"/>
         <InvestmentsTab investments={investments.filter(i=>i.category==="materiais")} adminRole={adminRole} defaultCategory="materiais"
+          mirror={{orders:purchaseOrders,vehicles,employees,tasks,onUpdate:poUpdate,onDelete:poDelete,onReserve:poReserve}}
           onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);pushNewPurchaseItem(r);}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
             const r=await db.updateInvestment(id,patch);
@@ -15117,7 +15145,7 @@ export default function App() {
         </div>);
       };
       return <QuickMatSortidosModal/>;
-    })()}}
+    })()}
     <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} theme={theme} setActive={(s)=>{
       setNavSectionPersist(s);
       if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab(allowedTabs.includes("clients")?"clients":"finishing");

@@ -10205,7 +10205,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 </div>
               </div>}
               {activeTotal>0&&<ExecutedStrip style={{marginBottom:10}}
-                executed={executedValue(perfTasks,defaultRate,v.osDiscountPct,fuelTotal+towTotal,!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)}
+                executed={executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)}
                 total={activeTotal}
                 done={[...perfTasks,...finTasks].filter(t=>t.done).length}
                 count={perfTasks.length+finTasks.length}
@@ -10580,7 +10580,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.19.1";
+const APP_VERSION = "2026.10.19.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

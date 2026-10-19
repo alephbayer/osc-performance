@@ -10128,7 +10128,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         const fuelTotal=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)+Number(v.fuelCost||0);
         const towTotal=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
         const perfDiscount=perfLaborTotal*Number(v.osDiscountPct||0)/100;
-        const perfTotal=perfLaborTotal+perfPartsTotal+perfFreightTotal+fuelTotal+towTotal-perfDiscount;
+        const vFreightTotal=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
+        const perfTotal=perfLaborTotal+perfPartsTotal+perfFreightTotal+fuelTotal+towTotal+vFreightTotal-perfDiscount;
         const finLaborTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
         const finPartsTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
         const finFreightTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
@@ -10174,6 +10175,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {renderBreakdown(perfTasks)}
                     {fuelTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>⛽ Combustível</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(fuelTotal)}</span></div>}
+                    {vFreightTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>🚚 Frete</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(vFreightTotal)}</span></div>}
                     {towTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Reboque</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(towTotal)}</span></div>}
                     {perfDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(perfDiscount)}</span></div>}
                     <div style={{borderTop:`1px solid ${B.gray600}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
@@ -10580,7 +10582,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.19.2";
+const APP_VERSION = "2026.10.19.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

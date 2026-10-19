@@ -1064,6 +1064,23 @@ function ExecutedStrip({executed,total,done,count,boughtValue=0,outsourcedValue=
     })()}
   </div>);
 }
+// Dias úteis (seg–sex, exceto feriados nacionais) de um mês: total e decorridos até "now" (inclusive)
+function businessDaysInfo(now){
+  const y=now.getFullYear(), m=now.getMonth();
+  const easter=(()=>{const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,mm=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*mm+114)/31),da=((h+l-7*mm+114)%31)+1;return new Date(y,mo-1,da);})();
+  const off=(dt,n)=>{const x=new Date(dt);x.setDate(x.getDate()+n);return x;};
+  const hol=[[0,1],[3,21],[4,1],[8,7],[9,12],[10,2],[10,15],[10,20],[11,25]].map(([mo,d])=>new Date(y,mo,d));
+  hol.push(off(easter,-2),off(easter,-48),off(easter,-47),off(easter,60)); // Sexta Santa, Carnaval (seg/ter), Corpus Christi
+  const isHol=dt=>hol.some(h=>h.getMonth()===dt.getMonth()&&h.getDate()===dt.getDate());
+  const last=new Date(y,m+1,0).getDate();
+  let total=0, elapsed=0;
+  for(let d=1;d<=last;d++){
+    const dt=new Date(y,m,d), wd=dt.getDay();
+    if(wd===0||wd===6||isHol(dt)) continue;
+    total++; if(d<=now.getDate()) elapsed++;
+  }
+  return {total,elapsed};
+}
 // ─── Painel "A receber" (gestor): quem cobrar e quanto deve entrar ─────────────
 function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate) {
   const byClient={};
@@ -10582,7 +10599,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.19.3";
+const APP_VERSION = "2026.10.19.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14082,6 +14099,9 @@ export default function App() {
     // Owner
     const now=new Date();
     const totalRevenue=payments.filter(p=>{const d=payDate(p.paidAt||p.createdAt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,p)=>s+Number(p.amount),0);
+    const bd=businessDaysInfo(now);
+    const perBizDay=bd.elapsed>0?totalRevenue/bd.elapsed:0;
+    const projected=perBizDay*bd.total;
     const weekRevenue=payments.filter(p=>{const d=payDate(p.paidAt||p.createdAt);return(now-d)<7*24*60*60*1000;}).reduce((s,p)=>s+Number(p.amount),0);
     const monthTasks=tasks.filter(t=>{if(!t.completedAt) return false;const d=new Date(t.completedAt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
     const monthVehicles=new Set(monthTasks.map(t=>t.vehicleId)).size;
@@ -14100,6 +14120,16 @@ export default function App() {
         </div>
         <div style={{fontSize:32,fontWeight:900,color:B.white,letterSpacing:-1}}>{hideRevenue?"••••••":fmtBRL(totalRevenue)}</div>
         <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Semana: <span style={{color:B.green,fontWeight:700}}>{hideRevenue?"••••":fmtBRL(weekRevenue)}</span></div>
+        <div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${B.orange}33`,display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:10}}>
+          <div>
+            <div style={{fontSize:10,color:B.orange,fontWeight:800,textTransform:"uppercase",letterSpacing:.8}}>Média por dia útil</div>
+            <div style={{fontSize:20,fontWeight:900,color:B.white,letterSpacing:-.5}}>{hideRevenue?"••••":fmtBRL(perBizDay)}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:11,color:B.gray400}}>Dia útil <b style={{color:B.gray200}}>{bd.elapsed}</b> de <b style={{color:B.gray200}}>{bd.total}</b></div>
+            <div style={{fontSize:11,color:B.gray400}}>Projeção do mês: <b style={{color:B.green}}>{hideRevenue?"••••":fmtBRL(projected)}</b></div>
+          </div>
+        </div>
       </div>
 
       <SL2 label="Operação atual"/>

@@ -697,7 +697,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
               const executedAll=(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),true):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,true):0);
               return <ExecutedStrip style={{margin:"10px 16px",borderRadius:10}} executed={executedAll} total={totalDue}
                 done={doneTasksAll.filter(t=>t.done).length} count={doneTasksAll.length}
-                boughtValue={boughtPendingValue(doneTasksAll,defaultRate)} advance paid={totalPaid}/>;
+                boughtValue={boughtPendingValue(doneTasksAll,defaultRate)} outsourcedValue={outsourcedOpenValue(doneTasksAll,defaultRate)} advance paid={totalPaid}/>;
             })()}
             {hasActiveOS&&vPayments.length>0&&<div style={{padding:"10px 16px",borderBottom:vHistory.length>0?`1px solid ${B.gray700}`:"none"}}>
               <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos — OS atual</div>
@@ -991,6 +991,7 @@ function executedValue(divTasks, defaultRate, discountPct, extras=0, advanceOpen
   divTasks.forEach(t=>{
     const c=taskCost(t,defaultRate);
     if(t.done){ tot+=c.total; labor+=c.labor; }                                   // concluída: 100% (M.O. + peças + frete)
+    else if(advanceOpen&&t.outsourced&&!t.warranty){ tot+=c.labor; labor+=c.labor; } // terceirizado: valor integral desde a abertura (dinheiro para pagar o prestador)
     else if(advanceOpen){ const adv=c.labor*ADVANCE_PCT/100; tot+=adv; labor+=adv; } // em andamento: 50% da M.O. contratada
   });
   const pct=parseFloat(String(discountPct||0).replace(",","."))||0;
@@ -1025,7 +1026,8 @@ function vehicleExtras(v) {
     +(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
 }
 // Faixa "quanto já foi executado" (usada na página de acompanhamento e no portal do cliente)
-function ExecutedStrip({executed,total,done,count,boughtValue=0,advance=false,paid=null,style}) {
+const outsourcedOpenValue=(divTasks,rate)=>divTasks.filter(t=>t.outsourced&&!t.warranty&&!t.done).reduce((s,t)=>s+taskCost(t,rate).labor,0);
+function ExecutedStrip({executed,total,done,count,boughtValue=0,outsourcedValue=0,advance=false,paid=null,style}) {
   if(!(total>0)||!(count>0)) return null;
   const ex=Math.min(executed,total);
   const pct=Math.max(0,Math.min(100,Math.round(ex/total*100)));
@@ -1038,7 +1040,7 @@ function ExecutedStrip({executed,total,done,count,boughtValue=0,advance=false,pa
       <div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/>
     </div>
     <div style={{fontSize:11,color:B.gray400}}>{done} de {count} serviço{count!==1?"s":""} concluído{done!==1?"s":""} · {pct}% do total de {fmtBRL(total)}</div>
-    <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{advance?`${ADVANCE_PCT}% da mão de obra contratada + serviços concluídos`:"Serviços concluídos"}{boughtValue>0.005?` + peças da OS (${fmtBRL(boughtValue)})`:""}</div>
+    <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{advance?`${ADVANCE_PCT}% da mão de obra contratada + serviços concluídos`:"Serviços concluídos"}{outsourcedValue>0.005?` (terceirizados integrais: ${fmtBRL(outsourcedValue)})`:""}{boughtValue>0.005?` + peças da OS (${fmtBRL(boughtValue)})`:""}</div>
     {/* Comparativo: o que o cliente pagou x o que já foi investido */}
     {paid!=null&&(paid>0||ex>0)&&(()=>{
       const diff=paid-ex, tol=1;
@@ -10208,6 +10210,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 done={[...perfTasks,...finTasks].filter(t=>t.done).length}
                 count={perfTasks.length+finTasks.length}
                 boughtValue={boughtPendingValue([...perfTasks,...finTasks],defaultRate)}
+                outsourcedValue={outsourcedOpenValue([...perfTasks,...finTasks],defaultRate)}
                 advance={!!(v.enteredAt||v.enteredAtFinishing)} paid={activePaid}/>}
               {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                 <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
@@ -10577,7 +10580,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.16.7";
+const APP_VERSION = "2026.10.19.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

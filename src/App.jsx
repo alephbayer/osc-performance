@@ -10614,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.8";
+const APP_VERSION = "2026.10.21.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11333,6 +11333,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const [newTaskOpen,setNewTaskOpen]=useState(false);
   const [q,setQ]=useState("");
   const [onlyNoLabor,setOnlyNoLabor]=useState(false);
+  const [laneOpen,setLaneOpen]=useState({}); // override manual: chave da categoria -> aberta?
   const [openId,setOpenId]=useState(null);
   const [copied,setCopied]=useState(false);
   useEffect(()=>{
@@ -11392,8 +11393,33 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
       {isOpen&&<div style={{marginTop:8,paddingTop:6,borderTop:`1px solid ${B.gray700}`}}>{renderTask(t)}</div>}
     </div>);
   };
-  const tabBtn=(id,label)=><button onClick={()=>setView(id)} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${view===id?accent:B.gray600}`,background:view===id?`${accent}22`:"none",color:view===id?accent:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{label}</button>;
   const cats=buildCatOrder(vts);
+  const renderRow=(t)=>{
+    const c=taskCost(t,defaultRate), isOpen=openId===t.id, warn=noLabor(t);
+    const mats=t.materials||[];
+    return (<div key={t.id} style={{borderBottom:`1px solid ${B.gray800}`,background:isOpen?`${accent}08`:"none"}}>
+      <div onClick={()=>setOpenId(isOpen?null:t.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",cursor:"pointer",opacity:t.done&&!isOpen?.72:1}}>
+        {t.done
+          ?<span style={{width:18,height:18,borderRadius:99,background:B.green,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.black} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+          :<span style={{width:14,height:14,borderRadius:99,border:`2px solid ${B.gray500}`,flexShrink:0,boxSizing:"content-box"}}/>}
+        <span style={{flex:1,minWidth:0,fontSize:13,fontWeight:t.done?600:700,color:t.done?B.gray300:B.white,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
+        <span style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"flex-end",alignItems:"center"}}>
+          {t.outsourced&&<span style={{fontSize:9,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",borderRadius:4,padding:"1px 6px"}}>3º</span>}
+          {t.warranty&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:4,padding:"1px 6px"}}>Garantia</span>}
+          {warn&&<span title="Sem tempo de mão de obra lançado" style={{fontSize:9,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,borderRadius:4,padding:"1px 6px"}}>⚠ sem {isFD?"quantidade":"tempo de M.O."}</span>}
+          {matMatches(t).map((m,mi)=><span key={mi} style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,borderRadius:4,padding:"1px 6px"}}>🔩 {m.name}</span>)}
+          {!qn&&mats.length>0&&<span style={{fontSize:10,color:B.gray400}}>{mats.length} peça{mats.length!==1?"s":""}</span>}
+          {t.done&&t.completedAt&&<span style={{fontSize:10,color:B.green}}>{fmtD(t.completedAt)}</span>}
+        </span>
+        <span style={{width:54,textAlign:"right",fontSize:12,color:Number(t.hours)>0?B.gray400:B.amber,flexShrink:0}}>{Number(t.hours)>0?`${t.hours}${isFD?" un":" h"}`:"—"}</span>
+        {managerMode&&<span style={{width:96,textAlign:"right",fontSize:13,fontWeight:800,color:t.done?B.green:B.gray100,flexShrink:0}}>{fmtBRL(c.total)}</span>}
+      </div>
+      {isOpen&&<div style={{padding:"4px 14px 12px 42px"}}>{renderTask(t)}</div>}
+    </div>);
+  };
+  const catTotals=cats.map(cat=>{const ct=vts.filter(t=>(t.category||null)===cat);return {cat,ct,total:sumT(ct),done:ct.filter(t=>t.done).length,hours:ct.reduce((a,t)=>a+(Number(t.hours)||0),0)};});
+  const grand=catTotals.reduce((a,x)=>a+x.total,0)||1;
+  const tabBtn=(id,label)=><button onClick={()=>setView(id)} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${view===id?accent:B.gray600}`,background:view===id?`${accent}22`:"none",color:view===id?accent:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{label}</button>;
   return (<div style={{position:"fixed",inset:0,zIndex:9000,background:B.black,color:B.white,fontFamily:"'Inter','Segoe UI',sans-serif",overflowY:"auto"}}>
     <div style={{maxWidth:1180,margin:"0 auto",padding:"14px 16px 60px"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
@@ -11433,7 +11459,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         {qn&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{vts.length} resultado{vts.length!==1?"s":""} de {allVts.length} tarefa{allVts.length!==1?"s":""}</div>}
       </div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-        {tabBtn("board","▦ Quadro")}{tabBtn("cats","☰ Categorias")}{tabBtn("full","📋 OS completa")}
+        {tabBtn("board","▦ Quadro")}{tabBtn("lanes","☰ Categorias")}{tabBtn("cats","▥ Blocos")}{tabBtn("full","📋 OS completa")}
         {managerMode&&onAddTask&&view!=="full"&&<button onClick={()=>setNewTaskOpen(true)} style={{marginLeft:"auto",padding:"7px 14px",borderRadius:8,border:"none",background:accent,color:B.white,fontWeight:800,fontSize:12,cursor:"pointer"}}>+ Nova tarefa</button>}
       </div>
       {newTaskOpen&&<NewTaskModal isFD={isFD} defaultRate={defaultRate} onClose={()=>setNewTaskOpen(false)} onSave={(label,cat,extra)=>onAddTask(vehicle.id,label,cat,div,extra)}/>}
@@ -11446,6 +11472,44 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           <div style={{fontSize:11,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Concluídas ({done.length}){managerMode&&<span style={{float:"right",color:B.gray300}}>{fmtBRL(sumT(done))}</span>}</div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>{done.map(renderCard)}{done.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nenhuma ainda.</div>}</div>
         </div>
+      </div>}
+      {view==="lanes"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
+        {managerMode&&grand>1&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px"}}>
+          <div style={{fontSize:10,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Onde está o dinheiro</div>
+          <div style={{display:"flex",height:12,borderRadius:99,overflow:"hidden",gap:2}}>
+            {catTotals.filter(x=>x.total>0).map(x=><div key={x.cat||"__n"} title={`${x.cat||"Sem categoria"} — ${fmtBRL(x.total)}`} style={{flex:x.total,background:x.cat?(catColors[x.cat]||B.gray500):B.gray500}}/>)}
+          </div>
+          <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:8,fontSize:11,color:B.gray400}}>
+            {catTotals.filter(x=>x.total>0).map(x=><span key={x.cat||"__n"}><i style={{display:"inline-block",width:8,height:8,borderRadius:99,background:x.cat?(catColors[x.cat]||B.gray500):B.gray500,marginRight:5}}/>{x.cat||"Sem categoria"} {Math.round(x.total/grand*100)}%</span>)}
+          </div>
+        </div>}
+        {catTotals.map(({cat,ct,total,done:cd,hours:ch})=>{
+          const key=cat||"__none__", col=cat?(catColors[cat]||B.gray500):B.gray500;
+          const pending=ct.length-cd;
+          const open=laneOpen[key]!==undefined?laneOpen[key]:(pending>0||!!qn);
+          const nl=ct.filter(noLabor).length;
+          const ordered=[...ct.filter(t=>!t.done),...ct.filter(t=>t.done)];
+          return (<div key={key} style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:14,overflow:"hidden"}}>
+            <div onClick={()=>setLaneOpen(p=>({...p,[key]:!open}))} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",cursor:"pointer",background:`linear-gradient(90deg,${col}24,${col}00 60%)`,borderBottom:open?`1px solid ${B.gray700}`:"none",flexWrap:"wrap"}}>
+              <span style={{width:4,height:34,borderRadius:99,background:col,flexShrink:0}}/>
+              <div style={{flex:"1 1 160px",minWidth:0}}>
+                <div style={{fontSize:14,fontWeight:900}}>{cat||"Sem categoria"}</div>
+                <div style={{fontSize:11,color:B.gray400}}>{cd} de {ct.length} tarefa{ct.length!==1?"s":""}{ch>0?` · ${ch}${isFD?" un":" h"} lançadas`:""}{nl>0&&<span style={{color:B.amber,fontWeight:700}}> · {nl} sem tempo de M.O.</span>}</div>
+              </div>
+              <div style={{width:140,flexShrink:0}}>
+                <div style={{height:6,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${ct.length?cd/ct.length*100:0}%`,height:"100%",background:col}}/></div>
+                <div style={{fontSize:10,color:B.gray400,marginTop:3,textAlign:"right"}}>{ct.length?Math.round(cd/ct.length*100):0}%</div>
+              </div>
+              {managerMode&&<div style={{textAlign:"right",minWidth:110}}>
+                <div style={{fontSize:15,fontWeight:900}}>{fmtBRL(total)}</div>
+                <div style={{fontSize:10,color:B.gray400}}>{fmtBRL(sumT(ct.filter(t=>!t.done)))} a fazer</div>
+              </div>}
+              <span style={{color:B.gray400,fontSize:11,width:12}}>{open?"▲":"▼"}</span>
+            </div>
+            {open&&<div>{ordered.map(renderRow)}</div>}
+          </div>);
+        })}
+        {cats.length===0&&<div style={{fontSize:12,color:B.gray500}}>Nenhum serviço nesta OS.</div>}
       </div>}
       {view==="cats"&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:14,alignItems:"start"}}>
         {cats.map(cat=>{

@@ -10614,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.7";
+const APP_VERSION = "2026.10.21.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11332,6 +11332,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const [view,setView]=useState("board");
   const [newTaskOpen,setNewTaskOpen]=useState(false);
   const [q,setQ]=useState("");
+  const [onlyNoLabor,setOnlyNoLabor]=useState(false);
   const [openId,setOpenId]=useState(null);
   const [copied,setCopied]=useState(false);
   useEffect(()=>{
@@ -11345,7 +11346,10 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const qn=norm(q.trim());
   const matMatches=t=>qn?(t.materials||[]).filter(m=>norm(m.name).includes(qn)||norm(m.brand).includes(qn)):[];
-  const vts=qn?allVts.filter(t=>norm(t.label).includes(qn)||norm(t.category).includes(qn)||norm(t.description).includes(qn)||matMatches(t).length>0):allVts;
+  const noLabor=t=>!(Number(t.hours)>0);
+  const noLaborAll=allVts.filter(noLabor);
+  const vts0=qn?allVts.filter(t=>norm(t.label).includes(qn)||norm(t.category).includes(qn)||norm(t.description).includes(qn)||matMatches(t).length>0):allVts;
+  const vts=onlyNoLabor?vts0.filter(noLabor):vts0;
   const todo=vts.filter(t=>!t.done), done=vts.filter(t=>t.done).sort((a,b)=>new Date(b.completedAt||0)-new Date(a.completedAt||0));
   // Financeiro da OS (mesma regra do card: tarefas + combustível/reboque/frete − desconto sobre M.O.)
   const sumT=l=>l.reduce((a,t)=>a+taskCost(t,defaultRate).total,0);
@@ -11366,7 +11370,8 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
     const c=taskCost(t,defaultRate), isOpen=openId===t.id;
     const col=t.category?(catColors[t.category]||B.gray500):B.gray500;
     const mats=(t.materials||[]);
-    return (<div key={t.id} style={{background:t.done?`${B.green}08`:B.gray900,border:`1px solid ${isOpen?accent:t.done?B.green+"33":B.gray700}`,borderLeft:`3px solid ${col}`,borderRadius:10,padding:"9px 11px"}}>
+    const warn=noLabor(t);
+    return (<div key={t.id} style={{background:t.done?`${B.green}08`:B.gray900,border:`1px solid ${isOpen?accent:warn?B.amber+"88":t.done?B.green+"33":B.gray700}`,borderLeft:`3px solid ${col}`,borderRadius:10,padding:"9px 11px"}}>
       <div onClick={()=>setOpenId(isOpen?null:t.id)} style={{cursor:"pointer"}}>
         <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
           <span style={{fontSize:13,fontWeight:700,color:t.done?B.gray400:B.white,textDecoration:t.done?"line-through":"none",flex:1,lineHeight:1.3}}>{t.label}</span>
@@ -11377,6 +11382,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           {t.outsourced&&<span style={{fontSize:9,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",borderRadius:4,padding:"1px 6px"}}>3º</span>}
           {t.warranty&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:4,padding:"1px 6px"}}>Garantia</span>}
           {Number(t.hours)>0&&<span style={{fontSize:10,color:B.gray400}}>{t.hours}h</span>}
+          {warn&&<span title="Esta tarefa não tem tempo de mão de obra lançado" style={{fontSize:9,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,borderRadius:4,padding:"1px 6px"}}>⚠ sem {isFD?"quantidade":"tempo de M.O."}</span>}
           {mats.length>0&&<span style={{fontSize:10,color:B.gray400}}>{mats.length} peça{mats.length!==1?"s":""}</span>}
           {matMatches(t).map((m,mi)=><span key={mi} style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,borderRadius:4,padding:"1px 6px"}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}</span>)}
           {(t.updates||[]).length>0&&<span style={{fontSize:10,color:B.gray400}}>{(t.updates||[]).length} atualiz.</span>}
@@ -11417,6 +11423,10 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         </div>
         <div style={{height:6,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99}}/></div>
       </div>
+      {view!=="full"&&noLaborAll.length>0&&<div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",background:`${B.amber}12`,border:`1px solid ${B.amber}55`,borderRadius:10,padding:"9px 12px",marginBottom:10}}>
+        <span style={{fontSize:12,color:B.amber,fontWeight:700,flex:1,minWidth:200}}>⚠ {noLaborAll.length} tarefa{noLaborAll.length!==1?"s":""} sem {isFD?"quantidade":"tempo de mão de obra"} lançad{isFD?"a":"o"} ({noLaborAll.filter(t=>t.done).length} concluída{noLaborAll.filter(t=>t.done).length!==1?"s":""})</span>
+        <button onClick={()=>setOnlyNoLabor(o=>!o)} style={{padding:"5px 12px",borderRadius:7,border:`1px solid ${B.amber}`,background:onlyNoLabor?B.amber:"none",color:onlyNoLabor?B.black:B.amber,fontWeight:800,fontSize:11,cursor:"pointer"}}>{onlyNoLabor?"Mostrar todas":"Ver só essas"}</button>
+      </div>}
       {view!=="full"&&<div style={{position:"relative",marginBottom:10}}>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar tarefa ou material…" style={{width:"100%",boxSizing:"border-box",padding:"10px 36px 10px 12px",borderRadius:10,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
         {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:15}}>✕</button>}

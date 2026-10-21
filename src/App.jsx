@@ -4083,7 +4083,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>;
   return (<>
     {showPage&&createPortal(<VehicleStagesPage vehicle={vehicle} tasks={tasks} defaultRate={defaultRate} isFD={isFD} managerMode={managerMode}
-      renderTask={renderTaskEditor} onAddTask={onAddTask}
+      renderTask={renderTaskEditor} onAddTask={onAddTask} payments={payments}
       renderFull={()=><VehicleCard {...props} defaultOpen hidePageBtn openPageOnMount={false}/>}
       onClose={()=>{setShowPage(false);try{const u=new URL(window.location.href);if(u.searchParams.has("carro")){u.searchParams.delete("carro");window.history.replaceState({},"",u.toString());}}catch(e){}}}/>,document.body)}
     <div style={{background:B.gray800,borderRadius:10,border:`1px solid ${vehicle.urgent?B.red+"66":B.gray700}`,overflow:"hidden",marginBottom:10,boxShadow:vehicle.urgent?`0 0 0 1px ${B.red}44,0 2px 12px ${B.red}22`:"none"}}>
@@ -10614,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.5";
+const APP_VERSION = "2026.10.21.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11328,7 +11328,7 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
 }
 
 // ─── Página do carro: vista das etapas (quadro / categorias) + OS completa ───
-function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=true,renderTask,renderFull,onAddTask,onClose}) {
+function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=true,payments=[],renderTask,renderFull,onAddTask,onClose}) {
   const [view,setView]=useState("board");
   const [newTaskOpen,setNewTaskOpen]=useState(false);
   const [q,setQ]=useState("");
@@ -11347,6 +11347,17 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const matMatches=t=>qn?(t.materials||[]).filter(m=>norm(m.name).includes(qn)||norm(m.brand).includes(qn)):[];
   const vts=qn?allVts.filter(t=>norm(t.label).includes(qn)||norm(t.category).includes(qn)||norm(t.description).includes(qn)||matMatches(t).length>0):allVts;
   const todo=vts.filter(t=>!t.done), done=vts.filter(t=>t.done).sort((a,b)=>new Date(b.completedAt||0)-new Date(a.completedAt||0));
+  // Financeiro da OS (mesma regra do card: tarefas + combustível/reboque/frete − desconto sobre M.O.)
+  const sumT=l=>l.reduce((a,t)=>a+taskCost(t,defaultRate).total,0);
+  const tows=(vehicle.tows||[]).reduce((a,t)=>a+Number(t.value||0),0), frs=(vehicle.freights||[]).reduce((a,f)=>a+Number(f.value||0),0);
+  const fuels=isFD?0:(vehicle.fuels||[]).reduce((a,f)=>a+Number(f.value||0),0);
+  const extrasV=tows+frs+fuels;
+  const discPct=parseFloat(String((isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)||0).replace(",","."))||0;
+  const laborAll=allVts.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0);
+  const finTotal=sumT(allVts)+extrasV-laborAll*discPct/100;
+  const finInvested=Math.min(finTotal,executedValue(allVts,defaultRate,discPct,extrasV,isFD?!!vehicle.enteredAtFinishing:!!vehicle.enteredAt));
+  const finPaid=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId&&((p.division||"performance")===div)).reduce((a,p)=>a+Number(p.amount||0),0);
+  const finBalance=finTotal-finPaid;
   const pct=allVts.length?Math.round(allVts.filter(t=>t.done).length/allVts.length*100):0;
   const accent=isFD?FD.primary:B.orange;
   const catColors=isFD?CAT_MAP_FINISHING:CAT_MAP;
@@ -11389,6 +11400,17 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         <button onClick={()=>{try{navigator.clipboard.writeText(`${window.location.origin}/?carro=${vehicle.id}`);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch(e){}}}
           style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:copied?B.green:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{copied?"✓ Link copiado":"🔗 Copiar link"}</button>
       </div>
+      {managerMode&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:10}}>
+        {[["Total da OS",finTotal,B.white],["Investido",finInvested,B.green],["Pago",finPaid,B.blue],[finBalance>=0?"A receber":"Crédito",Math.abs(finBalance),finBalance>0.005?B.amber:B.green]].map(([l,v,c])=>(
+          <div key={l} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"9px 12px"}}>
+            <div style={{fontSize:10,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>{l}</div>
+            <div style={{fontSize:17,fontWeight:900,color:c,marginTop:2}}>{fmtBRL(v)}</div>
+          </div>))}
+        {extrasV>0&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"9px 12px"}}>
+          <div style={{fontSize:10,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Combust./reboque/frete</div>
+          <div style={{fontSize:17,fontWeight:900,color:B.gray200,marginTop:2}}>{fmtBRL(extrasV)}</div>
+        </div>}
+      </div>}
       <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px",marginBottom:12}}>
         <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:B.gray300,marginBottom:6}}>
           <span><b style={{color:B.green}}>{allVts.filter(t=>t.done).length}</b> concluída{allVts.filter(t=>t.done).length!==1?"s":""} · <b style={{color:B.white}}>{allVts.filter(t=>!t.done).length}</b> a fazer</span><b style={{color:B.white}}>{pct}%</b>
@@ -11407,11 +11429,11 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
       {newTaskOpen&&<NewTaskModal isFD={isFD} defaultRate={defaultRate} onClose={()=>setNewTaskOpen(false)} onSave={(label,cat,extra)=>onAddTask(vehicle.id,label,cat,div,extra)}/>}
       {view==="board"&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:14,alignItems:"start"}}>
         <div>
-          <div style={{fontSize:11,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>A fazer ({todo.length})</div>
+          <div style={{fontSize:11,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>A fazer ({todo.length}){managerMode&&<span style={{float:"right",color:B.gray300}}>{fmtBRL(sumT(todo))}</span>}</div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>{todo.map(renderCard)}{todo.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nada pendente 🎉</div>}</div>
         </div>
         <div>
-          <div style={{fontSize:11,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Concluídas ({done.length})</div>
+          <div style={{fontSize:11,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Concluídas ({done.length}){managerMode&&<span style={{float:"right",color:B.gray300}}>{fmtBRL(sumT(done))}</span>}</div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>{done.map(renderCard)}{done.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nenhuma ainda.</div>}</div>
         </div>
       </div>}
@@ -11422,7 +11444,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           return (<div key={cat||"__none__"} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderTop:`3px solid ${col}`,borderRadius:12,padding:"12px"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
               <span style={{fontSize:12,fontWeight:900,color:col,textTransform:"uppercase",letterSpacing:.5}}>{cat||"Sem categoria"}</span>
-              <span style={{fontSize:11,color:B.gray400}}>{cd}/{ct.length}</span>
+              <span style={{fontSize:11,color:B.gray400}}>{cd}/{ct.length}{managerMode&&<b style={{color:B.gray200,marginLeft:8}}>{fmtBRL(sumT(ct))}</b>}</span>
             </div>
             <div style={{height:4,borderRadius:99,background:B.gray700,overflow:"hidden",marginBottom:10}}><div style={{width:`${ct.length?cd/ct.length*100:0}%`,height:"100%",background:col}}/></div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>

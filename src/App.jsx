@@ -10614,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.4";
+const APP_VERSION = "2026.10.21.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11331,6 +11331,7 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
 function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=true,renderTask,renderFull,onAddTask,onClose}) {
   const [view,setView]=useState("board");
   const [newTaskOpen,setNewTaskOpen]=useState(false);
+  const [q,setQ]=useState("");
   const [openId,setOpenId]=useState(null);
   const [copied,setCopied]=useState(false);
   useEffect(()=>{
@@ -11340,9 +11341,13 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
     return()=>{document.body.style.overflow=prev;window.removeEventListener("keydown",onKey);};
   },[]);
   const div=isFD?"finishing":"performance";
-  const vts=tasks.filter(t=>t.vehicleId===vehicle.id&&(t.division||"performance")===div);
+  const allVts=tasks.filter(t=>t.vehicleId===vehicle.id&&(t.division||"performance")===div);
+  const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const qn=norm(q.trim());
+  const matMatches=t=>qn?(t.materials||[]).filter(m=>norm(m.name).includes(qn)||norm(m.brand).includes(qn)):[];
+  const vts=qn?allVts.filter(t=>norm(t.label).includes(qn)||norm(t.category).includes(qn)||norm(t.description).includes(qn)||matMatches(t).length>0):allVts;
   const todo=vts.filter(t=>!t.done), done=vts.filter(t=>t.done).sort((a,b)=>new Date(b.completedAt||0)-new Date(a.completedAt||0));
-  const pct=vts.length?Math.round(done.length/vts.length*100):0;
+  const pct=allVts.length?Math.round(allVts.filter(t=>t.done).length/allVts.length*100):0;
   const accent=isFD?FD.primary:B.orange;
   const catColors=isFD?CAT_MAP_FINISHING:CAT_MAP;
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR"):"";
@@ -11362,6 +11367,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           {t.warranty&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:4,padding:"1px 6px"}}>Garantia</span>}
           {Number(t.hours)>0&&<span style={{fontSize:10,color:B.gray400}}>{t.hours}h</span>}
           {mats.length>0&&<span style={{fontSize:10,color:B.gray400}}>{mats.length} peça{mats.length!==1?"s":""}</span>}
+          {matMatches(t).map((m,mi)=><span key={mi} style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,borderRadius:4,padding:"1px 6px"}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}</span>)}
           {(t.updates||[]).length>0&&<span style={{fontSize:10,color:B.gray400}}>{(t.updates||[]).length} atualiz.</span>}
           {t.done&&t.completedAt&&<span style={{fontSize:10,color:B.green,marginLeft:"auto"}}>✓ {fmtD(t.completedAt)}</span>}
         </div>
@@ -11385,10 +11391,15 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
       </div>
       <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px",marginBottom:12}}>
         <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:B.gray300,marginBottom:6}}>
-          <span><b style={{color:B.green}}>{done.length}</b> concluída{done.length!==1?"s":""} · <b style={{color:B.white}}>{todo.length}</b> a fazer</span><b style={{color:B.white}}>{pct}%</b>
+          <span><b style={{color:B.green}}>{allVts.filter(t=>t.done).length}</b> concluída{allVts.filter(t=>t.done).length!==1?"s":""} · <b style={{color:B.white}}>{allVts.filter(t=>!t.done).length}</b> a fazer</span><b style={{color:B.white}}>{pct}%</b>
         </div>
         <div style={{height:6,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99}}/></div>
       </div>
+      {view!=="full"&&<div style={{position:"relative",marginBottom:10}}>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar tarefa ou material…" style={{width:"100%",boxSizing:"border-box",padding:"10px 36px 10px 12px",borderRadius:10,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
+        {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:15}}>✕</button>}
+        {qn&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{vts.length} resultado{vts.length!==1?"s":""} de {allVts.length} tarefa{allVts.length!==1?"s":""}</div>}
+      </div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
         {tabBtn("board","▦ Quadro")}{tabBtn("cats","☰ Categorias")}{tabBtn("full","📋 OS completa")}
         {managerMode&&onAddTask&&view!=="full"&&<button onClick={()=>setNewTaskOpen(true)} style={{marginLeft:"auto",padding:"7px 14px",borderRadius:8,border:"none",background:accent,color:B.white,fontWeight:800,fontSize:12,cursor:"pointer"}}>+ Nova tarefa</button>}

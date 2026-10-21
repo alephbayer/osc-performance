@@ -4083,7 +4083,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>;
   return (<>
     {showPage&&createPortal(<VehicleStagesPage vehicle={vehicle} tasks={tasks} defaultRate={defaultRate} isFD={isFD} managerMode={managerMode}
-      renderTask={renderTaskEditor}
+      renderTask={renderTaskEditor} onAddTask={onAddTask}
       renderFull={()=><VehicleCard {...props} defaultOpen hidePageBtn openPageOnMount={false}/>}
       onClose={()=>{setShowPage(false);try{const u=new URL(window.location.href);if(u.searchParams.has("carro")){u.searchParams.delete("carro");window.history.replaceState({},"",u.toString());}}catch(e){}}}/>,document.body)}
     <div style={{background:B.gray800,borderRadius:10,border:`1px solid ${vehicle.urgent?B.red+"66":B.gray700}`,overflow:"hidden",marginBottom:10,boxShadow:vehicle.urgent?`0 0 0 1px ${B.red}44,0 2px 12px ${B.red}22`:"none"}}>
@@ -10614,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.2";
+const APP_VERSION = "2026.10.21.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11249,9 +11249,80 @@ function InstalledPOs({orders}) {
   </div>);
 }
 
+// Janela "Nova tarefa" da página do carro: nome, categoria, horas/preço, terceirizado e materiais
+function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
+  const cats=isFD?CATEGORIES_FINISHING:CATEGORIES;
+  const [label,setLabel]=useState("");
+  const [category,setCategory]=useState("");
+  const [hours,setHours]=useState("");
+  const [rate,setRate]=useState("");
+  const [outsourced,setOutsourced]=useState(false);
+  const [mats,setMats]=useState([]);
+  const [saving,setSaving]=useState(false);
+  const num=v=>parseFloat(String(v||"").replace(",","."))||0;
+  const effRate=rate!==""?num(rate):Number(defaultRate||0);
+  const labor=num(hours)*effRate;
+  const matTotal=mats.reduce((s,m)=>s+num(m.cost)*(1+(m.markup===""?50:num(m.markup))/100)*(num(m.qty)||1),0);
+  const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",width:"100%"};
+  const lab={fontSize:10,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:.5,marginBottom:4};
+  const setM=(i,patch)=>setMats(p=>p.map((m,j)=>j===i?{...m,...patch}:m));
+  const save=async()=>{
+    if(!label.trim()||saving) return;
+    setSaving(true);
+    const extra={
+      hours:num(hours)||(isFD?1:0),
+      ratePerHour:rate!==""?num(rate):null,
+      outsourced,
+      materials:mats.filter(m=>m.name.trim()).map(m=>({name:m.name.trim(),brand:"",cost:num(m.cost),qty:num(m.qty)||1,markup:m.markup===""?50:num(m.markup),fromStock:false,stockItemId:null})),
+    };
+    await onSave(label.trim(),category||null,extra);
+    setSaving(false); onClose();
+  };
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9500,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:16,width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",padding:18,color:B.white}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:12}}>
+        <div style={{fontSize:16,fontWeight:900,flex:1}}>Nova tarefa</div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+      </div>
+      <div style={{marginBottom:10}}><div style={lab}>Tarefa *</div><input autoFocus value={label} onChange={e=>setLabel(e.target.value)} placeholder="Ex.: Trocar kit de embreagem" style={inp}/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+        <div><div style={lab}>Categoria</div>
+          <select value={category} onChange={e=>setCategory(e.target.value)} style={inp}><option value="">Sem categoria</option>{cats.map(c=><option key={c.id} value={c.id}>{c.id}</option>)}</select></div>
+        <div><div style={lab}>{isFD?"Quantidade":"Horas"}</div><input type="number" inputMode="decimal" value={hours} onChange={e=>setHours(e.target.value)} placeholder={isFD?"1":"0"} style={inp}/></div>
+        <div><div style={lab}>{isFD?"R$ por unidade":"R$ por hora"}</div><input type="number" inputMode="decimal" value={rate} onChange={e=>setRate(e.target.value)} placeholder={defaultRate?`padrão ${defaultRate}`:"padrão"} style={inp}/></div>
+        <div style={{display:"flex",alignItems:"flex-end"}}>
+          <button onClick={()=>setOutsourced(o=>!o)} style={{width:"100%",padding:"9px 10px",borderRadius:8,border:`1px solid ${outsourced?"#a78bfa":B.gray600}`,background:outsourced?"#a78bfa22":"none",color:outsourced?"#c4b5fd":B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{outsourced?"✓ Terceirizado":"Terceirizar"}</button>
+        </div>
+      </div>
+      <div style={{marginBottom:6,display:"flex",alignItems:"center"}}>
+        <div style={{...lab,marginBottom:0,flex:1}}>Materiais</div>
+        <button onClick={()=>setMats(p=>[...p,{name:"",qty:"1",cost:"",markup:""}])} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${B.blue}55`,background:`${B.blue}14`,color:B.blue,fontWeight:700,fontSize:11,cursor:"pointer"}}>+ Material</button>
+      </div>
+      {mats.map((m,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr 54px 80px 60px 26px",gap:6,marginBottom:6,alignItems:"center"}}>
+        <input value={m.name} onChange={e=>setM(i,{name:e.target.value})} placeholder="Peça/material" style={inp}/>
+        <input type="number" value={m.qty} onChange={e=>setM(i,{qty:e.target.value})} placeholder="Qtd" style={{...inp,padding:"8px 6px"}}/>
+        <input type="number" value={m.cost} onChange={e=>setM(i,{cost:e.target.value})} placeholder="Custo R$" style={{...inp,padding:"8px 6px"}}/>
+        <input type="number" value={m.markup} onChange={e=>setM(i,{markup:e.target.value})} placeholder="50%" title="Margem %" style={{...inp,padding:"8px 6px"}}/>
+        <button onClick={()=>setMats(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}>✕</button>
+      </div>))}
+      {mats.length>0&&<div style={{fontSize:10,color:B.gray500,marginBottom:6}}>Custo unitário · margem em % (padrão 50)</div>}
+      <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"9px 12px",margin:"10px 0",fontSize:12,color:B.gray300}}>
+        <div style={{display:"flex",justifyContent:"space-between"}}><span>Mão de obra</span><b>{fmtBRL(labor)}</b></div>
+        <div style={{display:"flex",justifyContent:"space-between"}}><span>Materiais (venda)</span><b>{fmtBRL(matTotal)}</b></div>
+        <div style={{display:"flex",justifyContent:"space-between",borderTop:`1px solid ${B.gray700}`,marginTop:5,paddingTop:5,color:B.white}}><span>Total</span><b>{fmtBRL(labor+matTotal)}</b></div>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={onClose} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${B.gray600}`,background:"none",color:B.gray300,fontWeight:700,cursor:"pointer"}}>Cancelar</button>
+        <button onClick={save} disabled={!label.trim()||saving} style={{flex:2,padding:"10px",borderRadius:9,border:"none",background:label.trim()?B.orange:B.gray700,color:B.white,fontWeight:800,cursor:label.trim()?"pointer":"not-allowed"}}>{saving?"Salvando…":"Adicionar tarefa"}</button>
+      </div>
+    </div>
+  </div>,document.body);
+}
+
 // ─── Página do carro: vista das etapas (quadro / categorias) + OS completa ───
-function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=true,renderTask,renderFull,onClose}) {
+function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=true,renderTask,renderFull,onAddTask,onClose}) {
   const [view,setView]=useState("board");
+  const [newTaskOpen,setNewTaskOpen]=useState(false);
   const [openId,setOpenId]=useState(null);
   const [copied,setCopied]=useState(false);
   useEffect(()=>{
@@ -11312,7 +11383,9 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
         {tabBtn("board","▦ Quadro")}{tabBtn("cats","☰ Categorias")}{tabBtn("full","📋 OS completa")}
+        {managerMode&&onAddTask&&view!=="full"&&<button onClick={()=>setNewTaskOpen(true)} style={{marginLeft:"auto",padding:"7px 14px",borderRadius:8,border:"none",background:accent,color:B.white,fontWeight:800,fontSize:12,cursor:"pointer"}}>+ Nova tarefa</button>}
       </div>
+      {newTaskOpen&&<NewTaskModal isFD={isFD} defaultRate={defaultRate} onClose={()=>setNewTaskOpen(false)} onSave={(label,cat,extra)=>onAddTask(vehicle.id,label,cat,div,extra)}/>}
       {view==="board"&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:14,alignItems:"start"}}>
         <div>
           <div style={{fontSize:11,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>A fazer ({todo.length})</div>
@@ -13535,9 +13608,9 @@ export default function App() {
   };
 
   // ── Tasks
-  const addTask=async(vid,lbl,category=null,division="performance")=>{
+  const addTask=async(vid,lbl,category=null,division="performance",extra=null)=>{
     try{
-      const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:division==="finishing"?1:0,ratePerHour:null,completedAt:null,category:category||null,division,rateType:division==="finishing"?"qty":"hour"});
+      const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:division==="finishing"?1:0,ratePerHour:null,completedAt:null,category:category||null,division,rateType:division==="finishing"?"qty":"hour",...(extra||{})});
       setTsk(p=>[...p,row]);
       // Push notification to assigned mechanics
       const v=vehicles.find(x=>x.id===vid);

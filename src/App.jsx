@@ -3999,7 +3999,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
   </div>);
 }
 
-function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}) {
+function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageOnMount=false,vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}=props;
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
   useEffect(()=>{
@@ -4010,7 +4010,8 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
       if(pending.length>0) setShowClientNotes(true); // auto-open if there are notes
     }).catch(()=>{});
   },[vehicle.id]);
-  const [open,setOpen] = useState(false);
+  const [open,setOpen] = useState(!!defaultOpen);
+  const [showPage,setShowPage] = useState(!!openPageOnMount);
   const [newT,setNewT] = useState("");
   const [aiL, setAiL] = useState(false);
   const [aiS, setAiS] = useState([]);
@@ -4077,7 +4078,14 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
     setPdfLoading(false);
   };
 
+  const renderTaskEditor=(t)=>managerMode
+    ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
+    :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>;
   return (<>
+    {showPage&&createPortal(<VehicleStagesPage vehicle={vehicle} tasks={tasks} defaultRate={defaultRate} isFD={isFD} managerMode={managerMode}
+      renderTask={renderTaskEditor}
+      renderFull={()=><VehicleCard {...props} defaultOpen hidePageBtn openPageOnMount={false}/>}
+      onClose={()=>{setShowPage(false);try{const u=new URL(window.location.href);if(u.searchParams.has("carro")){u.searchParams.delete("carro");window.history.replaceState({},"",u.toString());}}catch(e){}}}/>,document.body)}
     <div style={{background:B.gray800,borderRadius:10,border:`1px solid ${vehicle.urgent?B.red+"66":B.gray700}`,overflow:"hidden",marginBottom:10,boxShadow:vehicle.urgent?`0 0 0 1px ${B.red}44,0 2px 12px ${B.red}22`:"none"}}>
       {/* header */}
       <div style={{display:"flex",alignItems:"center",gap:10,background:B.gray700,padding:"10px 14px",cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
@@ -4303,6 +4311,10 @@ function VehicleCard({vehicle,tasks,employees,clients,stock,defaultRate,managerM
 
       {/* body */}
       {open&&<div style={{padding:"12px 14px"}}>
+        {!hidePageBtn&&managerMode&&<button onClick={()=>{setShowPage(true);try{const u=new URL(window.location.href);u.searchParams.set("carro",vehicle.id);window.history.replaceState({},"",u.toString());}catch(e){}}}
+          style={{width:"100%",marginBottom:10,padding:"9px 12px",borderRadius:9,background:`${B.blue}14`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:800,fontSize:12,cursor:"pointer"}}>
+          ⤢ Abrir página do carro — vista das etapas
+        </button>}
         {/* Paused banner */}
         {vehicle.status==="paused"&&<div style={{marginBottom:10,padding:"8px 12px",background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:8,display:"flex",alignItems:"center",gap:8}}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
@@ -5476,7 +5488,8 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
   purchaseOrders=[],onAddPurchaseOrder,onOpenOS=null,onCreateAppointment=null,onPostTimeline=null}) {
   const [collapsed,setCollapsed]=useState(()=>{
     const init={};
-    groups.forEach(({emp})=>{ init[emp?.id||"__none__"]=true; });
+    const carro=new URLSearchParams(window.location.search).get("carro");
+    groups.forEach(({emp,vehicles:gv})=>{ init[emp?.id||"__none__"]=!(carro&&(gv||[]).some(v=>v.id===carro)); });
     return init;
   });
   const [collapsedDone,setCollapsedDone]=useState({});
@@ -5485,6 +5498,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
   return (<div style={{display:"flex",flexDirection:"column",gap:16}}>
     {groups.map(({emp,vehicles:gVs})=>{
       const key=emp?.id||"__none__";
+      const carroParam0=new URLSearchParams(window.location.search).get("carro");
       const sorted=sortVehicles(gVs);
       const isVDone=(v)=>v.status==="ready"||v.status==="delivered"||(()=>{
         const vt=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")===(division||"performance"));
@@ -5493,10 +5507,11 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
       const activeVs=sorted.filter(v=>!isVDone(v));
       const doneVs=sorted.filter(v=>isVDone(v));
       const isCollapsed = searching ? false : !!collapsed[key];
-      const isDoneOpen = !!collapsedDone[key];
+      const isDoneOpen = !!collapsedDone[key]||(!!carroParam0&&doneVs.some(v=>v.id===carroParam0));
       const doneTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)&&t.done).length;
       const totalTasks=tasks.filter(t=>gVs.find(v=>v.id===t.vehicleId)).length;
-      const mkVC=(v)=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
+      const carroParam=new URLSearchParams(window.location.search).get("carro");
+      const mkVC=(v)=><VehicleCard key={v.id} openPageOnMount={carroParam===v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
         onAddTask={addTask} onToggleTask={toggleT} onDeleteTask={delTask} onUpdateTask={updTask} onUpdateVehicle={updVeh} onDeleteVehicle={delVeh}
         onTransferMechanic={xferMech} onTransferOwner={xferOwn} onConsumeStock={consumeStock} onReturnStock={returnStock}
         payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} company={company}
@@ -10599,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.19.4";
+const APP_VERSION = "2026.10.21.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11231,6 +11246,102 @@ function InstalledPOs({orders}) {
         {(po.consumedAt||po.receivedAt)&&<div style={{fontSize:10,color:B.gray500,marginTop:2}}>{po.consumedAt?"Utilizada em ":"Recebida em "}{new Date(po.consumedAt||po.receivedAt).toLocaleDateString("pt-BR")}</div>}
       </div>))}
     </div>}
+  </div>);
+}
+
+// ─── Página do carro: vista das etapas (quadro / categorias) + OS completa ───
+function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=true,renderTask,renderFull,onClose}) {
+  const [view,setView]=useState("board");
+  const [openId,setOpenId]=useState(null);
+  const [copied,setCopied]=useState(false);
+  useEffect(()=>{
+    const prev=document.body.style.overflow; document.body.style.overflow="hidden";
+    const onKey=e=>{if(e.key==="Escape")onClose();};
+    window.addEventListener("keydown",onKey);
+    return()=>{document.body.style.overflow=prev;window.removeEventListener("keydown",onKey);};
+  },[]);
+  const div=isFD?"finishing":"performance";
+  const vts=tasks.filter(t=>t.vehicleId===vehicle.id&&(t.division||"performance")===div);
+  const todo=vts.filter(t=>!t.done), done=vts.filter(t=>t.done).sort((a,b)=>new Date(b.completedAt||0)-new Date(a.completedAt||0));
+  const pct=vts.length?Math.round(done.length/vts.length*100):0;
+  const accent=isFD?FD.primary:B.orange;
+  const catColors=isFD?CAT_MAP_FINISHING:CAT_MAP;
+  const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR"):"";
+  const renderCard=(t)=>{
+    const c=taskCost(t,defaultRate), isOpen=openId===t.id;
+    const col=t.category?(catColors[t.category]||B.gray500):B.gray500;
+    const mats=(t.materials||[]);
+    return (<div key={t.id} style={{background:t.done?`${B.green}08`:B.gray900,border:`1px solid ${isOpen?accent:t.done?B.green+"33":B.gray700}`,borderLeft:`3px solid ${col}`,borderRadius:10,padding:"9px 11px"}}>
+      <div onClick={()=>setOpenId(isOpen?null:t.id)} style={{cursor:"pointer"}}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+          <span style={{fontSize:13,fontWeight:700,color:t.done?B.gray400:B.white,textDecoration:t.done?"line-through":"none",flex:1,lineHeight:1.3}}>{t.label}</span>
+          {managerMode&&c.total>0&&<span style={{fontSize:12,fontWeight:800,color:t.done?B.green:B.gray200,flexShrink:0}}>{fmtBRL(c.total)}</span>}
+        </div>
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:5,alignItems:"center"}}>
+          {t.category&&<span style={{fontSize:9,fontWeight:800,color:col,background:`${col}18`,borderRadius:4,padding:"1px 6px",textTransform:"uppercase"}}>{t.category}</span>}
+          {t.outsourced&&<span style={{fontSize:9,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",borderRadius:4,padding:"1px 6px"}}>3º</span>}
+          {t.warranty&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:4,padding:"1px 6px"}}>Garantia</span>}
+          {Number(t.hours)>0&&<span style={{fontSize:10,color:B.gray400}}>{t.hours}h</span>}
+          {mats.length>0&&<span style={{fontSize:10,color:B.gray400}}>{mats.length} peça{mats.length!==1?"s":""}</span>}
+          {(t.updates||[]).length>0&&<span style={{fontSize:10,color:B.gray400}}>{(t.updates||[]).length} atualiz.</span>}
+          {t.done&&t.completedAt&&<span style={{fontSize:10,color:B.green,marginLeft:"auto"}}>✓ {fmtD(t.completedAt)}</span>}
+        </div>
+      </div>
+      {isOpen&&<div style={{marginTop:8,paddingTop:6,borderTop:`1px solid ${B.gray700}`}}>{renderTask(t)}</div>}
+    </div>);
+  };
+  const tabBtn=(id,label)=><button onClick={()=>setView(id)} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${view===id?accent:B.gray600}`,background:view===id?`${accent}22`:"none",color:view===id?accent:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{label}</button>;
+  const cats=buildCatOrder(vts);
+  return (<div style={{position:"fixed",inset:0,zIndex:9000,background:B.black,overflowY:"auto"}}>
+    <div style={{maxWidth:1180,margin:"0 auto",padding:"14px 16px 60px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
+        <button onClick={onClose} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:B.gray200,fontWeight:700,fontSize:12,cursor:"pointer"}}>← Voltar</button>
+        {vehicle.photo&&<img src={vehicle.photo} alt="" style={{width:42,height:42,borderRadius:8,objectFit:"cover"}}/>}
+        <div style={{flex:1,minWidth:160}}>
+          <div style={{fontSize:18,fontWeight:900,color:B.white,lineHeight:1.15}}>{vehicle.model}</div>
+          <div style={{fontSize:12,color:B.gray400}}><span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>{(isFD?vehicle.osNumberFinishing:vehicle.osNumber)?` · ${isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber)}`:""}</div>
+        </div>
+        <button onClick={()=>{try{navigator.clipboard.writeText(`${window.location.origin}/?carro=${vehicle.id}`);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch(e){}}}
+          style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:copied?B.green:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{copied?"✓ Link copiado":"🔗 Copiar link"}</button>
+      </div>
+      <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:B.gray300,marginBottom:6}}>
+          <span><b style={{color:B.green}}>{done.length}</b> concluída{done.length!==1?"s":""} · <b style={{color:B.white}}>{todo.length}</b> a fazer</span><b style={{color:B.white}}>{pct}%</b>
+        </div>
+        <div style={{height:6,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99}}/></div>
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
+        {tabBtn("board","▦ Quadro")}{tabBtn("cats","☰ Categorias")}{tabBtn("full","📋 OS completa")}
+      </div>
+      {view==="board"&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:14,alignItems:"start"}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>A fazer ({todo.length})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>{todo.map(renderCard)}{todo.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nada pendente 🎉</div>}</div>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Concluídas ({done.length})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>{done.map(renderCard)}{done.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nenhuma ainda.</div>}</div>
+        </div>
+      </div>}
+      {view==="cats"&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:14,alignItems:"start"}}>
+        {cats.map(cat=>{
+          const ct=vts.filter(t=>(t.category||null)===cat), cd=ct.filter(t=>t.done).length;
+          const col=cat?(catColors[cat]||B.gray500):B.gray500;
+          return (<div key={cat||"__none__"} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderTop:`3px solid ${col}`,borderRadius:12,padding:"12px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
+              <span style={{fontSize:12,fontWeight:900,color:col,textTransform:"uppercase",letterSpacing:.5}}>{cat||"Sem categoria"}</span>
+              <span style={{fontSize:11,color:B.gray400}}>{cd}/{ct.length}</span>
+            </div>
+            <div style={{height:4,borderRadius:99,background:B.gray700,overflow:"hidden",marginBottom:10}}><div style={{width:`${ct.length?cd/ct.length*100:0}%`,height:"100%",background:col}}/></div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {[...ct.filter(t=>!t.done),...ct.filter(t=>t.done)].map(renderCard)}
+            </div>
+          </div>);
+        })}
+        {cats.length===0&&<div style={{fontSize:12,color:B.gray500}}>Nenhum serviço nesta OS.</div>}
+      </div>}
+      {view==="full"&&<div style={{maxWidth:900,margin:"0 auto"}}>{renderFull()}</div>}
+    </div>
   </div>);
 }
 
@@ -12791,6 +12902,7 @@ export default function App() {
   const [tab,setTab]=useState(()=>{ try{return sessionStorage.getItem("osc_tab")||"clients";}catch{return "clients";} });
   const [navSection,setNavSection]=useState(()=>{ try{return sessionStorage.getItem("osc_nav")||"home";}catch{return "home";} });
   const setNavSectionPersist=(v)=>{ try{sessionStorage.setItem("osc_nav",v);}catch{} setNavSection(v); };
+  useEffect(()=>{ if(new URLSearchParams(window.location.search).get("carro")){ setNavSectionPersist("oficina"); setTab("clients"); } },[]);
   const setTabPersist=(v)=>{ try{sessionStorage.setItem("osc_tab",v);}catch{} setTab(v); };
   const [scrollY,setScrollY]=useState(0);
   const [showQuickSheet,setShowQuickSheet]=useState(false);

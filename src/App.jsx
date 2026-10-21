@@ -10614,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.1";
+const APP_VERSION = "2026.10.21.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11292,7 +11292,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   };
   const tabBtn=(id,label)=><button onClick={()=>setView(id)} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${view===id?accent:B.gray600}`,background:view===id?`${accent}22`:"none",color:view===id?accent:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{label}</button>;
   const cats=buildCatOrder(vts);
-  return (<div style={{position:"fixed",inset:0,zIndex:9000,background:B.black,overflowY:"auto"}}>
+  return (<div style={{position:"fixed",inset:0,zIndex:9000,background:B.black,color:B.white,fontFamily:"'Inter','Segoe UI',sans-serif",overflowY:"auto"}}>
     <div style={{maxWidth:1180,margin:"0 auto",padding:"14px 16px 60px"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
         <button onClick={onClose} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:B.gray200,fontWeight:700,fontSize:12,cursor:"pointer"}}>← Voltar</button>

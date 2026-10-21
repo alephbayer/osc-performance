@@ -10614,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.9";
+const APP_VERSION = "2026.10.21.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12025,6 +12025,8 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
   const client=selectedVehicle?clients.find(c=>c.id===selectedVehicle.clientId):null;
 
   const selBal=selectedVehicle?divisionBalances(selectedVehicle,tasks,payments,defaultRate):null;
+  const perfBalO=selBal?selBal.perfTotal-selBal.perfPaid:0, finBalO=selBal?selBal.finTotal-selBal.finPaid:0;
+  const openOwed=!selBal?0:payDiv==="finishing"?finBalO:payDiv==="performance"?perfBalO:perfBalO+finBalO;
   const splitRes=(target==="open"&&payDiv==="split"&&selBal?.hasBoth)?resolveSplit(amountNum,perfStr,selBal.perfTotal-selBal.perfPaid,selBal.finTotal-selBal.finPaid):null;
   const ready=(target==="closed"?!!selHist&&!!amountNum:!!selectedId&&!!amountNum)&&(!splitRes||splitRes.valid);
   const save=async()=>{
@@ -12109,6 +12111,9 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
                   <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
                   <div style={{fontSize:11,color:B.gray400}}>{v.plate}{cli?` · ${cli.name}`:""}</div>
                 </div>
+                {(()=>{const b=divisionBalances(v,tasks,payments,defaultRate);const ow=(b.perfTotal-b.perfPaid)+(b.finTotal-b.finPaid);
+                  return ow>=0.01?<div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:12,fontWeight:800,color:B.amber}}>{fmtBRL(ow)}</div><div style={{fontSize:9,color:B.gray500}}>saldo</div></div>
+                    :b.perfTotal+b.finTotal>0?<span style={{fontSize:10,fontWeight:800,color:B.green,flexShrink:0}}>quitado</span>:null;})()}
                 {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}>✓</span>}
               </button>);
             })}
@@ -12127,6 +12132,14 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
             ))}
           </div>
           {splitRes&&<SplitBox total={amountNum} perfStr={perfStr} setPerfStr={setPerfStr} perfBal={selBal.perfTotal-selBal.perfPaid} finBal={selBal.finTotal-selBal.finPaid}/>}
+        </div>}
+        {target==="open"&&selBal&&(selBal.perfTotal+selBal.finTotal>0)&&<div style={{background:B.gray900,border:`1px solid ${openOwed>=0.01?B.amber+"55":B.green+"55"}`,borderRadius:10,padding:"10px 12px"}}>
+          <div style={{fontSize:10,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Situação da OS aberta</div>
+          {[["Performance",selBal.perfTotal,selBal.perfPaid,B.orange],...(selBal.finTotal>0||selBal.hasBoth?[["Finishing",selBal.finTotal,selBal.finPaid,FD.primary]]:[])].map(([l,t,pd,c])=>(
+            <div key={l} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12,padding:"2px 0"}}>
+              <span style={{color:c,fontWeight:700}}>{l}</span>
+              <span style={{color:B.gray400}}>total {fmtBRL(t)} · pago {fmtBRL(pd)} · <b style={{color:t-pd>=0.01?B.amber:B.green}}>{t-pd>=0.01?`saldo ${fmtBRL(t-pd)}`:t-pd<=-0.01?`crédito ${fmtBRL(pd-t)}`:"quitado"}</b></span>
+            </div>))}
         </div>}
 
         {/* Method */}
@@ -12148,6 +12161,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
             <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Valor R$</label>
             <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0,00" type="number"
               style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${amountNum>0?B.green:B.gray600}`,background:B.gray900,color:B.white,fontSize:18,fontWeight:700,outline:"none",boxSizing:"border-box"}}/>
+            {target==="open"&&openOwed>=0.01&&<button onClick={()=>setAmount(String(Math.round(openOwed*100)/100))} style={{marginTop:6,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:800}}>Quitar saldo · {fmtBRL(openOwed)}</button>}
             {target==="closed"&&selOwed>=0.01&&<button onClick={()=>setAmount(String(selOwed))} style={{marginTop:6,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:800}}>Quitar saldo · {fmtBRL(selOwed)}</button>}
           </div>
           <div style={{flex:1}}>

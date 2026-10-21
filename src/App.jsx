@@ -10614,7 +10614,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.3";
+const APP_VERSION = "2026.10.21.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11257,6 +11257,8 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
   const [hours,setHours]=useState("");
   const [rate,setRate]=useState("");
   const [outsourced,setOutsourced]=useState(false);
+  const [isDone,setIsDone]=useState(false);
+  const [doneDate,setDoneDate]=useState(()=>todayLocal());
   const [mats,setMats]=useState([]);
   const [saving,setSaving]=useState(false);
   const num=v=>parseFloat(String(v||"").replace(",","."))||0;
@@ -11273,6 +11275,7 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
       hours:num(hours)||(isFD?1:0),
       ratePerHour:rate!==""?num(rate):null,
       outsourced,
+      ...(isDone?{done:true,completedAt:new Date((doneDate||todayLocal())+"T12:00:00").toISOString()}:{}),
       materials:mats.filter(m=>m.name.trim()).map(m=>({name:m.name.trim(),brand:"",cost:num(m.cost),qty:num(m.qty)||1,markup:m.markup===""?50:num(m.markup),fromStock:false,stockItemId:null})),
     };
     await onSave(label.trim(),category||null,extra);
@@ -11293,6 +11296,11 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
         <div style={{display:"flex",alignItems:"flex-end"}}>
           <button onClick={()=>setOutsourced(o=>!o)} style={{width:"100%",padding:"9px 10px",borderRadius:8,border:`1px solid ${outsourced?"#a78bfa":B.gray600}`,background:outsourced?"#a78bfa22":"none",color:outsourced?"#c4b5fd":B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{outsourced?"✓ Terceirizado":"Terceirizar"}</button>
         </div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px 10px",borderRadius:9,border:`1px solid ${isDone?B.green+"66":B.gray700}`,background:isDone?`${B.green}10`:"none"}}>
+        <button onClick={()=>setIsDone(d=>!d)} style={{width:20,height:20,borderRadius:5,border:`2px solid ${isDone?B.green:B.gray500}`,background:isDone?B.green:"none",color:B.white,cursor:"pointer",padding:0,fontSize:12,lineHeight:1,flexShrink:0}}>{isDone?"✓":""}</button>
+        <span onClick={()=>setIsDone(d=>!d)} style={{fontSize:12,fontWeight:700,color:isDone?B.green:B.gray300,cursor:"pointer",flex:1}}>Lançar já como concluída</span>
+        {isDone&&<input type="date" value={doneDate} max={todayLocal()} onChange={e=>setDoneDate(e.target.value)} style={{...inp,width:"auto",padding:"5px 8px",fontSize:12}}/>}
       </div>
       <div style={{marginBottom:6,display:"flex",alignItems:"center"}}>
         <div style={{...lab,marginBottom:0,flex:1}}>Materiais</div>
@@ -13612,6 +13620,7 @@ export default function App() {
     try{
       const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:division==="finishing"?1:0,ratePerHour:null,completedAt:null,category:category||null,division,rateType:division==="finishing"?"qty":"hour",...(extra||{})});
       setTsk(p=>[...p,row]);
+      if(extra&&extra.done) return; // lançamento retroativo (já concluída): sem avisos nem linha do tempo
       // Push notification to assigned mechanics
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";

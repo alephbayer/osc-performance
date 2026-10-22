@@ -3337,7 +3337,7 @@ function StockPickerModal({stock,onPick,onClose}) {
 
 // ─── TaskItem — Mechanic ──────────────────────────────────────────────────────
 // ─── Material chip (one material entry in a task) ─────────────────────────────
-function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=false,editableQty=false}) {
+function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,readOnlyName=false,editableQty=false}) {
   const qty = mat.qty || 1;
   const cost = Number(mat.cost||0);
   const markup = mat.markup!=null ? Number(mat.markup) : 50;
@@ -3393,6 +3393,11 @@ function MaterialChip({mat,idx,onUpdate,onRemove,showCost=false,readOnlyName=fal
         style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
         {mat.noCharge?"✓ Grátis":"Grátis?"}
       </button>
+      {onOrder&&!mat.fromStock&&<button onClick={()=>onOrder(idx,mat)}
+        title={mat.ordered?"Já existe um pedido de compra para este material. Toque para fazer outro":"Criar pedido de compra deste material"}
+        style={{background:mat.ordered?`${B.blue}22`:`${B.amber}14`,border:`1px solid ${mat.ordered?B.blue+"66":B.amber+"55"}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.ordered?B.blue:B.amber,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        {mat.ordered?"✓ Pedido feito":"🛒 Pedir"}
+      </button>}
       {showCost&&!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,bought:!isBought})}
         title={isBought?"Peça conta como comprada (entra no investido). Toque para tirar da conta":"Peça fora da conta do investido. Toque para incluir"}
         style={{background:isBought?`${B.green}22`:"none",border:`1px solid ${isBought?B.green+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isBought?B.green:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
@@ -3579,7 +3584,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 }
 
 // ─── TaskItem — Manager ───────────────────────────────────────────────────────
-function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
+function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,onOrderPart=null,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
   const [showSP,setSP]=useState(false);
   const [showPOP,setShowPOP]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
@@ -3698,7 +3703,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       {/* ── Row 2: Materials ── */}
       <div style={{marginLeft:30,marginTop:7}}>
         <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:mats.length?6:0}}>
-          {mats.map((m,idx)=><MaterialChip key={idx} mat={m} idx={idx} onUpdate={updMat} onRemove={rmMat} showCost editableQty/>)}
+          {mats.map((m,idx)=><MaterialChip key={idx} mat={m} idx={idx} onUpdate={updMat} onRemove={rmMat} onOrder={onOrderPart?(i,mt)=>onOrderPart(task,i,mt):null} showCost editableQty/>)}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
         <div style={{display:"flex",flexDirection:"column",gap:4,flex:"1 1 160px"}}>
@@ -4012,6 +4017,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   },[vehicle.id]);
   const [open,setOpen] = useState(!!defaultOpen);
   const [showPage,setShowPage] = useState(!!openPageOnMount);
+  const [orderTarget,setOrderTarget] = useState(null);
+  const orderPart = onAddPurchaseOrder ? (task,idx,mat)=>setOrderTarget({task,idx,mat}) : null;
   const [newT,setNewT] = useState("");
   const [aiL, setAiL] = useState(false);
   const [aiS, setAiS] = useState([]);
@@ -4079,9 +4086,16 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   };
 
   const renderTaskEditor=(t)=>managerMode
-    ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
+    ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} onOrderPart={orderPart} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
     :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>;
   return (<>
+    {orderTarget&&<OrderPartModal target={orderTarget} vehicleId={vehicle.id}
+      onClose={()=>setOrderTarget(null)}
+      onSubmit={async(po)=>{
+        await onAddPurchaseOrder(po);
+        const {task,idx}=orderTarget; const cur=(tasks.find(t=>t.id===task.id)?.materials)||task.materials||[];
+        onUpdateTask(task.id,{materials:cur.map((m,i)=>i===idx?{...m,ordered:true,orderedAt:new Date().toISOString()}:m)});
+      }}/>}
     {showPage&&createPortal(<VehicleStagesPage vehicle={vehicle} tasks={tasks} defaultRate={defaultRate} isFD={isFD} managerMode={managerMode}
       renderTask={renderTaskEditor} onAddTask={onAddTask} payments={payments}
       renderFull={()=><VehicleCard {...props} defaultOpen hidePageBtn openPageOnMount={false}/>}
@@ -4407,7 +4421,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               {!isCollapsed&&<>
                 {/* Pending tasks — always shown normally */}
                 {pendingTasks.map(t=>managerMode
-                  ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
+                  ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} onOrderPart={orderPart} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
                   :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>
                 )}
                 {/* Done tasks — compact collapsible block */}
@@ -4423,7 +4437,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                       <span style={{fontSize:9,color:B.green,opacity:.6,marginLeft:4}}>{doneOpen?"▲":"▼"}</span>
                     </div>
                     {doneOpen&&doneTasks.map(t=>managerMode
-                      ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
+                      ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} onOrderPart={orderPart} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
                       :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>
                     )}
                   </div>);
@@ -10614,7 +10628,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.21.10";
+const APP_VERSION = "2026.10.22.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11247,6 +11261,49 @@ function InstalledPOs({orders}) {
       </div>))}
     </div>}
   </div>);
+}
+
+// Janela "Pedir material": cria um pedido de compra (aguardando compra) já com nome e quantidade do material da OS
+function OrderPartModal({target,vehicleId,onSubmit,onClose}) {
+  const {task,mat}=target;
+  const [name,setName]=useState(mat.name||"");
+  const [qty,setQty]=useState(String(mat.qty||1));
+  const [link,setLink]=useState("");
+  const [brand,setBrand]=useState(mat.brand||"");
+  const [obs,setObs]=useState("");
+  const [saving,setSaving]=useState(false);
+  const linkOk=/^https?:\/\/\S+/i.test(link.trim());
+  const inp={padding:"9px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",width:"100%"};
+  const lab={fontSize:10,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:.5,marginBottom:4};
+  const go=async()=>{
+    if(!name.trim()||!linkOk||saving) return;
+    setSaving(true);
+    try{
+      await onSubmit({vehicleId,taskId:task.id,partName:name.trim(),description:obs.trim()||`Material da tarefa "${task.label}"`,quantity:parseInt(qty)||1,link:link.trim(),brand:brand.trim(),costPrice:Number(mat.cost)>0?Number(mat.cost):null,status:"ready_to_buy"});
+      onClose();
+    }catch(e){ setSaving(false); }
+  };
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.amber}55`,borderRadius:16,width:"100%",maxWidth:460,maxHeight:"92vh",overflowY:"auto",padding:18,color:B.white}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:4}}>
+        <div style={{fontSize:16,fontWeight:900,flex:1}}>Pedir material</div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+      </div>
+      <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>Tarefa: {task.label}. O pedido entra em "Pedidos de veículos" como aguardando compra.</div>
+      <div style={{marginBottom:10}}><div style={lab}>Item</div><input value={name} onChange={e=>setName(e.target.value)} style={inp}/></div>
+      <div style={{display:"grid",gridTemplateColumns:"90px 1fr",gap:10,marginBottom:10}}>
+        <div><div style={lab}>Quantidade</div><input type="number" min="1" value={qty} onChange={e=>setQty(e.target.value)} style={inp}/></div>
+        <div><div style={lab}>Marca</div><input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="opcional" style={inp}/></div>
+      </div>
+      <div style={{marginBottom:10}}><div style={lab}>Link do produto *</div><input autoFocus value={link} onChange={e=>setLink(e.target.value)} placeholder="https://…" style={{...inp,borderColor:link&&!linkOk?B.red:B.gray600}}/>
+        {link&&!linkOk&&<div style={{fontSize:10,color:B.red,marginTop:3}}>Cole um link completo, começando com http</div>}</div>
+      <div style={{marginBottom:14}}><div style={lab}>Observação</div><input value={obs} onChange={e=>setObs(e.target.value)} placeholder="opcional" style={inp}/></div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={onClose} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${B.gray600}`,background:"none",color:B.gray300,fontWeight:700,cursor:"pointer"}}>Cancelar</button>
+        <button onClick={go} disabled={!name.trim()||!linkOk||saving} style={{flex:2,padding:"10px",borderRadius:9,border:"none",background:name.trim()&&linkOk?B.amber:B.gray700,color:name.trim()&&linkOk?B.black:B.gray500,fontWeight:800,cursor:name.trim()&&linkOk?"pointer":"not-allowed"}}>{saving?"Lançando…":"Lançar pedido"}</button>
+      </div>
+    </div>
+  </div>,document.body);
 }
 
 // Janela "Nova tarefa" da página do carro: nome, categoria, horas/preço, terceirizado e materiais

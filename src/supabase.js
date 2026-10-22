@@ -805,7 +805,11 @@ export const db = {
       description: p.description||"",
       photo_url: p.photoUrl||"",
       quantity: p.quantity||1,
-      status: "pending",
+      link: p.link||"",
+      notes_admin: p.brand||"",
+      cost_price: p.costPrice!=null?p.costPrice:null,
+      status: p.status||"pending",
+      ...(p.status==="ready_to_buy"?{ready_at:new Date().toISOString()}:{}),
     }).select().single();
     if (error) throw error;
     return this._mapOrder(data);

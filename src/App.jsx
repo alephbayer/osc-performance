@@ -4916,15 +4916,15 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
     setAmount(""); setNote(""); setPerfStr("");
   };
 
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:85,padding:16}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:16,maxWidth:520,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,boxShadow:"0 24px 80px rgba(0,0,0,.7)",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9500,padding:16,overscrollBehavior:"contain",touchAction:"none"}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:520,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,boxShadow:"0 24px 80px rgba(0,0,0,.7)",maxHeight:"88dvh",display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"16px 20px",background:B.gray900,borderBottom:`2px solid ${B.green}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
         <div style={{width:38,height:38,borderRadius:9,background:B.greenBg,display:"flex",alignItems:"center",justifyContent:"center"}}><IBank s={18} c={B.green}/></div>
         <div><div style={{fontWeight:700,fontSize:15,color:B.white}}>Conta Corrente — {vehicle.model}</div><div style={{fontSize:12,color:B.gray400}}>{vehicle.plate}</div></div>
         <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
       </div>
 
-      <div style={{padding:20,overflowY:"auto",flex:1}}>
+      <div style={{padding:"20px 20px 40px",overflowY:"auto",flex:1,minHeight:0,overscrollBehavior:"contain",touchAction:"pan-y",WebkitOverflowScrolling:"touch"}}>
         {/* Summary */}
         <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
           {hasBoth?<>
@@ -5025,7 +5025,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
       </div>
     </div>
   {confirmDelPay&&<ConfirmModal title="Excluir pagamento?" message="Este pagamento será removido permanentemente do histórico desta OS." confirmLabel="Excluir pagamento" onConfirm={()=>{onDeletePayment(confirmDelPay);setConfirmDelPay(null);}} onCancel={()=>setConfirmDelPay(null)}/>}
-  </div>);
+  </div>,document.body);
 }
 
 function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder}) {
@@ -10628,7 +10628,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.22.1";
+const APP_VERSION = "2026.10.26.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

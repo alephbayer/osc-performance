@@ -4075,10 +4075,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     setPdfLoading(true);
     try{
       if(isFD){
-        const finPayments=payments.filter(p=>p.division==="finishing");
+        const finPayments=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId&&p.division==="finishing");
         await generateFinishingPDF(vehicle,tasks,cli,mech,defaultRate,finPayments,company);
       } else {
-        await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate,undefined,payments.filter(p=>p.vehicleId===vehicle.id));
+        await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate,undefined,payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId));
       }
     }
     catch(err){ alert("Erro ao gerar PDF: "+err.message); }
@@ -10628,7 +10628,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.26.1";
+const APP_VERSION = "2026.10.27.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

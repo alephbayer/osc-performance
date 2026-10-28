@@ -9790,9 +9790,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
       {tab==="resumo"&&<>
       {/* ── Saudação ── */}
-      {cli&&cli.name&&<div style={{padding:"4px 4px 16px"}}>
-        <div style={{fontSize:22,fontWeight:900,color:B.white,letterSpacing:-.4,lineHeight:1.15}}>Olá, {cli.name.trim().split(/\s+/)[0]} 👋</div>
-        <div style={{fontSize:13,color:B.gray400,marginTop:4,lineHeight:1.45}}>Aqui você acompanha o andamento do seu {v.model}, com serviços, fotos e pagamentos.</div>
+      {cli&&cli.name&&<div style={{padding:"6px 4px 20px"}}>
+        <div style={{width:28,height:2,borderRadius:99,background:B.orange,marginBottom:12}}/>
+        <div style={{fontSize:17,fontWeight:600,color:B.white,letterSpacing:2.4,textTransform:"uppercase",lineHeight:1.3}}>Bem-vindo, <span style={{color:B.orange,fontWeight:800}}>{cli.name.trim().split(/\s+/)[0]}</span>!</div>
+        <div style={{fontSize:11,color:B.gray500,letterSpacing:.9,textTransform:"uppercase",marginTop:8,lineHeight:1.7}}>Acompanhe o andamento do seu {v.model}<br/>serviços · fotos · pagamentos</div>
       </div>}
       {/* ── Vehicle info ── */}
       <div style={S.card}>
@@ -10715,7 +10716,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.12";
+const APP_VERSION = "2026.10.29.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

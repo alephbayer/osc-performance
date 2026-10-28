@@ -193,7 +193,7 @@ function ClientLoginScreen({clients,onLogin}) {
     <div style={{maxWidth:380,width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
         <div style={{width:56,height:56,borderRadius:14,background:B.blue,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><ICar s={28} c={B.white}/></div>
-        <div style={{fontWeight:900,fontSize:20,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
+        <OscLogo h={30} center/>
         <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Portal do Cliente</div>
       </div>
       <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
@@ -9771,8 +9771,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* Top row: logos + name */}
       <div style={{padding:"12px 16px",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
-          <img src={getTheme()==="light"?"/osc-group-logo-light.png":"/osc-group-logo-dark.png"} alt="OSC Group" width="171" height="28" style={{display:"block",height:28,width:"auto",maxWidth:"100%"}}/>
-          <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:8}}><span style={{color:B.orange}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
+          <OscLogo h={28}/>
+          <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:8}}><span style={{color:"#DD8B34"}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
           <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
           <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Acompanhamento de serviço</div>
         </div>
@@ -10538,7 +10538,7 @@ function MechanicLoginScreen({employees,onLogin}) {
     <div style={{maxWidth:380,width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
         <div style={{width:56,height:56,borderRadius:14,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><IWrench s={28} c={B.white}/></div>
-        <div style={{fontWeight:900,fontSize:20,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
+        <OscLogo h={30} center/>
         <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Acesso do Mecânico</div>
       </div>
       <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
@@ -10716,7 +10716,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.15";
+const APP_VERSION = "2026.10.29.16";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -10875,7 +10875,7 @@ function AdminLoginScreen({onLogin}) {
     <div style={{maxWidth:380,width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
         <div style={{width:56,height:56,borderRadius:14,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><IWrench s={28} c={B.white}/></div>
-        <div style={{fontWeight:900,fontSize:20,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
+        <OscLogo h={30} center/>
         <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Acesso administrativo</div>
       </div>
       <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
@@ -10969,7 +10969,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
     <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",gap:12}}>
       <div style={{width:36,height:36,borderRadius:8,background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📋</div>
       <div>
-        <div style={{fontWeight:900,fontSize:15,color:B.white}}>OSC <span style={{color:B.orange}}>Performance</span></div>
+        <OscLogo h={20}/>
         <div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Histórico de serviços</div>
       </div>
     </div>
@@ -12334,6 +12334,11 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
 }
 
 // ─── Theme Button (floating, visible everywhere) ─────────────────────────────
+function OscLogo({h=28,center=false}) {
+  const light=getTheme()==="light";
+  return <img src={light?"/osc-group-logo-light.png":"/osc-group-logo-dark.png"} alt="OSC Group" height={h} width={Math.round(h*660/108)}
+    style={{display:"block",height:h,width:"auto",maxWidth:"100%",margin:center?"0 auto":0}}/>;
+}
 function ThemeBtn({toggleTheme, theme, themePref}) {
   const icon = themePref==="auto"
     ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
@@ -14373,7 +14378,7 @@ export default function App() {
       <div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:1.5,marginBottom:6}}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).replace(/^\w/,c=>c.toUpperCase())}</div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div>
-          <div style={{fontSize:22,fontWeight:900,color:B.white,letterSpacing:-.5,marginBottom:4}}>OSC <span style={{color:B.orange}}>Performance</span></div>
+          <div style={{marginBottom:8}}><OscLogo h={26}/></div>
           <div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:1.5}}>{ROLE_CONFIG[role]?.label}</div>
         </div>
         {onQuick&&<button onClick={onQuick} style={{width:42,height:42,borderRadius:12,background:`${B.orange}18`,border:`1px solid ${B.orange}33`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",boxShadow:`0 0 16px ${B.orange}20`,flexShrink:0}}>
@@ -14810,7 +14815,7 @@ export default function App() {
     <div className="osc-sidebar" style={{display:"none",flexDirection:"column",width:220,flexShrink:0,background:B.gray900,borderRight:`1px solid ${B.gray700}`,padding:"28px 12px",paddingTop:"calc(28px + env(safe-area-inset-top))",paddingBottom:"calc(12px + env(safe-area-inset-bottom))",gap:4,overflowY:"auto"}}>
       {/* Brand */}
       <div style={{padding:"0 8px",marginBottom:28}}>
-        <div style={{fontWeight:900,fontSize:16,color:B.white,letterSpacing:-.3}}>OSC <span style={{color:B.orange}}>Performance</span></div>
+        <OscLogo h={22}/>
         <div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:1.2,marginTop:3}}>{ROLE_CONFIG[adminRole]?.label}</div>
       </div>
       {sidebarItems.map(item=>(

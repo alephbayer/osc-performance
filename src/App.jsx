@@ -4020,6 +4020,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [xfM, setXfM] = useState(false);
   const [xfO, setXfO] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState({});
+  const [taskQ, setTaskQ] = useState("");
   const [showPhotos,setSP]=useState(false);
   const [cpLink,setCPL]=useState(false);
   const [showAccount,setSA]=useState(false);
@@ -4389,17 +4390,27 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             </div>
           </div>
         </div>}
+        {vts.length>=4&&<div style={{position:"relative",margin:"2px 0 6px"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input value={taskQ} onChange={e=>setTaskQ(e.target.value)} placeholder={`Buscar serviço nesta OS (${vts.length})`} type="search" enterKeyHint="search" autoComplete="off"
+            style={{width:"100%",boxSizing:"border-box",padding:"9px 34px 9px 32px",borderRadius:9,border:`1px solid ${taskQ?B.orange+"88":B.gray600}`,background:B.gray900,color:B.white,fontSize:16,outline:"none",fontFamily:"inherit"}}/>
+          {taskQ&&<button onClick={()=>setTaskQ("")} aria-label="Limpar busca" style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",width:30,height:30,border:"none",background:"none",color:B.gray400,fontSize:18,cursor:"pointer"}}>×</button>}
+        </div>}
         {(()=>{
           // Group tasks by category: alphabetical, uncategorized last
-          const catOrder=buildCatOrder(vts);
-          return catOrder.map(cat=>{
+          const nq=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+          const qq=nq(taskQ).trim();
+          const vtsQ=qq?vts.filter(t=>qq.split(/\s+/).every(w=>nq([t.label,t.category,t.description,...(t.materials||[]).map(m=>(m.name||"")+" "+(m.brand||""))].join(" ")).includes(w))):vts;
+          if(qq&&vtsQ.length===0) return <div style={{padding:"14px 4px",fontSize:12.5,color:B.gray400,textAlign:"center"}}>Nenhum serviço encontrado para “{taskQ.trim()}”.</div>;
+          const catOrder=buildCatOrder(vtsQ);
+          return <>{qq&&<div style={{fontSize:11,color:B.gray400,margin:"0 2px 4px"}}>{vtsQ.length} de {vts.length} serviço{vts.length!==1?"s":""}</div>}{catOrder.map(cat=>{
             const key=cat||"__none__";
-            const groupTasks=vts.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+            const groupTasks=vtsQ.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
             const catColor=cat?(isFD?CAT_MAP_FINISHING[cat]||CAT_MAP[cat]:CAT_MAP[cat]||CAT_MAP_FINISHING[cat])||B.gray500:null;
             const catTotal=managerMode?groupTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
             const allDone=groupTasks.length>0&&groupTasks.every(t=>t.done);
             // Default: collapsed if all done, open otherwise. User toggle overrides.
-            const isCollapsed=collapsedCats[key]!==undefined ? collapsedCats[key] : allDone;
+            const isCollapsed=qq?false:(collapsedCats[key]!==undefined ? collapsedCats[key] : allDone);
             const doneCount=groupTasks.filter(t=>t.done).length;
             const toggleCat=()=>setCollapsedCats(p=>({...p,[key]:!isCollapsed}));
             const pendingTasks=groupTasks.filter(t=>!t.done);
@@ -4422,7 +4433,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                 {/* Done tasks — compact collapsible block */}
                 {doneTasks.length>0&&(()=>{
                   const doneKey=key+"__done";
-                  const doneOpen=collapsedCats[doneKey]===true;
+                  const doneOpen=qq?true:collapsedCats[doneKey]===true;
                   return(<div style={{marginTop:pendingTasks.length>0?4:0}}>
                     <div onClick={()=>setCollapsedCats(p=>({...p,[doneKey]:!doneOpen}))}
                       style={{display:"flex",alignItems:"center",gap:5,padding:"3px 8px",borderRadius:6,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none",marginBottom:doneOpen?4:0}}>
@@ -4439,7 +4450,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                 })()}
               </>}
             </div>);
-          });
+          })}</>;
         })()}
         {aiS.length>0&&<div style={{marginTop:10,marginBottom:4}}>
           <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/><circle cx="12" cy="12" r="4"/></svg>Sugestões IA</div>
@@ -10709,7 +10720,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.20";
+const APP_VERSION = "2026.10.29.21";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

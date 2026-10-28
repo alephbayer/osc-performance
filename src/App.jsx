@@ -56,6 +56,7 @@ const B = {
 };
 
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
+const fmtBRLReal=n=>fmtBRL(n);
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
 const partUsedQty=(part,vehicleId,tasks)=>Number(part.usedQty||0)+(tasks||[]).filter(t=>t.vehicleId===vehicleId).flatMap(t=>t.materials||[]).filter(m=>(part.id&&m.reservedPartId===part.id)||(part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);
 const partsRemaining=(part,vehicleId,tasks)=>Math.max(0,Number(part.qty||1)-partUsedQty(part,vehicleId,tasks));
@@ -1027,7 +1028,8 @@ function vehicleExtras(v) {
 }
 // Faixa "quanto já foi executado" (usada na página de acompanhamento e no portal do cliente)
 const outsourcedOpenValue=(divTasks,rate)=>divTasks.filter(t=>t.outsourced&&!t.warranty&&!t.done).reduce((s,t)=>s+taskCost(t,rate).labor,0);
-function ExecutedStrip({executed,total,done,count,boughtValue=0,outsourcedValue=0,advance=false,paid=null,style}) {
+function ExecutedStrip({executed,total,done,count,boughtValue=0,outsourcedValue=0,advance=false,paid=null,hide=false,style}) {
+  const fmtBRL=n=>hide?"R$ ••••":fmtBRLReal(n);
   if(!(total>0)||!(count>0)) return null;
   const ex=Math.min(executed,total);
   const pct=Math.max(0,Math.min(100,Math.round(ex/total*100)));
@@ -9621,7 +9623,55 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 }
 
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
+function PayMethodsBox() {
+  return (
+              <div style={{marginTop:10,background:`#6366f115`,border:`1px solid #6366f144`,borderRadius:10,padding:"12px 14px"}}>
+                <div style={{fontSize:11,fontWeight:800,color:"#818cf8",textTransform:"uppercase",letterSpacing:.5,marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Formas de pagamento
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6,fontSize:12}}>
+                  <div style={{background:`#6366f110`,borderRadius:7,padding:"8px 10px"}}>
+                    <div style={{fontWeight:700,color:"#818cf8",marginBottom:2}}>Pix</div>
+                    <div style={{color:B.gray300,display:"flex",alignItems:"center",gap:6}}>Chave (CNPJ): <span style={{fontWeight:700,color:B.white,userSelect:"all"}}>23.783.927/0001-40</span>
+                      <button onClick={()=>navigator.clipboard.writeText("23.783.927/0001-40").then(()=>alert("Chave copiada!"))}
+                        style={{background:`#6366f122`,border:`1px solid #6366f144`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:"#818cf8",fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",gap:3}}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copiar
+                      </button>
+                    </div>
+                    <div style={{color:B.gray400,fontSize:11}}>Beneficiário: OSC Old School Customs</div>
+                  </div>
+                  <div style={{background:`${B.blue}10`,borderRadius:7,padding:"8px 10px"}}>
+                    <div style={{fontWeight:700,color:B.blue,marginBottom:2}}>TED / DOC — Itaú</div>
+                    <div style={{color:B.gray300}}>Ag: <span style={{fontWeight:700,color:B.white}}>6541</span> · CC: <span style={{fontWeight:700,color:B.white}}>98991-6</span></div>
+                    <div style={{color:B.gray400,fontSize:11}}>Beneficiário: OSC Enterprise Custom</div>
+                  </div>
+                  <div style={{color:B.gray500,fontSize:10,textAlign:"center"}}>Cartão disponível presencialmente</div>
+                </div>
+              </div>
+  );
+}
+function publicFinInfo(v,perfTasks,finTasks,payments,defaultRate){
+  const perfPaid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId&&(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
+  const finPaid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId&&p.division==="finishing").reduce((s,p)=>s+Number(p.amount),0);
+  const paid=perfPaid+finPaid;
+  const perfLabor=perfTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+  const perfParts=perfTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+  const perfFr=perfTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
+  const fuel=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)+Number(v.fuelCost||0);
+  const tow=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
+  const vFr=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
+  const perfTotal=perfLabor+perfParts+perfFr+fuel+tow+vFr-perfLabor*Number(v.osDiscountPct||0)/100;
+  const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+  const finTotal=finLabor+finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat+taskCost(t,defaultRate).freight,0)-finLabor*Number(v.osDiscountPctFinishing||0)/100;
+  const total=perfTotal+finTotal;
+  const executed=total>0?Math.min(total,executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)):0;
+  return {total,paid,executed,balance:Math.max(0,total-paid),pending:Math.max(0,executed-paid)};
+}
 function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[]}) {
+  const [hideNum,setHideNum]=useState(true); // valores ocultos por padrão (olho para mostrar)
+  const fmtBRL=n=>hideNum?"R$ ••••":fmtBRLReal(n);
   const v=vehicles.find(x=>x.id===vehicleId);
   const [timeline,setTimeline]=useState([]);
   const [tlLoaded,setTlLoaded]=useState(false);
@@ -9651,6 +9701,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const regularTs=ts.filter(t=>!t.warranty);
   const warrantyAllTasks=tasks.filter(t=>t.vehicleId===v.id&&t.warranty);
   const catOrder=buildCatOrder(regularTs);
+  const pubFin=publicFinInfo(v,perfTasks,finTasks,payments,defaultRate);
+  const pendingNow=pubFin.pending;
 
   const statusCfg={
     active:{label:"Em serviço",               icon:"service", color:B.orange, bg:`${B.orange}18`},
@@ -9694,6 +9746,13 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             Acompanhamento de serviço
           </div>
         </div>
+        <button onClick={()=>setHideNum(h=>!h)} title={hideNum?"Mostrar valores":"Ocultar valores"}
+          style={{flexShrink:0,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:99,padding:"6px 11px",cursor:"pointer",color:B.gray300,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:6}}>
+          {hideNum
+            ?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
+          Valores
+        </button>
       </div>
       {/* Bottom row: status badge full width */}
       <div style={{padding:"8px 16px",borderTop:`1px solid ${B.gray800}`,background:`${sc.color}10`,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
@@ -9707,6 +9766,22 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     </div>
 
     <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px"}}>
+
+      {/* ── Pagamento (sempre visível) ── */}
+      {pubFin.total>0&&(pendingNow>0.005
+        ?<div style={{...S.card,border:`1px solid ${B.amber}55`,background:`${B.amber}10`}}>
+          <div style={S.pad}>
+            <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>💳 Pagamento pendente</div>
+            <div style={{fontSize:30,fontWeight:900,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{fmtBRLReal(pendingNow)}</div>
+            <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Referente ao serviço já executado até agora.</div>
+            <PayMethodsBox/>
+          </div>
+        </div>
+        :<div style={{...S.card,border:`1px solid ${B.green}44`,background:B.greenBg}}>
+          <div style={{...S.pad,padding:"12px 20px",fontSize:13,fontWeight:800,color:B.green}}>
+            {pubFin.paid-pubFin.executed>1?"✅ Pagamento à frente do serviço":"✅ Pagamento em dia com o serviço"}
+          </div>
+        </div>)}
 
       {/* ── Vehicle info ── */}
       <div style={S.card}>
@@ -10259,7 +10334,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 count={perfTasks.length+finTasks.length}
                 boughtValue={boughtPendingValue([...perfTasks,...finTasks],defaultRate)}
                 outsourcedValue={outsourcedOpenValue([...perfTasks,...finTasks],defaultRate)}
-                advance={!!(v.enteredAt||v.enteredAtFinishing)} paid={activePaid}/>}
+                advance={!!(v.enteredAt||v.enteredAtFinishing)} paid={activePaid} hide={hideNum}/>}
               {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                 <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
                 <div style={{display:"flex",flexDirection:"column"}}>
@@ -10280,32 +10355,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 <span style={{fontSize:13,fontWeight:700,color:activeBalance>0?B.red:B.green}}>{activeBalance>0?"⚠ Saldo em aberto":"✅ Quitado"}</span>
                 {activeBalance>0&&<span style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(activeBalance)}</span>}
               </div>}
-              {/* Pix info */}
-              {activeBalance>0&&<div style={{marginTop:10,background:`#6366f115`,border:`1px solid #6366f144`,borderRadius:10,padding:"12px 14px"}}>
-                <div style={{fontSize:11,fontWeight:800,color:"#818cf8",textTransform:"uppercase",letterSpacing:.5,marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  Formas de pagamento
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:6,fontSize:12}}>
-                  <div style={{background:`#6366f110`,borderRadius:7,padding:"8px 10px"}}>
-                    <div style={{fontWeight:700,color:"#818cf8",marginBottom:2}}>Pix</div>
-                    <div style={{color:B.gray300,display:"flex",alignItems:"center",gap:6}}>Chave (CNPJ): <span style={{fontWeight:700,color:B.white,userSelect:"all"}}>23.783.927/0001-40</span>
-                      <button onClick={()=>navigator.clipboard.writeText("23.783.927/0001-40").then(()=>alert("Chave copiada!"))}
-                        style={{background:`#6366f122`,border:`1px solid #6366f144`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:"#818cf8",fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",gap:3}}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                        Copiar
-                      </button>
-                    </div>
-                    <div style={{color:B.gray400,fontSize:11}}>Beneficiário: OSC Old School Customs</div>
-                  </div>
-                  <div style={{background:`${B.blue}10`,borderRadius:7,padding:"8px 10px"}}>
-                    <div style={{fontWeight:700,color:B.blue,marginBottom:2}}>TED / DOC — Itaú</div>
-                    <div style={{color:B.gray300}}>Ag: <span style={{fontWeight:700,color:B.white}}>6541</span> · CC: <span style={{fontWeight:700,color:B.white}}>98991-6</span></div>
-                    <div style={{color:B.gray400,fontSize:11}}>Beneficiário: OSC Enterprise Custom</div>
-                  </div>
-                  <div style={{color:B.gray500,fontSize:10,textAlign:"center"}}>Cartão disponível presencialmente</div>
-                </div>
-              </div>}
+              {/* Pix info (se não houver o card "Pagamento" no topo) */}
+              {activeBalance>0&&pendingNow<=0.005&&<PayMethodsBox/>}
             </div>}
             {totalOwedPast>0&&<div>
               <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OS anteriores</div>
@@ -10628,7 +10679,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.27.1";
+const APP_VERSION = "2026.10.28.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

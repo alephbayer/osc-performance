@@ -9770,10 +9770,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     <div style={{background:B.black}}>
       {/* Top row: logos + name */}
       <div style={{padding:"12px 16px",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
-        <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
-          <div style={{width:32,height:32,borderRadius:7,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center"}}><IWrench s={16} c={B.white}/></div>
-          {hasFin&&<div style={{width:32,height:32,borderRadius:7,background:FD.primary,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎨</div>}
-        </div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:900,fontSize:16,color:B.white,lineHeight:1.15,letterSpacing:-.2}}>OSC <span style={{color:B.orange}}>Group</span></div>
           <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:2}}><span style={{color:B.orange}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
@@ -10713,7 +10709,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.4";
+const APP_VERSION = "2026.10.29.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

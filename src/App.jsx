@@ -9676,6 +9676,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const [openCats,setOpenCats]=useState({});
   const [taskFilter,setTaskFilter]=useState("all");
   const [detOpen,setDetOpen]=useState(false);
+  const [payOpen,setPayOpen]=useState(false);
+  const [pixCopied,setPixCopied]=useState(false);
   const goTab=id=>{setTab(id);try{window.scrollTo({top:0});}catch{}};
   const fmtBRL=n=>hideNum?"R$ ••••":fmtBRLReal(n);
   const v=vehicles.find(x=>x.id===vehicleId);
@@ -9741,13 +9743,20 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     label:{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.5,marginBottom:4},
     chip:{background:B.gray700,borderRadius:8,padding:"8px 14px"},
   };
-  const payCard=(pubFin.total>0&&(pendingNow>0.005
-        ?<div style={{...S.card,border:`1px solid ${B.amber}55`,background:`${B.amber}10`}}>
+  const copyPix=()=>{const k="23.783.927/0001-40";const ok=()=>{setPixCopied(true);setTimeout(()=>setPixCopied(false),2200);};try{navigator.clipboard.writeText(k).then(ok,ok);}catch{ok();}};
+  const payCardFn=(compact)=>(pubFin.total>0&&(pendingNow>0.005
+        ?<div style={{...S.card,border:`1px solid ${B.amber}66`,background:`${B.amber}10`}}>
           <div style={S.pad}>
-            <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>💳 Pagamento pendente</div>
+            <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>Pagamento pendente</div>
             <div style={{fontSize:30,fontWeight:900,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{fmtBRLReal(pendingNow)}</div>
-            <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Referente ao serviço já executado até agora.</div>
-            <PayMethodsBox/>
+            <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Referente ao serviço já executado até agora</div>
+            {compact?<>
+              <div style={{display:"flex",gap:8,marginTop:14}}>
+                <button onClick={copyPix} style={{flex:1,minHeight:46,border:"none",borderRadius:10,background:B.amber,color:B.black,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>{pixCopied?"✓ Chave copiada":"Copiar chave Pix"}</button>
+                <button onClick={()=>setPayOpen(o=>!o)} aria-expanded={payOpen} style={{flex:1,minHeight:46,borderRadius:10,border:`1px solid ${B.amber}88`,background:"none",color:B.amber,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>{payOpen?"Ocultar":"Outras formas"}</button>
+              </div>
+              {payOpen&&<PayMethodsBox/>}
+            </>:<PayMethodsBox/>}
           </div>
         </div>
         :<div style={{...S.card,border:`1px solid ${B.green}44`,background:B.greenBg}}>
@@ -9802,35 +9811,21 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:200,objectFit:"cover"}}/>}
         <div style={S.pad}>
-          <div style={{fontWeight:900,fontSize:24,color:B.white,marginBottom:2}}>{v.model}</div>
-
-          {/* Data chips */}
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
-            <div style={S.chip}>
-              <div style={S.label}>Placa</div>
-              <div style={{fontSize:15,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:1.5}}>{v.plate}</div>
-            </div>
-            {v.year&&<div style={S.chip}>
-              <div style={S.label}>Ano</div>
-              <div style={{fontSize:15,fontWeight:700,color:B.gray200}}>{v.year}</div>
-            </div>}
-            {v.color&&<div style={S.chip}>
-              <div style={S.label}>Cor</div>
-              <div style={{fontSize:15,fontWeight:700,color:B.gray200}}>🎨 {v.color}</div>
-            </div>}
-            {v.osNumber&&<div style={{...S.chip,background:`${B.orange}18`,border:`1px solid ${B.orange}33`}}>
-              <div style={S.label}>⚙️ OS Performance</div>
-              <div style={{fontSize:15,fontWeight:800,color:B.orange}}>{fmtOS(v.osNumber)}</div>
-            </div>}
-            {v.osNumberFinishing&&<div style={{...S.chip,background:FD.bg,border:`1px solid ${FD.border}`}}>
-              <div style={S.label}>🎨 OS Finishing</div>
-              <div style={{fontSize:15,fontWeight:800,color:FD.primary}}>{fmtOSFD(v.osNumberFinishing)}</div>
-            </div>}
-            {cli&&<div style={S.chip}>
-              <div style={S.label}>Cliente</div>
-              <div style={{fontSize:13,fontWeight:700,color:B.blue}}>👤 {cli.name}</div>
-            </div>}
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:8}}>
+            <span style={{fontSize:11,fontWeight:800,color:sc.color,background:sc.bg,borderRadius:99,padding:"3px 10px"}}>{sc.label}</span>
+            {hasPerf&&v.osNumber&&<span style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{fmtOS(v.osNumber)}</span>}
+            {hasFin&&v.osNumberFinishing&&<span style={{fontSize:11,color:FD.primary,fontFamily:"monospace"}}>{fmtOSFD(v.osNumberFinishing)}</span>}
           </div>
+          <div style={{fontWeight:900,fontSize:26,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{v.model}</div>
+          <div style={{fontSize:13,color:B.gray400,marginTop:5}}>{[v.year,v.color,v.plate&&("Placa "+v.plate)].filter(Boolean).join(" · ")}</div>
+          {cli&&<div style={{fontSize:12,color:B.blue,fontWeight:700,marginTop:4}}>👤 {cli.name}</div>}
+          {ts.length>0&&<div style={{marginTop:16}}>
+            <div style={{height:8,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:8,fontSize:12}}>
+              <span style={{color:B.gray300}}><b style={{color:B.white}}>{done} de {ts.length}</b> serviço{ts.length!==1?"s":""} concluído{done!==1?"s":""}</span>
+              <b style={{color:B.green,fontSize:13}}>{pct}%</b>
+            </div>
+          </div>}
           {/* Notes */}
           {v.notes&&v.notes.trim()&&<div style={{marginTop:12,padding:"10px 12px",background:`${B.amber}10`,border:`1px solid ${B.amber}33`,borderRadius:8}}>
             <div style={{fontSize:10,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Observações</div>
@@ -9839,16 +9834,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>
       </div>
 
-      {payCard}
+      {payCardFn(true)}
       {/* ── Resumo: progresso + próximos serviços ── */}
-      {ts.length>0&&<div style={S.card}><div style={S.pad}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
-          <span style={{fontSize:13,fontWeight:800,color:B.white}}>Andamento do projeto</span>
-          <span style={{fontSize:18,fontWeight:900,color:B.green}}>{pct}%</span>
-        </div>
-        <div style={{height:8,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/></div>
-        <div style={{fontSize:12,color:B.gray300,marginTop:8}}><b style={{color:B.white}}>{done} de {ts.length}</b> serviço{ts.length!==1?"s":""} concluído{done!==1?"s":""}</div>
-        {ts.filter(t=>!t.done&&!t.warranty).length>0&&<div style={{marginTop:14}}>
+      {ts.filter(t=>!t.done&&!t.warranty).length>0&&<div style={S.card}><div style={S.pad}>
+        {<div>
           <div style={{fontSize:11,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Em andamento / próximos</div>
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {ts.filter(t=>!t.done&&!t.warranty).slice(0,4).map(t=>(<div key={t.id} style={{display:"flex",alignItems:"center",gap:10,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"9px 12px"}}>
@@ -10304,7 +10293,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
       </>}
       {tab==="conta"&&<>
-      {payCard}
+      {payCardFn(false)}
       {/* ── Account / Financeiro ── */}
       {(()=>{
         const perfPaid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId&&(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
@@ -10738,7 +10727,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.2";
+const APP_VERSION = "2026.10.29.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -10709,7 +10709,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.5";
+const APP_VERSION = "2026.10.29.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13469,15 +13469,15 @@ export default function App() {
     }} onReject={async(qid)=>{
       await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});
       setQuotes(p=>p.map(x=>x.id===qid?{...x,status:"rejected"}:x));
-    }}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
+    }}/></ErrorBoundary></>;
   }
   if(publicVehicleId){
     if(loading) return <LoadingScreen/>;
-    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></>;
+    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock}/></ErrorBoundary></>;
   }
   if(publicHistoryId){
     if(loading) return <LoadingScreen/>;
-    return <div key={theme} style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
+    return <div key={theme} style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary></div>;
   }
   if(loading) return <LoadingScreen/>;
   if(loadError) return <ErrorScreen msg={loadError}/>;

@@ -10709,7 +10709,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.19";
+const APP_VERSION = "2026.10.29.20";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14367,11 +14367,11 @@ export default function App() {
 
   // Shared header for all roles
   const DashHeader=({role,onQuick})=>(
-    <div style={{marginBottom:20}}>
-      <div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:1.5,marginBottom:6}}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).replace(/^\w/,c=>c.toUpperCase())}</div>
+    <div style={{marginBottom:34}}>
+      <div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:1.5,marginBottom:20}}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).replace(/^\w/,c=>c.toUpperCase())}</div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div>
-          <div style={{marginBottom:8}}><OscLogo h={26}/></div>
+          <div style={{marginBottom:12}}><OscLogo h={40}/></div>
           <div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:1.5}}>{ROLE_CONFIG[role]?.label}</div>
         </div>
         {onQuick&&<button onClick={onQuick} style={{width:42,height:42,borderRadius:12,background:`${B.orange}18`,border:`1px solid ${B.orange}33`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",boxShadow:`0 0 16px ${B.orange}20`,flexShrink:0}}>

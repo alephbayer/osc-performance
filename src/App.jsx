@@ -9673,6 +9673,9 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const [hideNum,setHideNum]=useState(true); // valores ocultos por padrão (olho para mostrar)
   const [tab,setTab]=useState("resumo");
   const [tlAll,setTlAll]=useState(false);
+  const [openCats,setOpenCats]=useState({});
+  const [taskFilter,setTaskFilter]=useState("all");
+  const [detOpen,setDetOpen]=useState(false);
   const goTab=id=>{setTab(id);try{window.scrollTo({top:0});}catch{}};
   const fmtBRL=n=>hideNum?"R$ ••••":fmtBRLReal(n);
   const v=vehicles.find(x=>x.id===vehicleId);
@@ -9902,6 +9905,9 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         const progDone=progTasks.filter(t=>t.done).length;
         const progPct=progTasks.length?Math.round(progDone/progTasks.length*100):0;
         if(progTasks.length===0) return null;
+        const perfCatOrder=buildCatOrder(progTasks);
+        const openN=progTasks.filter(t=>!t.done).length;
+        const doneN=progTasks.length-openN;
         return(<div style={S.card}>
         <div style={S.pad}>
           <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Progresso do serviço</div>
@@ -10000,20 +10006,32 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               </div>
             ))}
           </div>}
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",margin:"4px 0 10px"}}>
+            {[["all","Todos",progTasks.length],["open","Em aberto",openN],["done","Concluídos",doneN]].map(([k,l,n])=>(<button key={k} onClick={()=>setTaskFilter(k)} aria-pressed={taskFilter===k}
+              style={{minHeight:36,padding:"0 14px",borderRadius:99,border:taskFilter===k?"none":`1px solid ${B.gray700}`,background:taskFilter===k?B.orange:"none",color:taskFilter===k?B.black:B.gray300,fontSize:12,fontWeight:taskFilter===k?800:700,cursor:"pointer",fontFamily:"inherit"}}>{l} · {n}</button>))}
+          </div>
           <div style={{marginTop:8}}>
-            {catOrder.map(cat=>{
-              const groupTasks=regularTs.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+            {perfCatOrder.map(cat=>{
+              const groupTasks=progTasks.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+              const shown=groupTasks.filter(t=>taskFilter==="all"||(taskFilter==="open"?!t.done:t.done));
+              if(shown.length===0) return null;
+              const ckey="p:"+(cat||"_");
+              const isOpen=openCats[ckey]??(taskFilter!=="all"||groupTasks.some(t=>!t.done));
               const isFDCat=groupTasks.length>0&&groupTasks[0].division==="finishing";
               const catColor=cat?(isFDCat?CAT_MAP_FINISHING[cat]||CAT_MAP[cat]:CAT_MAP[cat]||CAT_MAP_FINISHING[cat])||B.gray500:null;
               // Photos linked to tasks in this category
               const catPhotos=photos.filter(p=>groupTasks.find(t=>t.id===p.taskId));
               return (<div key={cat||"__none__"} style={{marginBottom:12}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:(catColor||B.gray500)+"18",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 6px 6px 0",marginBottom:6}}>
-                  <span style={{width:7,height:7,borderRadius:99,background:catColor||B.gray500,flexShrink:0,display:"inline-block"}}/>
-                  <span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
-                  <span style={{fontSize:10,color:(catColor||B.gray500)+"88",marginLeft:"auto"}}>{groupTasks.filter(t=>t.done).length}/{groupTasks.length}</span>
-                </div>
-                {groupTasks.map(t=>{
+                <button onClick={()=>setOpenCats(o=>({...o,[ckey]:!isOpen}))} aria-expanded={isOpen} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 12px",background:B.gray900,border:`1px solid ${isOpen?(catColor||B.gray500)+"88":B.gray700}`,borderRadius:12,cursor:"pointer",marginBottom:isOpen?8:0,textAlign:"left",color:"inherit",fontFamily:"inherit"}}>
+                  <span style={{width:4,height:32,borderRadius:99,background:(catColor||B.gray500),flexShrink:0}}/>
+                  <span style={{flex:1,minWidth:0}}>
+                    <span style={{display:"block",fontSize:13,fontWeight:800,color:B.white}}>{cat||"Sem categoria"}</span>
+                    <span style={{display:"block",height:5,borderRadius:99,background:B.gray700,marginTop:6,overflow:"hidden"}}><span style={{display:"block",width:`${Math.round(groupTasks.filter(t=>t.done).length/groupTasks.length*100)}%`,height:"100%",background:B.green}}/></span>
+                  </span>
+                  <span style={{fontSize:12,fontWeight:800,color:groupTasks.every(t=>t.done)?B.gray400:B.amber}}>{groupTasks.filter(t=>t.done).length}/{groupTasks.length}</span>
+                  {isOpen?<IChevU s={14} c={B.gray400}/>:<IChevD s={14} c={B.gray400}/>}
+                </button>
+                {isOpen&&shown.map(t=>{
                   const tPhotos=photos.filter(p=>p.taskId===t.id);
                   const signer=t.completedByEmployeeId?employees.find(e=>e.id===t.completedByEmployeeId):null;
                   return (<div key={t.id} style={{padding:"10px 12px",marginBottom:4,background:t.outsourced?`${"#a78bfa"}08`:t.done?`${B.green}08`:B.gray900,borderRadius:10,border:`1px solid ${t.outsourced?"#a78bfa33":t.done?B.green+"22":B.gray700}`}}>
@@ -10084,13 +10102,21 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           {buildCatOrder(finTasks).map(cat=>{
             const catTs=finTasks.filter(t=>(t.category||null)===cat).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
             const catColor=cat?CAT_MAP_FINISHING[cat]||CAT_MAP[cat]||B.gray500:B.gray500;
+            const shownF=catTs.filter(t=>taskFilter==="all"||(taskFilter==="open"?!t.done:t.done));
+            if(shownF.length===0) return null;
+            const ckey="f:"+(cat||"_");
+            const isOpen=openCats[ckey]??(taskFilter!=="all"||catTs.some(t=>!t.done));
             return (<div key={cat||"__none__"} style={{marginBottom:12}}>
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:catColor+"18",borderLeft:`3px solid ${catColor}`,borderRadius:"0 6px 6px 0",marginBottom:6}}>
-                <span style={{width:7,height:7,borderRadius:99,background:catColor,flexShrink:0,display:"inline-block"}}/>
-                <span style={{fontSize:10,fontWeight:800,color:catColor,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
-                <span style={{fontSize:10,color:catColor+"88",marginLeft:"auto"}}>{catTs.filter(t=>t.done).length}/{catTs.length}</span>
-              </div>
-              {catTs.map(t=>{
+                <button onClick={()=>setOpenCats(o=>({...o,[ckey]:!isOpen}))} aria-expanded={isOpen} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 12px",background:B.gray900,border:`1px solid ${isOpen?catColor+"88":B.gray700}`,borderRadius:12,cursor:"pointer",marginBottom:isOpen?8:0,textAlign:"left",color:"inherit",fontFamily:"inherit"}}>
+                  <span style={{width:4,height:32,borderRadius:99,background:catColor,flexShrink:0}}/>
+                  <span style={{flex:1,minWidth:0}}>
+                    <span style={{display:"block",fontSize:13,fontWeight:800,color:B.white}}>{cat||"Sem categoria"}</span>
+                    <span style={{display:"block",height:5,borderRadius:99,background:B.gray700,marginTop:6,overflow:"hidden"}}><span style={{display:"block",width:`${Math.round(catTs.filter(t=>t.done).length/catTs.length*100)}%`,height:"100%",background:B.green}}/></span>
+                  </span>
+                  <span style={{fontSize:12,fontWeight:800,color:catTs.every(t=>t.done)?B.gray400:B.amber}}>{catTs.filter(t=>t.done).length}/{catTs.length}</span>
+                  {isOpen?<IChevU s={14} c={B.gray400}/>:<IChevD s={14} c={B.gray400}/>}
+                </button>
+              {isOpen&&shownF.map(t=>{
                 const tPhotos=photosF.filter(p=>p.taskId===t.id);
                 const signer=t.completedByEmployeeId?employees.find(e=>e.id===t.completedByEmployeeId):null;
                 return (<div key={t.id} style={{padding:"10px 12px",marginBottom:4,background:t.done?`${B.green}08`:B.gray900,borderRadius:10,border:`1px solid ${t.done?B.green+"22":B.gray700}`}}>
@@ -10332,37 +10358,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           <div style={S.pad}>
             <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:14}}>💳 Conta</div>
             {hasActive&&<div style={{marginBottom:totalOwedPast>0?16:0}}>
-              {/* Performance */}
-              {perfTotal>0&&<div style={{marginBottom:12}}>
-                <div style={{fontSize:11,color:B.orange,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>⚙️ OSC Performance</div>
-                <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"12px 14px",marginBottom:6}}>
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {renderBreakdown(perfTasks)}
-                    {fuelTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>⛽ Combustível</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(fuelTotal)}</span></div>}
-                    {vFreightTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>🚚 Frete</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(vFreightTotal)}</span></div>}
-                    {towTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Reboque</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(towTotal)}</span></div>}
-                    {perfDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(perfDiscount)}</span></div>}
-                    <div style={{borderTop:`1px solid ${B.gray600}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
-                      <span style={{fontSize:13,fontWeight:800,color:B.white}}>Subtotal</span>
-                      <span style={{fontSize:14,fontWeight:900,color:B.orange}}>{fmtBRL(perfTotal)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>}
-              {/* Finishing */}
-              {finTotal>0&&<div style={{marginBottom:12}}>
-                <div style={{fontSize:11,color:FD.primary,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>🎨 OSC Finishing Division</div>
-                <div style={{background:B.gray900,border:`1px solid ${FD.border}`,borderRadius:10,padding:"12px 14px",marginBottom:6}}>
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {renderBreakdown(finTasks,CAT_MAP_FINISHING)}
-                    {finDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(finDiscount)}</span></div>}
-                    <div style={{borderTop:`1px solid ${FD.border}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
-                      <span style={{fontSize:13,fontWeight:800,color:B.white}}>Subtotal</span>
-                      <span style={{fontSize:14,fontWeight:900,color:FD.primary}}>{fmtBRL(finTotal)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>}
               {/* Grand total */}
               {activeTotal>0&&<div style={{background:B.gray900,border:`1px solid ${B.gray600}`,borderRadius:10,padding:"12px 14px",marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -10397,6 +10392,45 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               {activeTotal>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:activeBalance>0?`${B.red}15`:`${B.green}15`,border:`1px solid ${activeBalance>0?B.red+"33":B.green+"33"}`,borderRadius:10,padding:"10px 14px"}}>
                 <span style={{fontSize:13,fontWeight:700,color:activeBalance>0?B.red:B.green}}>{activeBalance>0?"⚠ Saldo em aberto":"✅ Quitado"}</span>
                 {activeBalance>0&&<span style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(activeBalance)}</span>}
+              </div>}
+              {hasActive&&<div style={{marginTop:10}}>
+                <button onClick={()=>setDetOpen(o=>!o)} aria-expanded={detOpen} style={{width:"100%",minHeight:48,display:"flex",alignItems:"center",gap:10,padding:"0 14px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:12,color:B.white,fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                  <span style={{flex:1,textAlign:"left"}}>Detalhamento por categoria</span>
+                  {detOpen?<IChevU s={14} c={B.gray400}/>:<IChevD s={14} c={B.gray400}/>}
+                </button>
+                {detOpen&&<div style={{marginTop:10}}>
+              {/* Performance */}
+              {perfTotal>0&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:11,color:B.orange,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>⚙️ OSC Performance</div>
+                <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"12px 14px",marginBottom:6}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {renderBreakdown(perfTasks)}
+                    {fuelTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>⛽ Combustível</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(fuelTotal)}</span></div>}
+                    {vFreightTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>🚚 Frete</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(vFreightTotal)}</span></div>}
+                    {towTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Reboque</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(towTotal)}</span></div>}
+                    {perfDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(perfDiscount)}</span></div>}
+                    <div style={{borderTop:`1px solid ${B.gray600}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
+                      <span style={{fontSize:13,fontWeight:800,color:B.white}}>Subtotal</span>
+                      <span style={{fontSize:14,fontWeight:900,color:B.orange}}>{fmtBRL(perfTotal)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>}
+              {/* Finishing */}
+              {finTotal>0&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:11,color:FD.primary,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>🎨 OSC Finishing Division</div>
+                <div style={{background:B.gray900,border:`1px solid ${FD.border}`,borderRadius:10,padding:"12px 14px",marginBottom:6}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {renderBreakdown(finTasks,CAT_MAP_FINISHING)}
+                    {finDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(finDiscount)}</span></div>}
+                    <div style={{borderTop:`1px solid ${FD.border}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
+                      <span style={{fontSize:13,fontWeight:800,color:B.white}}>Subtotal</span>
+                      <span style={{fontSize:14,fontWeight:900,color:FD.primary}}>{fmtBRL(finTotal)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>}
+                </div>}
               </div>}
               {/* Pix info (se não houver o card "Pagamento" no topo) */}
               {activeBalance>0&&pendingNow<=0.005&&<PayMethodsBox/>}
@@ -10704,7 +10738,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.1";
+const APP_VERSION = "2026.10.29.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

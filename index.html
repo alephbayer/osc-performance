@@ -43,7 +43,7 @@
       // Set body class based on URL — public links get normal scroll
       (function() {
         var params = new URLSearchParams(window.location.search);
-        var isPublic = params.has('vh') || params.get('portal') === 'cliente' || params.get('portal') === 'mecanico';
+        var isPublic = params.has('vh') || params.has('v') || params.get('portal') === 'cliente' || params.get('portal') === 'mecanico';
         document.body.classList.add(isPublic ? 'osc-public' : 'osc-app');
       })();
 
@@ -117,7 +117,7 @@
 
       // Version check — two strategies for reliability
       (function(){
-        const CURRENT = "2026.10.29.8";
+        const CURRENT = "2026.10.29.9";
         const stored = localStorage.getItem("osc_deployed_version");
 
         function showBanner(){

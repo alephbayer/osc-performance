@@ -47,7 +47,7 @@ const B = {
   get gray400(){ return THEMES[getTheme()].gray400;  },
   get gray200(){ return THEMES[getTheme()].gray200;  },
   get white()  { return THEMES[getTheme()].white;    },
-  orange:"#ff6b00", orangeD:"#cc5500", orangeL:"#ff8c33",
+  orange:"#DD8B34", orangeD:"#B06F28", orangeL:"#E8A55C",
   blue:"#3b82f6",   blueD:"#1d4ed8",   blueBg:"rgba(59,130,246,.12)",
   green:"#16a34a",  greenBg:"rgba(22,163,74,.12)",
   amber:"#f59e0b",  amberBg:"rgba(245,158,11,.12)",
@@ -1562,7 +1562,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   const pageW = 210, marginX = 14, contentW = pageW - marginX * 2;
   let y = 0;
 
-  const orange = [255,107,0], black = [20,20,20], gray = [100,100,100],
+  const orange = [221,139,52], black = [20,20,20], gray = [100,100,100],
         lightGray = [242,242,242], white = [255,255,255];
 
   // ── Header band ──────────────────────────────────────────────────────────────
@@ -6502,7 +6502,7 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
 
   return(<div style={{minHeight:"100vh",background:"#f0f0f5",fontFamily:"'Inter','Segoe UI',sans-serif",padding:"0 0 60px"}}>
     {/* Header */}
-    <div style={{background:"#ff6b00",padding:"20px 20px 24px",color:"#fff"}}>
+    <div style={{background:"#DD8B34",padding:"20px 20px 24px",color:"#fff"}}>
       <div style={{fontSize:11,fontWeight:700,opacity:.8,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Orçamento de Serviço</div>
       <div style={{fontSize:20,fontWeight:900}}>{quote.tempModel||"Veículo"}{quote.tempPlate?` · ${quote.tempPlate}`:""}</div>
       {quote.tempName&&<div style={{fontSize:13,opacity:.9,marginTop:2}}>{quote.tempName}{quote.tempPhone?` · ${quote.tempPhone}`:""}</div>}
@@ -6525,12 +6525,12 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
               {it.description&&<div style={{fontSize:12,color:"#888",marginTop:2}}>{it.description}</div>}
               {it.hours>0&&<div style={{fontSize:11,color:"#aaa",marginTop:2}}>{it.hours}h estimadas</div>}
             </div>
-            {it.price>0&&<div style={{fontWeight:800,fontSize:14,color:"#ff6b00",flexShrink:0}}>{fmtBRL(it.price)}</div>}
+            {it.price>0&&<div style={{fontWeight:800,fontSize:14,color:"#DD8B34",flexShrink:0}}>{fmtBRL(it.price)}</div>}
           </div>
         ))}
         <div style={{padding:"12px 16px",background:"#fafafa",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontWeight:700,fontSize:13,color:"#555"}}>Total estimado</span>
-          <span style={{fontWeight:900,fontSize:16,color:"#ff6b00"}}>{fmtBRL(total)}</span>
+          <span style={{fontWeight:900,fontSize:16,color:"#DD8B34"}}>{fmtBRL(total)}</span>
         </div>
       </div>}
 
@@ -10709,7 +10709,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.17";
+const APP_VERSION = "2026.10.29.18";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12405,11 +12405,11 @@ function LiquidNav({active,setActive,navItems,scrollY,theme}){
                 display:"flex",alignItems:"center",justifyContent:"center",
                 padding:`9px ${navItems.length>5?"10px":"16px"}`,
                 borderRadius:99,border:"none",cursor:"pointer",
-                background:on?"rgba(255,107,0,0.18)":"transparent",
+                background:on?"rgba(221,139,52,0.18)":"transparent",
                 color:on?B.orange:B.gray400,
                 position:"relative",transition:"all .25s cubic-bezier(.4,0,.2,1)",
               }}>
-                {on&&<div style={{position:"absolute",inset:2,borderRadius:99,background:"rgba(255,107,0,0.06)"}}/>}
+                {on&&<div style={{position:"absolute",inset:2,borderRadius:99,background:"rgba(221,139,52,0.06)"}}/>}
                 <div style={{position:"relative",transform:on?"scale(1.05)":"scale(0.92)",transition:"transform .2s"}}>
                   {n.svgIcon}
                 </div>

@@ -9771,8 +9771,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* Top row: logos + name */}
       <div style={{padding:"12px 16px",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:900,fontSize:16,color:B.white,lineHeight:1.15,letterSpacing:-.2}}>OSC <span style={{color:B.orange}}>Group</span></div>
-          <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:2}}><span style={{color:B.orange}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
+          <div style={{fontWeight:900,fontSize:26,color:B.white,lineHeight:1.05,letterSpacing:-.6}}>OSC <span style={{color:B.orange}}>Group</span></div>
+          <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:3}}><span style={{color:B.orange}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
           <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
           <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Acompanhamento de serviço</div>
         </div>
@@ -10469,14 +10469,16 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     </div>
 
     {/* Barra de abas */}
-    <nav aria-label="Seções" style={{position:"fixed",left:0,right:0,bottom:0,zIndex:100,background:B.gray900,borderTop:`1px solid ${B.gray700}`,display:"flex",paddingBottom:"env(safe-area-inset-bottom)"}}>
-      {tabs.map(tb=>(<button key={tb.id} onClick={()=>goTab(tb.id)} aria-current={tab===tb.id?"page":undefined}
-        style={{flex:1,minHeight:60,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,color:tab===tb.id?B.orange:B.gray400,fontSize:10,fontWeight:tab===tb.id?800:700,fontFamily:"inherit",position:"relative"}}>
+    <div style={{position:"fixed",left:0,right:0,bottom:0,zIndex:100,padding:"0 16px calc(12px + env(safe-area-inset-bottom))",pointerEvents:"none"}}>
+    <nav aria-label="Seções" style={{pointerEvents:"auto",maxWidth:440,margin:"0 auto",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:99,boxShadow:"0 8px 24px rgba(0,0,0,.35)",display:"flex",gap:2,padding:5}}>
+      {tabs.map(tb=>{const on=tab===tb.id;return(<button key={tb.id} onClick={()=>goTab(tb.id)} aria-current={on?"page":undefined}
+        style={{flex:1,minHeight:52,background:on?`${B.orange}22`:"none",border:"none",borderRadius:99,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,color:on?B.orange:B.gray400,fontSize:10,fontWeight:on?800:700,fontFamily:"inherit",position:"relative"}}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{__html:tb.icon}}/>
         {tb.label}
-        {tb.dot&&<span style={{position:"absolute",top:10,left:"calc(50% + 8px)",width:8,height:8,borderRadius:99,background:B.amber}}/>}
-      </button>))}
+        {tb.dot&&<span style={{position:"absolute",top:6,left:"calc(50% + 8px)",width:8,height:8,borderRadius:99,background:B.amber}}/>}
+      </button>);})}
     </nav>
+    </div>
 
     {/* Lightbox */}
     {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
@@ -10709,7 +10711,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.6";
+const APP_VERSION = "2026.10.29.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

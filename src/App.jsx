@@ -9671,6 +9671,9 @@ function publicFinInfo(v,perfTasks,finTasks,payments,defaultRate){
 }
 function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[]}) {
   const [hideNum,setHideNum]=useState(true); // valores ocultos por padrão (olho para mostrar)
+  const [tab,setTab]=useState("resumo");
+  const [tlAll,setTlAll]=useState(false);
+  const goTab=id=>{setTab(id);try{window.scrollTo({top:0});}catch{}};
   const fmtBRL=n=>hideNum?"R$ ••••":fmtBRLReal(n);
   const v=vehicles.find(x=>x.id===vehicleId);
   const [timeline,setTimeline]=useState([]);
@@ -9703,6 +9706,16 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const catOrder=buildCatOrder(regularTs);
   const pubFin=publicFinInfo(v,perfTasks,finTasks,payments,defaultRate);
   const pendingNow=pubFin.pending;
+  const shownTl=tlAll?timeline:timeline.slice(0,5);
+  const hasPecas=purchaseOrders.some(o=>o.vehicleId===v.id)||[...(v.partsList||[]),...(v.partsListFinishing||[])].some(p=>p.name);
+  const hasFotos=[...photos,...photosF].some(p=>p.url);
+  const tabs=[
+    {id:"resumo",label:"Resumo",icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'},
+    {id:"servicos",label:"Serviços",icon:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'},
+    ...(hasFotos?[{id:"fotos",label:"Fotos",icon:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>'}]:[]),
+    ...(hasPecas?[{id:"pecas",label:"Peças",icon:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>'}]:[]),
+    {id:"conta",label:"Conta",dot:pendingNow>0.005,icon:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'},
+  ];
 
   const statusCfg={
     active:{label:"Em serviço",               icon:"service", color:B.orange, bg:`${B.orange}18`},
@@ -9725,6 +9738,20 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     label:{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.5,marginBottom:4},
     chip:{background:B.gray700,borderRadius:8,padding:"8px 14px"},
   };
+  const payCard=(pubFin.total>0&&(pendingNow>0.005
+        ?<div style={{...S.card,border:`1px solid ${B.amber}55`,background:`${B.amber}10`}}>
+          <div style={S.pad}>
+            <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>💳 Pagamento pendente</div>
+            <div style={{fontSize:30,fontWeight:900,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{fmtBRLReal(pendingNow)}</div>
+            <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Referente ao serviço já executado até agora.</div>
+            <PayMethodsBox/>
+          </div>
+        </div>
+        :<div style={{...S.card,border:`1px solid ${B.green}44`,background:B.greenBg}}>
+          <div style={{...S.pad,padding:"12px 20px",fontSize:13,fontWeight:800,color:B.green}}>
+            {pubFin.paid-pubFin.executed>1?"✅ Pagamento à frente do serviço":"✅ Pagamento em dia com o serviço"}
+          </div>
+        </div>));
 
   return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Header */}
@@ -9765,24 +9792,9 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       </div>
     </div>
 
-    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px"}}>
+    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px 96px"}}>
 
-      {/* ── Pagamento (sempre visível) ── */}
-      {pubFin.total>0&&(pendingNow>0.005
-        ?<div style={{...S.card,border:`1px solid ${B.amber}55`,background:`${B.amber}10`}}>
-          <div style={S.pad}>
-            <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>💳 Pagamento pendente</div>
-            <div style={{fontSize:30,fontWeight:900,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{fmtBRLReal(pendingNow)}</div>
-            <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Referente ao serviço já executado até agora.</div>
-            <PayMethodsBox/>
-          </div>
-        </div>
-        :<div style={{...S.card,border:`1px solid ${B.green}44`,background:B.greenBg}}>
-          <div style={{...S.pad,padding:"12px 20px",fontSize:13,fontWeight:800,color:B.green}}>
-            {pubFin.paid-pubFin.executed>1?"✅ Pagamento à frente do serviço":"✅ Pagamento em dia com o serviço"}
-          </div>
-        </div>)}
-
+      {tab==="resumo"&&<>
       {/* ── Vehicle info ── */}
       <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:200,objectFit:"cover"}}/>}
@@ -9824,24 +9836,45 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>
       </div>
 
-      {/* ── Timeline do Projeto ── */}
+      {payCard}
+      {/* ── Resumo: progresso + próximos serviços ── */}
+      {ts.length>0&&<div style={S.card}><div style={S.pad}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
+          <span style={{fontSize:13,fontWeight:800,color:B.white}}>Andamento do projeto</span>
+          <span style={{fontSize:18,fontWeight:900,color:B.green}}>{pct}%</span>
+        </div>
+        <div style={{height:8,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/></div>
+        <div style={{fontSize:12,color:B.gray300,marginTop:8}}><b style={{color:B.white}}>{done} de {ts.length}</b> serviço{ts.length!==1?"s":""} concluído{done!==1?"s":""}</div>
+        {ts.filter(t=>!t.done&&!t.warranty).length>0&&<div style={{marginTop:14}}>
+          <div style={{fontSize:11,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Em andamento / próximos</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {ts.filter(t=>!t.done&&!t.warranty).slice(0,4).map(t=>(<div key={t.id} style={{display:"flex",alignItems:"center",gap:10,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"9px 12px"}}>
+              <span style={{width:8,height:8,borderRadius:99,background:B.orange,flexShrink:0}}/>
+              <span style={{fontSize:13,fontWeight:600,color:B.white,flex:1,minWidth:0}}>{t.label}</span>
+              {t.category&&<span style={{fontSize:10,color:B.gray500,flexShrink:0}}>{t.category}</span>}
+            </div>))}
+          </div>
+          {ts.filter(t=>!t.done&&!t.warranty).length>4&&<button onClick={()=>goTab("servicos")} style={{marginTop:8,background:"none",border:"none",color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer",minHeight:36,padding:0}}>Ver todos os serviços →</button>}
+        </div>}
+      </div></div>}
+      {/* ── Últimas atualizações ── */}
       {tlLoaded&&timeline.length>0&&<div style={S.card}>
         <div onClick={()=>setTlOpen(o=>!o)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style={{fontWeight:800,fontSize:15,color:B.white,flex:1}}>Timeline do Projeto</span>
+          <span style={{fontWeight:800,fontSize:15,color:B.white,flex:1}}>Últimas atualizações</span>
           <span style={{fontSize:11,color:B.gray500}}>{timeline.length} update{timeline.length!==1?"s":""}</span>
           {tlOpen?<IChevU s={13} c={B.gray500}/>:<IChevD s={13} c={B.gray500}/>}
         </div>
         {tlOpen&&<div style={{...S.pad,paddingTop:4}}>
           <div style={{position:"relative"}}>
             <div style={{position:"absolute",left:13,top:0,bottom:0,width:2,background:B.gray700,borderRadius:1}}/>
-            {timeline.map((ev,i)=>{
+            {shownTl.map((ev,i)=>{
               const evColor=ev.color||B.gray500;
               const evDate=new Date(ev.createdAt);
               const dateStr=evDate.toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"});
               const timeStr=evDate.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
               const typeIcon={task_done:"✅",task_added:"🔧",task_update:"📝",materials:"📦",parts_order:"🔧",payment:"💰",photo:"📷",note:"💬"}[ev.type]||"•";
-              return(<div key={ev.id} style={{display:"flex",gap:12,marginBottom:i<timeline.length-1?16:0,position:"relative"}}>
+              return(<div key={ev.id} style={{display:"flex",gap:12,marginBottom:i<shownTl.length-1?16:0,position:"relative"}}>
                 <div style={{width:28,height:28,borderRadius:99,background:`${evColor}22`,border:`2px solid ${evColor}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1,fontSize:11,marginTop:1}}>
                   {typeIcon}
                 </div>
@@ -9857,9 +9890,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               </div>);
             })}
           </div>
+          {timeline.length>5&&<button onClick={()=>setTlAll(a=>!a)} style={{marginTop:12,width:"100%",minHeight:44,background:"none",border:`1px solid ${B.gray700}`,borderRadius:10,color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer"}}>{tlAll?"Mostrar só as últimas":`Ver a linha do tempo completa (${timeline.length})`}</button>}
         </div>}
       </div>}
 
+      </>}
+      {tab==="servicos"&&<>
       {/* ── Progress ── */}
       {(()=>{
         const progTasks=perfTasks.filter(t=>!t.warranty);
@@ -10095,6 +10131,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>}
       </div>}
 
+      </>}
+      {tab==="pecas"&&<>
       {/* ── Pedidos de peças ── */}
       {(()=>{
         const isInst=po=>po.status==="received"&&(!!po.consumedAt||tasks.some(t=>t.vehicleId===v.id&&(t.materials||[]).some(m=>m.purchaseOrderId===po.id)));
@@ -10196,6 +10234,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>);
       })()}
 
+      </>}
+      {tab==="servicos"&&<>
       {/* ── Warranty section ── */}
       {warrantyAllTasks.length>0&&<div style={{background:B.gray900,borderRadius:14,overflow:"hidden",margin:"0 0 16px",border:`2px solid ${B.red}44`}}>
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",background:`${B.red}18`,borderBottom:`1px solid ${B.red}33`}}>
@@ -10236,6 +10276,9 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>
       </div>}
 
+      </>}
+      {tab==="conta"&&<>
+      {payCard}
       {/* ── Account / Financeiro ── */}
       {(()=>{
         const perfPaid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId&&(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
@@ -10401,52 +10444,34 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>);
       })()}
 
-      {/* ── Photos without task link ── */}
-      {photos.filter(p=>!p.taskId).length>0&&<div style={S.card}>
-        <div style={S.pad}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <div style={{fontWeight:800,fontSize:13,color:B.white,display:"flex",alignItems:"center",gap:5,flex:1}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              Fotos do serviço
-            </div>
-            <button onClick={async()=>{
-              const ps=photos.filter(p=>!p.taskId);
-              for(let i=0;i<ps.length;i++){
-                const a=document.createElement("a");a.href=ps[i].url;a.download=`foto-${i+1}.jpg`;a.target="_blank";a.rel="noopener noreferrer";
-                document.body.appendChild(a);a.click();document.body.removeChild(a);
-                await new Promise(r=>setTimeout(r,300));
-              }
-            }} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:7,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",color:B.gray300,fontSize:11,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Baixar todas
-            </button>
+      </>}
+      {tab==="fotos"&&<>
+      {/* ── Fotos (galeria) ── */}
+      {(()=>{
+        const all=[...photos.map(p=>({...p,_f:false})),...photosF.map(p=>({...p,_f:true}))].filter(p=>p.url);
+        if(all.length===0) return (<div style={{...S.card,padding:"28px 20px",textAlign:"center",color:B.gray500,fontSize:13}}>Ainda não há fotos neste projeto.</div>);
+        return (<div style={S.card}><div style={S.pad}>
+          <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:12}}>Fotos do projeto <span style={{fontSize:11,color:B.gray500,fontWeight:600}}>· {all.length}</span></div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6}}>
+            {all.map((p,i)=>(<button key={i} onClick={()=>setLB(p)} aria-label={p.caption||"Abrir foto"} style={{padding:0,border:"none",background:B.gray900,borderRadius:8,overflow:"hidden",cursor:"pointer",aspectRatio:"1 / 1"}}>
+              <img src={p.url} alt={p.caption||""} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            </button>))}
           </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-            {photos.filter(p=>!p.taskId).map((p,i)=>(
-              <div key={i} style={{width:140,flexShrink:0}}>
-                <div style={{width:140,height:140,borderRadius:10,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray600}`,position:"relative"}} onClick={()=>setLB(p)}>
-                  <img src={p.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                  {p.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.7)",padding:"4px 6px"}}>
-                    <div style={{fontSize:9,color:B.gray200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.caption}</div>
-                  </div>}
-                  <a href={p.url} download onClick={e=>e.stopPropagation()} target="_blank" rel="noopener noreferrer"
-                    style={{position:"absolute",top:5,right:5,background:"rgba(0,0,0,.55)",borderRadius:99,width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center",border:"none",cursor:"pointer"}}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  </a>
-                </div>
-                {p.caption&&<div style={{fontSize:10,color:B.gray400,marginTop:3,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.caption}</div>}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>}
-
-      <div style={{textAlign:"center",fontSize:12,color:B.gray500,marginTop:8,paddingBottom:24}}>
-        Atualizado em {fmtD()} · OSC Performance
-      </div>
-
+        </div></div>);
+      })()}
+      </>}
       {/* Nota manual da equipe — só visível para admins via url param */}
     </div>
+
+    {/* Barra de abas */}
+    <nav aria-label="Seções" style={{position:"fixed",left:0,right:0,bottom:0,zIndex:100,background:B.gray900,borderTop:`1px solid ${B.gray700}`,display:"flex",paddingBottom:"env(safe-area-inset-bottom)"}}>
+      {tabs.map(tb=>(<button key={tb.id} onClick={()=>goTab(tb.id)} aria-current={tab===tb.id?"page":undefined}
+        style={{flex:1,minHeight:60,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,color:tab===tb.id?B.orange:B.gray400,fontSize:10,fontWeight:tab===tb.id?800:700,fontFamily:"inherit",position:"relative"}}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{__html:tb.icon}}/>
+        {tb.label}
+        {tb.dot&&<span style={{position:"absolute",top:10,left:"calc(50% + 8px)",width:8,height:8,borderRadius:99,background:B.amber}}/>}
+      </button>))}
+    </nav>
 
     {/* Lightbox */}
     {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
@@ -10679,7 +10704,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.28.1";
+const APP_VERSION = "2026.10.29.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

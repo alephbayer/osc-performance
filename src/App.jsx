@@ -9785,7 +9785,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* ── Saudação ── */}
       {cli&&cli.name&&<div style={{padding:"2px 4px 16px"}}>
         <div style={{width:24,height:2,borderRadius:99,background:B.orange,marginBottom:9}}/>
-        <div style={{fontSize:13,fontWeight:600,color:B.white,letterSpacing:2.4,textTransform:"uppercase",lineHeight:1.3}}>Bem-vindo, <span style={{color:B.orange,fontWeight:800}}>{cli.name.trim().split(/\s+/)[0]}</span>!</div>
+        <div style={{fontSize:13,fontWeight:600,color:B.white,letterSpacing:2.4,textTransform:"uppercase",lineHeight:1.3}}>Bem-vindo, <span style={{color:B.orange,fontWeight:800}}>{cli.name.trim().split(/\s+/)[0]}</span></div>
         <div style={{fontSize:9,color:B.gray500,letterSpacing:.9,textTransform:"uppercase",marginTop:6,lineHeight:1.6}}>Acompanhe o andamento do seu {v.model}<br/>serviços · fotos · pagamentos</div>
       </div>}
       {/* ── Vehicle info ── */}
@@ -10709,7 +10709,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.18";
+const APP_VERSION = "2026.10.29.19";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

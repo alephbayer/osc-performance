@@ -10469,7 +10469,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     </div>
 
     {/* Barra de abas */}
-    <div style={{position:"fixed",left:0,right:0,bottom:0,zIndex:100,padding:"0 16px calc(12px + env(safe-area-inset-bottom))",pointerEvents:"none"}}>
+    <div style={{position:"fixed",left:0,right:0,bottom:0,zIndex:100,padding:"28px 16px calc(12px + env(safe-area-inset-bottom))",pointerEvents:"none",background:`linear-gradient(to bottom,transparent,${B.black} 55%)`}}>
     <nav aria-label="Seções" style={{pointerEvents:"auto",maxWidth:440,margin:"0 auto",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:99,boxShadow:"0 8px 24px rgba(0,0,0,.35)",display:"flex",gap:2,padding:5}}>
       {tabs.map(tb=>{const on=tab===tb.id;return(<button key={tb.id} onClick={()=>goTab(tb.id)} aria-current={on?"page":undefined}
         style={{flex:1,minHeight:52,background:on?`${B.orange}22`:"none",border:"none",borderRadius:99,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,color:on?B.orange:B.gray400,fontSize:10,fontWeight:on?800:700,fontFamily:"inherit",position:"relative"}}>
@@ -10711,7 +10711,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.9";
+const APP_VERSION = "2026.10.29.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

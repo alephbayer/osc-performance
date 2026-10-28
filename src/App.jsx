@@ -2699,8 +2699,9 @@ function pushNewPurchaseItem(item) {
 
 // Foto com zoom próprio: pinça, toque duplo e arrastar (roda do mouse no desktop).
 // O zoom nativo do app inteiro é travado em index.html — as fotos são a única exceção.
-function ZoomImg({src,style,alt=""}) {
+function ZoomImg({src,style,alt="",onSwipe}) {
   const ref=useRef(null);
+  const swipeRef=useRef(onSwipe); swipeRef.current=onSwipe;
   const S=useRef({s:1,x:0,y:0});
   useEffect(()=>{
     const el=ref.current; if(!el) return;
@@ -2713,12 +2714,12 @@ function ZoomImg({src,style,alt=""}) {
       z.x=Math.min(mx,Math.max(-mx,z.x)); z.y=Math.min(my,Math.max(-my,z.y));
     };
     apply();
-    let mode=null,d0=0,s0=1,px=0,py=0,lastTap=0,moved=false;
+    let mode=null,d0=0,s0=1,px=0,py=0,lastTap=0,moved=false,sx=0,sy=0,lx=0,ly=0;
     const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
     const toggle=()=>{if(z.s>1){z.s=1;}else{z.s=2.5;}fit();apply();};
     const start=e=>{
       if(e.touches.length===2){mode="pinch";d0=dist(e.touches);s0=z.s;moved=true;}
-      else if(e.touches.length===1){mode="pan";px=e.touches[0].clientX;py=e.touches[0].clientY;moved=false;}
+      else if(e.touches.length===1){mode="pan";px=e.touches[0].clientX;py=e.touches[0].clientY;sx=lx=px;sy=ly=py;moved=false;}
     };
     const move=e=>{
       e.preventDefault();
@@ -2727,12 +2728,15 @@ function ZoomImg({src,style,alt=""}) {
         const t=e.touches[0],dx=t.clientX-px,dy=t.clientY-py;
         if(Math.abs(dx)+Math.abs(dy)>4) moved=true;
         px=t.clientX;py=t.clientY;
+        lx=t.clientX;ly=t.clientY;
         if(z.s>1){z.x+=dx;z.y+=dy;fit();apply();}
+        else if(swipeRef.current){const tx=lx-sx;el.style.transform=`translate(${tx*0.7}px,0px) scale(1)`;}
       }
     };
     const end=e=>{
       if(e.touches.length===0){
         if(mode==="pan"&&!moved){const now=Date.now();if(now-lastTap<300){toggle();lastTap=0;}else lastTap=now;}
+        if(mode==="pan"&&z.s<1.05&&swipeRef.current){const ddx=lx-sx,ddy=ly-sy;if(Math.abs(ddx)>55&&Math.abs(ddx)>Math.abs(ddy)*1.3)swipeRef.current(ddx<0?1:-1);}
         if(z.s<1.05){z.s=1;fit();apply();}
         mode=null;
       } else if(e.touches.length===1){mode="pan";px=e.touches[0].clientX;py=e.touches[0].clientY;moved=true;}
@@ -2753,6 +2757,38 @@ function ZoomImg({src,style,alt=""}) {
   return <img ref={ref} src={src} alt={alt} draggable={false}
     onClick={e=>e.stopPropagation()}
     style={{...style,touchAction:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none",transformOrigin:"center center",willChange:"transform"}}/>;
+}
+function PhotoLightbox({items,current,onChange,onClose,taskLabel}) {
+  const urlOf=x=>x&&(x.url||x);
+  const idx=items.findIndex(p=>urlOf(p)===urlOf(current));
+  const n=items.length, nav=idx>=0&&n>1;
+  const go=d=>{ if(!nav) return; const j=idx+d; if(j<0||j>=n) return; onChange(items[j]); };
+  const goRef=useRef(go); goRef.current=go;
+  useEffect(()=>{
+    const k=e=>{ if(e.key==="ArrowRight")goRef.current(1); else if(e.key==="ArrowLeft")goRef.current(-1); else if(e.key==="Escape")onClose(); };
+    window.addEventListener("keydown",k); return()=>window.removeEventListener("keydown",k);
+  },[]);
+  useEffect(()=>{ if(!nav) return; [idx-1,idx+1].forEach(j=>{ if(j>=0&&j<n){ const im=new Image(); im.src=urlOf(items[j]); } }); },[idx]);
+  const cur=typeof current==="object"?current:{url:current};
+  const label=taskLabel&&cur.taskId?taskLabel(cur.taskId):null;
+  const arrow=(side,d,show)=>show&&<button onClick={e=>{e.stopPropagation();go(d);}} aria-label={d>0?"Próxima foto":"Foto anterior"}
+    style={{position:"fixed",top:"50%",[side]:10,transform:"translateY(-50%)",width:44,height:44,borderRadius:99,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.12)",color:"#fff",fontSize:22,cursor:"pointer",zIndex:2,display:"flex",alignItems:"center",justifyContent:"center"}}>{d>0?"›":"‹"}</button>;
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={onClose}>
+    {nav&&<div style={{position:"fixed",top:22,left:0,right:0,textAlign:"center",color:"rgba(255,255,255,.75)",fontSize:12,fontWeight:700,letterSpacing:1.5,pointerEvents:"none"}}>{idx+1} / {n}</div>}
+    <ZoomImg src={urlOf(current)} onSwipe={nav?d=>goRef.current(d):undefined} style={{maxWidth:"95vw",maxHeight:"75vh",objectFit:"contain",borderRadius:8}}/>
+    {(cur.caption||label)&&<div style={{textAlign:"center",padding:"0 20px"}}>
+      {label&&<div style={{color:"#c4b5fd",fontWeight:700,fontSize:13,marginBottom:2}}>🔗 {label}</div>}
+      {cur.caption&&<div style={{color:B.gray200,fontSize:13}}>{cur.caption}</div>}
+    </div>}
+    {nav&&n<=12&&<div style={{display:"flex",gap:5}}>{items.map((_,i)=><span key={i} style={{width:i===idx?16:6,height:6,borderRadius:99,background:i===idx?"#fff":"rgba(255,255,255,.3)",transition:"width .2s"}}/>)}</div>}
+    <a href={urlOf(current)} download target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}
+      style={{display:"flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:99,background:"rgba(255,255,255,.12)",border:"1px solid rgba(255,255,255,.2)",color:B.white,textDecoration:"none",fontSize:13,fontWeight:600}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Baixar foto
+    </a>
+    {arrow("left",-1,nav&&idx>0)}{arrow("right",1,nav&&idx<n-1)}
+    <button onClick={e=>{e.stopPropagation();onClose();}} aria-label="Fechar" style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer",zIndex:3}}><IX s={18} c={B.white}/></button>
+  </div>;
 }
 const ILock  =({s=18,c="currentColor"})=><Svg d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" d2="M7 11V7a5 5 0 0110 0v4" s={s} c={c}/>;
 const ILogout=({s=18,c="currentColor"})=><Svg d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" d2="M16 17l5-5-5-5M21 12H9" s={s} c={c}/>;
@@ -10490,19 +10526,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     </div>
 
     {/* Lightbox */}
-    {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
-      <ZoomImg src={lb.url||lb} style={{maxWidth:"95vw",maxHeight:"75vh",objectFit:"contain",borderRadius:8}}/>
-      {(lb.caption||(lb.taskId&&ts.find(t=>t.id===lb.taskId)))&&<div style={{textAlign:"center",padding:"0 20px"}}>
-        {ts.find(t=>t.id===lb.taskId)&&<div style={{color:"#c4b5fd",fontWeight:700,fontSize:13,marginBottom:2}}>🔗 {ts.find(t=>t.id===lb.taskId).label}</div>}
-        {lb.caption&&<div style={{color:B.gray200,fontSize:13}}>{lb.caption}</div>}
-      </div>}
-      <a href={lb.url||lb} download target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}
-        style={{display:"flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:99,background:"rgba(255,255,255,.12)",border:"1px solid rgba(255,255,255,.2)",color:B.white,textDecoration:"none",fontSize:13,fontWeight:600}}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Baixar foto
-      </a>
-      <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
-    </div>}
+    {lb&&<PhotoLightbox items={[...photos,...photosF].filter(p=>p&&p.url)} current={lb} onChange={setLB} onClose={()=>setLB(null)} taskLabel={id=>ts.find(t=>t.id===id)?.label}/>}
   </div>);
 }
 
@@ -10720,7 +10744,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.21";
+const APP_VERSION = "2026.10.29.22";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

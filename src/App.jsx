@@ -10744,7 +10744,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.22";
+const APP_VERSION = "2026.10.29.23";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13356,6 +13356,7 @@ export default function App() {
 
   // ── Admin push registration — offer when admin logs in ──
   const [adminPushStatus,setAdminPushStatus]=useState(null);
+  useEffect(()=>{ db.setAdminSession(!!adminRole); },[adminRole]);
   useEffect(()=>{
     if(!adminRole||!VAPID_PUBLIC_KEY) return;
     if(!("PushManager" in window)) return;

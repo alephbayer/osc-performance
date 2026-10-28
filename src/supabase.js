@@ -698,7 +698,12 @@ export const db = {
     if (error) throw error;
   },
 
+  // Quando o próprio gestor está logado e mexendo no sistema, não avisa os aparelhos dele
+  // (os avisos de mecânico/cliente continuam chegando, pois vêm de outra sessão).
+  setAdminSession(active) { db._adminSession = !!active; },
+
   async sendPushToAdmins(title, body, url) {
+    if (db._adminSession) return;
     const { error } = await supabase.functions.invoke("send-push", {
       body: { adminAll: true, title, body, url },
     });

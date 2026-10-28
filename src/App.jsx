@@ -10711,7 +10711,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.7";
+const APP_VERSION = "2026.10.29.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13265,7 +13265,7 @@ export default function App() {
       setTheme(resolved);
       const bg=resolved==="light"?"#f0f2f5":"#0a0a0a";
       try{
-        document.getElementById("osc-body").style.background=bg;
+        document.getElementById("osc-body").style.background=bg;document.documentElement.style.background=bg;
         document.getElementById("theme-color-meta")?.setAttribute("content",bg);
       }catch(e){}
     };
@@ -13281,7 +13281,7 @@ export default function App() {
     setTheme(resolved);
     const bg=resolved==="light"?"#f0f2f5":"#0a0a0a";
     try{
-      document.getElementById("osc-body").style.background=bg;
+      document.getElementById("osc-body").style.background=bg;document.documentElement.style.background=bg;
       document.getElementById("theme-color-meta")?.setAttribute("content",bg);
     }catch(e){}
   };

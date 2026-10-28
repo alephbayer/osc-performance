@@ -9767,7 +9767,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
   return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Header */}
-    <div style={{background:B.gray900,borderBottom:`2px solid ${hasFin?FD.primary:B.orange}`}}>
+    <div style={{background:B.black}}>
       {/* Top row: logos + name */}
       <div style={{padding:"12px 16px",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
@@ -9775,15 +9775,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           {hasFin&&<div style={{width:32,height:32,borderRadius:7,background:FD.primary,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎨</div>}
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:900,fontSize:14,color:B.white,lineHeight:1.2}}>
-            OSC <span style={{color:B.orange}}>Performance</span>
-            {hasFin&&<><span style={{color:B.gray600,margin:"0 5px"}}>+</span><span style={{color:FD.primary}}>Finishing</span></>}
-          </div>
-          <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.5,marginTop:2}}>
-            {hasPerf&&v.osNumber&&<span style={{color:B.orange,marginRight:6}}>{fmtOS(v.osNumber)}</span>}
-            {hasFin&&v.osNumberFinishing&&<span style={{color:FD.primary,marginRight:6}}>{fmtOSFD(v.osNumberFinishing)}</span>}
-            Acompanhamento de serviço
-          </div>
+          <div style={{fontWeight:900,fontSize:16,color:B.white,lineHeight:1.15,letterSpacing:-.2}}>OSC <span style={{color:B.orange}}>Group</span></div>
+          <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:2}}><span style={{color:B.orange}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
+          <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
+          <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Acompanhamento de serviço</div>
         </div>
         <button onClick={()=>setHideNum(h=>!h)} title={hideNum?"Mostrar valores":"Ocultar valores"}
           style={{flexShrink:0,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:99,padding:"6px 11px",cursor:"pointer",color:B.gray300,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:6}}>
@@ -9792,15 +9787,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
           Valores
         </button>
-      </div>
-      {/* Bottom row: status badge full width */}
-      <div style={{padding:"8px 16px",borderTop:`1px solid ${B.gray800}`,background:`${sc.color}10`,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-        <span style={{fontWeight:800,fontSize:12,color:sc.color,display:"inline-flex",alignItems:"center",gap:5}}>
-          {sc.icon==="service"&&<IWrench s={13} c={sc.color}/>}
-          {sc.icon==="paused"&&<IPause s={13} c={sc.color}/>}
-          {sc.icon==="ready"&&<ICheck s={13} c={sc.color}/>}
-          {sc.label}
-        </span>
       </div>
     </div>
 
@@ -10727,7 +10713,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.3";
+const APP_VERSION = "2026.10.29.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

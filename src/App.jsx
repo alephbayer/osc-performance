@@ -9789,6 +9789,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px 96px"}}>
 
       {tab==="resumo"&&<>
+      {/* ── Saudação ── */}
+      {cli&&cli.name&&<div style={{padding:"4px 4px 16px"}}>
+        <div style={{fontSize:22,fontWeight:900,color:B.white,letterSpacing:-.4,lineHeight:1.15}}>Olá, {cli.name.trim().split(/\s+/)[0]} 👋</div>
+        <div style={{fontSize:13,color:B.gray400,marginTop:4,lineHeight:1.45}}>Aqui você acompanha o andamento do seu {v.model}, com serviços, fotos e pagamentos.</div>
+      </div>}
       {/* ── Vehicle info ── */}
       <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:200,objectFit:"cover"}}/>}
@@ -9800,7 +9805,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           </div>
           <div style={{fontWeight:900,fontSize:26,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{v.model}</div>
           <div style={{fontSize:13,color:B.gray400,marginTop:5}}>{[v.year,v.color,v.plate&&("Placa "+v.plate)].filter(Boolean).join(" · ")}</div>
-          {cli&&<div style={{fontSize:12,color:B.blue,fontWeight:700,marginTop:4}}>👤 {cli.name}</div>}
           {ts.length>0&&<div style={{marginTop:16}}>
             <div style={{height:8,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/></div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:8,fontSize:12}}>
@@ -10711,7 +10715,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.11";
+const APP_VERSION = "2026.10.29.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -9771,8 +9771,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* Top row: logos + name */}
       <div style={{padding:"12px 16px",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:900,fontSize:26,color:B.white,lineHeight:1.05,letterSpacing:-.6}}>OSC <span style={{color:B.orange}}>Group</span></div>
-          <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:3}}><span style={{color:B.orange}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
+          <img src={getTheme()==="light"?"/osc-group-logo-light.png":"/osc-group-logo-dark.png"} alt="OSC Group" width="171" height="28" style={{display:"block",height:28,width:"auto",maxWidth:"100%"}}/>
+          <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:8}}><span style={{color:B.orange}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
           <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
           <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Acompanhamento de serviço</div>
         </div>
@@ -10716,7 +10716,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.14";
+const APP_VERSION = "2026.10.29.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

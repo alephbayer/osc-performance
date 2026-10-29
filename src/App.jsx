@@ -4064,8 +4064,16 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [showDelivCheck,setShowDelivCheck]=useState(false);
   // Qualquer alteração numa tarefa já conferida derruba a conferência dela
   const uncheckDeliv=(id)=>{const dc=vehicle.deliveryCheck||{};if(dc[id]&&onUpdateVehicle){const n={...dc};delete n[id];onUpdateVehicle(vehicle.id,{deliveryCheck:n});}};
-  const onUpdateTask=(id,patch,...r)=>{const ks=Object.keys(patch||{});if(ks.some(k=>!["sortOrder","photos"].includes(k)))uncheckDeliv(id);return _onUpdateTask&&_onUpdateTask(id,patch,...r);};
-  const onToggleTask=(id,...r)=>{uncheckDeliv(id);return _onToggleTask&&_onToggleTask(id,...r);};
+  // Só desmarca o que mexe na execução/segurança: reabrir o serviço, trocar nome/descrição ou
+  // incluir/remover/trocar material. Preço, horas, valor, categoria etc. NÃO desmarcam.
+  const matSig=(ms)=>(Array.isArray(ms)?ms:[]).map(m=>`${String(m.name||"").trim().toLowerCase()}|${String(m.brand||"").trim().toLowerCase()}|${Number(m.qty||1)}`).sort().join(";");
+  const onUpdateTask=(id,patch,...r)=>{
+    const p=patch||{}; const cur=tasks.find(x=>x.id===id);
+    const risky=("label" in p&&cur&&p.label!==cur.label)||("description" in p&&cur&&(p.description||"")!==(cur.description||""))||p.done===false||("materials" in p&&cur&&matSig(p.materials)!==matSig(cur.materials));
+    if(risky) uncheckDeliv(id);
+    return _onUpdateTask&&_onUpdateTask(id,patch,...r);
+  };
+  const onToggleTask=(id,...r)=>{const cur=tasks.find(x=>x.id===id);if(cur&&cur.done)uncheckDeliv(id);return _onToggleTask&&_onToggleTask(id,...r);};
   const [showParts,setShowParts]=useState(false);
   const [showPOForm,setShowPOForm]=useState(false);
   const [confirmDelV,setConfirmDelV]=useState(false);
@@ -10759,7 +10767,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.3";
+const APP_VERSION = "2026.10.30.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

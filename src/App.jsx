@@ -10047,6 +10047,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         .pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:20px}
         .pv-right{display:flex;flex-direction:column;gap:16px}
         .pv-grid>*,.pv-right>*{margin-bottom:0!important}
+        .pv-grid>:first-child{position:sticky;top:40px}
       }
     `}</style>
     <aside className="pv-side">
@@ -10133,8 +10134,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           {ts.filter(t=>!t.done&&!t.warranty).length>4&&<button onClick={()=>goTab("servicos")} style={{marginTop:8,background:"none",border:"none",color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer",minHeight:36,padding:0}}>Ver todos os serviços →</button>}
         </div>}
       </div></div>}
-      </div>
-      </div>
       {/* ── Últimas atualizações ── */}
       {tlLoaded&&timeline.length>0&&<div style={S.card}>
         <div onClick={()=>setTlOpen(o=>!o)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
@@ -10171,6 +10170,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           {timeline.length>5&&<button onClick={()=>setTlAll(a=>!a)} style={{marginTop:12,width:"100%",minHeight:44,background:"none",border:`1px solid ${B.gray700}`,borderRadius:10,color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer"}}>{tlAll?"Mostrar só as últimas":`Ver a linha do tempo completa (${timeline.length})`}</button>}
         </div>}
       </div>}
+      </div>
+      </div>
 
       </>}
       {tab==="servicos"&&<>
@@ -10994,7 +10995,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.11";
+const APP_VERSION = "2026.10.30.12";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -5722,7 +5722,10 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         const vt=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")===(division||"performance"));
         return vt.length>0&&vt.every(t=>t.done);
       })();
-      const activeVs=sorted.filter(v=>!isVDone(v));
+      const isPzV=v=>(division==="finishing"?v.statusFinishing:v.status)==="paused";
+      const activeAll=sorted.filter(v=>!isVDone(v));
+      const activeVs=activeAll.filter(v=>!isPzV(v));
+      const pausedVs=activeAll.filter(isPzV);
       const doneVs=sorted.filter(v=>isVDone(v));
       const isCollapsed = searching ? false : !!collapsed[key];
       const isDoneOpen = !!collapsedDone[key]||(!!carroParam0&&doneVs.some(v=>v.id===carroParam0));
@@ -5750,7 +5753,11 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         </div>
         {!isCollapsed&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
           {activeVs.map(v=>mkVC(v))}
-          {doneVs.length>0&&<div style={{marginTop:activeVs.length>0?4:0}}>
+          {pausedVs.length>0&&<>
+            <div style={{display:"flex",alignItems:"center",gap:8,margin:"14px 2px 4px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}>⏸ Pausados · {pausedVs.length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>
+            {pausedVs.map(v=>mkVC(v))}
+          </>}
+          {doneVs.length>0&&<div style={{marginTop:activeAll.length>0?4:0}}>
             <div onClick={e=>{e.stopPropagation();toggleDone(key);}} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none"}}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               <span style={{fontSize:11,color:B.green,fontWeight:700,flex:1}}>{doneVs.length} concluído{doneVs.length!==1?"s":""}</span>
@@ -10963,7 +10970,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.8";
+const APP_VERSION = "2026.10.30.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -10033,7 +10033,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     {/* Header */}
     <div style={{background:B.black}}>
       {/* Top row: logos + name */}
-      <div style={{padding:"12px 16px",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"12px max(16px, calc((100% - 620px)/2 + 16px))",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <OscLogo h={28}/>
           <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:8}}><span style={{color:"#DD8B34"}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
@@ -10970,7 +10970,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.9";
+const APP_VERSION = "2026.10.30.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

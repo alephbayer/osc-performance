@@ -4061,6 +4061,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [cpLink,setCPL]=useState(false);
   const [showAccount,setSA]=useState(false);
   const [showChecklist,setSCL]=useState(false);
+  const [showDelivCheck,setShowDelivCheck]=useState(false);
   const [showParts,setShowParts]=useState(false);
   const [showPOForm,setShowPOForm]=useState(false);
   const [confirmDelV,setConfirmDelV]=useState(false);
@@ -4128,6 +4129,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         const {task,idx}=orderTarget; const cur=(tasks.find(t=>t.id===task.id)?.materials)||task.materials||[];
         onUpdateTask(task.id,{materials:cur.map((m,i)=>i===idx?{...m,ordered:true,orderedAt:new Date().toISOString()}:m)});
       }}/>}
+    {showDelivCheck&&<DeliveryCheckModal vehicle={vehicle} tasks={vts} isFD={isFD} managerMode={managerMode} actor={managerMode?(isOwner?"Gestor":"Admin"):(currentMechanic?.name||"Mecânico")} onUpdateVehicle={onUpdateVehicle} onClose={()=>setShowDelivCheck(false)}/>}
     {showPage&&createPortal(<VehicleStagesPage vehicle={vehicle} tasks={tasks} defaultRate={defaultRate} isFD={isFD} managerMode={managerMode}
       renderTask={renderTaskEditor} onAddTask={onAddTask} payments={payments}
       renderFull={()=><VehicleCard {...props} defaultOpen hidePageBtn openPageOnMount={false}/>}
@@ -4225,6 +4227,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           {/* Checklist */}
           <button onClick={()=>setSCL(p=>!p)} style={{background:showChecklist?`${B.blue}22`:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Checklist
+          </button>
+          <button onClick={()=>setShowDelivCheck(true)} style={{background:`${B.green}10`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.green,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            Conferência{(()=>{const dl=vts.filter(x=>!x.warranty&&x.done);const dcx=vehicle.deliveryCheck||{};return dl.length?` ${dl.filter(x=>dcx[x.id]).length}/${dl.length}`:"";})()}
           </button>
           {/* Fotos */}
           <button onClick={()=>setSP(p=>!p)} style={{background:showPhotos?B.purpleBg:`${B.purple}15`,border:`1px solid ${B.purple}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.purple,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
@@ -10744,7 +10750,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.29.23";
+const APP_VERSION = "2026.10.30.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11810,6 +11816,84 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
 }
 
 // ─── Vehicle Checklist (inline) ───────────────────────────────────────────────
+function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,managerMode}) {
+  const [confirmReset,setConfirmReset]=useState(false);
+  const dc=(vehicle.deliveryCheck&&typeof vehicle.deliveryCheck==="object")?vehicle.deliveryCheck:{};
+  const list=tasks.filter(t=>!t.warranty);
+  const doneT=list.filter(t=>t.done);
+  const openN=list.length-doneT.length;
+  const checkedN=doneT.filter(t=>dc[t.id]).length;
+  const complete=list.length>0&&openN===0&&checkedN===doneT.length;
+  const accent=isFD?FD.primary:B.green;
+  const fmtAt=iso=>{try{return new Date(iso).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});}catch{return "";}};
+  const toggle=tk=>{
+    if(!tk.done) return;
+    const next={...dc};
+    if(next[tk.id]) delete next[tk.id]; else next[tk.id]={by:actor,at:new Date().toISOString()};
+    onUpdateVehicle(vehicle.id,{deliveryCheck:next});
+  };
+  useEffect(()=>{const k=e=>{if(e.key==="Escape")onClose();};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k);},[]);
+  const cats=buildCatOrder(list);
+  const lastAt=Object.values(dc).map(x=>x&&x.at).filter(Boolean).sort().slice(-1)[0];
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:300,background:B.black,display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+    <div style={{padding:"calc(14px + env(safe-area-inset-top)) 16px 12px",borderBottom:`1px solid ${B.gray700}`,background:B.gray900}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:10,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:1.2}}>Conferência de entrega</div>
+          <div style={{fontSize:17,fontWeight:900,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{vehicle.model} <span style={{fontWeight:600,color:B.gray400,fontSize:13}}>{vehicle.plate}</span></div>
+        </div>
+        <button onClick={onClose} aria-label="Fechar" style={{width:44,height:44,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={18} c={B.white}/></button>
+      </div>
+      <div style={{height:7,borderRadius:99,background:B.gray700,overflow:"hidden",marginTop:12}}><div style={{width:`${doneT.length?Math.round(checkedN/doneT.length*100):0}%`,height:"100%",background:accent,transition:"width .25s"}}/></div>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:B.gray300,marginTop:6}}>
+        <span><b style={{color:B.white}}>{checkedN} de {doneT.length}</b> conferido{checkedN!==1?"s":""}</span>
+        {openN>0&&<span style={{color:B.amber,fontWeight:700}}>{openN} em aberto</span>}
+      </div>
+    </div>
+    <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"12px 14px 24px"}}>
+      {list.length===0&&<div style={{padding:"40px 10px",textAlign:"center",color:B.gray400,fontSize:13}}>Esta OS ainda não tem serviços.</div>}
+      {cats.map(cat=>{
+        const items=list.filter(x=>(x.category||null)===cat);
+        if(!items.length) return null;
+        const color=cat?(isFD?CAT_MAP_FINISHING[cat]||CAT_MAP[cat]:CAT_MAP[cat]||CAT_MAP_FINISHING[cat])||B.gray500:B.gray500;
+        return <div key={cat||"_"} style={{marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,margin:"4px 2px 8px"}}>
+            <span style={{width:4,height:16,borderRadius:99,background:color}}/>
+            <span style={{fontSize:11,fontWeight:800,color:B.gray300,textTransform:"uppercase",letterSpacing:1}}>{cat||"Sem categoria"}</span>
+            <span style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>{items.filter(x=>dc[x.id]).length}/{items.filter(x=>x.done).length}</span>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {items.map(tk=>{
+              const ck=dc[tk.id]; const mats=(tk.materials||[]).map(m=>m.name).filter(Boolean);
+              return <button key={tk.id} onClick={()=>toggle(tk)} disabled={!tk.done} aria-pressed={!!ck}
+                style={{display:"flex",alignItems:"flex-start",gap:12,width:"100%",minHeight:56,padding:"11px 12px",textAlign:"left",borderRadius:12,border:`1px solid ${ck?accent+"66":B.gray700}`,background:ck?`${accent}14`:B.gray800,color:"inherit",fontFamily:"inherit",cursor:tk.done?"pointer":"not-allowed",opacity:tk.done?1:.5}}>
+                <span style={{width:26,height:26,borderRadius:8,flexShrink:0,marginTop:1,border:`2px solid ${ck?accent:B.gray500}`,background:ck?accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {ck&&<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
+                </span>
+                <span style={{flex:1,minWidth:0}}>
+                  <span style={{display:"block",fontSize:14,fontWeight:700,lineHeight:1.3}}>{tk.label}</span>
+                  {mats.length>0&&<span style={{display:"block",fontSize:11,color:B.gray400,marginTop:3,lineHeight:1.35}}>{mats.join(" · ")}</span>}
+                  {!tk.done&&<span style={{display:"inline-block",fontSize:10,fontWeight:800,color:B.amber,marginTop:4}}>AINDA EM ABERTO</span>}
+                  {ck&&<span style={{display:"block",fontSize:10.5,color:accent,marginTop:4,fontWeight:700}}>✓ {ck.by} · {fmtAt(ck.at)}</span>}
+                </span>
+              </button>;
+            })}
+          </div>
+        </div>;
+      })}
+    </div>
+    <div style={{padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",borderTop:`1px solid ${B.gray700}`,background:B.gray900}}>
+      {complete
+        ?<div style={{padding:"12px 14px",borderRadius:12,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:800,fontSize:13.5,textAlign:"center"}}>✅ Conferência completa{lastAt?` · ${fmtAt(lastAt)}`:""}</div>
+        :<div style={{fontSize:12.5,color:B.gray400,textAlign:"center"}}>{openN>0?`Há ${openN} serviço${openN!==1?"s":""} ainda em aberto na OS.`:"Marque cada item conforme for conferindo no veículo."}</div>}
+      {managerMode&&checkedN>0&&<div style={{marginTop:8,textAlign:"center"}}>
+        {confirmReset
+          ?<span style={{fontSize:12,color:B.gray300}}>Zerar toda a conferência? <button onClick={()=>{onUpdateVehicle(vehicle.id,{deliveryCheck:{}});setConfirmReset(false);}} style={{background:"none",border:"none",color:B.red,fontWeight:800,cursor:"pointer",fontSize:12,minHeight:36,padding:"0 8px"}}>Sim, zerar</button><button onClick={()=>setConfirmReset(false)} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:12,minHeight:36,padding:"0 8px"}}>Cancelar</button></span>
+          :<button onClick={()=>setConfirmReset(true)} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer",fontSize:11.5,minHeight:36,padding:"0 8px",textDecoration:"underline"}}>Recomeçar conferência</button>}
+      </div>}
+    </div>
+  </div>,document.body);
+}
 function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMode=true, isFD=false}) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [creating, setCreating] = useState(null);

@@ -116,6 +116,7 @@ const mapVehicleIn = (v) => ({
   fuelCost: Number(v.fuel_cost || 0),
   fuels: Array.isArray(v.fuels) ? v.fuels : (v.fuels ? JSON.parse(v.fuels) : []),
   checklist: Array.isArray(v.checklist) ? v.checklist : (v.checklist ? JSON.parse(v.checklist) : []),
+  deliveryCheck: (v.delivery_check && typeof v.delivery_check==='object' && !Array.isArray(v.delivery_check)) ? v.delivery_check : {},
   osNumberFinishing:     v.os_number_finishing || null,
   enteredAtFinishing:    v.entered_at_finishing || null,
   statusFinishing:       v.status_finishing || 'active',
@@ -399,6 +400,7 @@ export const db = {
     if ("photosFinishing"         in patch) dbPatch.photos_finishing         = patch.photosFinishing;
     if ("notesFinishing"          in patch) dbPatch.notes_finishing          = patch.notesFinishing;
     if ("checklistFinishing"      in patch) dbPatch.checklist_finishing      = patch.checklistFinishing;
+    if ("deliveryCheck"           in patch) dbPatch.delivery_check           = patch.deliveryCheck;
     if ("osDiscountPctFinishing"  in patch) dbPatch.os_discount_pct_finishing= patch.osDiscountPctFinishing;
     const { error } = await supabase.from("vehicles").update(dbPatch).eq("id", id);
     if (error) throw error;

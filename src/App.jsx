@@ -10767,7 +10767,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.4";
+const APP_VERSION = "2026.10.30.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11860,7 +11860,7 @@ function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,ma
   const cats=buildCatOrder(list);
   const lastAt=Object.values(dc).map(x=>x&&x.at).filter(Boolean).sort().slice(-1)[0];
   return createPortal(<div style={{position:"fixed",inset:0,zIndex:300,background:B.black,display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
-    <div style={{padding:"calc(14px + env(safe-area-inset-top)) 16px 12px",borderBottom:`1px solid ${B.gray700}`,background:B.gray900}}>
+    <div style={{padding:"calc(36px + env(safe-area-inset-top)) 16px 14px",borderBottom:`1px solid ${B.gray700}`,background:B.gray900}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:10,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:1.2}}>Conferência de entrega</div>

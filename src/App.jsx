@@ -4035,7 +4035,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
   </div>);
 }
 
-function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageOnMount=false,vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask,onDeleteTask,onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}=props;
+function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageOnMount=false,vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask:_onToggleTask,onDeleteTask,onUpdateTask:_onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}=props;
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
   useEffect(()=>{
@@ -4062,6 +4062,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [showAccount,setSA]=useState(false);
   const [showChecklist,setSCL]=useState(false);
   const [showDelivCheck,setShowDelivCheck]=useState(false);
+  // Qualquer alteração numa tarefa já conferida derruba a conferência dela
+  const uncheckDeliv=(id)=>{const dc=vehicle.deliveryCheck||{};if(dc[id]&&onUpdateVehicle){const n={...dc};delete n[id];onUpdateVehicle(vehicle.id,{deliveryCheck:n});}};
+  const onUpdateTask=(id,patch,...r)=>{const ks=Object.keys(patch||{});if(ks.some(k=>!["sortOrder","photos"].includes(k)))uncheckDeliv(id);return _onUpdateTask&&_onUpdateTask(id,patch,...r);};
+  const onToggleTask=(id,...r)=>{uncheckDeliv(id);return _onToggleTask&&_onToggleTask(id,...r);};
   const [showParts,setShowParts]=useState(false);
   const [showPOForm,setShowPOForm]=useState(false);
   const [confirmDelV,setConfirmDelV]=useState(false);
@@ -4081,6 +4085,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [pdfLoading,setPdfLoading]=useState(false);
 
   const isFD=division==="finishing";
+  const delivReady=deliveryReady(vehicle,tasks,isFD);
   const vts   = tasks.filter(t=>t.vehicleId===vehicle.id&&(isFD?(t.division==="finishing"):(t.division||"performance")==="performance"));
   const done  = vts.filter(t=>t.done).length;
   const mechs = (vehicle.mechanicIds||[]).map(id=>employees.find(e=>e.id===id)).filter(Boolean);
@@ -4196,9 +4201,13 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               <button onClick={()=>onSetStatus&&onSetStatus(vehicle.id,"active")} style={{flex:1,background:`${B.orange}33`,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
                 <IUndo s={12} c={B.orange}/>Reabrir
               </button>
-              {isOwner&&onDeliver&&<button onClick={()=>setConfirmDeliver(true)} style={{flex:1,background:B.green,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.white,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
-                <ICar2 s={12} c={B.white}/>Entregar
-              </button>}
+              {isOwner&&onDeliver&&(delivReady
+                ?<button onClick={()=>setConfirmDeliver(true)} style={{flex:1,background:B.green,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:B.white,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
+                  <ICar2 s={12} c={B.white}/>Entregar
+                </button>
+                :<button disabled title="Conclua a conferência de entrega" style={{flex:1,background:B.gray700,border:`1px dashed ${B.amber}66`,borderRadius:8,padding:"7px 4px",cursor:"not-allowed",color:B.amber,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800,opacity:.9}}>
+                  Pendente de conferência
+                </button>)}
             </>);
             return(
               <button onClick={()=>{
@@ -10750,7 +10759,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.1";
+const APP_VERSION = "2026.10.30.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11816,6 +11825,13 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
 }
 
 // ─── Vehicle Checklist (inline) ───────────────────────────────────────────────
+// Conferência de entrega completa? (sem serviços na OS = nada a conferir)
+function deliveryReady(vehicle,tasks,isFD){
+  const l=tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty&&(isFD?t.division==="finishing":(t.division||"performance")==="performance"));
+  if(l.length===0) return true;
+  const dc=(vehicle.deliveryCheck&&typeof vehicle.deliveryCheck==="object")?vehicle.deliveryCheck:{};
+  return l.every(t=>t.done&&dc[t.id]);
+}
 function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,managerMode}) {
   const [confirmReset,setConfirmReset]=useState(false);
   const dc=(vehicle.deliveryCheck&&typeof vehicle.deliveryCheck==="object")?vehicle.deliveryCheck:{};
@@ -13853,6 +13869,7 @@ export default function App() {
   const deliverVehicle=async(vid)=>{
     const v=vehicles.find(x=>x.id===vid);
     if(!v)return;
+    if(!deliveryReady(v,tasks,false)){toast_("Pendente de conferência de entrega");return;}
     const nowMs=Date.now();
     const deliveredAt=new Date().toISOString();
 
@@ -13967,6 +13984,7 @@ export default function App() {
   const deliverVehicleFinishing=async(vid)=>{
     const v=vehicles.find(x=>x.id===vid);
     if(!v||!v.enteredAtFinishing) return;
+    if(!deliveryReady(v,tasks,true)){toast_("Pendente de conferência de entrega");return;}
     const deliveredAt=new Date().toISOString();
     const finTasks=tasks.filter(t=>t.vehicleId===vid&&t.division==="finishing");
     const finTasksValue=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
@@ -15175,10 +15193,12 @@ export default function App() {
                           style={{padding:"7px 16px",borderRadius:8,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                           <ICheck s={12} c={B.blue}/>Pronto
                         </button>}
-                        {v.status==="ready"&&adminRole==="owner"&&<button onClick={()=>deliverVehicle(v.id)}
+                        {v.status==="ready"&&adminRole==="owner"&&(deliveryReady(v,tasks,false)
+                          ?<button onClick={()=>deliverVehicle(v.id)}
                           style={{padding:"7px 16px",borderRadius:8,background:`${B.green}22`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:800,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                           <ICar2 s={12} c={B.green}/>Entregar
-                        </button>}
+                        </button>
+                          :<button disabled title="Conclua a conferência de entrega" style={{padding:"7px 12px",borderRadius:8,background:B.gray700,border:`1px dashed ${B.amber}66`,color:B.amber,fontWeight:800,fontSize:11,cursor:"not-allowed"}}>Pendente de conferência</button>)}
                         {v.status==="ready"&&adminRole!=="owner"&&<span style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><ICheck s={10} c={B.green}/>Pronto</span>}
                       </div>
                     </div>

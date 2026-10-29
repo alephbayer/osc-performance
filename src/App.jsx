@@ -4472,7 +4472,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       {showParts&&<div style={{padding:"12px 16px",background:B.black,borderBottom:`1px solid ${B.gray700}`}}>
         <VehiclePartsList vehicle={vehicle} onUpdateVehicle={onUpdateVehicle} managerMode={managerMode} isFD={isFD} tasks={tasks}/>
       </div>}
-      {showPOForm&&<PurchaseOrderPanel vehicleId={vehicle.id} tasks={vts} onAdd={onAddPurchaseOrder} orders={purchaseOrders.filter(p=>p.vehicleId===vehicle.id)}/>}
+      {showPOForm&&<PurchaseOrderPanel vehicleId={vehicle.id} tasks={vts} stock={stock} onConsumeStock={onConsumeStock} onAdd={onAddPurchaseOrder} orders={purchaseOrders.filter(p=>p.vehicleId===vehicle.id)}/>}
       {showClientNotes&&clientNotes.length>0&&<div style={{padding:"12px 16px",background:`${B.amber}08`,borderBottom:`1px solid ${B.amber}33`}}>
         <div style={{fontSize:11,fontWeight:700,color:B.amber,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anotações do cliente</div>
         {clientNotes.map(n=>(
@@ -8776,7 +8776,22 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
 }
 
 // ─── Purchase Order Panel (inside VehicleCard for mechanics) ─────────────────
-function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[]}) {
+function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[],stock=[],onConsumeStock=null}) {
+  const [stkMode,setStkMode]=useState(false);
+  const [stkQ,setStkQ]=useState("");
+  const [stkSel,setStkSel]=useState(null);
+  const [stkTask,setStkTask]=useState("");
+  const [stkQty,setStkQty]=useState("1");
+  const [stkBusy,setStkBusy]=useState(false);
+  const stkList=useMemo(()=>{const q=stkQ.trim().toLowerCase();return (stock||[]).filter(i=>Number(i.qty)>0&&(!q||`${i.name} ${i.brand||""}`.toLowerCase().includes(q))).slice(0,30);},[stock,stkQ]);
+  const stkClose=()=>{setStkMode(false);setStkQ("");setStkSel(null);setStkTask("");setStkQty("1");};
+  const stkConfirm=async()=>{
+    if(!stkSel||!stkTask||stkBusy) return;
+    const q=Math.min(Math.max(1,parseInt(stkQty)||1),Math.floor(Number(stkSel.qty))||1);
+    setStkBusy(true);
+    try{ await onConsumeStock(stkTask,stkSel,undefined,false,q); stkClose(); }catch{}
+    setStkBusy(false);
+  };
   const [form,setForm]=useState({partName:"",description:"",taskId:"",quantity:"1",photoUrl:""});
   const [adding,setAdding]=useState(false);
   const [uploading,setUploading]=useState(false);
@@ -8805,7 +8820,10 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[]}) {
   return (<div style={{padding:"12px 14px",background:`${B.amber}08`,borderBottom:`1px solid ${B.amber}33`}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
       <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.5}}>Pedidos de peças</div>
-      {!adding&&<button onClick={()=>setAdding(true)} style={{padding:"4px 12px",borderRadius:7,background:`${B.amber}22`,border:`1px solid ${B.amber}55`,color:B.amber,fontWeight:700,fontSize:11,cursor:"pointer"}}>+ Novo pedido</button>}
+      {!adding&&!stkMode&&<div style={{display:"flex",gap:6}}>
+        {onConsumeStock&&<button onClick={()=>setStkMode(true)} style={{padding:"4px 12px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:11,cursor:"pointer"}}>📦 Do estoque</button>}
+        <button onClick={()=>setAdding(true)} style={{padding:"4px 12px",borderRadius:7,background:`${B.amber}22`,border:`1px solid ${B.amber}55`,color:B.amber,fontWeight:700,fontSize:11,cursor:"pointer"}}>+ Novo pedido</button>
+      </div>}
     </div>
 
     {/* Existing orders for this vehicle */}
@@ -8825,6 +8843,34 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[]}) {
         </div>
       </div>);
     })}
+
+    {stkMode&&<div style={{background:B.gray800,borderRadius:10,padding:12,border:`1px solid ${B.green}44`,marginBottom:8}}>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <input value={stkQ} onChange={e=>{setStkQ(e.target.value);setStkSel(null);}} placeholder="Buscar no estoque..." autoFocus
+          style={{padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
+        <div style={{maxHeight:180,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+          {stkList.length===0&&<div style={{fontSize:12,color:B.gray500,padding:6}}>Nada em estoque com esse nome.</div>}
+          {stkList.map(i=><button key={i.id} onClick={()=>{setStkSel(i);setStkQty("1");}}
+            style={{display:"flex",justifyContent:"space-between",gap:8,textAlign:"left",padding:"7px 10px",borderRadius:8,cursor:"pointer",background:stkSel?.id===i.id?`${B.green}22`:B.gray900,border:`1px solid ${stkSel?.id===i.id?B.green:B.gray600}`,color:B.white,fontSize:12}}>
+            <span style={{minWidth:0,overflow:"hidden",textOverflow:"ellipsis"}}>{i.name}{i.brand?` · ${i.brand}`:""}</span>
+            <span style={{flexShrink:0,color:B.gray400}}>{i.qty} un.</span>
+          </button>)}
+        </div>
+        {stkSel&&<div style={{display:"flex",gap:8}}>
+          <select value={stkTask} onChange={e=>setStkTask(e.target.value)}
+            style={{flex:1,minWidth:0,padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:stkTask?B.white:B.gray500,fontSize:12,outline:"none"}}>
+            <option value="">Lançar em qual serviço? *</option>
+            {tasks.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
+          <input value={stkQty} onChange={e=>setStkQty(e.target.value)} type="number" min="1" max={Math.floor(Number(stkSel.qty))||1} placeholder="Qtd"
+            style={{width:60,padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+        </div>}
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={stkConfirm} disabled={!stkSel||!stkTask||stkBusy} style={{flex:1,padding:"8px",borderRadius:8,border:"none",background:(!stkSel||!stkTask)?B.gray700:B.green,color:(!stkSel||!stkTask)?B.gray500:"#000",fontWeight:800,fontSize:12,cursor:(!stkSel||!stkTask)?"default":"pointer"}}>{stkBusy?"Lançando...":"Lançar na OS e descontar estoque"}</button>
+          <button onClick={stkClose} style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"transparent",color:B.gray400,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
 
     {adding&&<div style={{background:B.gray800,borderRadius:10,padding:12,border:`1px solid ${B.amber}44`}}>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -10912,7 +10958,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.6";
+const APP_VERSION = "2026.10.30.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14374,8 +14420,8 @@ export default function App() {
     }catch(e){errToast(e);}
   };
   // Adds a stock item as a new material entry (list grows, no limit)
-  const consumeStock=async(taskId,item,currentMats,quoteOnly=false)=>{
-    const matQty=1;
+  const consumeStock=async(taskId,item,currentMats,quoteOnly=false,qtyArg=1)=>{
+    const matQty=Math.max(1,Number(qtyArg)||1);
     const mats = currentMats || tasks.find(t=>t.id===taskId)?.materials || [];
     // quoteOnly: add value but don't deduct from stock, and don't link to stockItemId
     const newMats = [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:!quoteOnly,stockItemId:quoteOnly?null:item.id,quoteOnly:quoteOnly||undefined}];

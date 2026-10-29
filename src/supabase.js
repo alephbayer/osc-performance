@@ -453,6 +453,9 @@ export const db = {
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
       photos: historyRecord.photos || [],
+      delivery_check: historyRecord.deliveryCheck || {},
+      delivery_check_pdf: historyRecord.deliveryCheckPdf || null,
+      delivery_check_at: historyRecord.deliveryCheckAt || null,
     };
     ({ data: hData, error: hErr } = await supabase.from("os_history").insert(insertPayload).select("id").single());
     // If photos column doesn't exist yet, retry without it
@@ -485,6 +488,7 @@ export const db = {
       fuel_cost: 0,
       fuels: [],
       checklist: [],
+      delivery_check: historyRecord.keepDeliveryCheck || {},
       parts_list: historyRecord.partsListKeep || [],
       photos: [],
       os_discount_pct: 0,
@@ -513,6 +517,9 @@ export const db = {
       total_value: historyRecord.totalValue || 0,
       division: "finishing",
       photos: historyRecord.photos || [],
+      delivery_check: historyRecord.deliveryCheck || {},
+      delivery_check_pdf: historyRecord.deliveryCheckPdf || null,
+      delivery_check_at: historyRecord.deliveryCheckAt || null,
     };
     ({ data: hData, error: hErr } = await supabase.from("os_history").insert(insertPayload).select("id").single());
     if (hErr && hErr.message && hErr.message.includes("photos")) {
@@ -543,6 +550,7 @@ export const db = {
       photos_finishing: [],
       notes_finishing: "",
       checklist_finishing: [],
+      delivery_check: historyRecord.keepDeliveryCheck || {},
       parts_list_finishing: historyRecord.partsListKeep || [],
       os_discount_pct_finishing: 0,
     }).eq("id", vehicleId);
@@ -702,6 +710,13 @@ export const db = {
 
   // Quando o próprio gestor está logado e mexendo no sistema, não avisa os aparelhos dele
   // (os avisos de mecânico/cliente continuam chegando, pois vêm de outra sessão).
+  async uploadConferenciaPdf(vehicleId, blob) {
+    const path = `conferencia/${vehicleId}/${Date.now()}.pdf`;
+    const { error } = await supabase.storage.from("photos").upload(path, blob, { contentType: "application/pdf", cacheControl: "31536000", upsert: false });
+    if (error) throw error;
+    return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
+  },
+
   setAdminSession(active) { db._adminSession = !!active; },
 
   async sendPushToAdmins(title, body, url) {

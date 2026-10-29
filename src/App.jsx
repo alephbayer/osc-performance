@@ -1457,6 +1457,141 @@ function loadJsPDF() {
   return _jsPDFPromise;
 }
 
+
+function buildDeliveryInfo({vehicle,tasks,deliveryCheck,client,employees,company,isFD,deliveredAt,mechanicIds}){
+  const ids=mechanicIds||vehicle.mechanicIds||[];
+  return {
+    model:vehicle.model, plate:vehicle.plate, year:vehicle.year, color:vehicle.color,
+    osLabel:isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber),
+    divisionLabel:isFD?"Finishing Division":"Performance",
+    clientName:client?.name||"",
+    mechNames:ids.map(id=>(employees||[]).find(e=>e.id===id)?.name).filter(Boolean),
+    enteredAt:isFD?vehicle.enteredAtFinishing:vehicle.enteredAt, deliveredAt:deliveredAt||null,
+    tasks, deliveryCheck, company,
+  };
+}
+
+// ─── PDF: Termo de Conferência de Entrega ────────────────────────────────────
+// info: {model,plate,year,color,osLabel,divisionLabel,clientName,mechNames[],enteredAt,deliveredAt,tasks[],deliveryCheck{},company}
+async function generateDeliveryCheckPDF(info, opts={}) {
+  const jsPDFCtor = await loadJsPDF();
+  const doc = new jsPDFCtor({ unit:"mm", format:"a4" });
+  const pageW=210, pageH=297, mx=14, black=[20,20,20], gray=[100,100,100], light=[242,242,242], white=[255,255,255];
+  const green=[22,163,74], amber=[217,119,6], orange=[221,139,52];
+  const dc=info.deliveryCheck||{};
+  const list=(info.tasks||[]).filter(t=>!t.warranty);
+  const checkedN=list.filter(t=>dc[t.id]).length;
+  const openN=list.filter(t=>!t.done).length;
+  const complete=list.length>0&&checkedN===list.length&&openN===0;
+  const fmtDT=iso=>{try{return new Date(iso).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return "";}};
+  const fmtD2=iso=>{try{return new Date(iso).toLocaleDateString("pt-BR");}catch{return "";}};
+  const company=info.company||{};
+  let y=0;
+
+  // Header
+  doc.setFillColor(...black); doc.rect(0,0,pageW,38,"F");
+  doc.setFillColor(...orange); doc.rect(0,36,pageW,2,"F");
+  try{ doc.addImage(OSC_GROUP_LOGO_B64,"PNG",mx,6,13*660/108,13); }catch(e){ doc.setTextColor(...white); doc.setFont("helvetica","bold"); doc.setFontSize(18); doc.text("OSC GROUP",mx,16); }
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(210,210,210);
+  let hy=24;
+  if(company.address){ doc.text(company.address,mx,hy); hy+=5; }
+  const contact=[company.phone&&`Tel: ${company.phone}`,company.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ");
+  if(contact) doc.text(contact,mx,hy);
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...white);
+  doc.text("TERMO DE CONFERÊNCIA DE ENTREGA",pageW-mx,15,{align:"right"});
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(180,180,180);
+  doc.text(`Emitido em ${fmtDT(new Date().toISOString())}`,pageW-mx,22,{align:"right"});
+  y=46;
+
+  // Vehicle / OS block
+  const colW=(pageW-mx*2)/2;
+  doc.setFillColor(...light); doc.roundedRect(mx,y,pageW-mx*2,34,2,2,"F");
+  const label=(txt,x,yy)=>{doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(...gray);doc.text(txt,x,yy);};
+  const val=(txt,x,yy,size=10)=>{doc.setFont("helvetica","bold");doc.setFontSize(size);doc.setTextColor(...black);doc.text(doc.splitTextToSize(String(txt||"—"),colW-10)[0],x,yy);};
+  label("VEÍCULO",mx+5,y+7); val(info.model,mx+5,y+13,11);
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+  doc.text([`Placa: ${info.plate||"—"}`,info.year&&`Ano: ${info.year}`,info.color&&`Cor: ${info.color}`].filter(Boolean).join("  ·  "),mx+5,y+19);
+  label("CLIENTE",mx+5,y+25); val(info.clientName,mx+5,y+30,9);
+  label("ORDEM DE SERVIÇO",mx+colW+3,y+7); val(`${info.osLabel||"—"}${info.divisionLabel?"  ·  "+info.divisionLabel:""}`,mx+colW+3,y+13,10);
+  label("MECÂNICO(S) DA OS",mx+colW+3,y+19); val((info.mechNames||[]).join(", ")||"—",mx+colW+3,y+24,8.5);
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+  doc.text(`Entrada: ${info.enteredAt?fmtD2(info.enteredAt):"—"}   ·   Entrega: ${info.deliveredAt?fmtD2(info.deliveredAt):"—"}`,mx+colW+3,y+31);
+  y+=40;
+
+  // Summary
+  const checkers={}; list.forEach(t=>{const c=dc[t.id]; if(c) checkers[c.by||"—"]=(checkers[c.by||"—"]||0)+1;});
+  const ats=Object.values(dc).map(c=>c&&c.at).filter(Boolean).sort();
+  const stCol=complete?green:amber;
+  doc.setDrawColor(...stCol); doc.setLineWidth(0.6); doc.roundedRect(mx,y,pageW-mx*2,30,2,2,"S");
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...stCol);
+  doc.text(complete?"CONFERÊNCIA COMPLETA":"CONFERÊNCIA PARCIAL",mx+5,y+8);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...black);
+  doc.text(`${checkedN} de ${list.length} serviço${list.length!==1?"s":""} conferido${checkedN!==1?"s":""}${openN>0?`  ·  ${openN} ainda em aberto`:""}`,mx+5,y+14);
+  doc.setFontSize(8.5); doc.setTextColor(...gray);
+  const who=Object.entries(checkers).map(([n,c])=>`${n} (${c})`).join(", ")||"—";
+  doc.text(doc.splitTextToSize(`Conferido por: ${who}`,pageW-mx*2-10)[0],mx+5,y+20);
+  doc.text(`Início: ${ats[0]?fmtDT(ats[0]):"—"}   ·   Conclusão: ${ats.length?fmtDT(ats[ats.length-1]):"—"}`,mx+5,y+25.5);
+  y+=38;
+
+  // Table
+  const xBox=mx+1, xLbl=mx+9, wLbl=100, xBy=mx+114, xAt=mx+148;
+  const drawHead=()=>{
+    doc.setFillColor(...black); doc.rect(mx,y,pageW-mx*2,7,"F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...white);
+    doc.text("SERVIÇO / MATERIAIS",xLbl,y+4.8); doc.text("CONFERIDO POR",xBy,y+4.8); doc.text("DATA / HORA",xAt,y+4.8);
+    y+=9;
+  };
+  const newPage=()=>{ doc.addPage(); y=16; doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray); doc.text(`Conferência de entrega — ${info.model||""} ${info.plate||""} — ${info.osLabel||""}`,mx,y); y+=6; drawHead(); };
+  drawHead();
+  const catsOrdered=buildCatOrder(list);
+  catsOrdered.forEach(cat=>{
+    const items=list.filter(t=>(t.category||null)===cat);
+    if(!items.length) return;
+    if(y>pageH-40) newPage();
+    doc.setFillColor(230,230,230); doc.rect(mx,y-1,pageW-mx*2,5.5,"F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...black);
+    doc.text((cat||"Sem categoria").toUpperCase(),mx+2,y+3);
+    y+=7;
+    items.forEach(t=>{
+      const c=dc[t.id];
+      doc.setFont("helvetica","bold"); doc.setFontSize(9);
+      const ll=doc.splitTextToSize(String(t.label||""),wLbl);
+      const mats=(t.materials||[]).map(m=>m.name).filter(Boolean).join(" · ");
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
+      const ml=mats?doc.splitTextToSize(mats,wLbl):[];
+      const extra=(!t.done)?1:0;
+      const h=Math.max(9,ll.length*4.2+ml.length*3.4+extra*3.6+3);
+      if(y+h>pageH-18) newPage();
+      // checkbox
+      if(c){ doc.setFillColor(...green); doc.roundedRect(xBox,y,5,5,0.8,0.8,"F"); doc.setDrawColor(255,255,255); doc.setLineWidth(0.7); doc.line(xBox+1.1,y+2.7,xBox+2.2,y+3.8); doc.line(xBox+2.2,y+3.8,xBox+4,y+1.4); }
+      else { doc.setDrawColor(...gray); doc.setLineWidth(0.4); doc.roundedRect(xBox,y,5,5,0.8,0.8,"S"); }
+      doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...black);
+      doc.text(ll,xLbl,y+3.8);
+      let yy=y+3.8+(ll.length-1)*4.2;
+      if(ml.length){ doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...gray); doc.text(ml,xLbl,yy+3.6); yy+=ml.length*3.4+0.2; }
+      if(!t.done){ doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...amber); doc.text("AINDA EM ABERTO NA OS",xLbl,yy+3.8); }
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...black);
+      if(c){ doc.text(doc.splitTextToSize(String(c.by||"—"),32)[0],xBy,y+3.8); doc.setTextColor(...gray); doc.setFontSize(8); doc.text(fmtDT(c.at),xAt,y+3.8); }
+      else { doc.setTextColor(...gray); doc.text("não conferido",xBy,y+3.8); }
+      y+=h;
+      doc.setDrawColor(225,225,225); doc.setLineWidth(0.2); doc.line(mx,y-1.2,pageW-mx,y-1.2);
+    });
+    y+=2;
+  });
+
+  // Footer on every page
+  const pages=doc.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i); doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(150,150,150);
+    doc.text("Documento gerado automaticamente pelo sistema de gestão da OSC Group, a partir dos registros de conferência de cada serviço.",mx,pageH-9);
+    doc.text(`Página ${i} de ${pages}`,pageW-mx,pageH-9,{align:"right"});
+  }
+  const safe=s=>String(s||"").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");
+  const fileName=`conferencia-entrega-${safe(info.model)}-${safe(info.plate)}.pdf`;
+  if(opts.save) doc.save(fileName);
+  return { blob: doc.output("blob"), fileName, complete, checkedN, total: list.length };
+}
+
 const CATEGORIES=[
   {id:"Acabamento",     color:"#14b8a6"},
   {id:"Adaptação",      color:"#64748b"},
@@ -4142,7 +4277,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         const {task,idx}=orderTarget; const cur=(tasks.find(t=>t.id===task.id)?.materials)||task.materials||[];
         onUpdateTask(task.id,{materials:cur.map((m,i)=>i===idx?{...m,ordered:true,orderedAt:new Date().toISOString()}:m)});
       }}/>}
-    {showDelivCheck&&<DeliveryCheckModal vehicle={vehicle} tasks={vts} isFD={isFD} managerMode={managerMode} actor={managerMode?(isOwner?"Gestor":"Admin"):(currentMechanic?.name||"Mecânico")} onUpdateVehicle={onUpdateVehicle} onClose={()=>setShowDelivCheck(false)}/>}
+    {showDelivCheck&&<DeliveryCheckModal vehicle={vehicle} tasks={vts} isFD={isFD} managerMode={managerMode} actor={managerMode?(isOwner?"Gestor":"Admin"):(currentMechanic?.name||"Mecânico")} onUpdateVehicle={onUpdateVehicle} onClose={()=>setShowDelivCheck(false)}
+      onPdf={()=>generateDeliveryCheckPDF(buildDeliveryInfo({vehicle,tasks:vts.filter(x=>!x.warranty),deliveryCheck:vehicle.deliveryCheck||{},client:clients.find(c=>c.id===vehicle.clientId),employees,company,isFD}),{save:true})}/>}
     {showPage&&createPortal(<VehicleStagesPage vehicle={vehicle} tasks={tasks} defaultRate={defaultRate} isFD={isFD} managerMode={managerMode}
       renderTask={renderTaskEditor} onAddTask={onAddTask} payments={payments}
       renderFull={()=><VehicleCard {...props} defaultOpen hidePageBtn openPageOnMount={false}/>}
@@ -8202,6 +8338,15 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                   {taskCost(t,defaultRate).total>0&&<span style={{fontSize:10,color:t.done?B.green:B.amber,fontWeight:700}}>{fmtBRL(taskCost(t,defaultRate).total)}</span>}
                 </div>)}
               </div>}
+              {/* Conferência de entrega desta OS */}
+              {(()=>{
+                const hdc=(h.delivery_check&&typeof h.delivery_check==="object")?h.delivery_check:{};
+                const has=Object.keys(hdc).length>0;
+                const btn={display:"inline-flex",alignItems:"center",gap:6,marginTop:8,padding:"7px 12px",borderRadius:8,background:`${B.green}14`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:800,fontSize:11.5,cursor:"pointer",textDecoration:"none",fontFamily:"inherit"};
+                if(!has) return <div style={{marginTop:8,fontSize:10.5,color:B.gray500}}>Sem conferência de entrega registrada nesta OS.</div>;
+                if(h.delivery_check_pdf) return <a href={h.delivery_check_pdf} target="_blank" rel="noopener noreferrer" style={btn}>📄 Conferência de entrega (PDF)</a>;
+                return <button style={btn} onClick={async()=>{try{await generateDeliveryCheckPDF(buildDeliveryInfo({vehicle:{...vehicle,osNumber:h.os_number,osNumberFinishing:h.os_number,enteredAt:h.entered_at,enteredAtFinishing:h.entered_at},tasks:hTasks.filter(x=>!x.warranty),deliveryCheck:hdc,client:hClient,employees,company,isFD:h.division==="finishing",deliveredAt:h.delivered_at,mechanicIds:h.mechanic_ids||h.mechanicIds||[]}),{save:true});}catch(e){alert("Erro ao gerar PDF: "+(e.message||e));}}}>📄 Conferência de entrega (PDF)</button>;
+              })()}
               {/* Photos from this OS */}
               {(h.photos||[]).filter(p=>p).length>0&&<div style={{marginTop:8}}>
                 <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos da OS</div>
@@ -10767,7 +10912,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.5";
+const APP_VERSION = "2026.10.30.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -11840,8 +11985,9 @@ function deliveryReady(vehicle,tasks,isFD){
   const dc=(vehicle.deliveryCheck&&typeof vehicle.deliveryCheck==="object")?vehicle.deliveryCheck:{};
   return l.every(t=>t.done&&dc[t.id]);
 }
-function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,managerMode}) {
+function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,managerMode,onPdf}) {
   const [confirmReset,setConfirmReset]=useState(false);
+  const [pdfBusy,setPdfBusy]=useState(false);
   const dc=(vehicle.deliveryCheck&&typeof vehicle.deliveryCheck==="object")?vehicle.deliveryCheck:{};
   const list=tasks.filter(t=>!t.warranty);
   const doneT=list.filter(t=>t.done);
@@ -11910,6 +12056,8 @@ function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,ma
       {complete
         ?<div style={{padding:"12px 14px",borderRadius:12,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:800,fontSize:13.5,textAlign:"center"}}>✅ Conferência completa{lastAt?` · ${fmtAt(lastAt)}`:""}</div>
         :<div style={{fontSize:12.5,color:B.gray400,textAlign:"center"}}>{openN>0?`Há ${openN} serviço${openN!==1?"s":""} ainda em aberto na OS.`:"Marque cada item conforme for conferindo no veículo."}</div>}
+      {onPdf&&checkedN>0&&<button onClick={async()=>{setPdfBusy(true);try{await onPdf();}catch(e){alert("Erro ao gerar PDF: "+(e.message||e));}setPdfBusy(false);}} disabled={pdfBusy}
+        style={{width:"100%",minHeight:46,marginTop:8,borderRadius:12,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontWeight:700,fontSize:13.5,cursor:pdfBusy?"wait":"pointer",fontFamily:"inherit"}}>{pdfBusy?"Gerando PDF…":"📄 PDF da conferência"}</button>}
       {managerMode&&checkedN>0&&<div style={{marginTop:8,textAlign:"center"}}>
         {confirmReset
           ?<span style={{fontSize:12,color:B.gray300}}>Zerar toda a conferência? <button onClick={()=>{onUpdateVehicle(vehicle.id,{deliveryCheck:{}});setConfirmReset(false);}} style={{background:"none",border:"none",color:B.red,fontWeight:800,cursor:"pointer",fontSize:12,minHeight:36,padding:"0 8px"}}>Sim, zerar</button><button onClick={()=>setConfirmReset(false)} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:12,minHeight:36,padding:"0 8px"}}>Cancelar</button></span>
@@ -13874,6 +14022,22 @@ export default function App() {
     }catch(e){errToast(e);}
   };
 
+  // Gera e guarda o PDF da conferência (melhor esforço: se falhar, os dados da conferência ainda vão para o histórico)
+  const buildDeliveryRecord=async(v,delivTasks,isFD,deliveredAt,mechanicIds)=>{
+    const ids=new Set(delivTasks.map(x=>x.id));
+    const all=v.deliveryCheck||{};
+    const deliveryCheck={}, keepDeliveryCheck={};
+    Object.entries(all).forEach(([k,val])=>{ (ids.has(k)?deliveryCheck:keepDeliveryCheck)[k]=val; });
+    let deliveryCheckPdf=null;
+    try{
+      if(Object.keys(deliveryCheck).length){
+        const info=buildDeliveryInfo({vehicle:v,tasks:delivTasks.filter(x=>!x.warranty),deliveryCheck,client:clients.find(c=>c.id===v.clientId),employees,company,isFD,deliveredAt,mechanicIds});
+        const r=await generateDeliveryCheckPDF(info);
+        deliveryCheckPdf=await db.uploadConferenciaPdf(v.id,r.blob);
+      }
+    }catch(e){ console.warn("PDF da conferência não salvo:",e); }
+    return {deliveryCheck,keepDeliveryCheck,deliveryCheckPdf,deliveryCheckAt:Object.keys(deliveryCheck).length?new Date().toISOString():null};
+  };
   const deliverVehicle=async(vid)=>{
     const v=vehicles.find(x=>x.id===vid);
     if(!v)return;
@@ -13911,6 +14075,7 @@ export default function App() {
       totalValue,
       photos: v.photos||[],
       partsListKeep: closeKeepParts(v.partsList,vTasks),
+      ...(await buildDeliveryRecord(v,vTasks,false,deliveredAt,v.mechanicIds||[])),
     };
 
     // Don't update UI optimistically — wait for DB to confirm
@@ -14007,6 +14172,7 @@ export default function App() {
       osDiscountPct:v.osDiscountPctFinishing||0, totalValue, division:"finishing",
       photos: v.photosFinishing||[],
       partsListKeep: closeKeepParts(v.partsListFinishing,finTasks),
+      ...(await buildDeliveryRecord(v,finTasks,true,deliveredAt,(v.mechanicIds||[]).filter(id=>{const e=employees.find(e=>e.id===id);return e?.division==="finishing";}))),
     };
     // Don't update UI optimistically — wait for DB to confirm
     try{

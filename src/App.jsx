@@ -10029,9 +10029,29 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           </div>
         </div>));
 
-  return (<div style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+  return (<div className="pv-root" style={{minHeight:"100vh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+    <style>{`
+      .pv-side,.pv-right{display:contents}
+      @media(min-width:960px){
+        .pv-side{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:268px;background:${B.black};border-right:1px solid ${B.gray700};z-index:50;overflow-y:auto}
+        .pv-head>div{padding:48px 32px 8px!important;flex-direction:column;align-items:flex-start!important}
+        .pv-head img{height:36px!important}
+        .pv-val{position:absolute;left:32px;bottom:28px}
+        .pv-navwrap{position:static!important;padding:28px 20px!important;background:none!important}
+        .pv-nav{max-width:none!important;flex-direction:column;background:transparent!important;border:none!important;border-radius:0!important;padding:0!important;gap:2px!important}
+        .pv-tab{flex:none!important;flex-direction:row!important;justify-content:flex-start!important;min-height:40px!important;padding:0 14px!important;border-radius:8px!important;gap:0!important;font-size:10.5px!important;letter-spacing:2.2px;text-transform:uppercase;background:transparent!important}
+        .pv-tab svg{display:none}
+        .pv-tab[aria-current=page]{background:${B.orange}14!important;box-shadow:inset 2px 0 0 ${B.orange}}
+        .pv-tab>span{left:auto!important;right:14px;top:50%!important;transform:translateY(-50%)}
+        .pv-main{margin:0 0 0 calc(268px + max(0px,(100vw - 268px - 1000px)/2))!important;max-width:1000px!important;padding:56px 40px 64px!important}
+        .pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:20px}
+        .pv-right{display:flex;flex-direction:column;gap:16px}
+        .pv-grid>*,.pv-right>*{margin-bottom:0!important}
+      }
+    `}</style>
+    <aside className="pv-side">
     {/* Header */}
-    <div style={{background:B.black}}>
+    <div className="pv-head" style={{background:B.black}}>
       {/* Top row: logos + name */}
       <div style={{padding:"12px max(16px, calc((100% - 620px)/2 + 16px))",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
@@ -10040,7 +10060,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
           <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Acompanhamento de serviço</div>
         </div>
-        <button onClick={()=>setHideNum(h=>!h)} title={hideNum?"Mostrar valores":"Ocultar valores"}
+        <button className="pv-val" onClick={()=>setHideNum(h=>!h)} title={hideNum?"Mostrar valores":"Ocultar valores"}
           style={{flexShrink:0,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:99,padding:"6px 11px",cursor:"pointer",color:B.gray300,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:6}}>
           {hideNum
             ?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -10049,8 +10069,19 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </button>
       </div>
     </div>
-
-    <div style={{maxWidth:620,margin:"0 auto",padding:"20px 16px 96px"}}>
+    {/* Barra de abas */}
+    <div className="pv-navwrap" style={{position:"fixed",left:0,right:0,bottom:0,zIndex:100,padding:"28px 16px calc(12px + env(safe-area-inset-bottom))",pointerEvents:"none",background:`linear-gradient(to bottom,transparent,${B.black} 55%)`}}>
+    <nav className="pv-nav" aria-label="Seções" style={{pointerEvents:"auto",maxWidth:440,margin:"0 auto",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:99,display:"flex",gap:2,padding:5}}>
+      {tabs.map(tb=>{const on=tab===tb.id;return(<button className="pv-tab" key={tb.id} onClick={()=>goTab(tb.id)} aria-current={on?"page":undefined}
+        style={{flex:1,minHeight:52,background:on?`${B.orange}22`:"none",border:"none",borderRadius:99,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,color:on?B.orange:B.gray400,fontSize:10,fontWeight:on?800:700,fontFamily:"inherit",position:"relative"}}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{__html:tb.icon}}/>
+        {tb.label}
+        {tb.dot&&<span style={{position:"absolute",top:6,left:"calc(50% + 8px)",width:8,height:8,borderRadius:99,background:B.amber}}/>}
+      </button>);})}
+    </nav>
+    </div>
+    </aside>
+    <div className="pv-main" style={{maxWidth:620,margin:"0 auto",padding:"20px 16px 96px"}}>
 
       {tab==="resumo"&&<>
       {/* ── Saudação ── */}
@@ -10059,6 +10090,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         <div style={{fontSize:13,fontWeight:600,color:B.white,letterSpacing:2.4,textTransform:"uppercase",lineHeight:1.3}}>Bem-vindo, <span style={{color:B.orange,fontWeight:800}}>{cli.name.trim().split(/\s+/)[0]}</span></div>
         <div style={{fontSize:9,color:B.gray500,letterSpacing:.9,textTransform:"uppercase",marginTop:6,lineHeight:1.6}}>Acompanhe o andamento do seu {v.model}<br/>serviços · fotos · pagamentos</div>
       </div>}
+      <div className="pv-grid">
       {/* ── Vehicle info ── */}
       <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:200,objectFit:"cover"}}/>}
@@ -10085,6 +10117,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>
       </div>
 
+      <div className="pv-right">
       {payCardFn(true)}
       {/* ── Resumo: progresso + próximos serviços ── */}
       {ts.filter(t=>!t.done&&!t.warranty).length>0&&<div style={S.card}><div style={S.pad}>
@@ -10100,6 +10133,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           {ts.filter(t=>!t.done&&!t.warranty).length>4&&<button onClick={()=>goTab("servicos")} style={{marginTop:8,background:"none",border:"none",color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer",minHeight:36,padding:0}}>Ver todos os serviços →</button>}
         </div>}
       </div></div>}
+      </div>
+      </div>
       {/* ── Últimas atualizações ── */}
       {tlLoaded&&timeline.length>0&&<div style={S.card}>
         <div onClick={()=>setTlOpen(o=>!o)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
@@ -10737,17 +10772,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* Nota manual da equipe — só visível para admins via url param */}
     </div>
 
-    {/* Barra de abas */}
-    <div style={{position:"fixed",left:0,right:0,bottom:0,zIndex:100,padding:"28px 16px calc(12px + env(safe-area-inset-bottom))",pointerEvents:"none",background:`linear-gradient(to bottom,transparent,${B.black} 55%)`}}>
-    <nav aria-label="Seções" style={{pointerEvents:"auto",maxWidth:440,margin:"0 auto",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:99,display:"flex",gap:2,padding:5}}>
-      {tabs.map(tb=>{const on=tab===tb.id;return(<button key={tb.id} onClick={()=>goTab(tb.id)} aria-current={on?"page":undefined}
-        style={{flex:1,minHeight:52,background:on?`${B.orange}22`:"none",border:"none",borderRadius:99,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,color:on?B.orange:B.gray400,fontSize:10,fontWeight:on?800:700,fontFamily:"inherit",position:"relative"}}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{__html:tb.icon}}/>
-        {tb.label}
-        {tb.dot&&<span style={{position:"absolute",top:6,left:"calc(50% + 8px)",width:8,height:8,borderRadius:99,background:B.amber}}/>}
-      </button>);})}
-    </nav>
-    </div>
 
     {/* Lightbox */}
     {lb&&<PhotoLightbox items={[...photos,...photosF].filter(p=>p&&p.url)} current={lb} onChange={setLB} onClose={()=>setLB(null)} taskLabel={id=>ts.find(t=>t.id===id)?.label}/>}
@@ -10970,7 +10994,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.10";
+const APP_VERSION = "2026.10.30.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

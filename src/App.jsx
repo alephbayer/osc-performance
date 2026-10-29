@@ -4899,6 +4899,13 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   })();
   const activeEmpV2=empV.filter(v=>!isVDone(v));
   const doneEmpV2=empV.filter(v=>isVDone(v));
+  const isPzE=v=>(employee.division==="finishing"?v.statusFinishing:v.status)==="paused";
+  const renderEV=v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
+        onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
+        onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
+        onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
+        onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}
+        onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>;
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
   const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase(),vColor.trim());setMod("");setPlate("");setVColor("");setSF(false);};;
@@ -4960,12 +4967,8 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         </select>
         {employee.specialty&&<span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,borderRadius:5,padding:"2px 8px"}}>Filtra: {employee.specialty}</span>}
       </div>}
-      {activeEmpV2.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={false}
-        onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
-        onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
-        onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
-        onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}
-        onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>)}
+      {activeEmpV2.filter(v=>!isPzE(v)).map(renderEV)}
+      {activeEmpV2.some(isPzE)&&<><div style={{display:"flex",alignItems:"center",gap:8,margin:"22px 2px 10px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}>⏸ Pausados · {activeEmpV2.filter(isPzE).length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>{activeEmpV2.filter(isPzE).map(renderEV)}</>}
       {doneEmpV2.length>0&&<div style={{marginTop:activeEmpV2.length>0?8:0}}>
         <div onClick={()=>setDoneOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none",marginBottom:doneOpen?8:0}}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -10842,6 +10845,12 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
   const div = isFD ? "finishing" : "performance";
   const totT=filteredTasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&(t.division||"performance")===div).length;
   const donT=filteredTasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&(t.division||"performance")===div&&t.done).length;
+  const isPz=v=>(isFD?v.statusFinishing:v.status)==="paused";
+  const renderMV=v=><VehicleCard key={v.id} vehicle={v} tasks={filteredTasks} employees={employees} clients={clients} stock={stock} defaultRate={0} managerMode={false}
+          onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask}
+          onDeleteVehicle={()=>{}} onTransferMechanic={()=>{}} onTransferOwner={()=>{}} onUpdateVehicle={onUpdateVehicle}
+          onConsumeStock={()=>{}} onReturnStock={()=>{}} hideManagerButtons division={div}
+          onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} currentMechanic={employee}/>;
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"0 18px",paddingTop:"env(safe-area-inset-top)",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",height:58,gap:12}}>
@@ -10869,11 +10878,7 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
         {totT>0&&<ProgressBar value={donT} max={totT}/>}
       </div>
       {empV.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>🔧</div><div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum veículo atribuído a você ainda</div></div>
-        :empV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={filteredTasks} employees={employees} clients={clients} stock={stock} defaultRate={0} managerMode={false}
-          onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask}
-          onDeleteVehicle={()=>{}} onTransferMechanic={()=>{}} onTransferOwner={()=>{}} onUpdateVehicle={onUpdateVehicle}
-          onConsumeStock={()=>{}} onReturnStock={()=>{}} hideManagerButtons division={div}
-          onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders} currentMechanic={employee}/>)}
+        :<>{empV.filter(v=>!isPz(v)).map(renderMV)}{empV.some(isPz)&&<><div style={{display:"flex",alignItems:"center",gap:8,margin:"22px 2px 10px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}>⏸ Pausados · {empV.filter(isPz).length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>{empV.filter(isPz).map(renderMV)}</>}</>}
     </div>
     </div>{/* end scroll */}
   </div>);
@@ -10958,7 +10963,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.7";
+const APP_VERSION = "2026.10.30.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

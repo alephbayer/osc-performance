@@ -11002,7 +11002,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.14";
+const APP_VERSION = "2026.10.30.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13077,7 +13077,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
   const copySummary=()=>{try{navigator.clipboard.writeText(summaryText());alert("Resumo copiado ✓");}catch{fail({message:"Não foi possível copiar"});}};
   const waSummary=()=>{const ph=String(partner?.phone||"").replace(/\D/g,""); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(summaryText())}`,"_blank");};
 
-  return (<div>
+  return (<div style={{color:B.white}}>
     {/* Parceiros */}
     <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
       {partners.map(p=><button key={p.id} onClick={()=>{setPid(p.id);setQ("");}} style={pill(pid===p.id)}>{p.name}</button>)}

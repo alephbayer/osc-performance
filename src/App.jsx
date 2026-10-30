@@ -1016,7 +1016,7 @@ function boughtPendingValue(divTasks, defaultRate, osOpen=true) {
   divTasks.filter(t=>!t.done).forEach(t=>{
     (Array.isArray(t.materials)?t.materials:[]).forEach(m=>{
       if(!matIsBought(m,osOpen)||m.noCharge) return;
-      const markup=m.markup!=null?Number(m.markup):50;
+      const markup=m.markup!=null?Number(m.markup):(m.quoteOnly?0:50);
       v+=Number(m.cost||0)*(1+markup/100)*Number(m.qty||1)+Number(m.freight||0);
     });
   });
@@ -1355,7 +1355,7 @@ const taskCost=(t,defaultRate)=>{
     if(m.fromStock){
       return s + cost*qty;
     } else {
-      const markup = m.markup!=null ? Number(m.markup) : 50;
+      const markup = m.markup!=null ? Number(m.markup) : (m.quoteOnly?0:50);
       const salePrice = cost*(1+markup/100);
       return s + salePrice*qty;
     }
@@ -1971,7 +1971,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     let matY = y + 5 + labelH + descH;
     matTextLines.forEach(({ lines, mat, qty, freight }) => {
       const matCost = Number(mat.cost || 0);
-      const markup = mat.markup != null ? Number(mat.markup) : 50;
+      const markup = mat.markup != null ? Number(mat.markup) : (mat.quoteOnly ? 0 : 50);
       const unitPrice = mat.fromStock ? matCost : matCost * (1 + markup / 100);
       const matSubtotal = unitPrice * qty;
       const matTotal = matSubtotal + freight;
@@ -2580,7 +2580,7 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
             const matLines = doc.splitTextToSize(matLabel, cDisc - marginX - 8);
             matLines.forEach((line,li) => doc.text(line, marginX + 5, my + li*4.5));
             if (m.cost>0) {
-              const mp = Math.round(Number(m.cost)*(1+(Number(m.markup||50))/100)*(m.qty||1)*100)/100;
+              const mp = Math.round(Number(m.cost)*(1+(Number(m.markup!=null?m.markup:(m.quoteOnly?0:50)))/100)*(m.qty||1)*100)/100;
               doc.setFont("helvetica","bold"); doc.setTextColor(130,90,190);
               doc.text(fmtBRL(mp), cTotal, my, { align: "right" });
             }
@@ -3507,7 +3507,7 @@ function StockPickerModal({stock,onPick,onClose}) {
 function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,readOnlyName=false,editableQty=false}) {
   const qty = mat.qty || 1;
   const cost = Number(mat.cost||0);
-  const markup = mat.markup!=null ? Number(mat.markup) : 50;
+  const markup = mat.markup!=null ? Number(mat.markup) : (mat.quoteOnly ? 0 : 50);
   const salePrice = mat.fromStock ? cost : cost*(1+markup/100);
   const lineTotal = salePrice*qty;
   const freight = Number(mat.freight||0);
@@ -11007,7 +11007,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.21";
+const APP_VERSION = "2026.10.30.22";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14775,7 +14775,7 @@ export default function App() {
     const matQty=Math.max(1,Number(qtyArg)||1);
     const mats = currentMats || tasks.find(t=>t.id===taskId)?.materials || [];
     // quoteOnly: add value but don't deduct from stock, and don't link to stockItemId
-    const newMats = [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:!quoteOnly,stockItemId:quoteOnly?null:item.id,quoteOnly:quoteOnly||undefined}];
+    const newMats = [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:!quoteOnly,stockItemId:quoteOnly?null:item.id,quoteOnly:quoteOnly||undefined,...(quoteOnly?{markup:0}:{})}];
     if(!quoteOnly){
       const newQty=Math.max(0,Number((item.qty-matQty).toFixed(4)));
       setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));

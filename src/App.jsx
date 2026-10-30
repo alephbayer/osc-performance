@@ -4656,12 +4656,12 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
           <input value={newT} onChange={e=>setNewT(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addT()} placeholder="Nova tarefa…"
             style={{flex:1,minWidth:130,padding:"7px 11px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-          <button onClick={addT} style={{padding:"7px 13px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5}}><IPlus s={14} c={B.white}/>Add</button>
           <select value={newCat} onChange={e=>setNewCat(e.target.value)} title="Categoria da nova tarefa"
             style={{padding:"7px 8px",borderRadius:7,background:B.gray900,border:`1px solid ${newCat?B.orange+"88":B.gray600}`,color:newCat?B.orange:B.gray400,fontSize:12,fontWeight:600,outline:"none",maxWidth:140,cursor:"pointer"}}>
             <option value="">Categoria</option>
             {(isFD?CATEGORIES_FINISHING:CATEGORIES).map(c=><option key={c.id} value={c.id}>{c.id}</option>)}
           </select>
+          <button onClick={addT} style={{padding:"7px 13px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5}}><IPlus s={14} c={B.white}/>Add</button>
         </div>
         {managerMode&&!isFD&&<div style={{marginTop:10,padding:"10px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,display:"flex",flexDirection:"column",gap:8}}>
           {/* Fuels array */}
@@ -11004,7 +11004,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.18";
+const APP_VERSION = "2026.10.30.19";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -1913,7 +1913,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
       const freight = Number(m.freight || 0);
       const brandTag = m.brand ? ` · ${m.brand}` : "";
       const importedTag = m.imported ? "[Importado] " : "";
-      const txt = `· ${importedTag}${m.name}${brandTag}${m.fromStock?" (estoque)":""}${qty>1?` x${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
+      const txt = `· ${importedTag}${m.name}${brandTag}${m.fromStock?" (estoque)":""}${Number(qty)!==1?` x${qty}`:""}${freight>0?` + frete ${fmtBRL(freight)}`:""}`;
       doc.setFont("helvetica","normal"); doc.setFontSize(8);
       return { lines: doc.splitTextToSize(txt, cDescW - 6), mat: m, qty, freight };
     });
@@ -2275,7 +2275,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
           mats.forEach(m => {
             doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(160,60,60);
             const noChargeLbl = m.noCharge ? " [sem cobrança]" : "";
-            const ml1=doc.splitTextToSize(`  + ${m.name}${m.brand?` (${m.brand})`:""}${(m.qty||1)>1?` x${m.qty}`:""}${noChargeLbl}`,cDisc-marginX-8);ml1.forEach((l,li)=>doc.text(l,marginX+6,my+li*4.5));
+            const ml1=doc.splitTextToSize(`  + ${m.name}${m.brand?` (${m.brand})`:""}${Number(m.qty||1)!==1?` x${m.qty}`:""}${noChargeLbl}`,cDisc-marginX-8);ml1.forEach((l,li)=>doc.text(l,marginX+6,my+li*4.5));
             my += 5;
           });
         }
@@ -2576,7 +2576,7 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
           mats.forEach(m => {
             checkPageBreak(6);
             doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(130,90,190);
-            const matLabel = `  + ${m.name}${m.brand?` (${m.brand})`:""}${(m.qty||1)>1?` x${m.qty}`:""}${m.estimated?" [EST.]":""}`;
+            const matLabel = `  + ${m.name}${m.brand?` (${m.brand})`:""}${Number(m.qty||1)!==1?` x${m.qty}`:""}${m.estimated?" [EST.]":""}`;
             const matLines = doc.splitTextToSize(matLabel, cDisc - marginX - 8);
             matLines.forEach((line,li) => doc.text(line, marginX + 5, my + li*4.5));
             if (m.cost>0) {
@@ -2683,7 +2683,7 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
             let my = y + 10;
             mats.forEach(m => {
               doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(160,60,60);
-              const ml2=doc.splitTextToSize(`  + ${m.name}${m.brand?` (${m.brand})`:""}${(m.qty||1)>1?` x${m.qty}`:""}${m.noCharge?" [sem cobranca]":""}`,cDisc-marginX-8);ml2.forEach((l,li)=>doc.text(l,marginX+6,my+li*4.5));
+              const ml2=doc.splitTextToSize(`  + ${m.name}${m.brand?` (${m.brand})`:""}${Number(m.qty||1)!==1?` x${m.qty}`:""}${m.noCharge?" [sem cobranca]":""}`,cDisc-marginX-8);ml2.forEach((l,li)=>doc.text(l,marginX+6,my+li*4.5));
               my += 5;
             });
           }
@@ -3609,7 +3609,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
           </div>}
         </>}
 
-        {showCost&&qty>1&&<div style={{display:"flex",alignItems:"center",gap:4,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 8px"}}>
+        {showCost&&Number(qty)!==1&&<div style={{display:"flex",alignItems:"center",gap:4,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 8px"}}>
           <span style={{fontSize:10,color:B.gray500}}>Total</span>
           <span style={{fontSize:12,color:B.amber,fontWeight:800}}>{fmtBRL(lineTotal)}</span>
         </div>}
@@ -10328,7 +10328,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                             <span style={{fontSize:11,color:m.imported?"#60a5fa":B.gray500}}>🔩</span>
                             <span style={{fontSize:11,color:m.imported?"#60a5fa":B.gray500,fontWeight:m.imported?700:400}}>{m.name}</span>
                             {m.brand&&<span style={{fontSize:10,color:B.gray600}}>· {m.brand}</span>}
-                            {m.qty>1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
+                            {m.qty!=null&&Number(m.qty)!==1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
                             {m.imported&&<span style={{fontSize:9,fontWeight:800,color:"#60a5fa",background:"#60a5fa12",border:"1px solid #60a5fa33",borderRadius:4,padding:"0px 5px",whiteSpace:"nowrap"}}>✈ Importado</span>}
                           </div>
                         ))}
@@ -10410,7 +10410,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                           <span style={{fontSize:11,color:B.gray500}}>🔩</span>
                           <span style={{fontSize:11,color:B.gray500}}>{m.name}</span>
                           {m.brand&&<span style={{fontSize:10,color:B.gray600}}>· {m.brand}</span>}
-                          {m.qty>1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
+                          {m.qty!=null&&Number(m.qty)!==1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
                         </div>
                       ))}
                       {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
@@ -11007,7 +11007,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.23";
+const APP_VERSION = "2026.10.30.24";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14624,7 +14624,7 @@ export default function App() {
   const postMaterialsTimeline=(vehicleId,taskId,taskLabel,mats,actor)=>{
     clearTimeout(matDebounce.current[taskId]);
     matDebounce.current[taskId]=setTimeout(()=>{
-      const names=mats.map(m=>`${m.name}${m.qty>1?` ×${m.qty}`:""}`).join(", ");
+      const names=mats.map(m=>`${m.name}${m.qty!=null&&Number(m.qty)!==1?` ×${m.qty}`:""}`).join(", ");
       if(names) postTimeline(vehicleId,{type:"materials",title:`Materiais — ${taskLabel}`,body:names,actor,color:B.purple});
     },2500);
   };

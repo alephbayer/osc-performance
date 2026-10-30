@@ -4185,7 +4185,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [showPage,setShowPage] = useState(!!openPageOnMount);
   const [orderTarget,setOrderTarget] = useState(null);
   const orderPart = onAddPurchaseOrder ? (task,idx,mat)=>setOrderTarget({task,idx,mat}) : null;
-  const [newT,setNewT] = useState("");const [newCat,setNewCat] = useState("");
+  const [newT,setNewT] = useState("");const [newCat,setNewCat] = useState("");const [newH,setNewH] = useState("");
   const [aiL, setAiL] = useState(false);
   const [aiS, setAiS] = useState([]);
   const [xfM, setXfM] = useState(false);
@@ -4249,7 +4249,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const statusColorsFD = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Fin.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
   const sc = division==="finishing" ? (statusColorsFD[vehicle.statusFinishing||"active"]) : (statusColors[vehicle.status||"active"]);
 
-  const addT=()=>{if(!newT.trim())return;onAddTask(vehicle.id,newT.trim(),newCat||null,isFD?"finishing":"performance");setNewT("");setNewCat("");};
+  const addT=()=>{if(!newT.trim())return;const h=parseFloat(String(newH).replace(",","."));onAddTask(vehicle.id,newT.trim(),newCat||null,isFD?"finishing":"performance",h>0?{hours:h}:null);setNewT("");setNewCat("");setNewH("");};
   const doAI=async()=>{setAiL(true);setAiS([]);try{setAiS(await aiSuggest(vehicle.model));}catch{}setAiL(false);};
   const copyLink=()=>{navigator.clipboard?.writeText(pubLink);setCPL(true);setTimeout(()=>setCPL(false),2000);};
   const doPDF=async()=>{
@@ -4656,6 +4656,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
           <input value={newT} onChange={e=>setNewT(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addT()} placeholder="Nova tarefa…"
             style={{flex:1,minWidth:130,padding:"7px 11px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
+          <input value={newH} onChange={e=>setNewH(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addT()} type="number" inputMode="decimal" step="0.5" min="0" placeholder={isFD?"Qtd":"Horas"} title={isFD?"Quantidade (opcional)":"Tempo em horas (opcional)"}
+            style={{width:64,padding:"7px 8px",borderRadius:7,border:`1px solid ${newH?B.orange+"88":B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
           <select value={newCat} onChange={e=>setNewCat(e.target.value)} title="Categoria da nova tarefa"
             style={{padding:"7px 8px",borderRadius:7,background:B.gray900,border:`1px solid ${newCat?B.orange+"88":B.gray600}`,color:newCat?B.orange:B.gray400,fontSize:12,fontWeight:600,outline:"none",maxWidth:140,cursor:"pointer"}}>
             <option value="">Categoria</option>
@@ -11004,7 +11006,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.19";
+const APP_VERSION = "2026.10.30.20";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

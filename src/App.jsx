@@ -11007,7 +11007,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.22";
+const APP_VERSION = "2026.10.30.23";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12346,9 +12346,9 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
   const vehicleTasks=tasks.filter(t=>t.vehicleId===selectedVid);
 
   const costNum=parseFloat(cost.replace(",","."))||0;
-  const markupNum=parseFloat(markup)||50;
+  const markupNum=(()=>{const m=parseFloat(String(markup).replace(",","."));return isNaN(m)||m<0?50:m;})();
   const salePrice=costNum*(1+markupNum/100);
-  const qtyNum=Math.max(0.01,parseFloat(qty)||0.01);
+  const qtyNum=Math.max(0.01,parseFloat(String(qty).replace(",","."))||0.01);
 
   const save=async(fromStockItem=null)=>{
     if(!selectedTid) return;
@@ -12473,7 +12473,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
             <div style={{display:"flex",gap:10}}>
               <div style={{flex:1}}>
                 <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Qtd</label>
-                <input value={qty} onChange={e=>setQty(e.target.value)} type="number" min="1"
+                <input value={qty} onChange={e=>setQty(e.target.value)} type="number" min="0.01" step="any" inputMode="decimal"
                   style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:14,outline:"none",boxSizing:"border-box"}}/>
               </div>
               <div style={{flex:2}}>

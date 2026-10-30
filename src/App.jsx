@@ -55,6 +55,7 @@ const B = {
   red:"#ef4444",    wa:"#25D366",
 };
 
+const qtyNum=v=>{const n=parseFloat(String(v).replace(",","."));return n>0?n:1;};
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtBRLReal=n=>fmtBRL(n);
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
@@ -6681,7 +6682,7 @@ function ApptManualMat({sv,onUpdateService}){
       <input value={em.name} onChange={e=>setEm(p=>({...p,name:e.target.value}))} placeholder="Nome *"
         style={{padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
       <div style={{display:"flex",gap:4}}>
-        <input value={em.qty} type="number" min="1" onChange={e=>setEm(p=>({...p,qty:parseInt(e.target.value)||1}))}
+        <input value={em.qty} type="number" min="0.01" step="any" inputMode="decimal" onChange={e=>setEm(p=>({...p,qty:e.target.value}))} onBlur={e=>setEm(p=>({...p,qty:qtyNum(e.target.value)}))}
           style={{width:45,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
         <input value={em.cost} type="number" placeholder="Custo R$" onChange={e=>setEm(p=>({...p,cost:parseFloat(e.target.value)||0}))}
           style={{flex:1,padding:"4px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
@@ -6692,7 +6693,7 @@ function ApptManualMat({sv,onUpdateService}){
       <button onClick={()=>{
         if(!em.name.trim()) return;
         const sale=em.cost*(1+em.markup/100);
-        const mats=[...(sv.materials||[]),{name:em.name.trim(),qty:em.qty,stockId:null,cost:sale,markup:em.markup}];
+        const mats=[...(sv.materials||[]),{name:em.name.trim(),qty:qtyNum(em.qty),stockId:null,cost:sale,markup:em.markup}];
         onUpdateService(sv.id,{...sv,materials:mats});
         setEm({name:"",qty:1,cost:0,markup:50}); setShowEM(false);
       }} style={{padding:"4px 0",borderRadius:5,background:B.purple,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer"}}>Adicionar</button>
@@ -7020,12 +7021,12 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
                 return(<div key={mi} style={{display:"flex",alignItems:"center",gap:4,marginBottom:5,flexWrap:"wrap"}}>
                   <input value={m.name} onChange={e=>{const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,name:e.target.value};items[i]={...it,materials:mats};setForm(p=>({...p,items}));}}
                     placeholder="Nome" style={{flex:"1 1 80px",minWidth:60,padding:"2px 5px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
-                  <input value={m.qty} type="number" min="1" title="Qty" onChange={e=>{
+                  <input value={m.qty} type="number" min="0.01" step="any" inputMode="decimal" title="Qty" onChange={e=>{
                     const items=[...form.items];const mats=[...(items[i].materials||[])];
-                    mats[mi]={...m,qty:e.target.value===''?'':parseInt(e.target.value)||1};
+                    mats[mi]={...m,qty:e.target.value};
                     items[i]={...it,materials:mats};setForm(p=>({...p,items}));
-                  }} onBlur={e=>{if(!e.target.value||parseInt(e.target.value)<1){const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,qty:1};items[i]={...it,materials:mats};setForm(p=>({...p,items}));}}}
-                    style={{width:34,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
+                  }} onBlur={e=>{const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,qty:qtyNum(e.target.value)};items[i]={...it,materials:mats};setForm(p=>({...p,items}));}}
+                    style={{width:44,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
                   <input value={m.cost||""} type="number" placeholder="Custo" title="Custo R$" onChange={e=>{const items=[...form.items];const mats=[...(items[i].materials||[])];mats[mi]={...m,cost:parseFloat(e.target.value)||0};items[i]={...it,materials:mats};setForm(p=>({...p,items}));}}
                     style={{width:58,padding:"2px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:10,outline:"none"}}/>
                   <div style={{display:"flex",alignItems:"center",gap:1}}>
@@ -7472,8 +7473,8 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                       {(sv.materials||[]).map((m,mi)=>(
                         <div key={mi} style={{display:"flex",alignItems:"center",gap:5,padding:"3px 6px",background:B.gray900,borderRadius:5,border:`1px solid ${B.gray700}`}}>
                           <span style={{flex:1,fontSize:11,color:B.white}}>{m.name}</span>
-                          <input value={m.qty} type="number" min="1" onChange={e=>{const mats=[...(sv.materials||[])];mats[mi]={...m,qty:parseInt(e.target.value)||1};onUpdateService(sv.id,{...sv,materials:mats});}}
-                            style={{width:36,padding:"1px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                          <input key={String(m.qty)} defaultValue={m.qty} type="number" min="0.01" step="any" inputMode="decimal" onBlur={e=>{const q=qtyNum(e.target.value);if(q===Number(m.qty))return;const mats=[...(sv.materials||[])];mats[mi]={...m,qty:q};onUpdateService(sv.id,{...sv,materials:mats});}}
+                            style={{width:44,padding:"1px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
                           {m.cost>0&&<span style={{fontSize:10,color:B.amber}}>{fmtBRL(m.cost*m.qty)}</span>}
                           <button onClick={()=>{const mats=(sv.materials||[]).filter((_,j)=>j!==mi);onUpdateService(sv.id,{...sv,materials:mats});}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0}}><IX s={10}/></button>
                         </div>
@@ -7563,7 +7564,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   <input value={manualMat.name} onChange={e=>setManualMat(p=>({...p,name:e.target.value}))} placeholder="Nome do material *"
                     style={{padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
                   <div style={{display:"flex",gap:5}}>
-                    <input value={manualMat.qty} onChange={e=>setManualMat(p=>({...p,qty:parseInt(e.target.value)||1}))} type="number" min="1" placeholder="Qtd"
+                    <input value={manualMat.qty} onChange={e=>setManualMat(p=>({...p,qty:e.target.value}))} onBlur={e=>setManualMat(p=>({...p,qty:qtyNum(e.target.value)}))} type="number" min="0.01" step="any" inputMode="decimal" placeholder="Qtd"
                       style={{width:50,padding:"5px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
                     <input value={manualMat.cost} onChange={e=>setManualMat(p=>({...p,cost:parseFloat(e.target.value)||0}))} type="number" placeholder="Custo unit. R$"
                       style={{flex:1,padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
@@ -7576,7 +7577,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   <button onClick={()=>{
                     if(!manualMat.name.trim()) return;
                     const salePrice=manualMat.cost*(1+manualMat.markup/100);
-                    setSvcForm(p=>({...p,materials:[...(p.materials||[]),{name:manualMat.name.trim(),qty:manualMat.qty,stockId:null,cost:salePrice,markup:manualMat.markup}]}));
+                    setSvcForm(p=>({...p,materials:[...(p.materials||[]),{name:manualMat.name.trim(),qty:qtyNum(manualMat.qty),stockId:null,cost:salePrice,markup:manualMat.markup}]}));
                     setManualMat({name:"",qty:1,cost:0,markup:50});
                     setShowManualMat(false);
                   }} style={{padding:"5px 0",borderRadius:6,background:B.purple,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer"}}>
@@ -7589,8 +7590,8 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                     <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 8px",background:B.gray900,borderRadius:5,border:`1px solid ${B.gray700}`}}>
                       <span style={{flex:1,fontSize:11,color:B.white}}>{m.name}</span>
                       <span style={{fontSize:10,color:B.gray400}}>×</span>
-                      <input value={m.qty} onChange={e=>setSvcForm(p=>({...p,materials:p.materials.map((x,j)=>j===i?{...x,qty:parseInt(e.target.value)||1}:x)}))}
-                        type="number" min="1" style={{width:36,padding:"1px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
+                      <input value={m.qty} onChange={e=>setSvcForm(p=>({...p,materials:p.materials.map((x,j)=>j===i?{...x,qty:e.target.value}:x)}))} onBlur={e=>setSvcForm(p=>({...p,materials:p.materials.map((x,j)=>j===i?{...x,qty:qtyNum(e.target.value)}:x)}))}
+                        type="number" min="0.01" step="any" inputMode="decimal" style={{width:44,padding:"1px 4px",borderRadius:4,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11,outline:"none"}}/>
                       {m.cost>0&&<span style={{fontSize:10,color:B.amber}}>{fmtBRL(m.cost*m.qty)}</span>}
                       <button onClick={()=>setSvcForm(p=>({...p,materials:p.materials.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0}}><IX s={10}/></button>
                     </div>
@@ -11006,7 +11007,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.20";
+const APP_VERSION = "2026.10.30.21";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

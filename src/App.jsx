@@ -4185,7 +4185,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [showPage,setShowPage] = useState(!!openPageOnMount);
   const [orderTarget,setOrderTarget] = useState(null);
   const orderPart = onAddPurchaseOrder ? (task,idx,mat)=>setOrderTarget({task,idx,mat}) : null;
-  const [newT,setNewT] = useState("");
+  const [newT,setNewT] = useState("");const [newCat,setNewCat] = useState("");
   const [aiL, setAiL] = useState(false);
   const [aiS, setAiS] = useState([]);
   const [xfM, setXfM] = useState(false);
@@ -4249,7 +4249,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const statusColorsFD = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Fin.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
   const sc = division==="finishing" ? (statusColorsFD[vehicle.statusFinishing||"active"]) : (statusColors[vehicle.status||"active"]);
 
-  const addT=()=>{if(!newT.trim())return;onAddTask(vehicle.id,newT.trim(),null,isFD?"finishing":"performance");setNewT("");};
+  const addT=()=>{if(!newT.trim())return;onAddTask(vehicle.id,newT.trim(),newCat||null,isFD?"finishing":"performance");setNewT("");setNewCat("");};
   const doAI=async()=>{setAiL(true);setAiS([]);try{setAiS(await aiSuggest(vehicle.model));}catch{}setAiL(false);};
   const copyLink=()=>{navigator.clipboard?.writeText(pubLink);setCPL(true);setTimeout(()=>setCPL(false),2000);};
   const doPDF=async()=>{
@@ -4657,9 +4657,11 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           <input value={newT} onChange={e=>setNewT(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addT()} placeholder="Nova tarefa…"
             style={{flex:1,minWidth:130,padding:"7px 11px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
           <button onClick={addT} style={{padding:"7px 13px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5}}><IPlus s={14} c={B.white}/>Add</button>
-          <button onClick={doAI} disabled={aiL} style={{padding:"7px 10px",borderRadius:7,background:aiL?B.gray700:`${B.orange}22`,border:`1px solid ${B.orange}55`,color:aiL?B.gray400:B.orange,cursor:aiL?"not-allowed":"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:4}}>
-            <IAI s={13} c={aiL?B.gray400:B.orange}/>{aiL?"…":"IA"}
-          </button>
+          <select value={newCat} onChange={e=>setNewCat(e.target.value)} title="Categoria da nova tarefa"
+            style={{padding:"7px 8px",borderRadius:7,background:B.gray900,border:`1px solid ${newCat?B.orange+"88":B.gray600}`,color:newCat?B.orange:B.gray400,fontSize:12,fontWeight:600,outline:"none",maxWidth:140,cursor:"pointer"}}>
+            <option value="">Categoria</option>
+            {(isFD?CATEGORIES_FINISHING:CATEGORIES).map(c=><option key={c.id} value={c.id}>{c.id}</option>)}
+          </select>
         </div>
         {managerMode&&!isFD&&<div style={{marginTop:10,padding:"10px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,display:"flex",flexDirection:"column",gap:8}}>
           {/* Fuels array */}
@@ -7504,7 +7506,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                 <select value={svcForm.category} onChange={e=>setSvcForm(p=>({...p,category:e.target.value}))}
                   style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:svcForm.category?B.white:B.gray500,fontSize:12,outline:"none"}}>
                   <option value="">Categoria (opcional)</option>
-                  {(svcForm.division==="finishing"?CATEGORIES_FD:CATEGORIES).map(c=>(
+                  {(svcForm.division==="finishing"?CATEGORIES_FINISHING:CATEGORIES).map(c=>(
                     <option key={c.id} value={c.id}>{c.id}</option>
                   ))}
                 </select>
@@ -11002,7 +11004,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.17";
+const APP_VERSION = "2026.10.30.18";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

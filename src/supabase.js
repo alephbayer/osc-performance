@@ -983,6 +983,48 @@ export const db = {
     if (error) throw error;
   },
 
+  // ── Parceiros (empresas que terceirizam serviços pontuais) ─────────────────
+  async getPartners() {
+    const { data, error } = await supabase.from("partners").select("*").eq("active", true).order("name");
+    if (error) throw error; return data || [];
+  },
+  async addPartner(p) {
+    const { data, error } = await supabase.from("partners").insert([p]).select().single();
+    if (error) throw error; return data;
+  },
+  async getPartnerServices() {
+    const { data, error } = await supabase.from("partner_services").select("*").order("name");
+    if (error) throw error; return data || [];
+  },
+  async addPartnerService(s) {
+    const { data, error } = await supabase.from("partner_services").insert([s]).select().single();
+    if (error) throw error; return data;
+  },
+  async deletePartnerService(id) {
+    const { error } = await supabase.from("partner_services").delete().eq("id", id);
+    if (error) throw error;
+  },
+  async getPartnerJobs() {
+    const { data, error } = await supabase.from("partner_jobs").select("*").order("job_date", { ascending: false }).order("created_at", { ascending: false });
+    if (error) throw error; return data || [];
+  },
+  async addPartnerJob(j) {
+    const { data, error } = await supabase.from("partner_jobs").insert([j]).select().single();
+    if (error) throw error; return data;
+  },
+  async updatePartnerJob(id, patch) {
+    const { data, error } = await supabase.from("partner_jobs").update(patch).eq("id", id).select().single();
+    if (error) throw error; return data;
+  },
+  async deletePartnerJob(id) {
+    const { error } = await supabase.from("partner_jobs").delete().eq("id", id);
+    if (error) throw error;
+  },
+  async setPartnerJobsPaid(ids, paid) {
+    const { error } = await supabase.from("partner_jobs").update({ paid, paid_at: paid ? new Date().toISOString() : null }).in("id", ids);
+    if (error) throw error;
+  },
+
   // ── Internal Transfers ──────────────────────────────────────────────────────
   async loadInternalTransfers() {
     const { data, error } = await supabase.from("internal_transfers").select("*").order("date",{ascending:false});

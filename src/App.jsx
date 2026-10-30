@@ -10854,6 +10854,7 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
     check();
   },[]);
 
+  const [showPartners,setShowPartners]=useState(false);
   const requestPush=async()=>{
     const ok=await registerPushSubscription(employee.id);
     setPushStatus(ok?"granted":"denied");
@@ -10887,7 +10888,8 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
       <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",height:58,gap:12}}>
         <div style={{width:36,height:36,borderRadius:9,background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{isFD?<span style={{fontSize:18}}>🎨</span>:<IWrench s={18} c={B.white}/>}</div>
         <div><div style={{fontWeight:800,fontSize:14,color:B.white}}>{employee.name}</div><div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Minhas Tarefas — {isFD?"OSC Finishing Division":"OSC Performance"}</div></div>
-        <button onClick={onLogout} style={{marginLeft:"auto",padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
+        <button onClick={()=>setShowPartners(true)} style={{marginLeft:"auto",padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12}}>Parceiros</button>
+        <button onClick={onLogout} style={{marginLeft:0,padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
           <ILogout s={13} c={B.gray300}/>Sair
         </button>
       </div>
@@ -10912,6 +10914,12 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
         :<>{empV.filter(v=>!isPz(v)).map(renderMV)}{empV.some(isPz)&&<><div style={{display:"flex",alignItems:"center",gap:8,margin:"22px 2px 10px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}>⏸ Pausados · {empV.filter(isPz).length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>{empV.filter(isPz).map(renderMV)}</>}</>}
     </div>
     </div>{/* end scroll */}
+  {showPartners&&<div style={{position:"fixed",inset:0,zIndex:300,background:B.black,overflowY:"auto",paddingTop:"env(safe-area-inset-top)"}}>
+      <div style={{maxWidth:680,margin:"0 auto",padding:"16px 14px 60px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}><div style={{fontWeight:800,fontSize:16,color:B.white}}>Parceiros</div><button onClick={()=>setShowPartners(false)} style={{padding:"7px 14px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12}}>Fechar</button></div>
+        <PartnersTab employees={employees} canSeeValues={false} actor={employee.name}/>
+      </div>
+    </div>}
   </div>);
 }
 
@@ -10921,9 +10929,9 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments"],           envVar:"VITE_ADMIN_PASSWORD" },
-  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners"], envVar:"VITE_OWNER_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners"],           envVar:"VITE_ADMIN_PASSWORD" },
+  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca","partners"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
 // Hash a string with SHA-256 — used to avoid storing plain passwords in memory
 async function sha256(str) {
@@ -10994,7 +11002,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.13";
+const APP_VERSION = "2026.10.30.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12883,6 +12891,308 @@ function QuickActionSheet({onClose,adminRole,onFuel,onTask,onMat,onPay,onNovaOS,
   );
 }
 
+// ─── Partners Tab — empresas parceiras que terceirizam serviços pontuais ─────
+const todayISO=()=>new Date().toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});
+const normPlate=p=>String(p||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+const fmtDateBR=iso=>{ if(!iso) return ""; const [y,m,d]=String(iso).slice(0,10).split("-"); return `${d}/${m}/${y}`; };
+// Quinzenas: 1–15 e 16–fim do mês
+function partnerPeriod(iso){
+  const [y,m,d]=iso.split("-").map(Number);
+  const last=new Date(y,m,0).getDate();
+  const pad=n=>String(n).padStart(2,"0");
+  return d<=15
+    ?{from:`${y}-${pad(m)}-01`,to:`${y}-${pad(m)}-15`}
+    :{from:`${y}-${pad(m)}-16`,to:`${y}-${pad(m)}-${pad(last)}`};
+}
+function shiftPartnerPeriod(per,dir){
+  const [y,m]=per.from.split("-").map(Number); const first=per.from.endsWith("-01");
+  if(dir<0) return first?partnerPeriod(new Date(y,m-2,16).toLocaleDateString("sv-SE")):partnerPeriod(`${y}-${String(m).padStart(2,"0")}-01`);
+  return first?partnerPeriod(`${y}-${String(m).padStart(2,"0")}-16`):partnerPeriod(new Date(y,m,1).toLocaleDateString("sv-SE"));
+}
+function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
+  const accent=B.blue;
+  const [partners,setPartners]=useState([]);
+  const [services,setServices]=useState([]);
+  const [jobs,setJobs]=useState([]);
+  const [loaded,setLoaded]=useState(false);
+  const [loadErr,setLoadErr]=useState("");
+  const [pid,setPid]=useState(null);
+  const [view,setView]=useState("hoje");
+  const [q,setQ]=useState("");
+  const [limit,setLimit]=useState(40);
+  const [adding,setAdding]=useState(false);
+  const [newPartner,setNewPartner]=useState({name:"",phone:""});
+  const [showSvc,setShowSvc]=useState(false);
+  const [svcForm,setSvcForm]=useState({name:"",price:""});
+  const [period,setPeriod]=useState(()=>partnerPeriod(todayISO()));
+  const [lb,setLB]=useState(null);
+  const [lbItems,setLbItems]=useState([]);
+  const [busy,setBusy]=useState(false);
+  const [uploading,setUploading]=useState(false);
+  const [delivering,setDelivering]=useState(null); // job id
+  const [delPhotos,setDelPhotos]=useState([]);
+  const emptyForm={id:null,plate:"",model:"",color:"",items:[],freeName:"",freeValue:"",doneBy:[],notes:"",before:[],jobDate:todayISO()};
+  const [form,setForm]=useState(emptyForm);
+  const [formOpen,setFormOpen]=useState(false);
+
+  useEffect(()=>{
+    Promise.all([db.getPartners(),db.getPartnerServices(),db.getPartnerJobs()])
+      .then(([p,s,j])=>{setPartners(p);setServices(s);setJobs(j);setPid(p[0]?.id||null);setLoaded(true);})
+      .catch(e=>{setLoadErr(e?.message||"Erro ao carregar");setLoaded(true);});
+  },[]);
+
+  const partner=partners.find(p=>p.id===pid)||null;
+  const pServices=services.filter(s=>s.partner_id===pid);
+  const pJobs=jobs.filter(j=>j.partner_id===pid);
+  const fail=e=>alert((e&&e.message)||"Erro");
+  const jobTotal=items=>items.reduce((s,i)=>s+(Number(i.value)||0),0);
+
+  // Autopreencher modelo/cor pela placa
+  const onPlate=v=>{
+    const np=normPlate(v);
+    setForm(f=>{
+      let model=f.model,color=f.color;
+      if(np.length>=7){ const prev=jobs.find(j=>normPlate(j.plate)===np&&j.model); if(prev){ if(!model) model=prev.model||""; if(!color) color=prev.color||""; } }
+      return {...f,plate:v.toUpperCase(),model,color};
+    });
+  };
+  const addSvcToForm=s=>setForm(f=>({...f,items:[...f.items,{name:s.name,value:Number(s.price)||0}]}));
+  const addFree=()=>{
+    if(!form.freeName.trim()) return;
+    setForm(f=>({...f,items:[...f.items,{name:f.freeName.trim(),value:Number(String(f.freeValue).replace(",","."))||0}],freeName:"",freeValue:""}));
+  };
+  const rmItem=i=>setForm(f=>({...f,items:f.items.filter((_,k)=>k!==i)}));
+  const upPhotos=async(e,cb)=>{
+    const files=[...(e.target.files||[])]; if(!files.length) return;
+    setUploading(true);
+    try{ const urls=[]; for(const f of files){ urls.push(await resizeAndUpload(f,"partners")); } cb(urls); }catch(err){fail(err);}
+    setUploading(false); e.target.value="";
+  };
+
+  const saveJob=async()=>{
+    if(!pid||busy) return;
+    let items=form.items;
+    if(form.freeName.trim()) items=[...items,{name:form.freeName.trim(),value:Number(String(form.freeValue).replace(",","."))||0}];
+    if(!form.plate.trim()&&!form.model.trim()) return alert("Informe a placa ou o modelo.");
+    if(items.length===0) return alert("Adicione pelo menos um serviço.");
+    const row={partner_id:pid,job_date:form.jobDate||todayISO(),plate:form.plate.trim().toUpperCase(),model:form.model.trim(),color:form.color.trim(),items,total:jobTotal(items),done_by:form.doneBy.join(", "),notes:form.notes.trim(),before_photos:form.before};
+    setBusy(true);
+    try{
+      if(form.id){
+        // Quem não vê valores não pode alterar valores existentes
+        const patch=canSeeValues?row:{...row};
+        if(!canSeeValues){ const old=jobs.find(j=>j.id===form.id); patch.items=old?.items||items; patch.total=old?.total||0; }
+        const r=await db.updatePartnerJob(form.id,patch); setJobs(p=>p.map(j=>j.id===form.id?r:j));
+      } else {
+        if(!canSeeValues){ row.items=items.map(i=>({name:i.name,value:0})); row.total=0; }
+        row.created_by=actor||""; const r=await db.addPartnerJob(row); setJobs(p=>[r,...p]);
+      }
+      setForm(emptyForm); setFormOpen(false);
+    }catch(e){fail(e);}
+    setBusy(false);
+  };
+  const editJob=j=>{
+    setForm({id:j.id,plate:j.plate||"",model:j.model||"",color:j.color||"",items:j.items||[],freeName:"",freeValue:"",doneBy:(j.done_by||"").split(", ").filter(Boolean),notes:j.notes||"",before:j.before_photos||[],jobDate:j.job_date});
+    setFormOpen(true); setView("hoje");
+  };
+  const deliver=async j=>{
+    setBusy(true);
+    try{ const r=await db.updatePartnerJob(j.id,{status:"done",delivered_at:new Date().toISOString(),after_photos:[...(j.after_photos||[]),...delPhotos]}); setJobs(p=>p.map(x=>x.id===j.id?r:x)); setDelivering(null); setDelPhotos([]); }
+    catch(e){fail(e);} setBusy(false);
+  };
+  const reopen=async j=>{ try{ const r=await db.updatePartnerJob(j.id,{status:"doing",delivered_at:null}); setJobs(p=>p.map(x=>x.id===j.id?r:x)); }catch(e){fail(e);} };
+  const delJob=async j=>{ if(!window.confirm(`Remover o trabalho ${j.plate||j.model}?`)) return; try{ await db.deletePartnerJob(j.id); setJobs(p=>p.filter(x=>x.id!==j.id)); }catch(e){fail(e);} };
+  const setPaid=async(ids,paid)=>{
+    try{ await db.setPartnerJobsPaid(ids,paid); const at=paid?new Date().toISOString():null; setJobs(p=>p.map(j=>ids.includes(j.id)?{...j,paid,paid_at:at}:j)); }catch(e){fail(e);}
+  };
+  const addPartner=async()=>{
+    if(!newPartner.name.trim()) return;
+    try{ const r=await db.addPartner({name:newPartner.name.trim(),phone:newPartner.phone.trim()}); setPartners(p=>[...p,r]); setPid(r.id); setNewPartner({name:"",phone:""}); setAdding(false); }catch(e){fail(e);}
+  };
+  const addSvc=async()=>{
+    if(!svcForm.name.trim()||!pid) return;
+    try{ const r=await db.addPartnerService({partner_id:pid,name:svcForm.name.trim(),price:Number(String(svcForm.price).replace(",","."))||0}); setServices(p=>[...p,r]); setSvcForm({name:"",price:""}); }catch(e){fail(e);}
+  };
+  const delSvc=async id=>{ try{ await db.deletePartnerService(id); setServices(p=>p.filter(s=>s.id!==id)); }catch(e){fail(e);} };
+  const openLb=(urls,u)=>{setLbItems(urls);setLB(u);};
+
+  const inp={padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
+  const pill=(on,ac=accent)=>({padding:"6px 14px",borderRadius:99,border:`1px solid ${on?ac:B.gray600}`,background:on?`${ac}22`:"transparent",color:on?ac:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"});
+
+  const Thumbs=({urls,label})=>urls&&urls.length>0?<div style={{marginTop:8}}>
+    <div style={{fontSize:9,fontWeight:800,color:B.gray500,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>{label}</div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{urls.map(u=><img key={u} src={u} alt="" onClick={()=>openLb(urls,u)} style={{width:56,height:56,objectFit:"cover",borderRadius:8,cursor:"pointer",border:`1px solid ${B.gray700}`}}/>)}</div>
+  </div>:null;
+
+  const JobCard=({j})=>{
+    const done=j.status==="done";
+    return <div style={{background:B.gray800,border:`1px solid ${done?B.gray700:accent+"55"}`,borderRadius:14,padding:"12px 14px",marginBottom:10}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <span onClick={()=>{setQ(j.plate||j.model||"");setView("hist");}} style={{fontFamily:"monospace",fontWeight:800,fontSize:14,letterSpacing:1,color:B.white,cursor:"pointer"}}>{j.plate||"—"}</span>
+        <span style={{fontSize:13,color:B.gray300}}>{[j.model,j.color].filter(Boolean).join(" · ")}</span>
+        <span style={{marginLeft:"auto",fontSize:10,fontWeight:800,borderRadius:99,padding:"2px 9px",color:done?B.green:B.amber,background:done?`${B.green}18`:`${B.amber}18`}}>{done?"Entregue":"Em execução"}</span>
+      </div>
+      <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{fmtDateBR(j.job_date)}{j.done_by?` · ${j.done_by}`:""}{j.created_by&&!j.done_by?` · ${j.created_by}`:""}</div>
+      <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:3}}>
+        {(j.items||[]).map((i,k)=><div key={k} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:13,color:B.gray200}}><span>{i.name}</span>{canSeeValues&&<span style={{color:B.gray400}}>{fmtBRL(i.value)}</span>}</div>)}
+      </div>
+      {canSeeValues&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`}}>
+        <span style={{fontSize:11,color:j.paid?B.green:B.gray500,fontWeight:700}}>{j.paid?`✓ Pago${j.paid_at?" em "+fmtDateBR(j.paid_at.slice(0,10)):""}`:"Pendente de acerto"}</span>
+        <span style={{fontWeight:800,color:B.white}}>{fmtBRL(j.total)}</span>
+      </div>}
+      {j.notes&&<div style={{fontSize:12,color:B.gray400,marginTop:6,whiteSpace:"pre-wrap"}}>{j.notes}</div>}
+      <Thumbs urls={j.before_photos} label="Antes"/><Thumbs urls={j.after_photos} label="Depois"/>
+      {delivering===j.id&&<div style={{marginTop:10,padding:10,background:B.gray900,borderRadius:10,border:`1px solid ${B.green}44`}}>
+        <div style={{fontSize:11,color:B.gray300,marginBottom:6}}>Fotos do depois (opcional)</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          {delPhotos.map(u=><img key={u} src={u} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:7}}/>)}
+          <label style={{...pill(false),cursor:"pointer"}}>📷 {uploading?"Enviando…":"Adicionar"}<input type="file" accept="image/*" multiple onChange={e=>upPhotos(e,u=>setDelPhotos(p=>[...p,...u]))} style={{display:"none"}}/></label>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:10}}>
+          <button disabled={busy||uploading} onClick={()=>deliver(j)} style={{flex:1,padding:"9px",borderRadius:8,border:"none",background:B.green,color:"#000",fontWeight:800,fontSize:12,cursor:"pointer"}}>Confirmar entrega</button>
+          <button onClick={()=>{setDelivering(null);setDelPhotos([]);}} style={{padding:"9px 14px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"transparent",color:B.gray400,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+        </div>
+      </div>}
+      <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
+        {!done&&delivering!==j.id&&<button onClick={()=>{setDelivering(j.id);setDelPhotos([]);}} style={{...pill(true,B.green)}}>✓ Entregar</button>}
+        {done&&<button onClick={()=>reopen(j)} style={pill(false)}>Reabrir</button>}
+        <button onClick={()=>editJob(j)} style={pill(false)}>Editar</button>
+        {canSeeValues&&<button onClick={()=>delJob(j)} style={{...pill(false),color:B.red,borderColor:`${B.red}55`}}>Remover</button>}
+      </div>
+    </div>;
+  };
+
+  if(!loaded) return <div style={{padding:30,textAlign:"center",color:B.gray400,fontSize:13}}>Carregando…</div>;
+  if(loadErr) return <div style={{padding:20,color:B.red,fontSize:13}}>Não foi possível carregar os parceiros ({loadErr}). Verifique se a migration 042 foi aplicada no banco.</div>;
+
+  const today=todayISO();
+  const hojeJobs=pJobs.filter(j=>j.status==="doing"||j.job_date===today);
+  const needle=q.trim().toLowerCase(); const needleP=normPlate(q);
+  const histAll=pJobs.filter(j=>!needle||(needleP&&normPlate(j.plate).includes(needleP))||(j.model||"").toLowerCase().includes(needle)||(j.items||[]).some(i=>(i.name||"").toLowerCase().includes(needle)));
+  const periodJobs=pJobs.filter(j=>j.job_date>=period.from&&j.job_date<=period.to).sort((a,b)=>a.job_date.localeCompare(b.job_date));
+  const perTotal=periodJobs.reduce((s,j)=>s+Number(j.total||0),0);
+  const perPaid=periodJobs.filter(j=>j.paid).reduce((s,j)=>s+Number(j.total||0),0);
+  const perUnpaidIds=periodJobs.filter(j=>!j.paid).map(j=>j.id);
+  const summaryText=()=>`*OSC Group — Fechamento ${fmtDateBR(period.from)} a ${fmtDateBR(period.to)}*\n${partner?.name||""}\n\n`+periodJobs.map(j=>`${fmtDateBR(j.job_date).slice(0,5)} · ${j.plate||j.model} ${j.model&&j.plate?"("+j.model+") ":""}— ${(j.items||[]).map(i=>i.name).join(", ")} — ${fmtBRL(j.total)}`).join("\n")+`\n\n*Total: ${fmtBRL(perTotal)}*`;
+  const copySummary=()=>{try{navigator.clipboard.writeText(summaryText());alert("Resumo copiado ✓");}catch{fail({message:"Não foi possível copiar"});}};
+  const waSummary=()=>{const ph=String(partner?.phone||"").replace(/\D/g,""); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(summaryText())}`,"_blank");};
+
+  return (<div>
+    {/* Parceiros */}
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+      {partners.map(p=><button key={p.id} onClick={()=>{setPid(p.id);setQ("");}} style={pill(pid===p.id)}>{p.name}</button>)}
+      {canSeeValues&&!adding&&<button onClick={()=>setAdding(true)} style={{...pill(false),borderStyle:"dashed"}}>+ Parceiro</button>}
+    </div>
+    {adding&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
+      <input value={newPartner.name} onChange={e=>setNewPartner(p=>({...p,name:e.target.value}))} placeholder="Nome da empresa" style={{...inp,flex:"1 1 160px"}}/>
+      <input value={newPartner.phone} onChange={e=>setNewPartner(p=>({...p,phone:e.target.value}))} placeholder="WhatsApp (opcional)" style={{...inp,flex:"1 1 140px"}}/>
+      <button onClick={addPartner} style={{...pill(true)}}>Salvar</button><button onClick={()=>setAdding(false)} style={pill(false)}>✕</button>
+    </div>}
+    {partners.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray400,fontSize:13}}>Nenhum parceiro cadastrado{canSeeValues?" — toque em “+ Parceiro”.":"."}</div>}
+
+    {partner&&<>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+        <button onClick={()=>setView("hoje")} style={pill(view==="hoje")}>Hoje</button>
+        <button onClick={()=>setView("hist")} style={pill(view==="hist")}>Histórico</button>
+        {canSeeValues&&<button onClick={()=>setView("fech")} style={pill(view==="fech")}>Fechamento</button>}
+        {canSeeValues&&<button onClick={()=>setShowSvc(s=>!s)} style={{...pill(showSvc),marginLeft:"auto"}}>Serviços combinados</button>}
+      </div>
+
+      {canSeeValues&&showSvc&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:12,marginBottom:14}}>
+        <div style={{fontSize:10,fontWeight:800,color:B.gray500,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Tabela de {partner.name}</div>
+        {pServices.length===0&&<div style={{fontSize:12,color:B.gray500,marginBottom:8}}>Nenhum serviço combinado ainda. Você também pode lançar valores avulsos em cada trabalho.</div>}
+        {pServices.map(s=><div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",fontSize:13,color:B.gray200}}><span>{s.name}</span><span style={{display:"flex",gap:10,alignItems:"center"}}>{fmtBRL(s.price)}<button onClick={()=>delSvc(s.id)} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}>✕</button></span></div>)}
+        <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+          <input value={svcForm.name} onChange={e=>setSvcForm(f=>({...f,name:e.target.value}))} placeholder="Serviço" style={{...inp,flex:"2 1 140px"}}/>
+          <input value={svcForm.price} onChange={e=>setSvcForm(f=>({...f,price:e.target.value}))} placeholder="R$" inputMode="decimal" style={{...inp,flex:"1 1 80px"}}/>
+          <button onClick={addSvc} style={pill(true)}>Adicionar</button>
+        </div>
+      </div>}
+
+      {view==="hoje"&&<>
+        {!formOpen&&<button onClick={()=>{setForm(emptyForm);setFormOpen(true);}} style={{width:"100%",padding:"12px",borderRadius:12,border:`1px dashed ${accent}88`,background:`${accent}10`,color:accent,fontWeight:800,fontSize:13,cursor:"pointer",marginBottom:14,letterSpacing:.5}}>+ Lançar trabalho</button>}
+        {formOpen&&<div style={{background:B.gray800,border:`1px solid ${accent}55`,borderRadius:14,padding:14,marginBottom:14}}>
+          <div style={{fontSize:10,fontWeight:800,color:accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>{form.id?"Editar trabalho":"Novo trabalho"} · {partner.name}</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <input value={form.plate} onChange={e=>onPlate(e.target.value)} placeholder="Placa" style={{...inp,flex:"0 1 110px",fontFamily:"monospace",letterSpacing:1}}/>
+            <input value={form.model} onChange={e=>setForm(f=>({...f,model:e.target.value}))} placeholder="Modelo" style={{...inp,flex:"1 1 140px"}}/>
+            <input value={form.color} onChange={e=>setForm(f=>({...f,color:e.target.value}))} placeholder="Cor" style={{...inp,flex:"0 1 100px"}}/>
+          </div>
+          {pServices.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
+            {pServices.map(s=><button key={s.id} onClick={()=>addSvcToForm(s)} style={pill(false)}>+ {s.name}{canSeeValues?` · ${fmtBRL(s.price)}`:""}</button>)}
+          </div>}
+          {form.items.length>0&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:4}}>
+            {form.items.map((i,k)=><div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,color:B.gray200,background:B.gray900,borderRadius:8,padding:"6px 10px"}}><span>{i.name}</span><span style={{display:"flex",gap:10,alignItems:"center"}}>{canSeeValues&&fmtBRL(i.value)}<button onClick={()=>rmItem(k)} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}>✕</button></span></div>)}
+          </div>}
+          <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
+            <input value={form.freeName} onChange={e=>setForm(f=>({...f,freeName:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&addFree()} placeholder="Serviço (descreva)" style={{...inp,flex:"2 1 160px"}}/>
+            {canSeeValues&&<input value={form.freeValue} onChange={e=>setForm(f=>({...f,freeValue:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&addFree()} placeholder="R$" inputMode="decimal" style={{...inp,flex:"1 1 80px"}}/>}
+            <button onClick={addFree} style={pill(false)}>+</button>
+          </div>
+          {canSeeValues&&form.items.length>0&&<div style={{textAlign:"right",marginTop:8,fontWeight:800,color:B.white,fontSize:14}}>Total {fmtBRL(jobTotal(form.items)+(Number(String(form.freeValue).replace(",","."))||0)*(form.freeName.trim()?1:0))}</div>}
+          <div style={{marginTop:10}}>
+            <div style={{fontSize:10,fontWeight:800,color:B.gray500,letterSpacing:1.5,textTransform:"uppercase",marginBottom:6}}>Quem fez</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {employees.map(e=>{const on=form.doneBy.includes(e.name);return <button key={e.id} onClick={()=>setForm(f=>({...f,doneBy:on?f.doneBy.filter(n=>n!==e.name):[...f.doneBy,e.name]}))} style={pill(on)}>{e.name}</button>;})}
+            </div>
+          </div>
+          <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Observação (opcional)" rows={2} style={{...inp,width:"100%",marginTop:10,resize:"none"}}/>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:10}}>
+            {form.before.map(u=><img key={u} src={u} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:7}}/>)}
+            <label style={{...pill(false),cursor:"pointer"}}>📷 {uploading?"Enviando…":"Fotos do antes"}<input type="file" accept="image/*" multiple onChange={e=>upPhotos(e,u=>setForm(f=>({...f,before:[...f.before,...u]})))} style={{display:"none"}}/></label>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:14}}>
+            <button disabled={busy||uploading} onClick={saveJob} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:accent,color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>{busy?"Salvando…":form.id?"Salvar alterações":"Lançar"}</button>
+            <button onClick={()=>{setForm(emptyForm);setFormOpen(false);}} style={{padding:"10px 16px",borderRadius:9,border:`1px solid ${B.gray600}`,background:"transparent",color:B.gray400,fontSize:13,cursor:"pointer"}}>Cancelar</button>
+          </div>
+        </div>}
+        {hojeJobs.length===0&&!formOpen&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray500,fontSize:13}}>Nenhum trabalho em aberto hoje.</div>}
+        {hojeJobs.map(j=><JobCard key={j.id} j={j}/>)}
+      </>}
+
+      {view==="hist"&&<>
+        <div style={{position:"relative",marginBottom:14}}>
+          <input value={q} onChange={e=>{setQ(e.target.value);setLimit(40);}} placeholder="Buscar por placa, modelo ou serviço…" style={{...inp,width:"100%",paddingLeft:34}}/>
+          <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",fontSize:14}}>🔍</span>
+          {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,cursor:"pointer"}}>✕</button>}
+        </div>
+        <div style={{fontSize:11,color:B.gray500,marginBottom:10}}>{histAll.length} trabalho{histAll.length!==1?"s":""}{canSeeValues&&histAll.length>0?` · ${fmtBRL(histAll.reduce((s,j)=>s+Number(j.total||0),0))}`:""}</div>
+        {histAll.slice(0,limit).map(j=><JobCard key={j.id} j={j}/>)}
+        {histAll.length>limit&&<button onClick={()=>setLimit(l=>l+40)} style={{...pill(false),width:"100%"}}>Mostrar mais</button>}
+        {histAll.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray500,fontSize:13}}>Nada encontrado.</div>}
+      </>}
+
+      {view==="fech"&&canSeeValues&&<>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <button onClick={()=>setPeriod(p=>shiftPartnerPeriod(p,-1))} style={pill(false)}>‹</button>
+          <div style={{textAlign:"center"}}><div style={{fontSize:10,fontWeight:800,color:B.gray500,letterSpacing:1.8,textTransform:"uppercase"}}>Quinzena</div><div style={{fontWeight:800,color:B.white,fontSize:14}}>{fmtDateBR(period.from).slice(0,5)} a {fmtDateBR(period.to)}</div></div>
+          <button onClick={()=>setPeriod(p=>shiftPartnerPeriod(p,1))} style={pill(false)}>›</button>
+        </div>
+        <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,padding:"14px 16px",marginBottom:12}}>
+          <div style={{fontSize:10,fontWeight:800,color:B.gray500,letterSpacing:1.5,textTransform:"uppercase"}}>Total a receber</div>
+          <div style={{fontSize:26,fontWeight:900,color:B.white}}>{fmtBRL(perTotal-perPaid)}</div>
+          <div style={{fontSize:12,color:B.gray400}}>{periodJobs.length} trabalho{periodJobs.length!==1?"s":""} · total {fmtBRL(perTotal)} · pago {fmtBRL(perPaid)}</div>
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+          {perUnpaidIds.length>0&&<button onClick={()=>window.confirm(`Marcar ${perUnpaidIds.length} trabalho(s) como pagos?`)&&setPaid(perUnpaidIds,true)} style={pill(true,B.green)}>✓ Marcar quinzena como paga</button>}
+          <button onClick={copySummary} style={pill(false)}>Copiar resumo</button>
+          <button onClick={waSummary} style={pill(false,B.wa)}>WhatsApp</button>
+        </div>
+        {periodJobs.map(j=><div key={j.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10,marginBottom:6}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,color:B.white,fontWeight:700}}>{fmtDateBR(j.job_date).slice(0,5)} · <span style={{fontFamily:"monospace"}}>{j.plate||"—"}</span> <span style={{color:B.gray400,fontWeight:500}}>{j.model}</span></div>
+            <div style={{fontSize:11,color:B.gray500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{(j.items||[]).map(i=>i.name).join(", ")}</div>
+          </div>
+          <div style={{fontWeight:800,color:B.white,fontSize:13}}>{fmtBRL(j.total)}</div>
+          <button onClick={()=>setPaid([j.id],!j.paid)} title={j.paid?"Desmarcar pago":"Marcar pago"} style={{width:26,height:26,borderRadius:99,border:`1px solid ${j.paid?B.green:B.gray600}`,background:j.paid?`${B.green}22`:"transparent",color:j.paid?B.green:B.gray600,cursor:"pointer",fontSize:13}}>✓</button>
+        </div>)}
+        {periodJobs.length===0&&<div style={{textAlign:"center",padding:"28px 0",color:B.gray500,fontSize:13}}>Nenhum trabalho nesta quinzena.</div>}
+      </>}
+    </>}
+    {lb&&<PhotoLightbox items={lbItems} current={lb} onChange={setLB} onClose={()=>setLB(null)}/>}
+  </div>);
+}
+
 // ─── Sales Tab ────────────────────────────────────────────────────────────────
 // ─── PresencaTab ──────────────────────────────────────────────────────────────
 const PRESENCA_KEY = "osc_presenca_v1"; // localStorage key
@@ -14745,7 +15055,7 @@ export default function App() {
   const navItems=NAV_ITEMS_BY_ROLE[adminRole]||NAV_ITEMS_BY_ROLE.owner;
 
   // Tab grouping by nav section
-  const OFICINA_TABS=["clients","finishing","appointments","mechanics"];
+  const OFICINA_TABS=["clients","finishing","appointments","mechanics","partners"];
   const CADASTROS_TABS=["vehicles","clientsMonitor","mechanics"];
   const GESTAO_TABS=["finance","investments","sales","presenca"];
   const COMPRAS_TABS=["stock","materiais","purchases"];
@@ -15257,6 +15567,7 @@ export default function App() {
               {allowedTabs.includes("clients")&&tabBtn("clients","OSC Performance",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,B.orange)}
               {allowedTabs.includes("finishing")&&tabBtn("finishing","OSC Finishing Division",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>,FD.primary)}
               {allowedTabs.includes("appointments")&&tabBtn("appointments","Agendamentos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,"#8b5cf6")}
+              {allowedTabs.includes("partners")&&tabBtn("partners","Parceiros",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 17l2 2a1 1 0 0 0 3-3"/><path d="M14 14l2.5 2.5a1 1 0 0 0 3-3l-3.6-3.6a3 3 0 0 0-4.2 0l-.9.9a1 1 0 0 1-1.4 0l-.5-.5a1 1 0 0 1 0-1.4L12 5"/><path d="M2 13l4-4 3 3"/></svg>,B.blue)}
             </>}
             {navSection==="cadastros"&&<>
               {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos",<ICar s={13}/>,B.blue)}
@@ -15769,6 +16080,11 @@ export default function App() {
       {tab==="presenca"&&allowedTabs.includes("presenca")&&<>
         <TabHeader color={B.blue} title="Lista de Presenças" subtitle="Controle de presença, atrasos e faltas da equipe"/>
         <PresencaTab employees={employees} isOwner={adminRole==="owner"}/>
+      </>}
+
+      {tab==="partners"&&allowedTabs.includes("partners")&&<>
+        <TabHeader color={B.blue} title="Parceiros" subtitle="Trabalhos terceirizados por empresas parceiras"/>
+        <PartnersTab employees={employees} canSeeValues={adminRole!=="supervisor"} actor={ROLE_CONFIG[adminRole]?.label||""}/>
       </>}
 
       {tab==="sales"&&allowedTabs.includes("sales")&&<>

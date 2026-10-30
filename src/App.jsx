@@ -11002,7 +11002,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.15";
+const APP_VERSION = "2026.10.30.16";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13017,7 +13017,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
   const openLb=(urls,u)=>{setLbItems(urls);setLB(u);};
 
   const inp={padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
-  const pill=(on,ac=accent)=>({padding:"6px 14px",borderRadius:99,border:`1px solid ${on?ac:B.gray600}`,background:on?`${ac}22`:"transparent",color:on?ac:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"});
+  const pill=(on,ac=accent)=>({padding:"6px 14px",borderRadius:99,border:`1px solid ${on?ac:B.gray600}`,background:on?`${ac}22`:"transparent",color:on?ac:B.gray200,fontWeight:700,fontSize:12,cursor:"pointer"});
 
   const Thumbs=({urls,label})=>urls&&urls.length>0?<div style={{marginTop:8}}>
     <div style={{fontSize:9,fontWeight:800,color:B.gray500,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>{label}</div>
@@ -13029,7 +13029,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
     return <div style={{background:B.gray800,border:`1px solid ${done?B.gray700:accent+"55"}`,borderRadius:14,padding:"12px 14px",marginBottom:10}}>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         <span onClick={()=>{setQ(j.plate||j.model||"");setView("hist");}} style={{fontFamily:"monospace",fontWeight:800,fontSize:14,letterSpacing:1,color:B.white,cursor:"pointer"}}>{j.plate||"—"}</span>
-        <span style={{fontSize:13,color:B.gray300}}>{[j.model,j.color].filter(Boolean).join(" · ")}</span>
+        <span style={{fontSize:13,color:B.gray200}}>{[j.model,j.color].filter(Boolean).join(" · ")}</span>
         <span style={{marginLeft:"auto",fontSize:10,fontWeight:800,borderRadius:99,padding:"2px 9px",color:done?B.green:B.amber,background:done?`${B.green}18`:`${B.amber}18`}}>{done?"Entregue":"Em execução"}</span>
       </div>
       <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{fmtDateBR(j.job_date)}{j.done_by?` · ${j.done_by}`:""}{j.created_by&&!j.done_by?` · ${j.created_by}`:""}</div>
@@ -13043,7 +13043,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
       {j.notes&&<div style={{fontSize:12,color:B.gray400,marginTop:6,whiteSpace:"pre-wrap"}}>{j.notes}</div>}
       <Thumbs urls={j.before_photos} label="Antes"/><Thumbs urls={j.after_photos} label="Depois"/>
       {delivering===j.id&&<div style={{marginTop:10,padding:10,background:B.gray900,borderRadius:10,border:`1px solid ${B.green}44`}}>
-        <div style={{fontSize:11,color:B.gray300,marginBottom:6}}>Fotos do depois (opcional)</div>
+        <div style={{fontSize:11,color:B.gray200,marginBottom:6}}>Fotos do depois (opcional)</div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
           {delPhotos.map(u=><img key={u} src={u} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:7}}/>)}
           <label style={{...pill(false),cursor:"pointer"}}>📷 {uploading?"Enviando…":"Adicionar"}<input type="file" accept="image/*" multiple onChange={e=>upPhotos(e,u=>setDelPhotos(p=>[...p,...u]))} style={{display:"none"}}/></label>

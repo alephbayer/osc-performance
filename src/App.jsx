@@ -10038,17 +10038,16 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     <style>{`
       .pv-side,.pv-right{display:contents}
       @media(min-width:960px){
-        .pv-side{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:268px;background:${B.black};border-right:1px solid ${B.gray700};z-index:50;overflow-y:auto}
-        .pv-head>div{padding:48px 32px 8px!important;flex-direction:column;align-items:flex-start!important}
-        .pv-head img{height:36px!important}
-        .pv-val{position:absolute;left:32px;bottom:28px}
+        .pv-side{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:300px;background:${B.black};border-right:1px solid ${B.gray700};z-index:50;overflow-y:auto}
+        .pv-head>div{padding:48px 28px 8px!important;flex-direction:column;align-items:flex-start!important}
+                .pv-val{position:absolute;left:28px;bottom:28px}
         .pv-navwrap{position:static!important;padding:28px 20px!important;background:none!important}
         .pv-nav{max-width:none!important;flex-direction:column;background:transparent!important;border:none!important;border-radius:0!important;padding:0!important;gap:2px!important}
         .pv-tab{flex:none!important;flex-direction:row!important;justify-content:flex-start!important;min-height:40px!important;padding:0 14px!important;border-radius:8px!important;gap:0!important;font-size:10.5px!important;letter-spacing:2.2px;text-transform:uppercase;background:transparent!important}
         .pv-tab svg{display:none}
         .pv-tab[aria-current=page]{background:${B.orange}14!important;box-shadow:inset 2px 0 0 ${B.orange}}
         .pv-tab>span{left:auto!important;right:14px;top:50%!important;transform:translateY(-50%)}
-        .pv-main{margin:0 0 0 calc(268px + max(0px,(100vw - 268px - 1000px)/2))!important;max-width:1000px!important;padding:56px 40px 64px!important}
+        .pv-main{margin:0 0 0 calc(300px + max(0px,(100vw - 300px - 1000px)/2))!important;max-width:1000px!important;padding:56px 40px 64px!important}
         .pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:20px}
         .pv-right{display:flex;flex-direction:column;gap:16px}
         .pv-grid>*,.pv-right>*{margin-bottom:0!important}
@@ -10060,8 +10059,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* Top row: logos + name */}
       <div style={{padding:"12px max(16px, calc((100% - 620px)/2 + 16px))",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
-          <OscLogo h={28}/>
-          <div style={{fontSize:11,fontWeight:700,color:B.gray300,marginTop:8}}><span style={{color:"#DD8B34"}}>Performance</span> <span style={{color:B.gray500}}>&</span> <span style={{color:FD.primary}}>Finishing Division</span></div>
+          <OscLockup h={40}/>
           <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
           <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Acompanhamento de serviço</div>
         </div>
@@ -11007,7 +11005,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.10.30.24";
+const APP_VERSION = "2026.11.01.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12717,6 +12715,17 @@ function OscLogo({h=28,center=false}) {
   const light=getTheme()==="light";
   return <img src={light?"/osc-group-logo-light.png":"/osc-group-logo-dark.png"} alt="OSC Group" height={h} width={Math.round(h*660/108)}
     style={{display:"block",height:h,width:"auto",maxWidth:"100%",margin:center?"0 auto":0}}/>;
+}
+// Logo OSC GROUP + linha "PERFORMANCE & FINISHING DIVISION" (maiúsculas espaçadas, na largura do logo)
+function OscLockup({h=40}) {
+  const w=Math.round(h*660/108), fs=h*0.21;
+  const word=(t,c)=><span style={{color:c,marginRight:"-.3em",whiteSpace:"nowrap"}}>{t}</span>;
+  return <div style={{width:w,maxWidth:"100%"}}>
+    <OscLogo h={h}/>
+    <div style={{display:"flex",justifyContent:"space-between",marginTop:h*0.28,fontSize:fs,fontWeight:600,letterSpacing:".3em",lineHeight:1,paddingLeft:1}}>
+      {word("PERFORMANCE","#DD8B34")}{word("&",B.gray500)}{word("FINISHING DIVISION",FD.primary)}
+    </div>
+  </div>;
 }
 function ThemeBtn({toggleTheme, theme, themePref}) {
   const icon = themePref==="auto"

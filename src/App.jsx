@@ -4212,7 +4212,7 @@ const _brNum = s => {
 };
 function parsePurchaseLines(lines) {
   const rows = [];
-  const skip = /^(total|subtotal|valor|desconto|cnpj|cpf|data|nota|nf|pedido|cliente|endere|telefone|p[aá]gina|descri|item|c[oó]d|qtd|quant|un\b|pre[cç]o|forma|pagamento|vencimento|parcela)/i;
+  const skip = /^(produtos|descontos|entrega|observa|venda|gerado|impresso|soma|total|subtotal|valor|desconto|cnpj|cpf|data|nota|nf|pedido|cliente|endere|telefone|p[aá]gina|descri|item|c[oó]d|qtd|quant|un\b|pre[cç]o|forma|pagamento|vencimento|parcela)/i;
   lines.forEach(line => {
     const toks = line.split(/\s{2,}|\s(?=R\$)/).flatMap(t => t.trim().split(/\s+/).length > 1 && t.trim().split(/\s+/).every(w => _brNum(w) != null || /^(un|pc|pç|cx|kit|jg|par|lt|l|kg|m|mt|und?)\.?$/i.test(w)) ? t.trim().split(/\s+/) : [t.trim()]).filter(Boolean);
     const nums = [];
@@ -4222,13 +4222,25 @@ function parsePurchaseLines(lines) {
       if (v > 0) rows.push({ name: "Frete", qty: 1, cost: v, kind: "freight", sure: true });
       return;
     }
-    // procura (qtd, unitário, total) com qtd*unit ≈ total
-    for (let k = 0; k + 2 < nums.length; k++) {
-      const [a, b, c] = [nums[k], nums[k + 1], nums[k + 2]];
-      if (a.n > 0 && b.n > 0 && Math.abs(a.n * b.n - c.n) <= Math.max(0.05, c.n * 0.01)) {
-        let name = toks.slice(0, a.i).filter(t => _brNum(t) == null || t.length > 8).join(" ").replace(/^\d{3,}\s+/, "").replace(/\s+(un|und|pc|pç|cx|kit|jg|par|lt|kg|mt)\.?$/i, "").trim();
+    // procura (qtd, unitário, total) com qtd*unit ≈ total: unit/total são os 2 últimos números, qtd é o 1º que bate
+    if (nums.length >= 3) {
+      const U = nums[nums.length - 2], T = nums[nums.length - 1];
+      const Q = nums.slice(0, -2).find(x => x.n > 0 && U.n > 0 && Math.abs(x.n * U.n - T.n) <= Math.max(0.05, T.n * 0.01));
+      if (Q) {
+        const unitRe = /^(un|und|pc|pç|cx|kit|jg|par|lt|l|kg|m|mt)\.?$/i;
+        const codeRe = /^(#?\d[\w-]*|[A-Z0-9#-]{2,12})$/;
+        let parts = Q.i === 0 ? toks.slice(1, U.i) : toks.slice(0, Q.i);
+        parts = parts.flatMap(t => t.split(/\s+/)).filter(Boolean);
+        if (Q.i === 0) {
+          if (parts.length > 1 && codeRe.test(parts[0]) && (parts[1] && (unitRe.test(parts[1]) || parts.length > 2))) parts = parts.slice(1);
+          if (parts.length > 1 && unitRe.test(parts[0])) parts = parts.slice(1);
+        } else {
+          parts = parts.filter(t => !/^\d{3,}$/.test(t));
+          if (parts.length > 1 && unitRe.test(parts[parts.length - 1])) parts = parts.slice(0, -1);
+        }
+        const name = parts.join(" ").trim();
         if (name.length < 3 || skip.test(name)) return;
-        rows.push({ name, qty: a.n, cost: b.n, kind: "item", sure: true });
+        rows.push({ name, qty: Q.n, cost: U.n, kind: "item", sure: true });
         return;
       }
     }
@@ -11194,7 +11206,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.04.1";
+const APP_VERSION = "2026.11.04.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

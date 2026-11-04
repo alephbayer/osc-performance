@@ -4316,8 +4316,8 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
     catch (e) { setErr(e.message || "Erro ao importar"); setSaving(false); }
   };
 
-  return (<div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 260, padding: "12px 12px calc(104px + env(safe-area-inset-bottom))" }} onClick={onClose}>
-    <div style={{ background: B.gray800, borderRadius: 16, maxWidth: 620, width: "100%", border: `2px solid ${B.orange}55`, overflow: "hidden", maxHeight: "100%", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+  return (<div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 260, overscrollBehavior: "contain", padding: "12px 12px calc(104px + env(safe-area-inset-bottom))" }} onClick={onClose}>
+    <div style={{ background: B.gray800, borderRadius: 16, maxWidth: 620, width: "100%", border: `2px solid ${B.orange}55`, overflow: "hidden", maxHeight: "calc(100vh - 120px - env(safe-area-inset-bottom))", height: "auto", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
       <div style={{ background: B.gray900, borderBottom: `2px solid ${B.orange}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF)</div>
@@ -4325,7 +4325,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
       </div>
-      <div style={{ padding: 14, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <div style={{ padding: 14, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 10, minWidth: 0, minHeight: 0, flex: "1 1 auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}>
         <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", color: B.gray200, fontSize: 12 }}>
           {busy ? "Lendo PDF…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF da compra"}
           <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { pick(e.target.files?.[0]); e.target.value = ""; }} />
@@ -11232,7 +11232,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.04.5";
+const APP_VERSION = "2026.11.04.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -4263,8 +4263,8 @@ function TaskPicker({ value, onChange, vts, allowDefault = false, placeholder = 
   const nq = _normName(q);
   const list = vts.filter(t => !nq || _normName(lbl(t)).includes(nq));
   const pickIt = v => { onChange(v); setOpen(false); setQ(""); };
-  return (<div style={{ position: "relative", minWidth: 0 }}>
-    <button type="button" onClick={() => setOpen(o => !o)} style={{ width: "100%", textAlign: "left", background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "5px 7px", fontSize: 12, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cur} ▾</button>
+  return (<div style={{ position: "relative", minWidth: 0, maxWidth: "100%", width: "100%" }}>
+    <button type="button" onClick={() => setOpen(o => !o)} style={{ display: "block", width: "100%", maxWidth: "100%", boxSizing: "border-box", textAlign: "left", background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "5px 7px", fontSize: 12, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cur} ▾</button>
     {open && <div style={{ position: "absolute", zIndex: 5, left: 0, right: 0, minWidth: 220, top: "100%", marginTop: 2, background: B.gray900, border: `1px solid ${B.orange}66`, borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,.5)", padding: 6 }}>
       <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar ou criar tarefa…" style={{ background: B.gray800, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "6px 8px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box", marginBottom: 4 }} />
       <div style={{ maxHeight: 190, overflowY: "auto" }}>
@@ -4325,26 +4325,26 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
       </div>
-      <div style={{ padding: 14, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-        <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", color: B.gray200, fontSize: 12 }}>
+      <div style={{ padding: 14, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+        <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", color: B.gray200, fontSize: 12 }}>
           {busy ? "Lendo PDF…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF da compra"}
           <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { pick(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
         {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
         {rows && rows.length > 0 && <>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <div style={{ flex: "2 1 160px" }}>
+            <div style={{ flex: "2 1 160px", minWidth: 0 }}>
               <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Tarefa padrão</div>
               <TaskPicker value={taskId} onChange={setTaskId} vts={vts} />
             </div>
-            <div style={{ flex: "1 1 80px" }}>
+            <div style={{ flex: "1 1 80px", minWidth: 0 }}>
               <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Markup %</div>
               <input value={markup} onChange={e => setMarkup(e.target.value)} inputMode="decimal" style={fieldS} />
             </div>
           </div>
           <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens. Linhas com ⚠ foram lidas com menos certeza.</div>
           {rows.map(r => (
-            <div key={r.id} style={{ background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on ? B.orange + "66" : B.gray700}`, opacity: r.on ? 1 : 0.6 }}>
+            <div key={r.id} style={{ minWidth: 0, boxSizing: "border-box", background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on ? B.orange + "66" : B.gray700}`, opacity: r.on ? 1 : 0.6 }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <input type="checkbox" checked={r.on} onChange={e => upd(r.id, { on: e.target.checked })} />
                 <input value={r.name} onChange={e => upd(r.id, { name: e.target.value })} style={{ ...fieldS, flex: 1 }} />
@@ -4354,7 +4354,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
                 <input value={r.qty} onChange={e => upd(r.id, { qty: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...fieldS, width: 60 }} />
                 <span style={{ fontSize: 10, color: B.gray400 }}>Unit. R$</span>
                 <input value={r.cost} onChange={e => upd(r.id, { cost: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...fieldS, width: 80 }} />
-                <div style={{ flex: 1, minWidth: 130 }}><TaskPicker value={r.tid} onChange={v => upd(r.id, { tid: v })} vts={vts} allowDefault /></div>
+                <div style={{ flex: "1 1 100%", minWidth: 0 }}><TaskPicker value={r.tid} onChange={v => upd(r.id, { tid: v })} vts={vts} allowDefault /></div>
               </div>
               {(r.dup || !r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>
                 {r.dup ? "⚠ Parece já lançado nessa OS" : r.kind === "freight" ? "Frete (lançado como item sem markup)" : "⚠ Leitura incerta — confira"}
@@ -11232,7 +11232,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.04.4";
+const APP_VERSION = "2026.11.04.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -4171,6 +4171,179 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
   </div>);
 }
 
+// ─── Importar compra (PDF) ────────────────────────────────────────────────────
+let _pdfJsPromise = null;
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (_pdfJsPromise) return _pdfJsPromise;
+  _pdfJsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      resolve(window.pdfjsLib);
+    };
+    s.onerror = () => { _pdfJsPromise = null; reject(new Error("Não consegui carregar o leitor de PDF")); };
+    document.head.appendChild(s);
+  });
+  return _pdfJsPromise;
+}
+async function pdfToLines(file) {
+  const lib = await loadPdfJs();
+  const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const out = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const content = await (await pdf.getPage(p)).getTextContent();
+    const items = content.items.filter(i => i.str && i.str.trim()).map(i => ({ s: i.str.trim(), x: i.transform[4], y: i.transform[5] }));
+    items.sort((a, b) => b.y - a.y || a.x - b.x);
+    let cur = null;
+    items.forEach(it => {
+      if (cur && Math.abs(cur.y - it.y) <= 3) cur.parts.push(it);
+      else { cur = { y: it.y, parts: [it] }; out.push(cur); }
+    });
+  }
+  return out.map(l => l.parts.sort((a, b) => a.x - b.x).map(x => x.s).join("  "));
+}
+const _brNum = s => {
+  const t = String(s).replace(/^R\$\s*/i, "").trim();
+  if (!/^\d{1,3}(\.\d{3})*(,\d+)?$|^\d+(,\d+)?$|^\d+\.\d{1,2}$/.test(t)) return null;
+  const n = /,/.test(t) ? parseFloat(t.replace(/\./g, "").replace(",", ".")) : parseFloat(t);
+  return isNaN(n) ? null : n;
+};
+function parsePurchaseLines(lines) {
+  const rows = [];
+  const skip = /^(total|subtotal|valor|desconto|cnpj|cpf|data|nota|nf|pedido|cliente|endere|telefone|p[aá]gina|descri|item|c[oó]d|qtd|quant|un\b|pre[cç]o|forma|pagamento|vencimento|parcela)/i;
+  lines.forEach(line => {
+    const toks = line.split(/\s{2,}|\s(?=R\$)/).flatMap(t => t.trim().split(/\s+/).length > 1 && t.trim().split(/\s+/).every(w => _brNum(w) != null || /^(un|pc|pç|cx|kit|jg|par|lt|l|kg|m|mt|und?)\.?$/i.test(w)) ? t.trim().split(/\s+/) : [t.trim()]).filter(Boolean);
+    const nums = [];
+    toks.forEach((t, i) => { const n = _brNum(t); if (n != null) nums.push({ i, n }); });
+    if (/frete/i.test(line)) {
+      const v = nums.length ? nums[nums.length - 1].n : null;
+      if (v > 0) rows.push({ name: "Frete", qty: 1, cost: v, kind: "freight", sure: true });
+      return;
+    }
+    // procura (qtd, unitário, total) com qtd*unit ≈ total
+    for (let k = 0; k + 2 < nums.length; k++) {
+      const [a, b, c] = [nums[k], nums[k + 1], nums[k + 2]];
+      if (a.n > 0 && b.n > 0 && Math.abs(a.n * b.n - c.n) <= Math.max(0.05, c.n * 0.01)) {
+        let name = toks.slice(0, a.i).filter(t => _brNum(t) == null || t.length > 8).join(" ").replace(/^\d{3,}\s+/, "").replace(/\s+(un|und|pc|pç|cx|kit|jg|par|lt|kg|mt)\.?$/i, "").trim();
+        if (name.length < 3 || skip.test(name)) return;
+        rows.push({ name, qty: a.n, cost: b.n, kind: "item", sure: true });
+        return;
+      }
+    }
+    // fallback: texto + um valor no fim → revisar
+    if (nums.length >= 1 && toks[0] && _brNum(toks[0]) == null) {
+      const name = toks.slice(0, nums[0].i).join(" ").replace(/^\d{3,}\s+/, "").trim();
+      if (name.length >= 4 && !skip.test(name) && !/\d{2}\/\d{2}\/\d{2,4}/.test(line) && nums[nums.length - 1].n > 0)
+        rows.push({ name, qty: 1, cost: nums[nums.length - 1].n, kind: "item", sure: false });
+    }
+  });
+  return rows;
+}
+const _normName = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [rows, setRows] = useState(null);
+  const [taskId, setTaskId] = useState(vts[0]?.id || "");
+  const [markup, setMarkup] = useState("50");
+  const [keepPdf, setKeepPdf] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const existing = vts.flatMap(t => (Array.isArray(t.materials) ? t.materials : []).map(m => ({ n: _normName(m.name), c: Number(m.cost || 0) })));
+  const fieldS = { background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "5px 7px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box" };
+
+  const pick = async f => {
+    if (!f) return;
+    setFile(f); setErr(""); setBusy(true); setRows(null);
+    try {
+      const lines = await pdfToLines(f);
+      const parsed = parsePurchaseLines(lines).map((r, i) => {
+        const dup = existing.some(e => e.n === _normName(r.name) && Math.abs(e.c - r.cost) < 0.01);
+        return { ...r, id: i, dup, on: r.sure && !dup && r.kind !== "freight", tid: "" };
+      });
+      if (!parsed.length) setErr("Não encontrei itens nesse PDF. Se for escaneado/foto, ainda não consigo ler (só PDF com texto).");
+      setRows(parsed);
+    } catch (e) { setErr(e.message || "Erro ao ler o PDF"); }
+    setBusy(false);
+  };
+  const upd = (id, p) => setRows(rs => rs.map(r => r.id === id ? { ...r, ...p } : r));
+  const sel = (rows || []).filter(r => r.on);
+  const mk = (() => { const m = parseFloat(String(markup).replace(",", ".")); return isNaN(m) || m < 0 ? 50 : m; })();
+  const totalCost = sel.reduce((s, r) => s + r.cost * r.qty, 0);
+
+  const go = async () => {
+    if (!sel.length || !taskId) return;
+    setSaving(true);
+    try { await onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk }); onClose(); }
+    catch (e) { setErr(e.message || "Erro ao importar"); setSaving(false); }
+  };
+
+  return (<div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 260, padding: 12 }} onClick={onClose}>
+    <div style={{ background: B.gray800, borderRadius: 16, maxWidth: 620, width: "100%", border: `2px solid ${B.orange}55`, overflow: "hidden", maxHeight: "92vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: B.gray900, borderBottom: `2px solid ${B.orange}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF)</div>
+          <div style={{ fontSize: 11, color: B.gray400 }}>{vehicle.model} · {vehicle.plate}</div>
+        </div>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
+      </div>
+      <div style={{ padding: 14, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+        <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", color: B.gray200, fontSize: 12 }}>
+          {busy ? "Lendo PDF…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF da compra"}
+          <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+        {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
+        {rows && rows.length > 0 && <>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ flex: "2 1 160px" }}>
+              <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Tarefa padrão</div>
+              <select value={taskId} onChange={e => setTaskId(e.target.value)} style={fieldS}>
+                {vts.map(t => <option key={t.id} value={t.id}>{t.label || t.title || "Tarefa"}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: "1 1 80px" }}>
+              <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Markup %</div>
+              <input value={markup} onChange={e => setMarkup(e.target.value)} inputMode="decimal" style={fieldS} />
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens. Linhas com ⚠ foram lidas com menos certeza.</div>
+          {rows.map(r => (
+            <div key={r.id} style={{ background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on ? B.orange + "66" : B.gray700}`, opacity: r.on ? 1 : 0.6 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="checkbox" checked={r.on} onChange={e => upd(r.id, { on: e.target.checked })} />
+                <input value={r.name} onChange={e => upd(r.id, { name: e.target.value })} style={{ ...fieldS, flex: 1 }} />
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ fontSize: 10, color: B.gray400 }}>Qtd</span>
+                <input value={r.qty} onChange={e => upd(r.id, { qty: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...fieldS, width: 60 }} />
+                <span style={{ fontSize: 10, color: B.gray400 }}>Unit. R$</span>
+                <input value={r.cost} onChange={e => upd(r.id, { cost: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...fieldS, width: 80 }} />
+                <select value={r.tid} onChange={e => upd(r.id, { tid: e.target.value })} style={{ ...fieldS, flex: 1, minWidth: 110 }}>
+                  <option value="">Tarefa padrão</option>
+                  {vts.map(t => <option key={t.id} value={t.id}>{t.label || t.title || "Tarefa"}</option>)}
+                </select>
+              </div>
+              {(r.dup || !r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>
+                {r.dup ? "⚠ Parece já lançado nessa OS" : r.kind === "freight" ? "Frete (lançado como item sem markup)" : "⚠ Leitura incerta — confira"}
+              </div>}
+            </div>
+          ))}
+          <label style={{ fontSize: 12, color: B.gray200, display: "flex", gap: 6, alignItems: "center" }}>
+            <input type="checkbox" checked={keepPdf} onChange={e => setKeepPdf(e.target.checked)} /> Guardar o PDF como comprovante
+          </label>
+        </>}
+      </div>
+      {rows && rows.length > 0 && <div style={{ padding: 12, borderTop: `1px solid ${B.gray700}`, display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ flex: 1, fontSize: 12, color: B.gray200 }}>{sel.length} item(ns) · custo {fmtBRL(totalCost)}</div>
+        <button disabled={saving || !sel.length || !taskId} onClick={go} style={{ background: B.orange, color: "#000", border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", opacity: saving || !sel.length ? 0.5 : 1 }}>{saving ? "Importando…" : "Importar"}</button>
+      </div>}
+    </div>
+  </div>);
+}
+
 function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageOnMount=false,vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask:_onToggleTask,onDeleteTask,onUpdateTask:_onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}=props;
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
@@ -4212,6 +4385,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const onToggleTask=(id,...r)=>{const cur=tasks.find(x=>x.id===id);if(cur&&cur.done)uncheckDeliv(id);return _onToggleTask&&_onToggleTask(id,...r);};
   const [showParts,setShowParts]=useState(false);
   const [showPOForm,setShowPOForm]=useState(false);
+  const [showImportPO,setShowImportPO]=useState(false);
+  const canImportPO=managerMode&&(()=>{try{const r=sessionStorage.getItem(ADMIN_SESSION_KEY);return r==='owner'||r==='admin';}catch{return false;}})();
   const [confirmDelV,setConfirmDelV]=useState(false);
   const [confirmDeliver,setConfirmDeliver]=useState(false);
   const [showMoreMenu,setShowMoreMenu]=useState(false);
@@ -4395,6 +4570,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
             Pedidos{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length>0&&<span style={{background:`${B.amber}33`,borderRadius:99,padding:"0 5px",fontSize:10,fontWeight:900}}>{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length}</span>}
           </button>}
+          {canImportPO&&vts.length>0&&<button onClick={()=>setShowImportPO(true)} style={{background:`${B.orange}10`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg>
+            Importar compra
+          </button>}
           {/* Nota cliente */}
           {managerMode&&onPostTimeline&&<button onClick={()=>setShowTLNote(true)} style={{background:`${B.blue}15`,border:`1px solid ${B.blue}33`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -4473,6 +4652,16 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       {showParts&&<div style={{padding:"12px 16px",background:B.black,borderBottom:`1px solid ${B.gray700}`}}>
         <VehiclePartsList vehicle={vehicle} onUpdateVehicle={onUpdateVehicle} managerMode={managerMode} isFD={isFD} tasks={tasks}/>
       </div>}
+      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items,markup})=>{
+        let receiptUrl=null;
+        if(file){ try{ receiptUrl=await db.uploadPurchasePdf(vehicle.id,file); }catch(e){ console.warn("receipt upload",e); } }
+        const byTask={};
+        items.forEach(r=>{ (byTask[r.tid]=byTask[r.tid]||[]).push({name:r.name.trim(),brand:"",cost:Number(r.cost)||0,markup:r.kind==="freight"?0:markup,qty:Number(r.qty)>0?Number(r.qty):1,freight:0,fromStock:false,...(receiptUrl?{receiptUrl}:{})}); });
+        for(const tid of Object.keys(byTask)){
+          const cur=tasks.find(x=>x.id===tid); const base=Array.isArray(cur?.materials)?cur.materials:[];
+          await onUpdateTask(tid,{materials:[...base,...byTask[tid]]});
+        }
+      }}/>}
       {showPOForm&&<PurchaseOrderPanel vehicleId={vehicle.id} tasks={vts} stock={stock} onConsumeStock={onConsumeStock} onAdd={onAddPurchaseOrder} orders={purchaseOrders.filter(p=>p.vehicleId===vehicle.id)}/>}
       {showClientNotes&&clientNotes.length>0&&<div style={{padding:"12px 16px",background:`${B.amber}08`,borderBottom:`1px solid ${B.amber}33`}}>
         <div style={{fontSize:11,fontWeight:700,color:B.amber,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anotações do cliente</div>
@@ -11005,7 +11194,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.01.1";
+const APP_VERSION = "2026.11.04.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

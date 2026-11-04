@@ -717,6 +717,13 @@ export const db = {
     return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
   },
 
+  async uploadPurchasePdf(vehicleId, file) {
+    const path = `compras/${vehicleId}/${Date.now()}.pdf`;
+    const { error } = await supabase.storage.from("photos").upload(path, file, { contentType: "application/pdf", cacheControl: "31536000", upsert: false });
+    if (error) throw error;
+    return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
+  },
+
   setAdminSession(active) { db._adminSession = !!active; },
 
   async sendPushToAdmins(title, body, url) {

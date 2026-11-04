@@ -4316,8 +4316,8 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
     catch (e) { setErr(e.message || "Erro ao importar"); setSaving(false); }
   };
 
-  return (<div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 260, padding: 12 }} onClick={onClose}>
-    <div style={{ background: B.gray800, borderRadius: 16, maxWidth: 620, width: "100%", border: `2px solid ${B.orange}55`, overflow: "hidden", maxHeight: "92vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+  return (<div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 260, padding: "12px 12px calc(104px + env(safe-area-inset-bottom))" }} onClick={onClose}>
+    <div style={{ background: B.gray800, borderRadius: 16, maxWidth: 620, width: "100%", border: `2px solid ${B.orange}55`, overflow: "hidden", maxHeight: "100%", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
       <div style={{ background: B.gray900, borderBottom: `2px solid ${B.orange}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF)</div>
@@ -11232,7 +11232,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.04.3";
+const APP_VERSION = "2026.11.04.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

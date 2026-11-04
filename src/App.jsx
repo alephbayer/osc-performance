@@ -4255,12 +4255,35 @@ function parsePurchaseLines(lines) {
 }
 const _normName = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
+function TaskPicker({ value, onChange, vts, allowDefault = false, placeholder = "Tarefa" }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const lbl = t => t.label || t.title || "Tarefa";
+  const cur = value?.startsWith("new:") ? `＋ ${value.slice(4)} (nova)` : vts.find(t => t.id === value) ? lbl(vts.find(t => t.id === value)) : (allowDefault ? "Tarefa padrão" : placeholder);
+  const nq = _normName(q);
+  const list = vts.filter(t => !nq || _normName(lbl(t)).includes(nq));
+  const pickIt = v => { onChange(v); setOpen(false); setQ(""); };
+  return (<div style={{ position: "relative", minWidth: 0 }}>
+    <button type="button" onClick={() => setOpen(o => !o)} style={{ width: "100%", textAlign: "left", background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "5px 7px", fontSize: 12, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cur} ▾</button>
+    {open && <div style={{ position: "absolute", zIndex: 5, left: 0, right: 0, minWidth: 220, top: "100%", marginTop: 2, background: B.gray900, border: `1px solid ${B.orange}66`, borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,.5)", padding: 6 }}>
+      <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar ou criar tarefa…" style={{ background: B.gray800, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "6px 8px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box", marginBottom: 4 }} />
+      <div style={{ maxHeight: 190, overflowY: "auto" }}>
+        {allowDefault && <div onClick={() => pickIt("")} style={{ padding: "6px 8px", fontSize: 12, color: B.gray200, cursor: "pointer" }}>Tarefa padrão</div>}
+        {q.trim() && <div onClick={() => pickIt("new:" + q.trim())} style={{ padding: "6px 8px", fontSize: 12, color: B.orange, fontWeight: 700, cursor: "pointer" }}>＋ Criar tarefa “{q.trim()}”</div>}
+        {list.map(t => <div key={t.id} onClick={() => pickIt(t.id)} style={{ padding: "6px 8px", fontSize: 12, color: t.id === value ? B.orange : B.white, cursor: "pointer", borderRadius: 4 }}>{lbl(t)}{t.done ? " ✓" : ""}</div>)}
+        {!list.length && !q.trim() && <div style={{ padding: 8, fontSize: 11, color: B.gray400 }}>Digite para buscar ou criar</div>}
+      </div>
+      <div onClick={() => setOpen(false)} style={{ textAlign: "center", fontSize: 10, color: B.gray400, padding: 4, cursor: "pointer" }}>fechar</div>
+    </div>}
+  </div>);
+}
+
 function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [rows, setRows] = useState(null);
-  const [taskId, setTaskId] = useState(vts[0]?.id || "");
+  const [taskId, setTaskId] = useState(vts.length === 1 ? vts[0].id : "");
   const [markup, setMarkup] = useState("50");
   const [keepPdf, setKeepPdf] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -4287,7 +4310,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
   const totalCost = sel.reduce((s, r) => s + r.cost * r.qty, 0);
 
   const go = async () => {
-    if (!sel.length || !taskId) return;
+    if (!sel.length || sel.some(r => !(r.tid || taskId))) return;
     setSaving(true);
     try { await onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk }); onClose(); }
     catch (e) { setErr(e.message || "Erro ao importar"); setSaving(false); }
@@ -4312,9 +4335,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <div style={{ flex: "2 1 160px" }}>
               <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Tarefa padrão</div>
-              <select value={taskId} onChange={e => setTaskId(e.target.value)} style={fieldS}>
-                {vts.map(t => <option key={t.id} value={t.id}>{t.label || t.title || "Tarefa"}</option>)}
-              </select>
+              <TaskPicker value={taskId} onChange={setTaskId} vts={vts} />
             </div>
             <div style={{ flex: "1 1 80px" }}>
               <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Markup %</div>
@@ -4333,10 +4354,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
                 <input value={r.qty} onChange={e => upd(r.id, { qty: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...fieldS, width: 60 }} />
                 <span style={{ fontSize: 10, color: B.gray400 }}>Unit. R$</span>
                 <input value={r.cost} onChange={e => upd(r.id, { cost: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...fieldS, width: 80 }} />
-                <select value={r.tid} onChange={e => upd(r.id, { tid: e.target.value })} style={{ ...fieldS, flex: 1, minWidth: 110 }}>
-                  <option value="">Tarefa padrão</option>
-                  {vts.map(t => <option key={t.id} value={t.id}>{t.label || t.title || "Tarefa"}</option>)}
-                </select>
+                <div style={{ flex: 1, minWidth: 130 }}><TaskPicker value={r.tid} onChange={v => upd(r.id, { tid: v })} vts={vts} allowDefault /></div>
               </div>
               {(r.dup || !r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>
                 {r.dup ? "⚠ Parece já lançado nessa OS" : r.kind === "freight" ? "Frete (lançado como item sem markup)" : "⚠ Leitura incerta — confira"}
@@ -4350,7 +4368,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
       </div>
       {rows && rows.length > 0 && <div style={{ padding: 12, borderTop: `1px solid ${B.gray700}`, display: "flex", gap: 10, alignItems: "center" }}>
         <div style={{ flex: 1, fontSize: 12, color: B.gray200 }}>{sel.length} item(ns) · custo {fmtBRL(totalCost)}</div>
-        <button disabled={saving || !sel.length || !taskId} onClick={go} style={{ background: B.orange, color: "#000", border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", opacity: saving || !sel.length ? 0.5 : 1 }}>{saving ? "Importando…" : "Importar"}</button>
+        <button disabled={saving || !sel.length || sel.some(r => !(r.tid || taskId))} onClick={go} style={{ background: B.orange, color: "#000", border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", opacity: saving || !sel.length || sel.some(r => !(r.tid || taskId)) ? 0.5 : 1 }}>{saving ? "Importando…" : "Importar"}</button>
       </div>}
     </div>
   </div>);
@@ -4582,7 +4600,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
             Pedidos{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length>0&&<span style={{background:`${B.amber}33`,borderRadius:99,padding:"0 5px",fontSize:10,fontWeight:900}}>{purchaseOrders.filter(p=>p.vehicleId===vehicle.id).length}</span>}
           </button>}
-          {canImportPO&&vts.length>0&&<button onClick={()=>setShowImportPO(true)} style={{background:`${B.orange}10`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
+          {canImportPO&&<button onClick={()=>setShowImportPO(true)} style={{background:`${B.orange}10`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.orange,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg>
             Importar compra
           </button>}
@@ -4664,9 +4682,17 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       {showParts&&<div style={{padding:"12px 16px",background:B.black,borderBottom:`1px solid ${B.gray700}`}}>
         <VehiclePartsList vehicle={vehicle} onUpdateVehicle={onUpdateVehicle} managerMode={managerMode} isFD={isFD} tasks={tasks}/>
       </div>}
-      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items,markup})=>{
+      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items:items0,markup})=>{
+        let items=items0;
         let receiptUrl=null;
         if(file){ try{ receiptUrl=await db.uploadPurchasePdf(vehicle.id,file); }catch(e){ console.warn("receipt upload",e); } }
+        const newMap={};
+        for(const lbl of [...new Set(items.map(r=>r.tid).filter(x=>x.startsWith("new:")))]){
+          const row=await onAddTask(vehicle.id,lbl.slice(4),null,isFD?"finishing":"performance");
+          if(!row) throw new Error("Não consegui criar a tarefa “"+lbl.slice(4)+"”");
+          newMap[lbl]=row.id;
+        }
+        items=items.map(r=>({...r,tid:newMap[r.tid]||r.tid}));
         const byTask={};
         items.forEach(r=>{ (byTask[r.tid]=byTask[r.tid]||[]).push({name:r.name.trim(),brand:"",cost:Number(r.cost)||0,markup:r.kind==="freight"?0:markup,qty:Number(r.qty)>0?Number(r.qty):1,freight:0,fromStock:false,...(receiptUrl?{receiptUrl}:{})}); });
         for(const tid of Object.keys(byTask)){
@@ -11206,7 +11232,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.04.2";
+const APP_VERSION = "2026.11.04.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14803,7 +14829,7 @@ export default function App() {
     try{
       const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:division==="finishing"?1:0,ratePerHour:null,completedAt:null,category:category||null,division,rateType:division==="finishing"?"qty":"hour",...(extra||{})});
       setTsk(p=>[...p,row]);
-      if(extra&&extra.done) return; // lançamento retroativo (já concluída): sem avisos nem linha do tempo
+      if(extra&&extra.done) return row; // lançamento retroativo (já concluída): sem avisos nem linha do tempo
       // Push notification to assigned mechanics
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
@@ -14813,6 +14839,7 @@ export default function App() {
       // Timeline: task added
       const catColor=category?(CAT_MAP?.[category]||B.blue):B.blue;
       postTimeline(vid,{type:"task_added",title:`🔧 ${lbl}`,body:"Serviço incluído na OS",actor:adminRole==="owner"?"Gestor":"Admin",category:category||null,color:catColor});
+      return row;
     }catch(e){errToast(e);}
   };
   // ── Timeline helpers ─────────────────────────────────────────────────────────

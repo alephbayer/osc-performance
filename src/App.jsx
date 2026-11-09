@@ -10210,9 +10210,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const shownTl=tlAll?timeline:timeline.slice(0,5);
   const hasPecas=purchaseOrders.some(o=>o.vehicleId===v.id)||[...(v.partsList||[]),...(v.partsListFinishing||[])].some(p=>p.name);
   const hasFotos=[...photos,...photosF].some(p=>p.url);
+  const hasChecklist=(Array.isArray(v.checklist)?v.checklist:[]).some(c=>c.status);
   const tabs=[
     {id:"resumo",label:"Resumo",icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'},
     {id:"servicos",label:"Serviços",icon:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'},
+    ...(hasChecklist?[{id:"checklist",label:"Checklist",icon:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'}]:[]),
     ...(hasFotos?[{id:"fotos",label:"Fotos",icon:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>'}]:[]),
     ...(hasPecas?[{id:"pecas",label:"Peças",icon:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>'}]:[]),
     {id:"conta",label:"Conta",dot:pendingNow>0.005,icon:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'},
@@ -10430,44 +10432,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             🎉 Seu veículo está pronto para retirada!
           </div>}
 
-          {/* Checklist */}
-          {(()=>{
-            const cl=Array.isArray(v.checklist)?v.checklist:[];
-            const answered=cl.filter(c=>c.status);
-            if(!answered.length) return null;
-            const badItems=cl.filter(c=>c.status==="bad");
-            const okItems=cl.filter(c=>c.status==="ok");
-            return (<div style={{marginBottom:12,background:B.gray900,borderRadius:10,overflow:"hidden",border:`1px solid ${B.gray700}`}}>
-              <div style={{padding:"10px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:13,fontWeight:800,color:B.blue}}>📋 Checklist de entrada</span>
-                <span style={{fontSize:11,color:B.green,marginLeft:4}}>✓ {okItems.length} ok</span>
-                {badItems.length>0&&<span style={{fontSize:11,color:"#f87171"}}>✕ {badItems.length} com problema</span>}
-              </div>
-              <div style={{padding:"10px 14px",display:"flex",flexDirection:"column",gap:4}}>
-                {CHECKLIST_ITEMS.filter(item=>cl.find(c=>c.id===item.id)?.status).map(item=>{
-                  const state=cl.find(c=>c.id===item.id);
-                  const isBad=state?.status==="bad";
-                  const catColor=CAT_MAP[item.category]||B.gray500;
-                  return (<div key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:`1px solid ${B.gray800}`}}>
-                    <span style={{fontSize:14,flexShrink:0}}>{isBad?"⚠️":"✅"}</span>
-                    <span style={{fontSize:12,color:isBad?"#fca5a5":B.gray300,flex:1}}>{item.label}</span>
-                    <span style={{fontSize:9,fontWeight:700,color:catColor,background:catColor+"18",borderRadius:4,padding:"1px 5px",flexShrink:0}}>{item.category}</span>
-                  </div>);
-                })}
-              </div>
-              {/* Entry photos */}
-              {(cl.find(c=>c.id==="__photos")?.urls||[]).length>0&&<div style={{padding:"10px 14px",borderTop:`1px solid ${B.gray800}`}}>
-                <div style={{fontSize:11,color:B.gray500,marginBottom:8}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de entrada</div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  {(cl.find(c=>c.id==="__photos")?.urls||[]).map((url,i)=>(
-                    <div key={i} style={{width:80,height:80,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray700}`,flexShrink:0}} onClick={()=>setLB({url})}>
-                      <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                    </div>
-                  ))}
-                </div>
-              </div>}
-            </div>);
-          })()}
           {/* Tasks grouped by category */}
           {/* Fuel and tows */}
           {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0||(v.freights||[]).filter(f=>Number(f.value||0)>0).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
@@ -10765,6 +10729,45 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>);
       })()}
 
+      </>}
+      {tab==="checklist"&&<>
+                    {(()=>{
+            const cl=Array.isArray(v.checklist)?v.checklist:[];
+            const answered=cl.filter(c=>c.status);
+            if(!answered.length) return null;
+            const badItems=cl.filter(c=>c.status==="bad");
+            const okItems=cl.filter(c=>c.status==="ok");
+            return (<div style={{marginBottom:12,background:B.gray900,borderRadius:10,overflow:"hidden",border:`1px solid ${B.gray700}`}}>
+              <div style={{padding:"10px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:13,fontWeight:800,color:B.blue}}>📋 Checklist de entrada</span>
+                <span style={{fontSize:11,color:B.green,marginLeft:4}}>✓ {okItems.length} ok</span>
+                {badItems.length>0&&<span style={{fontSize:11,color:"#f87171"}}>✕ {badItems.length} com problema</span>}
+              </div>
+              <div style={{padding:"10px 14px",display:"flex",flexDirection:"column",gap:4}}>
+                {CHECKLIST_ITEMS.filter(item=>cl.find(c=>c.id===item.id)?.status).map(item=>{
+                  const state=cl.find(c=>c.id===item.id);
+                  const isBad=state?.status==="bad";
+                  const catColor=CAT_MAP[item.category]||B.gray500;
+                  return (<div key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:`1px solid ${B.gray800}`}}>
+                    <span style={{fontSize:14,flexShrink:0}}>{isBad?"⚠️":"✅"}</span>
+                    <span style={{fontSize:12,color:isBad?"#fca5a5":B.gray300,flex:1}}>{item.label}</span>
+                    <span style={{fontSize:9,fontWeight:700,color:catColor,background:catColor+"18",borderRadius:4,padding:"1px 5px",flexShrink:0}}>{item.category}</span>
+                  </div>);
+                })}
+              </div>
+              {/* Entry photos */}
+              {(cl.find(c=>c.id==="__photos")?.urls||[]).length>0&&<div style={{padding:"10px 14px",borderTop:`1px solid ${B.gray800}`}}>
+                <div style={{fontSize:11,color:B.gray500,marginBottom:8}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de entrada</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {(cl.find(c=>c.id==="__photos")?.urls||[]).map((url,i)=>(
+                    <div key={i} style={{width:80,height:80,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray700}`,flexShrink:0}} onClick={()=>setLB({url})}>
+                      <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    </div>
+                  ))}
+                </div>
+              </div>}
+            </div>);
+          })()}
       </>}
       {tab==="servicos"&&<>
       {/* ── Warranty section ── */}
@@ -11232,7 +11235,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.04.6";
+const APP_VERSION = "2026.11.09.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -6285,7 +6285,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
       for(let round=0;round<5;round++){
         const r=await db.mlCall("sync",{days:90});
         if(r.ok===false){ setErr(r.error||"Erro ao sincronizar"); if(r.code) setSt(s=>({...(s||{}),connected:false})); return; }
-        added+=r.added||0; if(r.warn) setErr("Aviso: "+r.warn);
+        added+=r.added||0; if(r.warn&&!/Detalhes de .*anúncio.*403/.test(r.warn)) setErr("Aviso: "+r.warn);
         const rows=await db.getMLItems(); setItems(rows);
         // cada rodada consulta o envio de até 120 pedidos; repete enquanto ainda houver pedidos sem status e o número cair
         const left=rows.filter(i=>!i.ship_status&&i.order_status==="paid").length;
@@ -11998,7 +11998,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.23";
+const APP_VERSION = "2026.11.11.24";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

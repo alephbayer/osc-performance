@@ -6187,6 +6187,7 @@ function MLAssignModal({item,vehicles,tasks,stock,onClose,onAssign}) {
   const [err,setErr]=useState("");
   const vts=tasks.filter(t=>t.vehicleId===vid);
   const total=(Number(item.qty)||1)*(Number(item.unit_price)||0);
+  const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const qNum=Number(String(qtyStr).replace(",","."))||0;
   const qEff=mode==="stock"?Math.round(qNum):qNum;
   const unitCost=qEff>0?total/qEff:0;
@@ -6194,7 +6195,6 @@ function MLAssignModal({item,vehicles,tasks,stock,onClose,onAssign}) {
     <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,flexWrap:"wrap"}}>Quantidade que entra <input value={qtyStr} onChange={e=>setQtyStr(e.target.value.replace(/[^\d.,]/g,""))} inputMode="decimal" style={{...inp,width:80,textAlign:"center"}}/><span style={{color:B.gray500}}>un.</span></div>
     <div style={{fontSize:11,color:B.gray500,marginTop:5,lineHeight:1.45}}>{qEff>0?<>Custo por unidade: <b style={{color:B.gray200}}>{fmtBRL(unitCost)}</b> ({fmtBRL(total)} ÷ {qEff})</>:"Informe a quantidade"}{Number(item.qty)!==qEff&&qEff>0?<span style={{color:B.amber}}> · o anúncio vendeu {item.qty}</span>:null}</div>
   </div>);
-  const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const go=async()=>{
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
     if(mode!=="ignored"&&!(qEff>0)){setErr("Informe a quantidade");return;}
@@ -11904,7 +11904,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.12";
+const APP_VERSION = "2026.11.11.13";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

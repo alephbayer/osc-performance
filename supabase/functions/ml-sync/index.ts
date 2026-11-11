@@ -184,10 +184,22 @@ async function sync(days: number) {
   for (let i = 0; i < itemIds.length; i += 20) {
     try {
       const arr = await ml(`/items?ids=${itemIds.slice(i, i + 20).join(",")}&attributes=id,permalink,thumbnail,user_product_id,catalog_product_id`, t.access_token);
-      for (const x of arr) { if (x.code === 200) info[x.body.id] = x.body; else if (!itemsErr) itemsErr = `anúncio ${x.code}`; }
+      for (const x of arr) { if (x.code === 200) info[x.body.id] = x.body; else if (!itemsErr) itemsErr = `anúncio ${x.code} ${x.body?.message || x.body?.error || ""}`.trim(); }
     } catch (e) { if (!itemsErr) itemsErr = (e as Error).message; }
   }
-  if (itemIds.length && !Object.keys(info).length && itemsErr) warn = (warn ? warn + " · " : "") + "Detalhes dos anúncios indisponíveis (" + itemsErr + ")";
+  // plano B: consulta anúncio por anúncio (alguns retornam 403 no lote); até 40 por rodada, só os que faltam
+  const missing = itemIds.filter((id) => !info[id]).slice(0, 40);
+  if (missing.length) {
+    let fb = "";
+    for (let i = 0; i < missing.length; i += 8) {
+      await Promise.all(missing.slice(i, i + 8).map(async (id) => {
+        try { const x = await ml(`/items/${id}?attributes=id,permalink,thumbnail,user_product_id,catalog_product_id`, t.access_token); if (x?.id) info[x.id] = x; }
+        catch (e) { if (!fb) fb = (e as Error).message; }
+      }));
+    }
+    if (fb && !itemsErr.includes(fb)) itemsErr = (itemsErr ? itemsErr + " | " : "") + fb;
+  }
+  if (itemIds.length && Object.keys(info).length < itemIds.length && itemsErr) warn = (warn ? warn + " · " : "") + `Detalhes de ${itemIds.length - Object.keys(info).length} anúncio(s) indisponíveis (` + itemsErr + ")";
 
   // status de entrega (só pedidos ainda não entregues)
   const orderIds = orders.map((o) => String(o.id));

@@ -12008,7 +12008,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.28";
+const APP_VERSION = "2026.11.11.29";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15776,7 +15776,7 @@ export default function App() {
       if(patch.materials){
         try{
           const oldM=tasks.find(t=>t.id===id)?.materials||[];
-          const gone=oldM.filter(om=>(om.mlItem||om.mlLink)&&!patch.materials.some(nm=>nm===om||(om.mlItem?nm.mlItem===om.mlItem:(nm.mlLink===om.mlLink&&nm.name===om.name))));
+          const gone=oldM.filter(om=>(om.mlItem||om.mlLink)&&!patch.materials.some(nm=>nm===om||(om.mlItem?nm.mlItem===om.mlItem:nm.mlLink===om.mlLink)));
           if(gone.length){
             const n=await db.releaseMLItems(id,gone.map(g=>g.mlItem).filter(Boolean),gone.filter(g=>!g.mlItem).map(g=>g.mlLink).filter(Boolean));
             if(n) toast_(`↩ ${n===1?"Peça voltou":"Peças voltaram"} para “Sem destino” no Mercado Livre`);

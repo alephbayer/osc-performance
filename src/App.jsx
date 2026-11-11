@@ -6357,6 +6357,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
         {!isPending&&i.assigned_at&&<span style={{color:B.gray400}}>📌 Destinada em {fmtD(i.assigned_at)}</span>}
       </div>
       {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:3}}>{destLbl(i)}</div>}
+      {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:3,wordBreak:"break-word"}}>🔗 {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
       {isPending?<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>
@@ -11990,7 +11991,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.20";
+const APP_VERSION = "2026.11.11.21";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14949,6 +14950,13 @@ export default function App() {
   const [showQuickNote,setShowQuickNote]=useState(false);
   const [hideRevenue,setHideRevenue]=useState(true);
   const [purchaseOrders,setPurchaseOrders]=useState([]);
+  // Mercado Livre: recebe sozinho os pedidos de compra cuja peça foi entregue (função atribuída mais abaixo, sempre com o estado atual)
+  const mlRecvFn=useRef(null); const mlRecvBusy=useRef(false);
+  useEffect(()=>{
+    const run=()=>{ try{ mlRecvFn.current&&mlRecvFn.current(); }catch{} };
+    const t0=setTimeout(run,5000); const iv=setInterval(run,2*60000);
+    return()=>{clearTimeout(t0);clearInterval(iv);};
+  },[]);
   const [investments,setInvestments]=useState([]);
   const [shelfItems,setShelfItems]=useState([]);
   const [sales,setSales]=useState([]);
@@ -16057,6 +16065,41 @@ export default function App() {
             setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
             try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}
           };
+  mlRecvFn.current=async()=>{
+    if(adminRole!=="owner"&&adminRole!=="admin") return;
+    if(mlRecvBusy.current) return; mlRecvBusy.current=true;
+    try{
+      const rows=await db.getMLToReceive();
+      for(const m of rows){
+        const mlTotal=(Number(m.qty)||1)*(Number(m.unit_price)||0);
+        try{
+          if(m.link_type==="po"){
+            const po=purchaseOrders.find(x=>x.id===m.link_id);
+            if(po&&po.status==="bought"){
+              const unit=Math.round(mlTotal/Math.max(1,Number(po.quantity)||1)*100)/100;
+              const u=await db.updatePurchaseOrder(po.id,{status:"received",costPrice:unit});
+              setPurchaseOrders(p=>p.map(o=>o.id===po.id?u:o));
+              const v=vehicles.find(x=>x.id===po.vehicleId);
+              if(po.employeeId) db.sendPushToEmployee(po.employeeId,`✅ Pedido atualizado — ${v?.model||"Veículo"}`,`${po.partName}: ${PO_STATUS.received.label}`,"/?portal=mecanico").catch(()=>{});
+              await poReserve({...po,status:"received",costPrice:unit},"Na oficina — a definir");
+              toast_(`📦 "${po.partName}" recebido — entrega confirmada no Mercado Livre ✓`);
+            }
+          } else if(m.link_type==="inv"){
+            const inv=investments.find(x=>x.id===m.link_id);
+            if(inv&&inv.status==="bought"){
+              const unit=Math.round(mlTotal/Math.max(1,Number(inv.quantity)||1)*100)/100;
+              const r=await db.updateInvestment(inv.id,{status:"received",value:unit});
+              setInvestments(p=>p.map(i=>i.id===inv.id?r:i));
+              if(inv.stockItemId) await addPurchase({stockId:inv.stockItemId,qty:inv.quantity||1,unitCost:unit,purchaseDate:new Date().toISOString().slice(0,10),supplier:"Mercado Livre",note:"Recebido automaticamente (Mercado Livre)"});
+              toast_(`📦 "${inv.name}" recebido — entrega confirmada no Mercado Livre ✓`);
+            }
+          }
+          await db.setMLItem(m.id,{link_done_at:new Date().toISOString()});
+        }catch(e){ console.warn("ml auto-receive item",e); }
+      }
+    }catch(e){ console.warn("ml auto-receive",e); }
+    finally{ mlRecvBusy.current=false; }
+  };
 
   // Insere o pagamento; com p.parts (Performance + Finishing) cria 2 lançamentos ligados por group_id
   const insertPayment=async(p)=>{

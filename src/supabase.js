@@ -1053,6 +1053,10 @@ export const db = {
       .in("ship_status", ["pending", "handling", "ready_to_ship", "shipped"]).neq("order_status", "cancelled").limit(300);
     if (error) throw error; return data || [];
   },
+  async getMLToReceive() {
+    const { data, error } = await supabase.from("ml_purchase_items").select("*").not("link_type", "is", null).eq("ship_status", "delivered").is("link_done_at", null);
+    if (error) throw error; return data || [];
+  },
   async getMLItems() {
     const { data, error } = await supabase.from("ml_purchase_items").select("*").order("ordered_at", { ascending: false }).limit(600);
     if (error) throw error; return data || [];

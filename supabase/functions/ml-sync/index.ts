@@ -89,6 +89,73 @@ async function notifyDeliveries(orderIds: string[]) {
   return route.length + dueToday.length + done.length;
 }
 
+const normT = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+const toksT = (s: string) => new Set(normT(s).split(" ").filter((w) => w.length > 1));
+const codesOf = (link: string) => new Set((String(link || "").toUpperCase().match(/MLBU?-?\d{5,}/g) || []).map((c) => c.replace("-", "")));
+// vincula compras do ML a pedidos de compra "comprados": por código do anúncio (certo) ou por nome+valor (só se único)
+async function linkOrders() {
+  const since = new Date(Date.now() - 60 * 86400000).toISOString();
+  const { data: items } = await sb.from("ml_purchase_items")
+    .select("id,ml_item_id,user_product_id,catalog_product_id,title,qty,unit_price,destination")
+    .is("link_type", null).neq("order_status", "cancelled").gte("ordered_at", since);
+  if (!items?.length) return 0;
+  const { data: used } = await sb.from("ml_purchase_items").select("link_type,link_id").not("link_type", "is", null);
+  const usedSet = new Set((used || []).map((x: any) => `${x.link_type}:${x.link_id}`));
+  const { data: pos } = await sb.from("purchase_orders").select("id,part_name,quantity,cost_price,link,vehicle_id,task_id").eq("status", "bought");
+  const { data: invs } = await sb.from("investments").select("id,name,quantity,value,link").eq("status", "bought");
+  const cands = [
+    ...(pos || []).map((p: any) => ({ type: "po", id: p.id, name: p.part_name, qty: Number(p.quantity) || 1, unit: p.cost_price != null ? Number(p.cost_price) : null, link: p.link || "", po: p })),
+    ...(invs || []).map((i: any) => ({ type: "inv", id: i.id, name: i.name, qty: Number(i.quantity) || 1, unit: i.value != null ? Number(i.value) : null, link: i.link || "", po: null })),
+  ].filter((c) => !usedSet.has(`${c.type}:${c.id}`));
+  if (!cands.length) return 0;
+  const scored: { it: any; c: any; score: number }[] = [];
+  for (const it of items) {
+    const itCodes = [it.ml_item_id, it.user_product_id, it.catalog_product_id].filter(Boolean).map((x: string) => String(x).toUpperCase());
+    const tIt = toksT(it.title);
+    const mlTotal = (Number(it.qty) || 1) * (Number(it.unit_price) || 0);
+    for (const c of cands) {
+      let score = 0;
+      if (itCodes.some((x) => codesOf(c.link).has(x))) score = 1;
+      else {
+        const tC = toksT(c.name);
+        const small = Math.min(tIt.size, tC.size);
+        let inter = 0; tC.forEach((w) => { if (tIt.has(w)) inter++; });
+        const cont = small >= 2 ? inter / small : 0;
+        const total = c.unit != null ? c.unit * c.qty : 0;
+        const priceOk = !(total > 0) || Math.abs(mlTotal - total) / total <= 0.25;
+        if (cont >= 0.8 && priceOk) score = 0.5 + cont * 0.4;
+      }
+      if (score > 0) scored.push({ it, c, score });
+    }
+  }
+  scored.sort((a, b) => b.score - a.score);
+  const takenIt = new Set<string>(), takenC = new Set<string>();
+  const pairs: { it: any; c: any }[] = [];
+  for (const m of scored) {
+    if (takenIt.has(m.it.id) || takenC.has(`${m.c.type}:${m.c.id}`)) continue;
+    const rival = scored.find((o) => o !== m && o.score >= m.score - 0.05 && ((o.it.id === m.it.id && o.c !== m.c) || (o.c === m.c && o.it.id !== m.it.id)));
+    if (rival && m.score < 1) continue; // ambíguo: deixa para destinar à mão
+    takenIt.add(m.it.id); takenC.add(`${m.c.type}:${m.c.id}`); pairs.push({ it: m.it, c: m.c });
+  }
+  if (!pairs.length) return 0;
+  const vIds = [...new Set(pairs.map((p) => p.c.po?.vehicle_id).filter(Boolean))];
+  const tIds = [...new Set(pairs.map((p) => p.c.po?.task_id).filter(Boolean))];
+  const { data: vs } = vIds.length ? await sb.from("vehicles").select("id,model,plate").in("id", vIds) : { data: [] as any[] };
+  const { data: ts } = tIds.length ? await sb.from("tasks").select("id,label").in("id", tIds) : { data: [] as any[] };
+  const now = new Date().toISOString();
+  for (const { it, c } of pairs) {
+    const patch: Record<string, unknown> = { link_type: c.type, link_id: c.id, link_label: String(c.name || "").slice(0, 120) };
+    // pedido feito para um veículo: a peça já nasce destinada a ele (pedido avulso fica sem destino até a entrega)
+    if (c.type === "po" && c.po?.vehicle_id && !it.destination) {
+      const v = (vs || []).find((x: any) => x.id === c.po.vehicle_id);
+      const tk = (ts || []).find((x: any) => x.id === c.po.task_id);
+      Object.assign(patch, { destination: "vehicle", vehicle_id: c.po.vehicle_id, vehicle_label: v ? `${v.model || ""} · ${v.plate || ""}`.trim() : null, task_id: c.po.task_id ? String(c.po.task_id) : null, task_label: tk?.label || null, assigned_by: "Pedido de compra", assigned_at: now });
+    }
+    await sb.from("ml_purchase_items").update(patch).eq("id", it.id).is("link_type", null);
+  }
+  return pairs.length;
+}
+
 async function sync(days: number) {
   const t = await getAccess();
   const uid = t.ml_user_id;
@@ -113,12 +180,14 @@ async function sync(days: number) {
   // detalhes dos anúncios (link e miniatura)
   const itemIds = [...new Set(orders.flatMap((o) => (o.order_items || []).map((i: any) => i.item?.id)).filter(Boolean))] as string[];
   const info: Record<string, any> = {};
+  let itemsErr = "";
   for (let i = 0; i < itemIds.length; i += 20) {
     try {
-      const arr = await ml(`/items?ids=${itemIds.slice(i, i + 20).join(",")}&attributes=id,permalink,thumbnail`, t.access_token);
-      for (const x of arr) if (x.code === 200) info[x.body.id] = x.body;
-    } catch { /* link é opcional */ }
+      const arr = await ml(`/items?ids=${itemIds.slice(i, i + 20).join(",")}&attributes=id,permalink,thumbnail,user_product_id,catalog_product_id`, t.access_token);
+      for (const x of arr) { if (x.code === 200) info[x.body.id] = x.body; else if (!itemsErr) itemsErr = `anúncio ${x.code}`; }
+    } catch (e) { if (!itemsErr) itemsErr = (e as Error).message; }
   }
+  if (itemIds.length && !Object.keys(info).length && itemsErr) warn = (warn ? warn + " · " : "") + "Detalhes dos anúncios indisponíveis (" + itemsErr + ")";
 
   // status de entrega (só pedidos ainda não entregues)
   const orderIds = orders.map((o) => String(o.id));
@@ -185,8 +254,10 @@ async function sync(days: number) {
         eta_at: ship[String(o.id)]?.eta ?? null,
         paid_at: ((o.payments || []).map((p: any) => p.date_approved).filter(Boolean).sort()[0]) || null,
         seller: o.seller?.nickname || null,
-        permalink: info[iid]?.permalink || null,
+        permalink: info[iid]?.permalink || `https://produto.mercadolivre.com.br/${iid.replace(/^MLB/, "MLB-")}`,
         thumbnail: info[iid]?.thumbnail || null,
+        user_product_id: info[iid]?.user_product_id || it.item?.user_product_id || null,
+        catalog_product_id: info[iid]?.catalog_product_id || null,
       });
     }
   }
@@ -198,9 +269,11 @@ async function sync(days: number) {
     if (error) throw new Error(error.message);
   }
   await sb.from("ml_tokens").update({ last_sync_at: new Date().toISOString() }).eq("id", 1);
+  let linked = 0;
+  try { linked = await linkOrders(); } catch (e) { warn = warn || "vínculo: " + (e as Error).message; }
   let notified = 0;
   try { notified = await notifyDeliveries(orderIds); } catch (e) { warn = warn || "push: " + (e as Error).message; }
-  return { ok: true, added, orders: orders.length, warn, notified };
+  return { ok: true, added, orders: orders.length, warn, notified, linked };
 }
 
 Deno.serve(async (req) => {

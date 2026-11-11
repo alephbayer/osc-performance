@@ -6033,8 +6033,8 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
   const sortedPurchases=[...purchases].sort((a,b)=>a.purchaseDate<b.purchaseDate?1:-1);
 
   return (<>
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
-      <div style={{background:B.gray800,borderRadius:16,maxWidth:560,width:"100%",overflow:"hidden",border:`1px solid ${B.purple}55`,boxShadow:"0 24px 80px rgba(0,0,0,.7)",maxHeight:"92vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:"16px 16px calc(104px + env(safe-area-inset-bottom))",boxSizing:"border-box"}} onClick={onClose}>
+      <div style={{background:B.gray800,borderRadius:16,maxWidth:560,width:"100%",overflow:"hidden",border:`1px solid ${B.purple}55`,boxShadow:"0 24px 80px rgba(0,0,0,.7)",maxHeight:"calc(100dvh - 124px - env(safe-area-inset-bottom))",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
         <div style={{padding:"16px 20px",background:B.gray900,borderBottom:`2px solid ${B.purple}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
           <div style={{width:36,height:36,borderRadius:8,background:B.purpleBg,display:"flex",alignItems:"center",justifyContent:"center"}}><IBox s={17} c={B.purple}/></div>
           <div style={{fontWeight:700,fontSize:15,color:B.white}}>{item.name}</div>
@@ -12176,7 +12176,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.36";
+const APP_VERSION = "2026.11.11.37";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

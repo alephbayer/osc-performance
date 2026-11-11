@@ -12008,7 +12008,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.27";
+const APP_VERSION = "2026.11.11.28";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15772,6 +15772,17 @@ export default function App() {
     setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));
     try{
       await db.updateTask(id,patch);
+      // peça do Mercado Livre removida da OS: volta para "Sem destino" e pode ser destinada de novo
+      if(patch.materials){
+        try{
+          const oldM=tasks.find(t=>t.id===id)?.materials||[];
+          const gone=oldM.filter(om=>(om.mlItem||om.mlLink)&&!patch.materials.some(nm=>nm===om||(om.mlItem?nm.mlItem===om.mlItem:(nm.mlLink===om.mlLink&&nm.name===om.name))));
+          if(gone.length){
+            const n=await db.releaseMLItems(id,gone.map(g=>g.mlItem).filter(Boolean),gone.filter(g=>!g.mlItem).map(g=>g.mlLink).filter(Boolean));
+            if(n) toast_(`↩ ${n===1?"Peça voltou":"Peças voltaram"} para “Sem destino” no Mercado Livre`);
+          }
+        }catch(e){ console.warn("ml release",e); }
+      }
       // Auto-assign specialty mechanic when category matches
       if(patch.category){
         const t=tasks.find(x=>x.id===id);
@@ -15972,7 +15983,7 @@ export default function App() {
           tid=row.id;
         } else { tlabel=tasks.find(t=>t.id===tid)?.label||""; }
         const cur=tasks.find(t=>t.id===tid); const base=Array.isArray(cur?.materials)?cur.materials:[];
-        const mat={name:String(d.name||item.title||"").trim(),brand:"",cost,markup:Number(d.markup)||0,qty,freight:frt,fromStock:false,bought:true,supplier:"Mercado Livre"+(item.seller?` · ${item.seller}`:""),...(item.permalink?{mlLink:item.permalink}:{})};
+        const mat={name:String(d.name||item.title||"").trim(),brand:"",cost,markup:Number(d.markup)||0,qty,freight:frt,fromStock:false,bought:true,supplier:"Mercado Livre"+(item.seller?` · ${item.seller}`:""),mlItem:item.id,...(item.permalink?{mlLink:item.permalink}:{})};
         await updTask(tid,{materials:[...base,mat]});
         await db.setMLItem(item.id,{task_id:String(tid),task_label:tlabel});
         toast_("Peça lançada na OS ✓");

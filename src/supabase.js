@@ -1066,6 +1066,14 @@ export const db = {
     const { data, error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id).is("destination", null).select("id");
     if (error) throw error; return (data || []).length > 0;
   },
+  // peça removida da OS volta para "Sem destino" (por id da linha ML ou, nas antigas, pelo link do anúncio + tarefa)
+  async releaseMLItems(taskId, rowIds = [], links = []) {
+    const clear = { destination: null, vehicle_id: null, vehicle_label: null, task_id: null, task_label: null, stock_id: null, assigned_by: null, assigned_at: null };
+    let n = 0;
+    if (rowIds.length) { const { data } = await supabase.from("ml_purchase_items").update(clear).in("id", rowIds).eq("destination", "vehicle").select("id"); n += (data || []).length; }
+    if (links.length) { const { data } = await supabase.from("ml_purchase_items").update(clear).eq("task_id", String(taskId)).eq("destination", "vehicle").in("permalink", links).select("id"); n += (data || []).length; }
+    return n;
+  },
   async setMLItem(id, patch) {
     const { error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id);
     if (error) throw error;

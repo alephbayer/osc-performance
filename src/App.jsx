@@ -6235,6 +6235,8 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
   const [msg,setMsg]=useState("");
   const [showDone,setShowDone]=useState(false);
   const [pick,setPick]=useState(null);
+  const [fil,setFil]=useState("all");
+  const [sortBy,setSortBy]=useState("date");
   const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
   const doSync=async(silent)=>{
     setBusy("sync");setErr("");if(!silent)setMsg("");
@@ -6254,8 +6256,18 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
   // eslint-disable-next-line
   },[]);
   const live=items.filter(i=>i.order_status!=="cancelled"&&i.ship_status!=="cancelled");
-  const pending=live.filter(i=>!i.destination);
-  const done=live.filter(i=>i.destination);
+  const SORT_ORD={delivered:0,shipped:1,ready_to_ship:2,handling:3,pending:4,not_delivered:5};
+  const isDone=i=>i.destination==="ignored"||(!!i.destination&&i.ship_status==="delivered");
+  const byFil=i=>fil==="all"||(fil==="none"?!i.ship_status:i.ship_status===fil);
+  const byDate=(x,y)=>new Date(y.ordered_at)-new Date(x.ordered_at);
+  const srt=a=>[...a].sort(sortBy==="status"?(x,y)=>(SORT_ORD[x.ship_status]??9)-(SORT_ORD[y.ship_status]??9)||byDate(x,y):byDate);
+  const active=live.filter(i=>!isDone(i));
+  const pendingAll=live.filter(i=>!i.destination);
+  const pending=srt(pendingAll.filter(byFil));
+  const waiting=srt(live.filter(i=>i.destination&&!isDone(i)).filter(byFil));
+  const done=srt(live.filter(isDone));
+  const cnt=k=>k==="all"?active.length:active.filter(i=>k==="none"?!i.ship_status:i.ship_status===k).length;
+  const chips=[["all","Todos"],["delivered","Entregue"],["shipped","A caminho"],["ready_to_ship","Pronto p/ envio"],["handling","Preparando"],["pending","Aguardando"],["none","Sem status"]].filter(([k])=>k==="all"||k===fil||cnt(k)>0);
   const openVeh=vehicles.filter(v=>v.status!=="delivered");
   const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(e.message); } };
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
@@ -6279,7 +6291,7 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
       <span style={{fontSize:13,fontWeight:800,color:B.amber,letterSpacing:.4}}>Mercado Livre</span>
       {st?.connected&&<span style={{fontSize:10,color:B.gray400}}>{st.nickname?`@${st.nickname} · `:""}{st.lastSync?`sincronizado ${new Date(st.lastSync).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}`:"nunca sincronizado"}</span>}
-      {pending.length>0&&<span style={{fontSize:10,fontWeight:800,background:B.amber,color:B.black,borderRadius:99,padding:"1px 8px"}}>{pending.length} pendente{pending.length!==1?"s":""}</span>}
+      {pendingAll.length>0&&<span style={{fontSize:10,fontWeight:800,background:B.amber,color:B.black,borderRadius:99,padding:"1px 8px"}}>{pendingAll.length} sem destino</span>}
       <span style={{flex:1}}/>
       {st?.connected&&<><button onClick={()=>doSync(false)} disabled={!!busy} style={{padding:"5px 12px",borderRadius:8,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,color:B.amber,fontSize:12,fontWeight:700,cursor:"pointer",opacity:busy?.6:1}}>{busy==="sync"?"Sincronizando…":"↻ Sincronizar"}</button>
         <button onClick={disconnect} style={{background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>desconectar</button></>}
@@ -6294,10 +6306,18 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
     {err&&<div style={{fontSize:12,color:B.red,marginTop:10,wordBreak:"break-word"}}>{err}</div>}
     {msg&&!err&&<div style={{fontSize:12,color:B.green,marginTop:10}}>{msg}</div>}
     {st?.connected&&<div style={{marginTop:12}}>
-      {pending.length===0?<div style={{fontSize:12,color:B.gray500}}>{items.length?"Nenhuma peça pendente. 👌":"Nenhuma compra ainda — toque em Sincronizar."}</div>
-        :<div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div>}
-      {done.length>0&&<div style={{marginTop:10}}>
-        <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer",padding:0}}>{showDone?"▾":"▸"} Já destinadas ({done.length})</button>
+      {active.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
+        {chips.map(([k,l])=><button key={k} onClick={()=>setFil(k)} style={{padding:"3px 10px",borderRadius:99,border:`1px solid ${fil===k?B.amber:B.gray600}`,background:fil===k?`${B.amber}22`:"transparent",color:fil===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l} <span style={{opacity:.7}}>{cnt(k)}</span></button>)}
+        <span style={{flex:1}}/>
+        <button onClick={()=>setSortBy(v=>v==="date"?"status":"date")} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>ordem: {sortBy==="date"?"mais recentes":"por status"} ⇅</button>
+      </div>}
+      {pending.length>0&&<><div style={{fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"2px 0 6px"}}>Sem destino ({pending.length})</div>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div></>}
+      {waiting.length>0&&<><div style={{fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}>Destinadas · aguardando entrega ({waiting.length})</div>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>{waiting.map(i=>row(i,false))}</div></>}
+      {pending.length===0&&waiting.length===0&&<div style={{fontSize:12,color:B.gray500}}>{!items.length?"Nenhuma compra ainda — toque em Sincronizar.":active.length&&fil!=="all"?"Nada neste filtro.":"Tudo concluído. 👌"}</div>}
+      {done.length>0&&<div style={{marginTop:12}}>
+        <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.green,fontSize:11,fontWeight:700,cursor:"pointer",padding:0}}>{showDone?"▾":"▸"} ✓ Concluídas — entregues e destinadas ({done.length})</button>
         {showDone&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>{done.map(i=>row(i,false))}</div>}
       </div>}
     </div>}
@@ -11866,7 +11886,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.9";
+const APP_VERSION = "2026.11.11.10";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

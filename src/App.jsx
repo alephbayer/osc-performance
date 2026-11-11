@@ -4635,6 +4635,20 @@ function suggestStockItems(name, stock, n = 3) {
   }
   return res.sort((a,b)=>b.score-a.score).slice(0,n);
 }
+// busca por palavras-chave: todas as palavras precisam aparecer (porca 3/8 acha "Porca Sextavada 3/8 Inox"); entende plural e sinônimos
+function stockSearchMatch(query, text) {
+  const norm = x => String(x || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const q = norm(query).trim(); if (!q) return true;
+  const h = " " + norm(text).replace(/[^a-z0-9/.,]+/g, " ") + " ";
+  const canon = _stockTokens(text);
+  return q.split(/\s+/).every(t => {
+    t = t.replace(/^[^a-z0-9/]+|[^a-z0-9/]+$/g, ""); if (!t) return true;
+    if (/\d/.test(t) && t.includes("/")) return new RegExp("(^|[^0-9/])" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "([^0-9/]|$)").test(h);
+    if (h.includes(t)) return true;
+    if (t.length > 3 && t.endsWith("s") && h.includes(t.slice(0, -1))) return true;
+    const c = [..._stockTokens(t)][0]; return !!c && canon.has(c);
+  });
+}
 function matchStockItem(name, stock) {
   const n = _normName(name); let best = "", bs = 0;
   const tok = s => new Set(_normName(s).split(" ").filter(w => w.length > 1));
@@ -5860,7 +5874,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
 
   const types =[...new Set(stock.map(s=>s.type).filter(Boolean))].sort();
   const filtered=[...stock.filter(s=>
-    (!search||s.name.toLowerCase().includes(search.toLowerCase()))&&
+    (!search||stockSearchMatch(search,s.name+" "+(s.brand||"")+" "+(s.type||"")))&&
     (!filterType||s.type===filterType)
   )].sort((a,b)=>{
     // Low stock first
@@ -6397,7 +6411,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const fmtS=d=>{ if(!d) return ""; const x=new Date(d); const same=x.getFullYear()===new Date().getFullYear(); return x.toLocaleDateString("pt-BR",same?{day:"2-digit",month:"2-digit"}:{day:"2-digit",month:"2-digit",year:"2-digit"}); };
-  const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":i.destination==="supplies"?"🧴 Insumos · custo do mês":i.destination==="tool"?"🔧 Ferramentas · patrimônio":"— ignorado";
+  const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?(i.stock_plan&&!i.stock_id?"📦 Estoque · entra quando for entregue":"📦 Estoque"):i.destination==="supplies"?"🧴 Insumos · custo do mês":i.destination==="tool"?"🔧 Ferramentas · patrimônio":"— ignorado";
   const fmtT=d=>d?new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
   const timeline=i=>{
     const h={}; (Array.isArray(i.ship_history)?i.ship_history:[]).forEach(e=>{ if(e&&e.status&&e.date&&!h[e.status]) h[e.status]=e.date; });
@@ -6414,7 +6428,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       {k:"delivered",ic:"✅",l:"Entregue",d:h.delivered||(cur==="delivered"?i.status_at:null),done:cur==="delivered"||!!h.delivered},
     ];
     if(cur==="not_delivered") steps.push({k:"nd",ic:"⚠️",l:"Não entregue",d:h.not_delivered||i.status_at,done:true});
-    if(i.destination&&i.destination!=="ignored") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":i.destination==="tool"?"Destinada · Ferramentas (patrimônio)":"Destinada · Estoque",d:i.assigned_at,done:true,by:i.assigned_by});
+    if(i.destination&&i.destination!=="ignored") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":i.destination==="tool"?"Destinada · Ferramentas (patrimônio)":(i.stock_plan&&!i.stock_id?"Destinada · Estoque (entra na entrega)":"Destinada · Estoque"),d:i.assigned_at,done:true,by:i.assigned_by});
     if(i.destination==="ignored") steps.push({k:"ign",ic:"—",l:"Ignorada (não é da oficina)",d:i.assigned_at,done:true,by:i.assigned_by});
     return steps;
   };
@@ -12176,7 +12190,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.37";
+const APP_VERSION = "2026.11.11.38";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16167,8 +16181,15 @@ export default function App() {
         await db.setMLItem(item.id,{tool_id:tl.id});
         toast_("🔧 Ferramenta adicionada ao patrimônio ✓");
       } else if(d.type==="stock"){
-        const sid=await importStockNote({items:[{pid:d.pid||"",name:String(d.name||item.title||"").trim(),qty:Math.max(1,Math.round(qty)),cost:Math.round((total+frt)/Math.max(1,Math.round(qty))*10000)/10000}],supplierName:"Mercado Livre",date:String(item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:"ML "+item.ml_order_id,markup:Number(d.markup)||0});
-        if(sid) await db.setMLItem(item.id,{stock_id:sid});
+        const q=Math.max(1,Math.round(qty));
+        const plan={pid:d.pid||"",name:String(d.name||item.title||"").trim(),qty:q,cost:Math.round((total+frt)/q*10000)/10000,markup:Number(d.markup)||0,invoice:"ML "+item.ml_order_id};
+        if(item.ship_status==="delivered"){
+          const sid=await importStockNote({items:[{pid:plan.pid,name:plan.name,qty:plan.qty,cost:plan.cost}],supplierName:"Mercado Livre",date:String(item.delivered_at||item.status_at||item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:plan.invoice,markup:plan.markup});
+          if(sid) await db.setMLItem(item.id,{stock_id:sid});
+        } else {
+          await db.setMLItem(item.id,{stock_plan:plan});
+          toast_("📦 Destinada ao estoque — entra quando o Mercado Livre marcar como entregue ✓");
+        }
       }
     }catch(e){
       try{ await db.setMLItem(item.id,{destination:null,vehicle_id:null,vehicle_label:null,task_id:null,task_label:null,stock_id:null,assigned_by:null,assigned_at:null}); }catch{}
@@ -16283,6 +16304,18 @@ export default function App() {
     if(adminRole!=="owner"&&adminRole!=="admin") return;
     if(mlRecvBusy.current) return; mlRecvBusy.current=true;
     try{
+      // estoque: entra quando o ML marca "entregue"
+      try{
+        const sp=await db.getMLStockPending();
+        for(const x of sp){
+          const plan=x.stock_plan; if(!plan) continue;
+          if(!(await db.claimMLStockPlan(x.id))) continue; // outro aparelho já cuidou
+          try{
+            const sid=await importStockNote({items:[{pid:plan.pid||"",name:plan.name,qty:plan.qty,cost:plan.cost}],supplierName:"Mercado Livre",date:String(x.delivered_at||x.status_at||x.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:plan.invoice||("ML "+x.ml_order_id),markup:plan.markup});
+            if(sid) await db.setMLItem(x.id,{stock_id:sid});
+          }catch(e){ try{ await db.setMLItem(x.id,{stock_plan:plan}); }catch{} console.warn("ml stock entry",e); }
+        }
+      }catch(e){ console.warn("ml stock pending",e); }
       const rows=await db.getMLToReceive();
       for(const m of rows){
         const mlTotal=(Number(m.qty)||1)*(Number(m.unit_price)||0)+(Number(m.freight)||0);

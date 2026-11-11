@@ -1067,6 +1067,16 @@ export const db = {
     const { data, error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id).is("destination", null).select("id");
     if (error) throw error; return (data || []).length > 0;
   },
+  // estoque: entrada só quando o ML marca "entregue" (plano guardado em stock_plan)
+  async getMLStockPending() {
+    const { data, error } = await supabase.from("ml_purchase_items").select("id,stock_plan,delivered_at,status_at,ordered_at,ml_order_id")
+      .eq("destination", "stock").eq("ship_status", "delivered").not("stock_plan", "is", null);
+    if (error) throw error; return data || [];
+  },
+  async claimMLStockPlan(id) {
+    const { data, error } = await supabase.from("ml_purchase_items").update({ stock_plan: null }).eq("id", id).not("stock_plan", "is", null).select("id");
+    if (error) throw error; return !!(data && data.length);
+  },
   // ── Ferramentas (patrimônio) ─────────────────────────────────────────────
   async getTools() {
     const { data, error } = await supabase.from("tools").select("*").order("purchased_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });

@@ -40,3 +40,4 @@ create table if not exists tools (
 alter table ml_purchase_items add column if not exists tool_id uuid;
 alter table tools disable row level security;
 grant select, insert, update, delete on tools to anon, authenticated;
+alter table ml_purchase_items add column if not exists stock_plan jsonb;   -- entrada no estoque aguardando a entrega

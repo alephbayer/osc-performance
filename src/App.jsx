@@ -6212,7 +6212,11 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const qNum=Number(String(qtyStr).replace(",","."))||0;
   const qEff=mode==="stock"?Math.round(qNum):qNum;
-  const unitCost=qEff>0?total/qEff:0;
+  const freight=Number(item.freight)||0;
+  const [incFr,setIncFr]=useState(freight>0);
+  const fr=incFr?freight:0;
+  const unitCost=qEff>0?(mode==="stock"?(total+fr)/qEff:total/qEff):0;
+  const frBox=freight>0?(<label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,background:B.gray900,borderRadius:8,padding:"8px 10px",cursor:"pointer"}}><input type="checkbox" checked={incFr} onChange={e=>setIncFr(e.target.checked)}/>Incluir frete pago no ML: <b style={{color:B.gray200}}>{fmtBRL(freight)}</b></label>):null;
   const qtyBox=(<div style={{background:B.gray900,borderRadius:8,padding:"8px 10px"}}>
     <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,flexWrap:"wrap"}}>Quantidade que entra <input value={qtyStr} onChange={e=>setQtyStr(e.target.value.replace(/[^\d.,]/g,""))} inputMode="decimal" style={{...inp,width:80,textAlign:"center"}}/><span style={{color:B.gray500}}>un.</span></div>
     <div style={{fontSize:11,color:B.gray500,marginTop:5,lineHeight:1.45}}>{qEff>0?<>Custo por unidade: <b style={{color:B.gray200}}>{fmtBRL(unitCost)}</b> ({fmtBRL(total)} ÷ {qEff})</>:"Informe a quantidade"}{Number(item.qty)!==qEff&&qEff>0?<span style={{color:B.amber}}> · o anúncio vendeu {item.qty}</span>:null}</div>
@@ -6221,7 +6225,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
     if(mode!=="ignored"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
-    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff,name:nameStr.trim()||item.title}); onClose(); }
+    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff,freight:fr,name:nameStr.trim()||item.title}); onClose(); }
     catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
@@ -6241,11 +6245,13 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         <VehiclePicker value={vid} onChange={v=>{setVid(v);setTid("");}} vehicles={vehicles} clients={clients}/>
         {vid&&<TaskPicker value={tid} onChange={setTid} vts={vts} placeholder="Escolha ou crie a tarefa…"/>}
         {qtyBox}
+        {frBox}
         <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Margem sobre o custo <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>
       </div>}
       {mode==="stock"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <StockProductPicker value={pid} onChange={setPid} stock={stock}/>
         {qtyBox}
+        {frBox}
         {!pid&&<input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome do produto novo" style={inp}/>}
         {!pid&&<div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Produto novo — margem <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>}
         <div style={{fontSize:11,color:B.gray500}}>Entra como compra no estoque (fornecedor Mercado Livre) e soma a quantidade.</div>
@@ -6346,7 +6352,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:12.5,fontWeight:700,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{i.title}</div>
       <div style={{fontSize:11,color:B.gray400,marginTop:3,display:"flex",gap:8,flexWrap:"wrap"}}>
-        <span>{i.qty}× {fmtBRL(Number(i.unit_price)||0)}</span>{i.seller&&<span>{i.seller}</span>}
+        <span>{i.qty}× {fmtBRL(Number(i.unit_price)||0)}</span>{Number(i.freight)>0&&<span>+ frete {fmtBRL(Number(i.freight))}</span>}{i.seller&&<span>{i.seller}</span>}
         {i.permalink&&<a href={i.permalink} target="_blank" rel="noreferrer" style={{color:B.blue,textDecoration:"none"}}>anúncio ↗</a>}
       </div>
       <div style={{fontSize:11,marginTop:3,display:"flex",gap:"2px 10px",flexWrap:"wrap"}}>
@@ -11991,7 +11997,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.21";
+const APP_VERSION = "2026.11.11.22";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15945,6 +15951,7 @@ export default function App() {
       const total=(Number(item.qty)||1)*(Number(item.unit_price)||0);
       const qty=Number(d.qty)>0?Number(d.qty):(Number(item.qty)>0?Number(item.qty):1);
       const cost=Math.round(total/qty*10000)/10000;
+      const frt=Number(d.freight)||0;
       if(d.type==="vehicle"){
         let tid=d.tid, tlabel="";
         if(String(tid).startsWith("new:")){
@@ -15954,12 +15961,12 @@ export default function App() {
           tid=row.id;
         } else { tlabel=tasks.find(t=>t.id===tid)?.label||""; }
         const cur=tasks.find(t=>t.id===tid); const base=Array.isArray(cur?.materials)?cur.materials:[];
-        const mat={name:String(d.name||item.title||"").trim(),brand:"",cost,markup:Number(d.markup)||0,qty,freight:0,fromStock:false,bought:true,supplier:"Mercado Livre"+(item.seller?` · ${item.seller}`:""),...(item.permalink?{mlLink:item.permalink}:{})};
+        const mat={name:String(d.name||item.title||"").trim(),brand:"",cost,markup:Number(d.markup)||0,qty,freight:frt,fromStock:false,bought:true,supplier:"Mercado Livre"+(item.seller?` · ${item.seller}`:""),...(item.permalink?{mlLink:item.permalink}:{})};
         await updTask(tid,{materials:[...base,mat]});
         await db.setMLItem(item.id,{task_id:String(tid),task_label:tlabel});
         toast_("Peça lançada na OS ✓");
       } else if(d.type==="stock"){
-        const sid=await importStockNote({items:[{pid:d.pid||"",name:String(d.name||item.title||"").trim(),qty:Math.max(1,Math.round(qty)),cost:Math.round(total/Math.max(1,Math.round(qty))*10000)/10000}],supplierName:"Mercado Livre",date:String(item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:"ML "+item.ml_order_id,markup:Number(d.markup)||0});
+        const sid=await importStockNote({items:[{pid:d.pid||"",name:String(d.name||item.title||"").trim(),qty:Math.max(1,Math.round(qty)),cost:Math.round((total+frt)/Math.max(1,Math.round(qty))*10000)/10000}],supplierName:"Mercado Livre",date:String(item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:"ML "+item.ml_order_id,markup:Number(d.markup)||0});
         if(sid) await db.setMLItem(item.id,{stock_id:sid});
       }
     }catch(e){
@@ -16071,7 +16078,7 @@ export default function App() {
     try{
       const rows=await db.getMLToReceive();
       for(const m of rows){
-        const mlTotal=(Number(m.qty)||1)*(Number(m.unit_price)||0);
+        const mlTotal=(Number(m.qty)||1)*(Number(m.unit_price)||0)+(Number(m.freight)||0);
         try{
           if(m.link_type==="po"){
             const po=purchaseOrders.find(x=>x.id===m.link_id);
@@ -16090,6 +16097,18 @@ export default function App() {
               const unit=Math.round(mlTotal/Math.max(1,Number(inv.quantity)||1)*100)/100;
               const r=await db.updateInvestment(inv.id,{status:"received",value:unit});
               setInvestments(p=>p.map(i=>i.id===inv.id?r:i));
+              // corrige a despesa já lançada no financeiro (valor digitado → valor real do ML + frete)
+              try{
+                const oldTotal=(Number(inv.value)||0)*(Number(inv.quantity)||1);
+                const newTotal=Math.round(unit*(Number(inv.quantity)||1)*100)/100;
+                const nm=[`Investimento: ${inv.name}`,`Mat. Sortido: ${inv.name}`];
+                const ex=expenses.find(e=>nm.includes(e.name)&&Math.abs(Number(e.amount)-oldTotal)<0.01);
+                if(ex&&Math.abs(newTotal-Number(ex.amount))>=0.01){
+                  await db.updateExpense(ex.id,{name:ex.name,amount:newTotal,category:ex.category,recurrent:ex.recurrent,division:ex.division});
+                  setExpenses(p=>p.map(e=>e.id===ex.id?{...e,amount:newTotal}:e));
+                  toast_(`💰 Financeiro ajustado: ${fmtBRL(oldTotal)} → ${fmtBRL(newTotal)}`);
+                }
+              }catch(e){ console.warn("ml expense fix",e); }
               if(inv.stockItemId) await addPurchase({stockId:inv.stockItemId,qty:inv.quantity||1,unitCost:unit,purchaseDate:new Date().toISOString().slice(0,10),supplier:"Mercado Livre",note:"Recebido automaticamente (Mercado Livre)"});
               toast_(`📦 "${inv.name}" recebido — entrega confirmada no Mercado Livre ✓`);
             }
@@ -17182,7 +17201,7 @@ export default function App() {
               const inv=investments.find(i=>i.id===id);
               if(inv&&inv.value>0){
                 const total=inv.value*(inv.quantity||1);
-                const exp=await db.addExpense({description:`Mat. Sortido: ${inv.name}`,date:new Date().toISOString().slice(0,10),amount:total,category:"materiais",division:inv.division||"ambos",recurrent:false});
+                const exp=await db.addExpense({name:`Mat. Sortido: ${inv.name}`,amount:total,category:"materiais",division:inv.division||"ambos",recurrent:false});
                 setExpenses(p=>[...p,exp]);
                 toast_(`💰 R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
               }

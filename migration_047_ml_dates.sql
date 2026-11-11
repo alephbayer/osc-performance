@@ -17,3 +17,4 @@ alter table ml_purchase_items add column if not exists link_id uuid;
 alter table ml_purchase_items add column if not exists link_label text;
 alter table ml_purchase_items add column if not exists link_done_at timestamptz;
 create index if not exists ml_purchase_items_link on ml_purchase_items(link_type, link_id);
+alter table ml_purchase_items add column if not exists freight numeric default 0;   -- frete rateado do pedido

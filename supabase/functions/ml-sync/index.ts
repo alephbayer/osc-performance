@@ -231,11 +231,15 @@ async function sync(days: number) {
 
   const rowMap = new Map<string, any>();
   for (const o of orders) {
+    // frete pago no pedido (rateado entre os itens, proporcional ao valor de cada linha)
+    const shipCost = (o.payments || []).reduce((sum: number, p: any) => sum + (Number(p.shipping_cost) || 0), 0);
+    const orderSum = (o.order_items || []).reduce((sum: number, i: any) => sum + (Number(i.unit_price) || 0) * (Number(i.quantity) || 1), 0);
     for (const it of o.order_items || []) {
       const iid = String(it.item?.id || "");
       if (!iid) continue;
+      const lineFreight = orderSum > 0 ? Math.round(shipCost * (((Number(it.unit_price) || 0) * (Number(it.quantity) || 1)) / orderSum) * 100) / 100 : 0;
       const key = `${o.id}|${iid}|${it.item?.variation_id ? String(it.item.variation_id) : ""}`;
-      if (rowMap.has(key)) { rowMap.get(key).qty += Number(it.quantity) || 1; continue; }
+      if (rowMap.has(key)) { const r = rowMap.get(key); r.qty += Number(it.quantity) || 1; r.freight = Math.round((r.freight + lineFreight) * 100) / 100; continue; }
       rowMap.set(key, {
         ml_order_id: String(o.id),
         ml_item_id: iid,
@@ -243,6 +247,7 @@ async function sync(days: number) {
         title: it.item?.title || "",
         qty: Number(it.quantity) || 1,
         unit_price: Number(it.unit_price) || 0,
+        freight: lineFreight,
         ordered_at: o.date_created,
         order_status: o.status,
         ship_status: ship[String(o.id)]?.status ?? null,

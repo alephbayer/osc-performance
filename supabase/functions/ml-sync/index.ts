@@ -78,6 +78,7 @@ async function sync(days: number) {
     if (rs.length < 50) break;
     offset += 50;
   }
+  { const seenO = new Set<string>(); const uniq = orders.filter((o) => !seenO.has(String(o.id)) && (seenO.add(String(o.id)), true)); orders.length = 0; orders.push(...uniq); }
   if (!orders.length) { await sb.from("ml_tokens").update({ last_sync_at: new Date().toISOString() }).eq("id", 1); return { ok: true, added: 0, orders: 0, warn }; }
 
   // detalhes dos anúncios (link e miniatura)
@@ -94,11 +95,14 @@ async function sync(days: number) {
   const orderIds = orders.map((o) => String(o.id));
   const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at,ship_history").in("ml_order_id", orderIds);
   const known = new Set((ex || []).map((x: any) => `${x.ml_order_id}|${x.ml_item_id}|${x.variation_id}`));
-  const delivered = new Set((ex || []).filter((x: any) => x.ship_status === "delivered" && Array.isArray(x.ship_history) && x.ship_history.length).map((x: any) => x.ml_order_id));
+  const delivered = new Set((ex || []).filter((x: any) => (x.ship_status === "delivered" || x.ship_status === "cancelled") && Array.isArray(x.ship_history) && x.ship_history.length).map((x: any) => x.ml_order_id));
   const ship: Record<string, any> = {};
   // pedidos que não foram reconsultados mantêm o que já está salvo (o upsert em lote não pode zerar colunas)
   for (const x of ex || []) if (!ship[x.ml_order_id] && x.ship_status !== undefined) ship[x.ml_order_id] = { status: x.ship_status, at: x.status_at, shipped: x.shipped_at, delivered: x.delivered_at, hist: x.ship_history };
-  const todo = orders.filter((o) => o.shipping?.id && !delivered.has(String(o.id))).slice(0, 60);
+  const todo = orders
+    .filter((o) => o.shipping?.id && !delivered.has(String(o.id)))
+    .sort((a, b) => (ship[String(a.id)]?.status ? 1 : 0) - (ship[String(b.id)]?.status ? 1 : 0))
+    .slice(0, 120);
   const fetchShip = async (o: any) => {
     const sid = o.shipping.id;
     const hdr = { "x-format-new": "true" };
@@ -123,14 +127,16 @@ async function sync(days: number) {
       ship[String(o.id)] = { status, at, shipped: first("shipped"), delivered: first("delivered") || (status === "delivered" ? at : null), hist };
     } catch { /* opcional */ }
   };
-  for (let i = 0; i < todo.length; i += 6) await Promise.all(todo.slice(i, i + 6).map(fetchShip));
+  for (let i = 0; i < todo.length; i += 8) await Promise.all(todo.slice(i, i + 8).map(fetchShip));
 
-  const rows: any[] = [];
+  const rowMap = new Map<string, any>();
   for (const o of orders) {
     for (const it of o.order_items || []) {
       const iid = String(it.item?.id || "");
       if (!iid) continue;
-      rows.push({
+      const key = `${o.id}|${iid}|${it.item?.variation_id ? String(it.item.variation_id) : ""}`;
+      if (rowMap.has(key)) { rowMap.get(key).qty += Number(it.quantity) || 1; continue; }
+      rowMap.set(key, {
         ml_order_id: String(o.id),
         ml_item_id: iid,
         variation_id: it.item?.variation_id ? String(it.item.variation_id) : "",
@@ -151,6 +157,7 @@ async function sync(days: number) {
       });
     }
   }
+  const rows: any[] = [...rowMap.values()];
   const added = rows.filter((r) => !known.has(`${r.ml_order_id}|${r.ml_item_id}|${r.variation_id}`)).length;
   // upsert só com colunas do ML: destino (vehicle/task/stock) nunca é sobrescrito
   for (let i = 0; i < rows.length; i += 100) {

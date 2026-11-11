@@ -6335,6 +6335,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const undoSupplies=async i=>{ if(!window.confirm("Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(e.message||"Erro ao desfazer"); } };
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
+  const fmtS=d=>{ if(!d) return ""; const x=new Date(d); const same=x.getFullYear()===new Date().getFullYear(); return x.toLocaleDateString("pt-BR",same?{day:"2-digit",month:"2-digit"}:{day:"2-digit",month:"2-digit",year:"2-digit"}); };
   const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":i.destination==="supplies"?"🧴 Insumos · custo do mês":"— ignorado";
   const fmtT=d=>d?new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
   const timeline=i=>{
@@ -6356,27 +6357,32 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     if(i.destination==="ignored") steps.push({k:"ign",ic:"—",l:"Ignorada (não é da oficina)",d:i.assigned_at,done:true,by:i.assigned_by});
     return steps;
   };
-  const row=(i,isPending)=><div key={i.id} style={{background:B.gray900,borderRadius:10,padding:"9px 10px",minWidth:0}}>
+  const row=(i,isPending)=><div key={i.id} style={{background:B.gray900,borderRadius:12,padding:"11px 12px",minWidth:0}}>
    <div onClick={()=>setExp(x=>({...x,[i.id]:!x[i.id]}))} style={{display:"flex",gap:10,alignItems:"flex-start",minWidth:0,cursor:"pointer"}}>
     {i.thumbnail?<img src={i.thumbnail} alt="" style={{width:46,height:46,objectFit:"cover",borderRadius:7,flexShrink:0}}/>:null}
     <div style={{flex:1,minWidth:0}}>
-      <div style={{fontSize:12.5,fontWeight:700,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{i.title}</div>
-      <div style={{fontSize:11,color:B.gray400,marginTop:3,display:"flex",gap:8,flexWrap:"wrap"}}>
-        <span>{i.qty}× {fmtBRL(Number(i.unit_price)||0)}</span>{Number(i.freight)>0&&<span>+ frete {fmtBRL(Number(i.freight))}</span>}{i.seller&&<span>{i.seller}</span>}
-        {i.permalink&&<a href={i.permalink} target="_blank" rel="noreferrer" style={{color:B.blue,textDecoration:"none"}}>anúncio ↗</a>}
+      <div style={{fontSize:13,fontWeight:600,color:B.white,lineHeight:1.35,wordBreak:"break-word",display:"-webkit-box",WebkitLineClamp:exp[i.id]?6:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{i.title}</div>
+      <div style={{fontSize:11,color:B.gray400,marginTop:4,display:"flex",gap:"2px 8px",flexWrap:"wrap",alignItems:"baseline"}}>
+        <span><span style={{color:B.gray200,fontWeight:700}}>{fmtBRL((Number(i.qty)||1)*(Number(i.unit_price)||0))}</span> <span style={{color:B.gray500}}>· {i.qty}× {fmtBRL(Number(i.unit_price)||0)}{Number(i.freight)>0?` + frete ${fmtBRL(Number(i.freight))}`:""}</span></span>
+        {i.seller&&<span style={{color:B.gray500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%"}}>{i.seller}</span>}
       </div>
-      <div style={{fontSize:11,marginTop:3,display:"flex",gap:"2px 10px",flexWrap:"wrap"}}>
-        <span style={{color:B.gray300}}>🛒 Comprado em {fmtD(i.ordered_at)}</span>
-        {i.ship_status&&(i.ship_status==="delivered"
-          ?<span style={{color:B.green,fontWeight:700}}>✓ Entregue{(i.delivered_at||i.status_at)?` em ${fmtD(i.delivered_at||i.status_at)}`:""}</span>
-          :<span style={{color:B.amber,fontWeight:700}}>{ML_SHIP[i.ship_status]||i.ship_status}{i.status_at?` desde ${fmtD(i.status_at)}`:""}</span>)}
-        {i.ship_status&&i.ship_status!=="delivered"&&i.ship_substatus&&<span style={{color:i.ship_substatus==="out_for_delivery"?B.green:B.gray300,fontWeight:i.ship_substatus==="out_for_delivery"?800:500}}>· {i.ship_substatus==="out_for_delivery"?"🚚 ":""}{mlSubLbl(i.ship_substatus)}</span>}
-        {i.ship_status&&i.ship_status!=="delivered"&&i.ship_status!=="cancelled"&&i.eta_at&&<span style={{color:B.gray400}}>· previsão {fmtD(i.eta_at)}</span>}
-        {i.ship_status!=="delivered"&&i.ship_status!=="cancelled"&&(i.delivery_key||i.ml_key)&&<span style={{color:B.black,background:B.amber,borderRadius:6,padding:"0 7px",fontWeight:800}}>🔑 {i.delivery_key||i.ml_key}</span>}
-        {!isPending&&i.assigned_at&&<span style={{color:B.gray400}}>📌 Destinada em {fmtD(i.assigned_at)}</span>}
-      </div>
-      {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:3}}>{destLbl(i)}</div>}
-      {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:3,wordBreak:"break-word"}}>🔗 {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
+      {(()=>{
+        const st=i.ship_status; if(!st) return null;
+        const out=i.ship_substatus==="out_for_delivery";
+        const col=st==="delivered"?B.green:st==="cancelled"?B.red:out?B.green:st==="shipped"?B.blue:st==="pending"?B.gray400:B.amber;
+        const live=st!=="delivered"&&st!=="cancelled";
+        return (<div style={{display:"flex",alignItems:"center",gap:"4px 8px",flexWrap:"wrap",marginTop:6}}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:700,color:col,background:`${col}1f`,borderRadius:99,padding:"2px 9px 2px 7px"}}>
+            <span style={{width:6,height:6,borderRadius:99,background:col}}/>
+            {st==="delivered"?`Entregue${(i.delivered_at||i.status_at)?` ${fmtS(i.delivered_at||i.status_at)}`:""}`:(out?"Saiu para entrega":(ML_SHIP[st]||st))}
+            {live&&i.ship_substatus&&!out&&<span style={{fontWeight:500,opacity:.85}}>· {mlSubLbl(i.ship_substatus)}</span>}
+          </span>
+          {live&&i.eta_at&&<span style={{fontSize:11,color:B.gray400}}>previsão <b style={{color:B.gray200,fontWeight:600}}>{fmtS(i.eta_at)}</b></span>}
+          {live&&(i.delivery_key||i.ml_key)&&<span style={{fontSize:11,color:B.black,background:B.amber,borderRadius:6,padding:"1px 7px",fontWeight:800}}>🔑 {i.delivery_key||i.ml_key}</span>}
+        </div>);
+      })()}
+      {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:6,wordBreak:"break-word"}}>{destLbl(i)}</div>}
+      {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}>🔗 {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
       {isPending?<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>
@@ -6386,6 +6392,11 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     </div>
    </div>
    {exp[i.id]&&<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B.gray700}`}}>
+     <div style={{display:"flex",gap:"3px 14px",flexWrap:"wrap",fontSize:11,color:B.gray400,marginBottom:10}}>
+       <span>🛒 Comprado em <b style={{color:B.gray200,fontWeight:600}}>{fmtD(i.ordered_at)}</b></span>
+       {!isPending&&i.assigned_at&&<span>📌 Destinada em <b style={{color:B.gray200,fontWeight:600}}>{fmtD(i.assigned_at)}</b></span>}
+       {i.permalink&&<a href={i.permalink} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:B.blue,textDecoration:"none"}}>ver anúncio ↗</a>}
+     </div>
      {i.ship_status!=="delivered"&&i.ship_status!=="cancelled"&&<div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10,fontSize:11,color:B.gray300}}>
        🔑 Palavra-chave p/ entregador
        <input key={i.id+"|"+(i.delivery_key||"")} defaultValue={i.delivery_key||""} placeholder={i.ml_key?`${i.ml_key} (do ML)`:"digite a palavra"} onBlur={async e=>{const v=e.target.value.trim(); if(v===(i.delivery_key||"")) return; try{ await db.setMLItem(i.id,{delivery_key:v||null}); await loadItems(); }catch(er){ setErr(er.message||"Erro ao salvar"); }}} style={{flex:1,minWidth:120,padding:"6px 9px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
@@ -12018,7 +12029,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.31";
+const APP_VERSION = "2026.11.11.32";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

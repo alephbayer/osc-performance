@@ -3454,7 +3454,8 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
 function StockPickerModal({stock,onPick,onClose}) {
   const [q,setQ]=useState("");
   const [quoteOnly,setQuoteOnly]=useState(false);
-  const filtered=stock.filter(s=>s.name.toLowerCase().includes(q.toLowerCase())||s.brand.toLowerCase().includes(q.toLowerCase()));
+  const [hideZero,setHideZero]=useState(false);
+  const filtered=stock.filter(s=>(s.name.toLowerCase().includes(q.toLowerCase())||s.brand.toLowerCase().includes(q.toLowerCase()))&&!(hideZero&&Number(s.qty)<=0));
   return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:95,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",overflow:"hidden",border:`1px solid ${B.gray600}`}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.purple}`,display:"flex",alignItems:"center",gap:10}}>
@@ -3476,7 +3477,10 @@ function StockPickerModal({stock,onPick,onClose}) {
           </div>
         </button>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar produto…" autoFocus
-          style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
+          style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+        <label style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:B.gray300,marginBottom:10,cursor:"pointer"}}>
+          <input type="checkbox" checked={hideZero} onChange={e=>setHideZero(e.target.checked)}/> Ocultar itens com estoque zero
+        </label>
         <div style={{maxHeight:300,overflowY:"auto"}}>
           {filtered.length===0?<div style={{textAlign:"center",padding:"16px 0",color:B.gray400,fontSize:13}}>Nenhum produto encontrado.</div>
             :filtered.map(s=>(
@@ -9249,7 +9253,14 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
             <div style={{fontSize:11,fontWeight:800,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}44`,borderRadius:6,padding:"2px 8px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}{o.receivedAt&&o.status==="received"?` · ${new Date(o.receivedAt).toLocaleDateString("pt-BR")}`:""}</div>
             {isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>✓ Instalada</div>}
             {isReserved&&!isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.purple,background:`${B.purple}18`,border:`1px solid ${B.purple}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>📦 Armazenada</div>}
-            <div style={{fontSize:10,color:B.gray500,marginTop:4}}>{new Date(o.createdAt).toLocaleDateString("pt-BR")}</div>
+            <div style={{fontSize:10,color:B.gray500,marginTop:4,lineHeight:1.5}}>
+              {(()=>{const f=d=>new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}).replace(",","");
+                return (<>
+                  <div>Criado {f(o.createdAt)}</div>
+                  {o.boughtAt&&<div style={{color:B.blue}}>Comprado {f(o.boughtAt)}</div>}
+                  {o.receivedAt&&<div style={{color:B.green}}>Recebido {f(o.receivedAt)}</div>}
+                </>);})()}
+            </div>
           </div>
         </div>
 
@@ -11235,7 +11246,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.09.1";
+const APP_VERSION = "2026.11.11.1";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

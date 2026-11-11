@@ -6274,9 +6274,20 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
   const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
   const doSync=async(silent)=>{
     setBusy("sync");setErr("");if(!silent)setMsg("");
-    try{ const r=await db.mlCall("sync",{days:90}); if(r.ok===false){ setErr(r.error||"Erro ao sincronizar"); if(r.code) setSt(s=>({...(s||{}),connected:false})); } else { setMsg(r.added?`${r.added} item(ns) novo(s) ✓`:"Tudo em dia — nenhuma compra nova"); if(r.warn) setErr("Aviso: "+r.warn); await loadItems(); setSt(s=>({...(s||{}),lastSync:new Date().toISOString()})); } }
-    catch(e){ setErr(e.message||"Erro ao sincronizar"); }
-    setBusy("");
+    try{
+      let added=0, prev=Infinity;
+      for(let round=0;round<5;round++){
+        const r=await db.mlCall("sync",{days:90});
+        if(r.ok===false){ setErr(r.error||"Erro ao sincronizar"); if(r.code) setSt(s=>({...(s||{}),connected:false})); return; }
+        added+=r.added||0; if(r.warn) setErr("Aviso: "+r.warn);
+        const rows=await db.getMLItems(); setItems(rows);
+        // cada rodada consulta o envio de até 120 pedidos; repete enquanto ainda houver pedidos sem status e o número cair
+        const left=rows.filter(i=>!i.ship_status&&i.order_status==="paid").length;
+        if(!left||left>=prev) break; prev=left;
+      }
+      setMsg(added?`${added} item(ns) novo(s) ✓`:"Tudo em dia — nenhuma compra nova"); setSt(s=>({...(s||{}),lastSync:new Date().toISOString()}));
+    }catch(e){ setErr(e.message||"Erro ao sincronizar"); }
+    finally{ setBusy(""); }
   };
   useEffect(()=>{
     (async()=>{
@@ -11979,7 +11990,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.18";
+const APP_VERSION = "2026.11.11.19";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

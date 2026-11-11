@@ -12018,7 +12018,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.30";
+const APP_VERSION = "2026.11.11.31";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15999,7 +15999,7 @@ export default function App() {
         toast_("Peça lançada na OS ✓");
       } else if(d.type==="supplies"){
         const nm=String(d.name||item.title||"").trim();
-        const exp=await db.addExpense({name:`Insumos: ${nm}`.slice(0,160),amount:Math.round((total+frt)*100)/100,category:"insumos",division:d.division||"ambos",recurrent:false,date:item.ordered_at||undefined});
+        const exp=await db.addExpense({name:`Insumos: ${nm}`.slice(0,160),amount:Math.round((total+frt)*100)/100,category:"insumos",division:d.division||"ambos",recurrent:false,date:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"})+"T12:00:00-03:00":undefined});
         setExpenses(p=>[...p,exp]);
         await db.setMLItem(item.id,{expense_id:exp.id});
         toast_(`🧴 ${fmtBRL(total+frt)} lançado em Insumos (${new Date(item.ordered_at||Date.now()).toLocaleDateString("pt-BR")}) ✓`);

@@ -6269,6 +6269,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
   const [pick,setPick]=useState(null);
   const [fil,setFil]=useState("all");
   const [qs,setQs]=useState("");
+  const [exp,setExp]=useState({});
   const [sortBy,setSortBy]=useState("date");
   const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
   const doSync=async(silent)=>{
@@ -6308,7 +6309,28 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":"— ignorado";
-  const row=(i,isPending)=><div key={i.id} style={{background:B.gray900,borderRadius:10,padding:"9px 10px",display:"flex",gap:10,alignItems:"flex-start",minWidth:0}}>
+  const fmtT=d=>d?new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+  const timeline=i=>{
+    const h={}; (Array.isArray(i.ship_history)?i.ship_history:[]).forEach(e=>{ if(e&&e.status&&e.date&&!h[e.status]) h[e.status]=e.date; });
+    if(i.shipped_at&&!h.shipped) h.shipped=i.shipped_at;
+    if(i.delivered_at&&!h.delivered) h.delivered=i.delivered_at;
+    const cur=i.ship_status;
+    const rank={pending:0,handling:1,ready_to_ship:2,shipped:3,delivered:4};
+    const steps=[
+      {k:"order",ic:"🛒",l:"Pedido feito",d:i.ordered_at,done:true},
+      {k:"paid",ic:"💳",l:"Pagamento aprovado",d:i.paid_at,done:!!i.paid_at},
+      {k:"handling",ic:"📦",l:"Preparando o envio",d:h.handling,done:!!h.handling||(rank[cur]??-1)>=1},
+      {k:"ready_to_ship",ic:"🏷️",l:"Pronto para envio",d:h.ready_to_ship,done:!!h.ready_to_ship||(rank[cur]??-1)>=2},
+      {k:"shipped",ic:"🚚",l:"A caminho",d:h.shipped,done:!!h.shipped||(rank[cur]??-1)>=3},
+      {k:"delivered",ic:"✅",l:"Entregue",d:h.delivered||(cur==="delivered"?i.status_at:null),done:cur==="delivered"||!!h.delivered},
+    ];
+    if(cur==="not_delivered") steps.push({k:"nd",ic:"⚠️",l:"Não entregue",d:h.not_delivered||i.status_at,done:true});
+    if(i.destination&&i.destination!=="ignored") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:"Destinada · Estoque",d:i.assigned_at,done:true,by:i.assigned_by});
+    if(i.destination==="ignored") steps.push({k:"ign",ic:"—",l:"Ignorada (não é da oficina)",d:i.assigned_at,done:true,by:i.assigned_by});
+    return steps;
+  };
+  const row=(i,isPending)=><div key={i.id} style={{background:B.gray900,borderRadius:10,padding:"9px 10px",minWidth:0}}>
+   <div onClick={()=>setExp(x=>({...x,[i.id]:!x[i.id]}))} style={{display:"flex",gap:10,alignItems:"flex-start",minWidth:0,cursor:"pointer"}}>
     {i.thumbnail?<img src={i.thumbnail} alt="" style={{width:46,height:46,objectFit:"cover",borderRadius:7,flexShrink:0}}/>:<div style={{width:46,height:46,borderRadius:7,background:B.gray800,flexShrink:0}}/>}
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:12.5,fontWeight:700,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{i.title}</div>
@@ -6325,8 +6347,27 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
       </div>
       {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:3}}>{destLbl(i)}</div>}
     </div>
-    {isPending?<button onClick={()=>setPick(i)} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer",flexShrink:0}}>Destinar</button>
-      :i.destination==="ignored"&&<button onClick={()=>undoIgnore(i)} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer",flexShrink:0}}>desfazer</button>}
+    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
+      {isPending?<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>
+        :i.destination==="ignored"&&<button onClick={e=>{e.stopPropagation();undoIgnore(i);}} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer</button>}
+      <span style={{fontSize:11,color:B.gray500}}>{exp[i.id]?"▴":"▾"}</span>
+    </div>
+   </div>
+   {exp[i.id]&&<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B.gray700}`}}>
+     <div style={{display:"flex",flexDirection:"column",gap:0}}>
+       {timeline(i).map((st,ix,arr)=><div key={st.k} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+         <div style={{display:"flex",flexDirection:"column",alignItems:"center",width:18,flexShrink:0}}>
+           <span style={{fontSize:12,lineHeight:"18px",opacity:st.done?1:.35}}>{st.ic}</span>
+           {ix<arr.length-1&&<span style={{width:1,flex:1,minHeight:10,background:st.done?B.green+"66":B.gray700}}/>}
+         </div>
+         <div style={{paddingBottom:8,minWidth:0}}>
+           <div style={{fontSize:12,fontWeight:st.done?700:500,color:st.done?B.white:B.gray500,lineHeight:"18px",wordBreak:"break-word"}}>{st.l}</div>
+           <div style={{fontSize:11,color:st.d?B.gray300:B.gray600}}>{st.d?fmtT(st.d):st.done?"data não informada":"ainda não"}{st.by?` · por ${st.by}`:""}</div>
+         </div>
+       </div>)}
+     </div>
+     <div style={{fontSize:10,color:B.gray600,marginTop:2}}>Pedido #{i.ml_order_id}</div>
+   </div>}
   </div>;
   return (<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.amber}44`,padding:14,marginBottom:16}}>
     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
@@ -11938,7 +11979,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.17";
+const APP_VERSION = "2026.11.11.18";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -53,8 +53,8 @@ async function getAccess() {
   return { ...data, access_token: d.access_token, ml_user_id: data.ml_user_id || String(d.user_id) };
 }
 
-async function ml(path: string, token: string) {
-  const r = await fetch(API + path, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
+async function ml(path: string, token: string, extra: Record<string, string> = {}) {
+  const r = await fetch(API + path, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json", ...extra } });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`ML ${path.split("?")[0]} → ${r.status} ${d.message || d.error || ""}`.trim());
   return d;
@@ -92,24 +92,38 @@ async function sync(days: number) {
 
   // status de entrega (só pedidos ainda não entregues)
   const orderIds = orders.map((o) => String(o.id));
-  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at").in("ml_order_id", orderIds);
+  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at,ship_history").in("ml_order_id", orderIds);
   const known = new Set((ex || []).map((x: any) => `${x.ml_order_id}|${x.ml_item_id}|${x.variation_id}`));
-  const delivered = new Set((ex || []).filter((x: any) => x.ship_status === "delivered").map((x: any) => x.ml_order_id));
+  const delivered = new Set((ex || []).filter((x: any) => x.ship_status === "delivered" && Array.isArray(x.ship_history) && x.ship_history.length).map((x: any) => x.ml_order_id));
   const ship: Record<string, any> = {};
   // pedidos que não foram reconsultados mantêm o que já está salvo (o upsert em lote não pode zerar colunas)
-  for (const x of ex || []) if (!ship[x.ml_order_id] && x.ship_status !== undefined) ship[x.ml_order_id] = { status: x.ship_status, at: x.status_at, shipped: x.shipped_at, delivered: x.delivered_at };
-  let n = 0;
-  for (const o of orders) {
-    const sid = o.shipping?.id;
-    if (!sid || delivered.has(String(o.id)) || n >= 40) continue;
-    n++;
+  for (const x of ex || []) if (!ship[x.ml_order_id] && x.ship_status !== undefined) ship[x.ml_order_id] = { status: x.ship_status, at: x.status_at, shipped: x.shipped_at, delivered: x.delivered_at, hist: x.ship_history };
+  const todo = orders.filter((o) => o.shipping?.id && !delivered.has(String(o.id))).slice(0, 60);
+  const fetchShip = async (o: any) => {
+    const sid = o.shipping.id;
+    const hdr = { "x-format-new": "true" };
     try {
-      const s = await ml(`/shipments/${sid}`, t.access_token);
-      const h = s.status_history || {};
-      const at = ({ delivered: h.date_delivered, shipped: h.date_shipped, ready_to_ship: h.date_ready_to_ship, handling: h.date_handling, pending: h.date_created } as any)[s.status] || s.last_updated || null;
-      ship[String(o.id)] = { status: s.status || "", at, shipped: h.date_shipped || null, delivered: h.date_delivered || null };
+      const s = await ml(`/shipments/${sid}`, t.access_token, hdr);
+      let hist: { status: string; date: string }[] = [];
+      try {
+        const hr = await ml(`/shipments/${sid}/history`, t.access_token, hdr);
+        const arr = Array.isArray(hr) ? hr : (hr.history || hr.results || hr.data || []);
+        hist = arr.map((e: any) => ({ status: e.status, date: e.date_created || e.date || e.date_time })).filter((e: any) => e.status && e.date);
+      } catch { /* histórico é opcional */ }
+      const sh = s.status_history || {};
+      const add = (st: string, d: any) => { if (d && !hist.find((e) => e.status === st)) hist.push({ status: st, date: d }); };
+      add("handling", sh.date_handling); add("ready_to_ship", sh.date_ready_to_ship); add("shipped", sh.date_shipped); add("delivered", sh.date_delivered);
+      hist.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const seen = new Set<string>();
+      hist = hist.filter((e) => !seen.has(e.status) && (seen.add(e.status), true));
+      const first = (st: string) => hist.find((e) => e.status === st)?.date || null;
+      const status = s.status || "";
+      const at = first(status) || s.last_updated || null;
+      if (!hist.length && status && at) hist = [{ status, date: at }];
+      ship[String(o.id)] = { status, at, shipped: first("shipped"), delivered: first("delivered") || (status === "delivered" ? at : null), hist };
     } catch { /* opcional */ }
-  }
+  };
+  for (let i = 0; i < todo.length; i += 6) await Promise.all(todo.slice(i, i + 6).map(fetchShip));
 
   const rows: any[] = [];
   for (const o of orders) {
@@ -129,6 +143,8 @@ async function sync(days: number) {
         status_at: ship[String(o.id)]?.at ?? null,
         shipped_at: ship[String(o.id)]?.shipped ?? null,
         delivered_at: ship[String(o.id)]?.delivered ?? null,
+        ship_history: ship[String(o.id)]?.hist ?? null,
+        paid_at: ((o.payments || []).map((p: any) => p.date_approved).filter(Boolean).sort()[0]) || null,
         seller: o.seller?.nickname || null,
         permalink: info[iid]?.permalink || null,
         thumbnail: info[iid]?.thumbnail || null,

@@ -203,12 +203,12 @@ async function sync(days: number) {
 
   // status de entrega (só pedidos ainda não entregues)
   const orderIds = orders.map((o) => String(o.id));
-  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at,ship_history,ship_substatus,eta_at").in("ml_order_id", orderIds);
+  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at,ship_history,ship_substatus,eta_at,ml_key,ship_probe").in("ml_order_id", orderIds);
   const known = new Set((ex || []).map((x: any) => `${x.ml_order_id}|${x.ml_item_id}|${x.variation_id}`));
   const delivered = new Set((ex || []).filter((x: any) => (x.ship_status === "delivered" || x.ship_status === "cancelled") && Array.isArray(x.ship_history) && x.ship_history.length).map((x: any) => x.ml_order_id));
   const ship: Record<string, any> = {};
   // pedidos que não foram reconsultados mantêm o que já está salvo (o upsert em lote não pode zerar colunas)
-  for (const x of ex || []) if (!ship[x.ml_order_id] && x.ship_status !== undefined) ship[x.ml_order_id] = { status: x.ship_status, at: x.status_at, shipped: x.shipped_at, delivered: x.delivered_at, hist: x.ship_history, sub: x.ship_substatus, eta: x.eta_at };
+  for (const x of ex || []) if (!ship[x.ml_order_id] && x.ship_status !== undefined) ship[x.ml_order_id] = { status: x.ship_status, at: x.status_at, shipped: x.shipped_at, delivered: x.delivered_at, hist: x.ship_history, sub: x.ship_substatus, eta: x.eta_at, key: x.ml_key, probe: x.ship_probe };
   const todo = orders
     .filter((o) => o.shipping?.id && !delivered.has(String(o.id)))
     .sort((a, b) => (ship[String(a.id)]?.status ? 1 : 0) - (ship[String(b.id)]?.status ? 1 : 0))
@@ -236,7 +236,18 @@ async function sync(days: number) {
       if (!hist.length && status && at) hist = [{ status, date: at }];
       const lt = s.lead_time || {}, so = s.shipping_option || {};
       const eta = lt.estimated_delivery_final?.date || lt.estimated_delivery_time?.date || so.estimated_delivery_final?.date || so.estimated_delivery_time?.date || null;
-      ship[String(o.id)] = { status, at, shipped: first("shipped"), delivered: first("delivered") || (status === "delivered" ? at : null), hist, sub: s.substatus || null, eta };
+      // palavra-chave de entrega: varre o envio atrás de campos de código/senha (guarda só o que bate)
+      const found: Record<string, string> = {};
+      const walk = (v: any, path: string, depth: number) => {
+        if (depth > 4 || v == null) return;
+        if (Array.isArray(v)) { v.forEach((x, i) => walk(x, `${path}[${i}]`, depth + 1)); return; }
+        if (typeof v === "object") { for (const k of Object.keys(v)) { if (/address|receiver_id|sender_id|tracking|zip|geolocation/i.test(k)) continue; walk(v[k], path ? `${path}.${k}` : k, depth + 1); } return; }
+        if ((typeof v === "string" || typeof v === "number") && /(password|passcode|keyword|security|verification|delivery_code|pin|palavra|secret|handshake|code)/i.test(path.split(".").pop() || "")) found[path] = String(v).slice(0, 60);
+      };
+      walk(s, "", 0);
+      const strict = Object.entries(found).find(([k, v]) => /(password|passcode|keyword|security_code|delivery_code|palavra|handshake)/i.test(k) && !/status/i.test(k) && /^[\w-]{3,20}$/.test(v));
+      const probe = { keys: Object.keys(s).slice(0, 60), tags: s.tags || null, found };
+      ship[String(o.id)] = { status, at, shipped: first("shipped"), delivered: first("delivered") || (status === "delivered" ? at : null), hist, sub: s.substatus || null, eta, key: strict ? strict[1] : (ship[String(o.id)]?.key ?? null), probe };
     } catch { /* opcional */ }
   };
   for (let i = 0; i < todo.length; i += 8) await Promise.all(todo.slice(i, i + 8).map(fetchShip));
@@ -269,6 +280,8 @@ async function sync(days: number) {
         ship_history: ship[String(o.id)]?.hist ?? null,
         ship_substatus: ship[String(o.id)]?.sub ?? null,
         eta_at: ship[String(o.id)]?.eta ?? null,
+        ml_key: ship[String(o.id)]?.key ?? null,
+        ship_probe: ship[String(o.id)]?.probe ?? null,
         paid_at: ((o.payments || []).map((p: any) => p.date_approved).filter(Boolean).sort()[0]) || null,
         seller: o.seller?.nickname || null,
         permalink: info[iid]?.permalink || `https://produto.mercadolivre.com.br/${iid.replace(/^MLB/, "MLB-")}`,

@@ -6364,6 +6364,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
           :<span style={{color:B.amber,fontWeight:700}}>{ML_SHIP[i.ship_status]||i.ship_status}{i.status_at?` desde ${fmtD(i.status_at)}`:""}</span>)}
         {i.ship_status&&i.ship_status!=="delivered"&&i.ship_substatus&&<span style={{color:i.ship_substatus==="out_for_delivery"?B.green:B.gray300,fontWeight:i.ship_substatus==="out_for_delivery"?800:500}}>· {i.ship_substatus==="out_for_delivery"?"🚚 ":""}{mlSubLbl(i.ship_substatus)}</span>}
         {i.ship_status&&i.ship_status!=="delivered"&&i.ship_status!=="cancelled"&&i.eta_at&&<span style={{color:B.gray400}}>· previsão {fmtD(i.eta_at)}</span>}
+        {i.ship_status!=="delivered"&&i.ship_status!=="cancelled"&&(i.delivery_key||i.ml_key)&&<span style={{color:B.black,background:B.amber,borderRadius:6,padding:"0 7px",fontWeight:800}}>🔑 {i.delivery_key||i.ml_key}</span>}
         {!isPending&&i.assigned_at&&<span style={{color:B.gray400}}>📌 Destinada em {fmtD(i.assigned_at)}</span>}
       </div>
       {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:3}}>{destLbl(i)}</div>}
@@ -6376,6 +6377,11 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
     </div>
    </div>
    {exp[i.id]&&<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B.gray700}`}}>
+     {i.ship_status!=="delivered"&&i.ship_status!=="cancelled"&&<div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10,fontSize:11,color:B.gray300}}>
+       🔑 Palavra-chave p/ entregador
+       <input key={i.id+"|"+(i.delivery_key||"")} defaultValue={i.delivery_key||""} placeholder={i.ml_key?`${i.ml_key} (do ML)`:"digite a palavra"} onBlur={async e=>{const v=e.target.value.trim(); if(v===(i.delivery_key||"")) return; try{ await db.setMLItem(i.id,{delivery_key:v||null}); await loadItems(); }catch(er){ setErr(er.message||"Erro ao salvar"); }}} style={{flex:1,minWidth:120,padding:"6px 9px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+       {i.ml_key&&<span style={{color:B.gray500}}>detectada no ML: {i.ml_key}</span>}
+     </div>}
      <div style={{display:"flex",flexDirection:"column",gap:0}}>
        {timeline(i).map((st,ix,arr)=><div key={st.k} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
          <div style={{display:"flex",flexDirection:"column",alignItems:"center",width:18,flexShrink:0}}>
@@ -12002,7 +12008,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.25";
+const APP_VERSION = "2026.11.11.26";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13868,7 +13874,7 @@ function MLArrivalsAlert({show,onOpen}) {
   const dueToday=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)===today);
   const late=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)<today);
   if(!route.length&&!dueToday.length&&!late.length) return null;
-  const names=a=>a.slice(0,3).map(r=>String(r.title||"").slice(0,40)).join(" · ")+(a.length>3?` +${a.length-3}`:"");
+  const names=a=>a.slice(0,3).map(r=>{const k=r.delivery_key||r.ml_key;return (k?`🔑 ${k} — `:"")+String(r.title||"").slice(0,40);}).join(" · ")+(a.length>3?` +${a.length-3}`:"");
   const pl=(n,s,p)=>`${n} ${n!==1?p:s}`;
   return (<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.amber}55`}}>
     {route.length>0&&<DashAlert color={B.green} icon={<span style={{fontSize:16}}>🚚</span>} label={`${pl(route.length,"peça saiu","peças saíram")} para entrega`} sub={names(route)} onClick={onOpen}/>}

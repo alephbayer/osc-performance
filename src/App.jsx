@@ -6176,7 +6176,28 @@ function SupplierInput({value,onChange,suppliers=[],placeholder="Nome do fornece
 
 // ─── Mercado Livre: compras da conta → destino (OS / estoque) ────────────────
 const ML_SHIP={pending:"Aguardando envio",handling:"Preparando",ready_to_ship:"Pronto p/ envio",shipped:"A caminho",delivered:"Entregue",not_delivered:"Não entregue",cancelled:"Cancelado"};
-function MLAssignModal({item,vehicles,tasks,stock,onClose,onAssign}) {
+function VehiclePicker({value,onChange,vehicles,clients=[]}) {
+  const [open,setOpen]=useState(false);
+  const [q,setQ]=useState("");
+  const cliName=v=>clients.find(c=>c.id===v.clientId)?.name||"";
+  const lbl=v=>(v.model||"Veículo")+" · "+(v.plate||"sem placa");
+  const cur=vehicles.find(v=>v.id===value);
+  const nq=_normName(q);
+  const list=vehicles.filter(v=>!nq||_normName([v.model,v.plate,cliName(v)].join(" ")).includes(nq)).slice(0,40);
+  const pickIt=id=>{onChange(id);setOpen(false);setQ("");};
+  return (<div style={{position:"relative",minWidth:0,width:"100%"}}>
+    <button type="button" onClick={()=>setOpen(o=>!o)} style={{display:"block",width:"100%",boxSizing:"border-box",textAlign:"left",background:B.gray900,border:`1px solid ${cur?B.amber+"88":B.gray600}`,borderRadius:8,color:cur?B.white:B.gray400,padding:"8px 10px",fontSize:13,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cur?lbl(cur)+(cliName(cur)?` — ${cliName(cur)}`:""):"Escolha o carro…"} ▾</button>
+    {open&&<div style={{position:"absolute",zIndex:5,left:0,right:0,top:"100%",marginTop:2,background:B.gray900,border:`1px solid ${B.amber}66`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.5)",padding:6}}>
+      <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Digite o modelo, placa ou cliente…" style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:6,color:B.white,padding:"7px 9px",fontSize:13,outline:"none",width:"100%",boxSizing:"border-box",marginBottom:4}}/>
+      <div style={{maxHeight:200,overflowY:"auto",overscrollBehavior:"contain"}}>
+        {list.map(v=><div key={v.id} onClick={()=>pickIt(v.id)} style={{padding:"7px 8px",fontSize:13,color:v.id===value?B.amber:B.white,cursor:"pointer",borderRadius:4}}>{lbl(v)}{cliName(v)&&<span style={{color:B.gray500,fontSize:11}}> — {cliName(v)}</span>}</div>)}
+        {!list.length&&<div style={{padding:8,fontSize:12,color:B.gray400}}>Nenhum carro encontrado</div>}
+      </div>
+      <div onClick={()=>setOpen(false)} style={{textAlign:"center",fontSize:10,color:B.gray400,padding:4,cursor:"pointer"}}>fechar</div>
+    </div>}
+  </div>);
+}
+function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) {
   const [mode,setMode]=useState("vehicle");
   const [vid,setVid]=useState("");
   const [tid,setTid]=useState("");
@@ -6215,10 +6236,7 @@ function MLAssignModal({item,vehicles,tasks,stock,onClose,onAssign}) {
       </div>
       <div style={{display:"flex",gap:6,marginBottom:12}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("ignored","Ignorar")}</div>
       {mode==="vehicle"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
-        <select value={vid} onChange={e=>{setVid(e.target.value);setTid("");}} style={inp}>
-          <option value="">Escolha o carro…</option>
-          {vehicles.map(v=><option key={v.id} value={v.id}>{(v.model||"Veículo")+" · "+(v.plate||"sem placa")}</option>)}
-        </select>
+        <VehiclePicker value={vid} onChange={v=>{setVid(v);setTid("");}} vehicles={vehicles} clients={clients}/>
         {vid&&<TaskPicker value={tid} onChange={setTid} vts={vts} placeholder="Escolha ou crie a tarefa…"/>}
         {qtyBox}
         <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Margem sobre o custo <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>
@@ -6238,7 +6256,7 @@ function MLAssignModal({item,vehicles,tasks,stock,onClose,onAssign}) {
     </div>
   </div>);
 }
-function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
+function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
   const [st,setSt]=useState(null);
   const [items,setItems]=useState([]);
   const [busy,setBusy]=useState("");
@@ -6346,12 +6364,12 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
         {(showDone||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>{done.map(i=>row(i,false))}</div>}
       </div>}
     </div>}
-    {pick&&<MLAssignModal item={pick} vehicles={openVeh} tasks={tasks} stock={stock} onClose={()=>setPick(null)} onAssign={async(it,d)=>{ await onAssign(it,d); await loadItems(); }}/>}
+    {pick&&<MLAssignModal item={pick} vehicles={openVeh} clients={clients} tasks={tasks} stock={stock} onClose={()=>setPick(null)} onAssign={async(it,d)=>{ await onAssign(it,d); await loadItems(); }}/>}
   </div>);
 }
 
 // ─── Cadastro de fornecedores ────────────────────────────────────────────────
-function SuppliersTab({purchases=[],actor="",vehicles=[],tasks=[],stock=[],onAssignML}) {
+function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],stock=[],onAssignML}) {
   const [list,setList]=useState([]);
   const [loading,setLoading]=useState(true);
   const [q,setQ]=useState("");
@@ -6413,7 +6431,7 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],tasks=[],stock=[],onAss
     </div>
   </div>);
   return (<div>
-    {onAssignML&&<MLPurchasesCard vehicles={vehicles} tasks={tasks} stock={stock} onAssign={onAssignML}/>}
+    {onAssignML&&<MLPurchasesCard vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssign={onAssignML}/>}
     <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar fornecedor…" style={{...inp,flex:"1 1 220px",maxWidth:340}}/>
       {editId!=="new"&&<button onClick={()=>startEdit(null)} style={{padding:"8px 16px",borderRadius:8,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>＋ Novo fornecedor</button>}
@@ -11911,7 +11929,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.14";
+const APP_VERSION = "2026.11.11.15";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17060,7 +17078,7 @@ export default function App() {
 
       {tab==="suppliers"&&allowedTabs.includes("suppliers")&&<>
         <TabHeader color={B.green} title="Fornecedores" subtitle="Cadastro de quem vende para a oficina — usado no autocompletar das compras de estoque"/>
-        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} tasks={tasks} stock={stock} onAssignML={assignMLItem}/>
+        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssignML={assignMLItem}/>
       </>}
 
       {tab==="partners"&&allowedTabs.includes("partners")&&<>

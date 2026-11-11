@@ -4588,6 +4588,35 @@ function StockProductPicker({ value, onChange, stock }) {
     </div>}
   </div>);
 }
+// ── Sugestão de estoque por sinônimos (ex.: "pano pega poeira" ≈ "pega pó") ───────
+const _SYN_PHRASES=[["pega poeira","pegapo"],["pega po","pegapo"],["tack rag","pegapo"],["fita crepe","fitacrepe"],["fita mascara","fitacrepe"],["fita de mascaramento","fitacrepe"],["fita mascaramento","fitacrepe"],["papel toalha","papeltoalha"],["toalha de papel","papeltoalha"],["toalha papel","papeltoalha"],["papel interfolha","papeltoalha"],["lixa dagua","lixaagua"],["lixa d agua","lixaagua"],["lixa de agua","lixaagua"],["lixa agua","lixaagua"],["disco de corte","discocorte"],["disco corte","discocorte"],["disco de desbaste","discodesbaste"],["disco flap","discoflap"],["fundo preparador","primer"],["massa poliester","massapoli"],["massa rapida","massapoli"],["massa plastica","massapoli"],["limpa pecas","desengraxante"],["limpa contato","limpacontato"],["silicone em spray","siliconespray"],["silicone spray","siliconespray"],["oleo lubrificante","lubrificante"],["wd 40","desengripante"],["wd40","desengripante"],["fita isolante","fitaisolante"],["fita veda rosca","vedarosca"],["veda rosca","vedarosca"],["cola instantanea","superbonder"],["super bonder","superbonder"],["super cola","superbonder"],["pote descartavel","pote"],["marmitex","pote"],["cano pvc","tubopvc"],["mascara de solda","mascarasolda"],["mascara solda","mascarasolda"],["vidro de mascara","lentemascara"],["lente mascara","lentemascara"],["lentes mascara","lentemascara"],["lentes externa","lentemascara"],["lente externa","lentemascara"],["luva nitrilica","luvanitrilica"],["luva de nitrilo","luvanitrilica"],["luva descartavel","luvanitrilica"],["luvas descartaveis","luvanitrilica"]];
+const _SYN_WORDS={tiner:"thinner",diluente:"thinner",solvente:"thinner",flanela:"pano",estopa:"pano",desengordurante:"desengraxante",desengripante:"desengripante",abracadeira:"abracadeira",tubo:"mangueira",cabo:"fio",respirador:"mascara",lubrificante:"lubrificante",graxa:"graxa",grafite:"grafite",parafusos:"parafuso",porcas:"porca",arruelas:"arruela",rebites:"rebite",luvas:"luva",panos:"pano",lixas:"lixa",discos:"disco",fitas:"fita",colas:"cola",oleos:"oleo",tintas:"tinta",vernizes:"verniz"};
+const _SYN_NOISE=new Set(["de","da","do","das","dos","para","p","c","com","e","em","a","o","kit","jogo","par","un","und","unid","unidade","unidades","pcs","pc","peca","pecas","original","novo","nova","cor","tamanho","tam","embalagem","caixa","cx","pacote","pct","rolo","litro","litros","lt","l","ml","g","kg","mm","cm","m","x","uso","profissional","automotivo","automotiva","premium","top"]);
+function _stockTokens(txt){
+  let n=" "+_normName(txt)+" ";
+  for(const [a,b] of _SYN_PHRASES) n=n.split(" "+a+" ").join(" "+b+" ");
+  const out=new Set();
+  for(let w of n.trim().split(/\s+/)){
+    if(!w||_SYN_NOISE.has(w)||/^\d+$/.test(w)||/^\d+[a-z]{1,3}$/.test(w)||w.length<2) continue;
+    if(_SYN_WORDS[w]) w=_SYN_WORDS[w];
+    else if(w.length>4&&w.endsWith("s")&&!w.endsWith("ss")) w=w.slice(0,-1);
+    out.add(w);
+  }
+  return out;
+}
+// devolve até n produtos do estoque parecidos com o nome (score 0–1), do melhor ao pior
+function suggestStockItems(name, stock, n = 3) {
+  const A=_stockTokens(name); if(!A.size) return [];
+  const res=[];
+  for(const s of stock){
+    const S=_stockTokens(s.name+" "+(s.brand||"")); if(!S.size) continue;
+    const inter=[...A].filter(x=>S.has(x)).length; if(!inter) continue;
+    const cont=inter/Math.min(A.size,S.size); const jac=inter/new Set([...A,...S]).size;
+    const score=0.6*cont+0.4*jac;
+    if(cont>=0.6&&score>=0.6) res.push({id:s.id,name:s.name,brand:s.brand||"",score});
+  }
+  return res.sort((a,b)=>b.score-a.score).slice(0,n);
+}
 function matchStockItem(name, stock) {
   const n = _normName(name); let best = "", bs = 0;
   const tok = s => new Set(_normName(s).split(" ").filter(w => w.length > 1));
@@ -6207,6 +6236,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const [qtyStr,setQtyStr]=useState(String(item.qty||1));
   const [nameStr,setNameStr]=useState(item.title||"");
   const [pid,setPid]=useState(()=>matchStockItem(item.title||"",stock));
+  const sugg=useMemo(()=>suggestStockItems(item.title||"",stock),[item.id,stock]);
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState("");
   const vts=tasks.filter(t=>t.vehicleId===vid);
@@ -6254,6 +6284,10 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
       </div>}
       {mode==="stock"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <StockProductPicker value={pid} onChange={setPid} stock={stock}/>
+        {!pid&&sugg.length>0&&<div style={{background:`${B.purple}14`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"7px 9px"}}>
+          <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:5}}>💡 Parece um item que já existe no estoque</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{sugg.map(x=><button key={x.id} onClick={()=>setPid(x.id)} style={{padding:"4px 10px",borderRadius:99,border:`1px solid ${B.purple}66`,background:"none",color:B.white,fontSize:11.5,cursor:"pointer",textAlign:"left"}}>{x.name}{x.brand?` · ${x.brand}`:""}</button>)}</div>
+        </div>}
         {qtyBox}
         {frBox}
         {!pid&&<input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome do produto novo" style={inp}/>}
@@ -6333,6 +6367,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const srt=a=>[...a].sort(sortBy==="status"?(x,y)=>(SORT_ORD[x.ship_status]??9)-(SORT_ORD[y.ship_status]??9)||byDate(x,y):sortBy==="old"?(x,y)=>byDate(y,x):sortBy==="value"?(x,y)=>(Number(y.qty)*Number(y.unit_price)||0)-(Number(x.qty)*Number(x.unit_price)||0)||byDate(x,y):byDate);
   const active=live.filter(i=>!isDone(i));
   const pendingAll=live.filter(i=>!i.destination);
+  const stockHints=useMemo(()=>{ const h={}; if(!stock?.length) return h; pendingAll.forEach(i=>{ const g=suggestStockItems(i.title||"",stock,1)[0]; if(g&&g.score>=0.75) h[i.id]=g; }); return h; },[items,stock]);
   const pending=srt(pendingAll.filter(byFil));
   const waiting=srt(live.filter(i=>i.destination&&!isDone(i)).filter(byFil));
   const done=srt(live.filter(isDone).filter(bySearch));
@@ -6389,6 +6424,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
           {live&&(i.delivery_key||i.ml_key)&&<span style={{fontSize:11,color:B.black,background:B.amber,borderRadius:6,padding:"1px 7px",fontWeight:800}}>🔑 {i.delivery_key||i.ml_key}</span>}
         </div>);
       })()}
+      {isPending&&(()=>{ const sg=stockHints[i.id]; return sg?<div style={{fontSize:11,color:B.purple,marginTop:6,wordBreak:"break-word"}}>💡 Parece estoque: {sg.name}{sg.brand?` · ${sg.brand}`:""}</div>:null; })()}
       {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:6,wordBreak:"break-word"}}>{destLbl(i)}</div>}
       {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}>🔗 {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
     </div>
@@ -12122,7 +12158,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.34";
+const APP_VERSION = "2026.11.11.35";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

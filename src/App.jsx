@@ -4301,77 +4301,197 @@ function TaskPicker({ value, onChange, vts, allowDefault = false, placeholder = 
   </div>);
 }
 
-function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
+// ─── Importação de notas: identidade da nota + controle anti-duplicidade ───────
+async function sha256Hex(input) {
+  const buf = typeof input === "string" ? new TextEncoder().encode(input) : input;
+  const h = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function extractDocNumber(text) {
+  const pats = [/Proposta\s+Comercial\s+N[ºo°]?\s*[:.]?\s*(\d{2,})/i, /Venda\s*[:.]?\s*(\d{2,})/i, /(?:NF-?e|Nota\s+Fiscal|NFC-?e)[^\d]{0,20}(\d{3,})/i, /(?:Pedido|Or[cç]amento)\s*(?:N[ºo°.]*)?\s*[:.]?\s*(\d{3,})/i];
+  for (const r of pats) { const m = String(text).match(r); if (m) return m[1]; }
+  return "";
+}
+// Lê o PDF e descobre quais itens dessa nota já foram importados (veículo ou estoque)
+async function analyzeNote(file) {
+  const lines = await pdfToLines(file);
+  const text = lines.map(l => (typeof l === "string" ? l : l.t)).join(" ");
+  const cnt = {};
+  const rows = parsePurchaseLines(lines).map((r, i) => {
+    const base = `${_normName(r.name)}|${r.qty}|${r.cost}`;
+    const occ = (cnt[base] = (cnt[base] || 0) + 1);
+    return { ...r, id: i, key: `${base}|${occ}`, origName: r.name };
+  });
+  const docNumber = extractDocNumber(text);
+  const fileHash = await sha256Hex(await file.arrayBuffer());
+  const total = rows.reduce((s, r) => s + r.cost * r.qty, 0);
+  // com nº da nota: identidade = nº + total + nº de itens (sobrevive a reimpressões do PDF); sem nº: o próprio arquivo
+  const noteId = docNumber && rows.length ? "n:" + (await sha256Hex(`${docNumber}|${total.toFixed(2)}|${rows.length}`)).slice(0, 40) : "f:" + fileHash.slice(0, 40);
+  let imports = [];
+  try { imports = await db.getPurchaseImports(noteId); } catch {}
+  const byKey = {}; imports.forEach(x => { byKey[x.item_key] = x; });
+  rows.forEach(r => { r.imp = byKey[r.key] || null; });
+  return { lines, text, rows, docNumber, noteId, imports, total };
+}
+async function loadImpMap() {
+  const map = {};
+  try { (await db.getAllPurchaseImports()).forEach(x => { const m = map[x.note_id] || (map[x.note_id] = { keys: new Set(), total: 0 }); m.keys.add(x.item_key); m.total = Math.max(m.total, x.items_total || 0); }); } catch {}
+  return map;
+}
+const impLabel = x => !x ? "" : (x.destination === "stock" ? "Estoque" : x.destination === "ignored" ? "ignorado" : `OS ${x.vehicle_label || ""}`.trim()) + " · " + new Date(x.created_at).toLocaleDateString("pt-BR");
+async function claimNoteRows({ note, file, rows, dest, extra, supplierName, actor }) {
+  const claimed = [], dupRows = [];
+  for (const r of rows) {
+    try {
+      const res = await db.claimPurchaseImport({ note_id: note.noteId, item_key: r.key, item_name: r.origName || r.name, qty: r.qty, unit_cost: r.cost, items_total: note.rows.length, doc_number: note.docNumber || null, supplier_name: supplierName || null, file_name: file?.name || null, destination: dest, vehicle_id: extra?.vehicleId || null, vehicle_label: extra?.vehicleLabel || null, created_by: actor || null });
+      if (res.dup) dupRows.push(r); else claimed.push(res.row);
+    } catch (e) { for (const c of claimed) { try { await db.releasePurchaseImport(c.id); } catch {} } throw e; }
+  }
+  return { claimed, dupRows };
+}
+// Reserva os itens ANTES de lançar (a trava é do banco); se algo falhar, devolve a reserva
+async function guardedNoteImport({ note, file, selected, ignored = [], dest, extra, supplierName, actor, perform }) {
+  const a = await claimNoteRows({ note, file, rows: selected, dest, extra, supplierName, actor });
+  if (a.dupRows.length) { for (const c of a.claimed) { try { await db.releasePurchaseImport(c.id); } catch {} } return { dupRows: a.dupRows }; }
+  const b = await claimNoteRows({ note, file, rows: ignored, dest: "ignored", extra, supplierName, actor });
+  if (b.dupRows.length) { for (const c of [...a.claimed, ...b.claimed]) { try { await db.releasePurchaseImport(c.id); } catch {} } return { dupRows: b.dupRows }; }
+  try { await perform(); }
+  catch (e) { for (const c of [...a.claimed, ...b.claimed]) { try { await db.releasePurchaseImport(c.id); } catch {} } throw e; }
+  return { dupRows: [] };
+}
+async function attachNoteDoc({ file, existingDoc, supplier, note, label, total, actor }) {
+  if (existingDoc) { if (existingDoc.id && !existingDoc.noteId) { try { await db.setSupplierDocNote(existingDoc.id, note.noteId); } catch {} } return existingDoc.url; }
+  if (!file || !supplier) return null;
+  const url = await db.uploadSupplierPdf(supplier.id, file);
+  await db.addSupplierDoc({ supplier_id: supplier.id, file_url: url, file_name: file.name, vehicle_label: label, total, note: `${note.rows.length} itens na nota`, note_id: note.noteId, created_by: actor || null });
+  return url;
+}
+async function fetchDocFile(d) {
+  const res = await fetch(d.file_url);
+  if (!res.ok) throw new Error("Não consegui baixar a nota (" + res.status + ")");
+  return new File([await res.blob()], d.file_name || "nota.pdf", { type: "application/pdf" });
+}
+function NoteStatusBanner({ note, rows, onRelease }) {
+  if (!note || !rows.length) return null;
+  const imp = rows.filter(r => r.imp), done = imp.length === rows.length;
+  if (!imp.length) return note.docNumber ? <div style={{ fontSize: 11, color: B.gray400 }}>Nota nº {note.docNumber} · {rows.length} item(ns) · ainda não importada</div> : null;
+  return (<div style={{ background: done ? `${B.green}15` : `${B.amber}12`, border: `1px solid ${done ? B.green : B.amber}55`, borderRadius: 8, padding: "9px 11px" }}>
+    <div style={{ fontSize: 12, fontWeight: 800, color: done ? B.green : B.amber }}>{done ? "✓ Esta nota já foi totalmente importada" : `Importação parcial: ${imp.length} de ${rows.length} itens já importados`}{note.docNumber ? ` (nota nº ${note.docNumber})` : ""}</div>
+    <div style={{ fontSize: 11, color: B.gray300, marginTop: 3 }}>{done ? "Para evitar lançamentos em duplicidade, ela não pode ser importada de novo." : "Os itens já importados ficam bloqueados; só os restantes podem ser importados."}</div>
+    {[...new Set(imp.map(impLabel))].slice(0, 3).map(l => <div key={l} style={{ fontSize: 10, color: B.gray400, marginTop: 2 }}>• {l}</div>)}
+    {onRelease && <button type="button" onClick={onRelease} style={{ marginTop: 6, background: "none", border: `1px solid ${B.gray600}`, color: B.gray300, borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer" }}>Liberar para importar de novo…</button>}
+  </div>);
+}
+function NoteDocPicker({ docs, regSup, impMap, onPick, fieldS }) {
+  const [q, setQ] = useState("");
+  const nq = _normName(q);
+  const nameOf = d => regSup.find(x => x.id === d.supplier_id)?.name || "";
+  const list = [...docs].filter(d => !nq || _normName(nameOf(d) + " " + (d.file_name || "") + " " + (d.vehicle_label || "")).includes(nq)).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  return (<div style={{ background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 8, padding: 8 }}>
+    <input value={q} onChange={e => setQ(e.target.value)} placeholder="Filtrar por fornecedor ou arquivo…" style={{ ...fieldS, marginBottom: 6 }} />
+    <div style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+      {list.length === 0 && <div style={{ fontSize: 11, color: B.gray500, padding: 6 }}>{docs.length ? "Nenhuma nota encontrada." : "Ainda não há notas anexadas aos fornecedores."}</div>}
+      {list.map(d => { const m = d.note_id && impMap[d.note_id]; const st = m ? (m.keys.size >= m.total && m.total > 0 ? ["✓ importada", B.green] : [`parcial ${m.keys.size}/${m.total}`, B.amber]) : null;
+        return (<div key={d.id} onClick={() => onPick(d)} style={{ padding: "7px 9px", borderRadius: 7, background: B.gray800, cursor: "pointer", border: `1px solid ${B.gray700}`, opacity: st && st[1] === B.green ? 0.6 : 1 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <div style={{ fontSize: 12, color: B.white, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{nameOf(d) || "Fornecedor"} · {d.file_name || "nota.pdf"}</div>
+            {st && <span style={{ fontSize: 10, fontWeight: 800, color: st[1], flexShrink: 0 }}>{st[0]}</span>}
+          </div>
+          <div style={{ fontSize: 10, color: B.gray500 }}>{new Date(d.created_at).toLocaleDateString("pt-BR")}{d.vehicle_label ? ` · ${d.vehicle_label}` : ""}{d.total != null ? ` · ${fmtBRL(Number(d.total))}` : ""}</div>
+        </div>); })}
+    </div>
+  </div>);
+}
+
+const importFieldS = { background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "5px 7px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box" };
+const importOverlayS = { position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 260, overscrollBehavior: "contain", padding: "12px 12px calc(104px + env(safe-area-inset-bottom))" };
+const importBoxS = c => ({ background: B.gray800, borderRadius: 16, maxWidth: 620, width: "100%", border: `2px solid ${c}55`, overflow: "hidden", maxHeight: "calc(100vh - 120px - env(safe-area-inset-bottom))", height: "auto", display: "flex", flexDirection: "column" });
+const importBodyS = { padding: 14, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 10, minWidth: 0, minHeight: 0, flex: "1 1 auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" };
+const roleActor = () => { try { return ROLE_CONFIG[sessionStorage.getItem(ADMIN_SESSION_KEY)]?.label || ""; } catch { return ""; } };
+
+// hook compartilhado: arquivo → análise da nota + fornecedor reconhecido + notas guardadas
+function useNoteImport() {
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [note, setNote] = useState(null);
   const [rows, setRows] = useState(null);
-  const [taskId, setTaskId] = useState(vts.length === 1 ? vts[0].id : "");
-  const [markup, setMarkup] = useState("50");
-  const [keepPdf, setKeepPdf] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [regSup, setRegSup] = useState([]);
   const [supplier, setSupplier] = useState("");
   const [autoSup, setAutoSup] = useState(false);
   const [docs, setDocs] = useState([]);
+  const [impMap, setImpMap] = useState({});
   const [showDocs, setShowDocs] = useState(false);
-  const [docQ, setDocQ] = useState("");
   const [fromDoc, setFromDoc] = useState(null);
-  useEffect(() => { db.getSuppliers().then(setRegSup).catch(() => {}); db.getSupplierDocs().then(setDocs).catch(() => {}); }, []);
-  const pickDoc = async d => {
-    setErr(""); setBusy(true);
-    try {
-      const res = await fetch(d.file_url);
-      if (!res.ok) throw new Error("Não consegui baixar a nota (" + res.status + ")");
-      const blob = await res.blob();
-      const f = new File([blob], d.file_name || "nota.pdf", { type: "application/pdf" });
-      const sp = regSup.find(x => x.id === d.supplier_id);
-      setShowDocs(false);
-      await pick(f);
-      setFromDoc({ url: d.file_url, supplierId: d.supplier_id });
-      if (sp) { setSupplier(sp.name); setAutoSup(true); }
-    } catch (e) { setErr(e.message || "Erro ao abrir a nota"); setBusy(false); }
-  };
+  const [finish, setFinish] = useState(false);
+  useEffect(() => { db.getSuppliers().then(setRegSup).catch(() => {}); db.getSupplierDocs().then(setDocs).catch(() => {}); loadImpMap().then(setImpMap); }, []);
   const regMatch = regSup.find(x => _normName(x.name) === _normName(supplier)) || null;
-  const existing = vts.flatMap(t => (Array.isArray(t.materials) ? t.materials : []).map(m => ({ n: _normName(m.name), c: Number(m.cost || 0) })));
-  const fieldS = { background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "5px 7px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box" };
-
-  const pick = async f => {
+  const analyze = async (f, decorate, doc = null) => {
     if (!f) return;
-    setFile(f); setErr(""); setBusy(true); setRows(null); setFromDoc(null);
+    setFile(f); setErr(""); setBusy(true); setRows(null); setNote(null); setFromDoc(null);
     try {
-      const lines = await pdfToLines(f);
-      // tenta reconhecer o fornecedor pelo CNPJ ou pelo nome dentro do PDF
+      const n = await analyzeNote(f);
       try {
         const regs = regSup.length ? regSup : await db.getSuppliers();
-        const text = lines.map(l => (typeof l === "string" ? l : l.t)).join(" ");
-        const digits = text.replace(/\D/g, ""), ntext = _normName(text);
+        const digits = n.text.replace(/\D/g, ""), ntext = _normName(n.text);
         const hit = regs.find(x => { const c = String(x.cnpj || "").replace(/\D/g, ""); return (c.length >= 11 && digits.includes(c)) || (_normName(x.name).length >= 4 && ntext.includes(_normName(x.name))); });
         if (hit) { setSupplier(hit.name); setAutoSup(true); }
       } catch {}
-      const parsed = parsePurchaseLines(lines).map((r, i) => {
-        const dup = existing.some(e => e.n === _normName(r.name) && Math.abs(e.c - r.cost) < 0.01);
-        return { ...r, id: i, dup, on: r.sure && !dup && r.kind !== "freight", tid: "" };
-      });
-      if (!parsed.length) setErr("Não encontrei itens nesse PDF. Se for escaneado/foto, ainda não consigo ler (só PDF com texto).");
-      setRows(parsed);
+      if (doc) { const sp = regSup.find(x => x.id === doc.supplier_id); if (sp) { setSupplier(sp.name); setAutoSup(true); } setFromDoc({ url: doc.file_url, id: doc.id, noteId: doc.note_id, supplierId: doc.supplier_id }); }
+      const rs = n.rows.map(r => ({ ...r, ...decorate(r) }));
+      setNote(n); setRows(rs);
+      const left = rs.filter(r => !r.imp && !r.on);
+      setFinish(left.length > 0 && left.every(r => r.kind === "freight" || !r.sure || r.dup || r.bad));
+      if (!rs.length) setErr("Não encontrei itens nesse PDF. Se for escaneado/foto, ainda não consigo ler (só PDF com texto).");
     } catch (e) { setErr(e.message || "Erro ao ler o PDF"); }
     setBusy(false);
   };
+  const pickDoc = async (d, decorate) => {
+    setErr(""); setBusy(true);
+    try { const f = await fetchDocFile(d); setShowDocs(false); await analyze(f, decorate, d); }
+    catch (e) { setErr(e.message || "Erro ao abrir a nota"); setBusy(false); }
+  };
   const upd = (id, p) => setRows(rs => rs.map(r => r.id === id ? { ...r, ...p } : r));
-  const sel = (rows || []).filter(r => r.on);
+  const release = async (decorate) => {
+    if (!note || !window.confirm("Liberar esta nota para importar de novo? Faça isso só se os lançamentos anteriores foram apagados — senão haverá itens em duplicidade.")) return;
+    try { await db.releaseNoteImports(note.noteId); loadImpMap().then(setImpMap); await analyze(file, decorate); } catch (e) { setErr(e.message || "Erro ao liberar"); }
+  };
+  return { file, busy, err, setErr, note, rows, regSup, supplier, setSupplier, autoSup, setAutoSup, docs, impMap, showDocs, setShowDocs, fromDoc, finish, setFinish, regMatch, analyze, pickDoc, upd, release, setImpMap };
+}
+
+function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
+  const N = useNoteImport();
+  const { file, busy, err, note, rows, regSup, supplier, regMatch } = N;
+  const [taskId, setTaskId] = useState(vts.length === 1 ? vts[0].id : "");
+  const [markup, setMarkup] = useState("50");
+  const [keepPdf, setKeepPdf] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const existing = vts.flatMap(t => (Array.isArray(t.materials) ? t.materials : []).map(m => ({ n: _normName(m.name), c: Number(m.cost || 0) })));
+  const decorate = r => { const dup = existing.some(e => e.n === _normName(r.name) && Math.abs(e.c - r.cost) < 0.01); return { dup, on: r.sure && !dup && r.kind !== "freight" && !r.imp, tid: "" }; };
+  const sel = (rows || []).filter(r => r.on && !r.imp);
+  const leftover = (rows || []).filter(r => !r.imp && !r.on);
   const mk = (() => { const m = parseFloat(String(markup).replace(",", ".")); return isNaN(m) || m < 0 ? 50 : m; })();
   const totalCost = sel.reduce((s, r) => s + r.cost * r.qty, 0);
+  const complete = !!rows && rows.length > 0 && rows.every(r => r.imp);
+  const blocked = saving || !sel.length || sel.some(r => !(r.tid || taskId));
 
   const go = async () => {
-    if (!sel.length || sel.some(r => !(r.tid || taskId))) return;
-    setSaving(true);
-    try { await onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk, supplier: regMatch, supplierName: supplier.trim(), existingDoc: keepPdf ? fromDoc : null }); onClose(); }
-    catch (e) { setErr(e.message || "Erro ao importar"); setSaving(false); }
+    if (blocked) return;
+    setSaving(true); N.setErr("");
+    try {
+      const res = await guardedNoteImport({
+        note, file, selected: sel, ignored: N.finish ? leftover : [], dest: "vehicle",
+        extra: { vehicleId: vehicle.id, vehicleLabel: `${vehicle.model || ""} · ${vehicle.plate || ""}`.trim() },
+        supplierName: supplier.trim(), actor: roleActor(),
+        perform: () => onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk, supplier: regMatch, supplierName: supplier.trim(), existingDoc: keepPdf ? N.fromDoc : null, noteId: note.noteId }),
+      });
+      if (res.dupRows.length) { N.setErr(`${res.dupRows.length} item(ns) acabou(aram) de ser importado(s) por outra pessoa. Nada foi lançado — a nota foi recarregada.`); await N.analyze(file, decorate); setSaving(false); return; }
+      onClose();
+    } catch (e) { N.setErr(e.message || "Erro ao importar"); setSaving(false); }
   };
 
-  return (<div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 260, overscrollBehavior: "contain", padding: "12px 12px calc(104px + env(safe-area-inset-bottom))" }} onClick={onClose}>
-    <div style={{ background: B.gray800, borderRadius: 16, maxWidth: 620, width: "100%", border: `2px solid ${B.orange}55`, overflow: "hidden", maxHeight: "calc(100vh - 120px - env(safe-area-inset-bottom))", height: "auto", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+  return (<div style={importOverlayS} onClick={onClose}>
+    <div style={importBoxS(B.orange)} onClick={e => e.stopPropagation()}>
       <div style={{ background: B.gray900, borderBottom: `2px solid ${B.orange}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF)</div>
@@ -4379,72 +4499,208 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
       </div>
-      <div style={{ padding: 14, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 10, minWidth: 0, minHeight: 0, flex: "1 1 auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}>
+      <div style={importBodyS}>
         <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", color: B.gray200, fontSize: 12 }}>
           {busy ? "Lendo PDF…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF da compra"}
-          <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+          <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { N.analyze(e.target.files?.[0], decorate); e.target.value = ""; }} />
         </label>
-        <button type="button" onClick={() => setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📚 Usar nota já guardada de um fornecedor {showDocs ? "▲" : "▼"}</button>
-        {showDocs && (() => {
-          const nq = _normName(docQ);
-          const nameOf = d => regSup.find(x => x.id === d.supplier_id)?.name || "";
-          const list = [...docs].filter(d => !nq || _normName(nameOf(d) + " " + (d.file_name || "") + " " + (d.vehicle_label || "")).includes(nq)).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-          return (<div style={{ background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 8, padding: 8 }}>
-            <input value={docQ} onChange={e => setDocQ(e.target.value)} placeholder="Filtrar por fornecedor ou arquivo…" style={{ ...fieldS, marginBottom: 6 }} />
-            <div style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-              {list.length === 0 && <div style={{ fontSize: 11, color: B.gray500, padding: 6 }}>{docs.length ? "Nenhuma nota encontrada." : "Ainda não há notas anexadas aos fornecedores."}</div>}
-              {list.map(d => (<div key={d.id} onClick={() => pickDoc(d)} style={{ padding: "7px 9px", borderRadius: 7, background: B.gray800, cursor: "pointer", border: `1px solid ${B.gray700}` }}>
-                <div style={{ fontSize: 12, color: B.white, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nameOf(d) || "Fornecedor"} · {d.file_name || "nota.pdf"}</div>
-                <div style={{ fontSize: 10, color: B.gray500 }}>{new Date(d.created_at).toLocaleDateString("pt-BR")}{d.vehicle_label ? ` · ${d.vehicle_label}` : ""}{d.total != null ? ` · ${fmtBRL(Number(d.total))}` : ""}</div>
-              </div>))}
-            </div>
-          </div>);
-        })()}
+        <button type="button" onClick={() => N.setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📚 Usar nota já guardada de um fornecedor {N.showDocs ? "▲" : "▼"}</button>
+        {N.showDocs && <NoteDocPicker docs={N.docs} regSup={regSup} impMap={N.impMap} fieldS={importFieldS} onPick={d => N.pickDoc(d, decorate)} />}
         {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
+        <NoteStatusBanner note={note} rows={rows || []} onRelease={() => N.release(decorate)} />
         {rows && rows.length > 0 && <>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <div style={{ flex: "2 1 160px", minWidth: 0 }}>
-              <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Tarefa padrão</div>
-              <TaskPicker value={taskId} onChange={setTaskId} vts={vts} />
+          {!complete && <>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ flex: "2 1 160px", minWidth: 0 }}>
+                <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Tarefa padrão</div>
+                <TaskPicker value={taskId} onChange={setTaskId} vts={vts} />
+              </div>
+              <div style={{ flex: "1 1 80px", minWidth: 0 }}>
+                <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Markup %</div>
+                <input value={markup} onChange={e => setMarkup(e.target.value)} inputMode="decimal" style={importFieldS} />
+              </div>
             </div>
-            <div style={{ flex: "1 1 80px", minWidth: 0 }}>
-              <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Markup %</div>
-              <input value={markup} onChange={e => setMarkup(e.target.value)} inputMode="decimal" style={fieldS} />
+            <div>
+              <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Fornecedor {N.autoSup && regMatch ? <span style={{ color: B.green }}>· reconhecido no PDF</span> : null}</div>
+              <SupplierInput value={supplier} onChange={v => { N.setSupplier(v); N.setAutoSup(false); }} suppliers={buildSuppliers([], regSup)} placeholder="Quem vendeu (opcional)" style={importFieldS} />
+              {supplier.trim() && !regMatch && <div style={{ fontSize: 10, color: B.amber, marginTop: 3 }}>Fornecedor sem cadastro — o PDF só é anexado a fornecedores cadastrados (Cadastros → Fornecedores).</div>}
+              {regMatch && keepPdf && <div style={{ fontSize: 10, color: B.gray400, marginTop: 3 }}>A nota será anexada ao cadastro de {regMatch.name}.</div>}
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Fornecedor {autoSup && regMatch ? <span style={{ color: B.green }}>· reconhecido no PDF</span> : null}</div>
-            <SupplierInput value={supplier} onChange={v => { setSupplier(v); setAutoSup(false); }} suppliers={buildSuppliers([], regSup)} placeholder="Quem vendeu (opcional)" style={fieldS} />
-            {supplier.trim() && !regMatch && <div style={{ fontSize: 10, color: B.amber, marginTop: 3 }}>Fornecedor sem cadastro — o PDF só é anexado a fornecedores cadastrados (Cadastros → Fornecedores).</div>}
-            {regMatch && keepPdf && <div style={{ fontSize: 10, color: B.gray400, marginTop: 3 }}>A nota será anexada ao cadastro de {regMatch.name}.</div>}
-          </div>
-          <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens. Linhas com ⚠ foram lidas com menos certeza.</div>
+            <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens. Linhas com ⚠ foram lidas com menos certeza.</div>
+          </>}
           {rows.map(r => (
-            <div key={r.id} style={{ minWidth: 0, boxSizing: "border-box", background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on ? B.orange + "66" : B.gray700}`, opacity: r.on ? 1 : 0.6 }}>
+            <div key={r.id} style={{ minWidth: 0, boxSizing: "border-box", background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on && !r.imp ? B.orange + "66" : B.gray700}`, opacity: r.imp ? 0.55 : r.on ? 1 : 0.6 }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="checkbox" checked={r.on} onChange={e => upd(r.id, { on: e.target.checked })} />
-                <input value={r.name} onChange={e => upd(r.id, { name: e.target.value })} style={{ ...fieldS, flex: 1 }} />
+                <input type="checkbox" checked={!!r.on && !r.imp} disabled={!!r.imp} onChange={e => N.upd(r.id, { on: e.target.checked })} />
+                <input value={r.name} disabled={!!r.imp} onChange={e => N.upd(r.id, { name: e.target.value })} style={{ ...importFieldS, flex: 1 }} />
               </div>
-              <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
-                <span style={{ fontSize: 10, color: B.gray400 }}>Qtd</span>
-                <input value={r.qty} onChange={e => upd(r.id, { qty: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...fieldS, width: 60 }} />
-                <span style={{ fontSize: 10, color: B.gray400 }}>Unit. R$</span>
-                <input value={r.cost} onChange={e => upd(r.id, { cost: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...fieldS, width: 80 }} />
-                <div style={{ flex: "1 1 100%", minWidth: 0 }}><TaskPicker value={r.tid} onChange={v => upd(r.id, { tid: v })} vts={vts} allowDefault /></div>
-              </div>
-              {(r.dup || !r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>
-                {r.dup ? "⚠ Parece já lançado nessa OS" : r.kind === "freight" ? "Frete (lançado como item sem markup)" : "⚠ Leitura incerta — confira"}
-              </div>}
+              {r.imp
+                ? <div style={{ fontSize: 10, marginTop: 5, color: B.green }}>✓ Já importado · {r.qty} × {fmtBRL(r.cost)} · {impLabel(r.imp)}</div>
+                : <>
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 10, color: B.gray400 }}>Qtd</span>
+                    <input value={r.qty} onChange={e => N.upd(r.id, { qty: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...importFieldS, width: 60 }} />
+                    <span style={{ fontSize: 10, color: B.gray400 }}>Unit. R$</span>
+                    <input value={r.cost} onChange={e => N.upd(r.id, { cost: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...importFieldS, width: 80 }} />
+                    <div style={{ flex: "1 1 100%", minWidth: 0 }}><TaskPicker value={r.tid} onChange={v => N.upd(r.id, { tid: v })} vts={vts} allowDefault /></div>
+                  </div>
+                  {(r.dup || !r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>
+                    {r.dup ? "⚠ Parece já lançado nessa OS" : r.kind === "freight" ? "Frete (lançado como item sem markup)" : "⚠ Leitura incerta — confira"}
+                  </div>}
+                </>}
             </div>
           ))}
-          <label style={{ fontSize: 12, color: B.gray200, display: "flex", gap: 6, alignItems: "center" }}>
-            <input type="checkbox" checked={keepPdf} onChange={e => setKeepPdf(e.target.checked)} /> Guardar o PDF (comprovante e nota do fornecedor)
-          </label>
+          {!complete && <>
+            {leftover.length > 0 && <label style={{ fontSize: 12, color: B.gray200, display: "flex", gap: 6, alignItems: "flex-start" }}>
+              <input type="checkbox" checked={N.finish} onChange={e => N.setFinish(e.target.checked)} style={{ marginTop: 2 }} /> <span>Concluir a nota: os {leftover.length} item(ns) não marcados serão ignorados e a nota não poderá ser importada de novo.</span>
+            </label>}
+            <label style={{ fontSize: 12, color: B.gray200, display: "flex", gap: 6, alignItems: "center" }}>
+              <input type="checkbox" checked={keepPdf} onChange={e => setKeepPdf(e.target.checked)} /> Guardar o PDF (comprovante e nota do fornecedor)
+            </label>
+          </>}
         </>}
       </div>
-      {rows && rows.length > 0 && <div style={{ padding: 12, borderTop: `1px solid ${B.gray700}`, display: "flex", gap: 10, alignItems: "center" }}>
+      {rows && rows.length > 0 && !complete && <div style={{ padding: 12, borderTop: `1px solid ${B.gray700}`, display: "flex", gap: 10, alignItems: "center" }}>
         <div style={{ flex: 1, fontSize: 12, color: B.gray200 }}>{sel.length} item(ns) · custo {fmtBRL(totalCost)}</div>
-        <button disabled={saving || !sel.length || sel.some(r => !(r.tid || taskId))} onClick={go} style={{ background: B.orange, color: "#000", border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", opacity: saving || !sel.length || sel.some(r => !(r.tid || taskId)) ? 0.5 : 1 }}>{saving ? "Importando…" : "Importar"}</button>
+        <button disabled={blocked} onClick={go} style={{ background: B.orange, color: "#000", border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", opacity: blocked ? 0.5 : 1 }}>{saving ? "Importando…" : "Importar"}</button>
+      </div>}
+    </div>
+  </div>);
+}
+
+// ─── Importar nota no ESTOQUE ────────────────────────────────────────────────
+function StockProductPicker({ value, onChange, stock }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const cur = stock.find(s => s.id === value);
+  const nq = _normName(q);
+  const list = stock.filter(s => !nq || _normName(s.name + " " + (s.brand || "")).includes(nq)).slice(0, 40);
+  const pickIt = v => { onChange(v); setOpen(false); setQ(""); };
+  return (<div style={{ position: "relative", minWidth: 0, width: "100%" }}>
+    <button type="button" onClick={() => setOpen(o => !o)} style={{ display: "block", width: "100%", maxWidth: "100%", boxSizing: "border-box", textAlign: "left", background: B.gray900, border: `1px solid ${cur ? B.purple + "88" : B.gray700}`, borderRadius: 6, color: cur ? B.purple : B.amber, padding: "5px 7px", fontSize: 12, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cur ? `📦 ${cur.name} (em estoque: ${cur.qty})` : "＋ Criar produto novo"} ▾</button>
+    {open && <div style={{ position: "absolute", zIndex: 5, left: 0, right: 0, top: "100%", marginTop: 2, background: B.gray900, border: `1px solid ${B.purple}66`, borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,.5)", padding: 6 }}>
+      <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar produto do estoque…" style={{ background: B.gray800, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "6px 8px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box", marginBottom: 4 }} />
+      <div style={{ maxHeight: 190, overflowY: "auto" }}>
+        <div onClick={() => pickIt("")} style={{ padding: "6px 8px", fontSize: 12, color: B.amber, fontWeight: 700, cursor: "pointer" }}>＋ Criar produto novo</div>
+        {list.map(s => <div key={s.id} onClick={() => pickIt(s.id)} style={{ padding: "6px 8px", fontSize: 12, color: s.id === value ? B.purple : B.white, cursor: "pointer" }}>{s.name}{s.brand ? ` · ${s.brand}` : ""} <span style={{ color: B.gray500 }}>({s.qty})</span></div>)}
+      </div>
+      <div onClick={() => setOpen(false)} style={{ textAlign: "center", fontSize: 10, color: B.gray400, padding: 4, cursor: "pointer" }}>fechar</div>
+    </div>}
+  </div>);
+}
+function matchStockItem(name, stock) {
+  const n = _normName(name); let best = "", bs = 0;
+  const tok = s => new Set(_normName(s).split(" ").filter(w => w.length > 1));
+  const A = tok(name);
+  for (const s of stock) {
+    if (_normName(s.name) === n) return s.id;
+    const Bt = tok(s.name); const inter = [...A].filter(x => Bt.has(x)).length; const uni = new Set([...A, ...Bt]).size; const j = uni ? inter / uni : 0;
+    if (j > bs) { bs = j; best = s.id; }
+  }
+  return bs >= 0.7 ? best : "";
+}
+function StockImportModal({ stock, onClose, onImport }) {
+  const N = useNoteImport();
+  const { file, busy, err, note, rows, regSup, supplier, regMatch } = N;
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [invoice, setInvoice] = useState("");
+  const [markup, setMarkup] = useState("50");
+  const [keepPdf, setKeepPdf] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const badQty = r => !(Number.isInteger(Number(r.qty)) && Number(r.qty) > 0) || !(Number(r.cost) > 0);
+  const decorate = r => { const pid = matchStockItem(r.name, stock); return { pid, auto: !!pid, on: r.sure && r.kind !== "freight" && !r.imp, bad: false }; };
+  const sel = (rows || []).filter(r => r.on && !r.imp);
+  const leftover = (rows || []).filter(r => !r.imp && !r.on);
+  const mk = (() => { const m = parseFloat(String(markup).replace(",", ".")); return isNaN(m) || m < 0 ? 50 : m; })();
+  const totalCost = sel.reduce((s, r) => s + r.cost * r.qty, 0);
+  const complete = !!rows && rows.length > 0 && rows.every(r => r.imp);
+  const blocked = saving || !sel.length || sel.some(badQty) || sel.some(r => !r.pid && !r.name.trim());
+  useEffect(() => { if (note?.docNumber) setInvoice(note.docNumber); }, [note?.noteId]);
+
+  const go = async () => {
+    if (blocked) return;
+    setSaving(true); N.setErr("");
+    try {
+      const res = await guardedNoteImport({
+        note, file, selected: sel, ignored: N.finish ? leftover : [], dest: "stock", extra: {},
+        supplierName: supplier.trim(), actor: roleActor(),
+        perform: async () => {
+          if (keepPdf) { try { await attachNoteDoc({ file, existingDoc: N.fromDoc, supplier: regMatch, note, label: "Estoque", total: Math.round(totalCost * 100) / 100, actor: roleActor() }); } catch (e) { console.warn("nota fornecedor", e); } }
+          await onImport({ items: sel.map(r => ({ pid: r.pid, name: r.name, qty: Number(r.qty), cost: Number(r.cost) })), supplierName: supplier.trim(), date, invoice: invoice.trim(), markup: mk });
+        },
+      });
+      if (res.dupRows.length) { N.setErr(`${res.dupRows.length} item(ns) acabou(aram) de ser importado(s) por outra pessoa. Nada foi lançado — a nota foi recarregada.`); await N.analyze(file, decorate); setSaving(false); return; }
+      onClose();
+    } catch (e) { N.setErr(e.message || "Erro ao importar"); setSaving(false); }
+  };
+
+  return (<div style={importOverlayS} onClick={onClose}>
+    <div style={importBoxS(B.purple)} onClick={e => e.stopPropagation()}>
+      <div style={{ background: B.gray900, borderBottom: `2px solid ${B.purple}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar nota no estoque</div>
+          <div style={{ fontSize: 11, color: B.gray400 }}>Lança as compras e soma as quantidades ao estoque</div>
+        </div>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
+      </div>
+      <div style={importBodyS}>
+        <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", color: B.gray200, fontSize: 12 }}>
+          {busy ? "Lendo PDF…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF da nota"}
+          <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { N.analyze(e.target.files?.[0], decorate); e.target.value = ""; }} />
+        </label>
+        <button type="button" onClick={() => N.setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📚 Usar nota já guardada de um fornecedor {N.showDocs ? "▲" : "▼"}</button>
+        {N.showDocs && <NoteDocPicker docs={N.docs} regSup={regSup} impMap={N.impMap} fieldS={importFieldS} onPick={d => N.pickDoc(d, decorate)} />}
+        {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
+        <NoteStatusBanner note={note} rows={rows || []} onRelease={() => N.release(decorate)} />
+        {rows && rows.length > 0 && <>
+          {!complete && <>
+            <div>
+              <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Fornecedor {N.autoSup && regMatch ? <span style={{ color: B.green }}>· reconhecido no PDF</span> : null}</div>
+              <SupplierInput value={supplier} onChange={v => { N.setSupplier(v); N.setAutoSup(false); }} suppliers={buildSuppliers([], regSup)} placeholder="Quem vendeu" style={importFieldS} />
+              {supplier.trim() && !regMatch && <div style={{ fontSize: 10, color: B.amber, marginTop: 3 }}>Fornecedor sem cadastro — o PDF só é anexado a fornecedores cadastrados.</div>}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 120px", minWidth: 0 }}><div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Data da compra</div><input type="date" value={date} onChange={e => setDate(e.target.value)} style={importFieldS} /></div>
+              <div style={{ flex: "1 1 110px", minWidth: 0 }}><div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Nº da nota</div><input value={invoice} onChange={e => setInvoice(e.target.value)} style={importFieldS} /></div>
+              <div style={{ flex: "1 1 100px", minWidth: 0 }}><div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Markup p/ produtos novos %</div><input value={markup} onChange={e => setMarkup(e.target.value)} inputMode="decimal" style={importFieldS} /></div>
+            </div>
+            <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens e a qual produto do estoque cada um pertence. Linhas com ⚠ foram lidas com menos certeza.</div>
+          </>}
+          {rows.map(r => (
+            <div key={r.id} style={{ minWidth: 0, boxSizing: "border-box", background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on && !r.imp ? B.purple + "66" : B.gray700}`, opacity: r.imp ? 0.55 : r.on ? 1 : 0.6 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="checkbox" checked={!!r.on && !r.imp} disabled={!!r.imp} onChange={e => N.upd(r.id, { on: e.target.checked })} />
+                <input value={r.name} disabled={!!r.imp} onChange={e => N.upd(r.id, { name: e.target.value })} style={{ ...importFieldS, flex: 1 }} />
+              </div>
+              {r.imp
+                ? <div style={{ fontSize: 10, marginTop: 5, color: B.green }}>✓ Já importado · {r.qty} × {fmtBRL(r.cost)} · {impLabel(r.imp)}</div>
+                : <>
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 10, color: B.gray400 }}>Qtd</span>
+                    <input value={r.qty} onChange={e => N.upd(r.id, { qty: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="numeric" style={{ ...importFieldS, width: 60, borderColor: r.on && badQty(r) ? B.red : B.gray700 }} />
+                    <span style={{ fontSize: 10, color: B.gray400 }}>Unit. R$</span>
+                    <input value={r.cost} onChange={e => N.upd(r.id, { cost: parseFloat(String(e.target.value).replace(",", ".")) || 0 })} inputMode="decimal" style={{ ...importFieldS, width: 80 }} />
+                    <div style={{ flex: "1 1 100%", minWidth: 0 }}><StockProductPicker value={r.pid} onChange={v => N.upd(r.id, { pid: v, auto: false })} stock={stock} /></div>
+                  </div>
+                  {r.on && badQty(r) && <div style={{ fontSize: 10, marginTop: 4, color: B.red }}>O estoque trabalha com unidades inteiras — ajuste a quantidade (e o valor) deste item.</div>}
+                  {r.auto && r.pid && <div style={{ fontSize: 10, marginTop: 4, color: B.gray400 }}>Associado automaticamente a um produto existente — confira.</div>}
+                  {(!r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>{r.kind === "freight" ? "Frete normalmente não entra no estoque (fica desmarcado)." : "⚠ Leitura incerta — confira"}</div>}
+                </>}
+            </div>
+          ))}
+          {!complete && <>
+            {leftover.length > 0 && <label style={{ fontSize: 12, color: B.gray200, display: "flex", gap: 6, alignItems: "flex-start" }}>
+              <input type="checkbox" checked={N.finish} onChange={e => N.setFinish(e.target.checked)} style={{ marginTop: 2 }} /> <span>Concluir a nota: os {leftover.length} item(ns) não marcados serão ignorados e a nota não poderá ser importada de novo.</span>
+            </label>}
+            <label style={{ fontSize: 12, color: B.gray200, display: "flex", gap: 6, alignItems: "center" }}>
+              <input type="checkbox" checked={keepPdf} onChange={e => setKeepPdf(e.target.checked)} /> Guardar o PDF no cadastro do fornecedor
+            </label>
+          </>}
+        </>}
+      </div>
+      {rows && rows.length > 0 && !complete && <div style={{ padding: 12, borderTop: `1px solid ${B.gray700}`, display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ flex: 1, fontSize: 12, color: B.gray200 }}>{sel.length} item(ns) · custo {fmtBRL(totalCost)}</div>
+        <button disabled={blocked} onClick={go} style={{ background: B.purple, color: B.white, border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", opacity: blocked ? 0.5 : 1 }}>{saving ? "Importando…" : "Importar para o estoque"}</button>
       </div>}
     </div>
   </div>);
@@ -4758,12 +5014,12 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       {showParts&&<div style={{padding:"12px 16px",background:B.black,borderBottom:`1px solid ${B.gray700}`}}>
         <VehiclePartsList vehicle={vehicle} onUpdateVehicle={onUpdateVehicle} managerMode={managerMode} isFD={isFD} tasks={tasks}/>
       </div>}
-      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items:items0,markup,supplier,supplierName,existingDoc})=>{
+      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items:items0,markup,supplier,supplierName,existingDoc,noteId})=>{
         let items=items0;
         let receiptUrl=null;
-        if(existingDoc){ receiptUrl=existingDoc.url; }
+        if(existingDoc){ receiptUrl=existingDoc.url; if(existingDoc.id&&!existingDoc.noteId&&noteId){ try{ await db.setSupplierDocNote(existingDoc.id,noteId); }catch{} } }
         else if(file){ try{ receiptUrl=await db.uploadPurchasePdf(vehicle.id,file); }catch(e){ console.warn("receipt upload",e); } }
-        if(receiptUrl&&supplier&&!existingDoc){ try{ await db.addSupplierDoc({supplier_id:supplier.id,file_url:receiptUrl,file_name:file.name,vehicle_label:`${vehicle.model||""} · ${vehicle.plate||""}`.trim(),total:Math.round(items0.reduce((s,r)=>s+(Number(r.cost)||0)*(Number(r.qty)||1),0)*100)/100,note:`${items0.length} item(ns) importado(s)`,created_by:(()=>{try{return sessionStorage.getItem(ADMIN_SESSION_KEY)||"";}catch{return "";}})()}); }catch(e){ console.warn("supplier doc",e); } }
+        if(receiptUrl&&supplier&&!existingDoc){ try{ await db.addSupplierDoc({supplier_id:supplier.id,file_url:receiptUrl,file_name:file.name,vehicle_label:`${vehicle.model||""} · ${vehicle.plate||""}`.trim(),total:Math.round(items0.reduce((s,r)=>s+(Number(r.cost)||0)*(Number(r.qty)||1),0)*100)/100,note:`${items0.length} item(ns) importado(s)`,note_id:noteId||null,created_by:(()=>{try{return sessionStorage.getItem(ADMIN_SESSION_KEY)||"";}catch{return "";}})()}); }catch(e){ console.warn("supplier doc",e); } }
         const newMap={};
         for(const lbl of [...new Set(items.map(r=>r.tid).filter(x=>x.startsWith("new:")))]){
           const row=await onAddTask(vehicle.id,lbl.slice(4),null,isFD?"finishing":"performance");
@@ -5542,7 +5798,8 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   </div>,document.body);
 }
 
-function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder}) {
+function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder,onImportNote}) {
+  const [showImport,setShowImport]=useState(false);
   const [regSuppliers,setRegSuppliers]=useState([]);
   useEffect(()=>{db.getSuppliers().then(setRegSuppliers).catch(()=>{});},[]);
   const emptyForm = {name:"",brand:"",type:"",location:"",notes:"",minQty:"",costPrice:"",markup:"",photo:""};
@@ -5593,7 +5850,8 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
         {types.map(t=><option key={t}>{t}</option>)}
       </select>
       {(search||filterType)&&<button onClick={()=>{setSearch("");setFT("");}} style={{padding:"7px 12px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontSize:13}}>Limpar filtros</button>}
-      <div style={{marginLeft:"auto"}}>
+      <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
+        {onImportNote&&<button onClick={()=>setShowImport(true)} style={{padding:"8px 14px",borderRadius:8,background:`${B.purple}18`,border:`1px solid ${B.purple}66`,color:B.purple,cursor:"pointer",fontWeight:700,fontSize:13}}>📥 Importar nota</button>}
         <button onClick={()=>setShowAdd(p=>!p)} style={{padding:"8px 16px",borderRadius:8,background:B.purple,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>
           <IPlus s={14} c={B.white}/>Novo produto
         </button>
@@ -5643,6 +5901,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
 
+    {showImport&&<StockImportModal stock={stock} onClose={()=>setShowImport(false)} onImport={onImportNote}/>}
     {openItem&&<StockProductPanel
       item={stock.find(s=>s.id===openItem.id)||openItem}
       purchases={purchases.filter(p=>p.stockId===openItem.id)}
@@ -5927,10 +6186,11 @@ function SuppliersTab({purchases=[],actor=""}) {
   const [err,setErr]=useState("");
   const [confirmDel,setConfirmDel]=useState(null);
   const [docs,setDocs]=useState([]);
+  const [impMap,setImpMap]=useState({});
   const [openDocs,setOpenDocs]=useState(null);
   const [upBusy,setUpBusy]=useState(false);
   const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
-  const loadDocs=()=>db.getSupplierDocs().then(setDocs).catch(()=>{});
+  const loadDocs=()=>{ loadImpMap().then(setImpMap); return db.getSupplierDocs().then(setDocs).catch(()=>{}); };
   const attach=async(sp,f)=>{
     if(!f) return; setUpBusy(true); setErr("");
     try{ const url=await db.uploadSupplierPdf(sp.id,f); await db.addSupplierDoc({supplier_id:sp.id,file_url:url,file_name:f.name,created_by:actor||null}); await loadDocs(); setOpenDocs(sp.id); }
@@ -6012,6 +6272,7 @@ function SuppliersTab({purchases=[],actor=""}) {
             {sd.length===0&&<div style={{fontSize:11,color:B.gray500}}>Nenhuma nota anexada. As notas importadas em uma OS (com este fornecedor) aparecem aqui.</div>}
             {sd.map(d=><div key={d.id} style={{background:B.gray900,borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
               <a href={d.file_url} target="_blank" rel="noreferrer" style={{color:B.blue,fontSize:12,fontWeight:700,textDecoration:"none",flex:"1 1 160px",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📄 {d.file_name||"nota.pdf"}</a>
+              {(()=>{const m=d.note_id&&impMap[d.note_id];if(!m)return null;const full=m.total>0&&m.keys.size>=m.total;return <span style={{fontSize:10,fontWeight:800,color:full?B.green:B.amber}}>{full?"✓ importada":`parcial ${m.keys.size}/${m.total}`}</span>;})()}
               <span style={{fontSize:10,color:B.gray500}}>{new Date(d.created_at).toLocaleDateString("pt-BR")}{d.vehicle_label?` · ${d.vehicle_label}`:""}{d.total!=null?` · ${fmtBRL(Number(d.total))}`:""}</span>
               <button onClick={()=>{if(window.confirm("Remover esta nota?"))delDoc(d.id);}} style={{background:"none",border:"none",color:B.red,fontSize:11,cursor:"pointer"}}>remover</button>
             </div>)}
@@ -11471,7 +11732,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.11.7";
+const APP_VERSION = "2026.11.11.8";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15359,6 +15620,27 @@ export default function App() {
       toast_(`Compra registrada: +${purchase.qty} ${latestItem?.name||""} ✓`);
     }catch(e){errToast(e);}
   };
+  const importStockNote=async({items,supplierName,date,invoice,markup})=>{
+    const qtyMap={}; let created=0, bought=0;
+    for(const it of items){
+      let sid=it.pid; let itemRow=stock.find(s=>s.id===sid);
+      if(!sid){
+        const cost=Number(it.cost)||0, mk=Number(markup)||0;
+        const nr=await db.addStock({name:it.name.trim(),brand:"",type:"",location:"",notes:"",minQty:2,qty:0,costPrice:cost,markup:mk,salePrice:Math.round(cost*(1+mk/100)*100)/100,photo:null});
+        setStk(p=>[...p,nr]); sid=nr.id; itemRow=nr; created++;
+      }
+      const base=qtyMap[sid]!=null?qtyMap[sid]:Number(itemRow?.qty||0);
+      const qty=Number(it.qty), cost=Number(it.cost);
+      const prow=await db.addPurchase({stockId:sid,purchaseDate:date,supplier:supplierName||"",qty,unitCost:cost,totalCost:Math.round(qty*cost*100)/100,invoiceNumber:invoice||""});
+      setStockPurchases(p=>[prow,...p]);
+      const newQty=base+qty; qtyMap[sid]=newQty;
+      const sale=Math.round(cost*(1+Number(itemRow?.markup||0)/100)*100)/100;
+      await db.updateStock(sid,{qty:newQty,costPrice:cost,salePrice:sale});
+      setStk(p=>p.map(s=>s.id===sid?{...s,qty:newQty,costPrice:cost,salePrice:sale}:s));
+      bought++;
+    }
+    toast_(`${bought} item(ns) lançado(s) no estoque${created?` (${created} produto${created!==1?"s":""} novo${created!==1?"s":""})`:""} ✓`);
+  };
   const updatePurchase=async(id,patch)=>{
     const oldPurchase=stockPurchases.find(p=>p.id===id);
     const newPurchases=stockPurchases.map(x=>x.id===id?{...x,...patch}:x);
@@ -16354,7 +16636,7 @@ export default function App() {
       {/* ══ STOCK ══ */}
       {tab==="stock"&&allowedTabs.includes("stock")&&<>
         <TabHeader color={B.purple} title="Estoque" subtitle="Produtos, preços e quantidades · Vinculados às OSs"/>
-        <StockTab stock={stock} purchases={stockPurchases} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
+        <StockTab stock={stock} purchases={stockPurchases} onImportNote={importStockNote} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
           onGenerateOrder={async inv=>{
             try{
               const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});

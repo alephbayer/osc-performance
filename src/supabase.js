@@ -1024,6 +1024,10 @@ export const db = {
     const { data, error } = await supabase.from("supplier_documents").insert([d]).select().single();
     if (error) throw error; return data;
   },
+  async setSupplierDocNote(id, noteId) {
+    const { error } = await supabase.from("supplier_documents").update({ note_id: noteId }).eq("id", id);
+    if (error) throw error;
+  },
   async deleteSupplierDoc(id) {
     const { error } = await supabase.from("supplier_documents").delete().eq("id", id);
     if (error) throw error;
@@ -1033,6 +1037,29 @@ export const db = {
     const { error } = await supabase.storage.from("photos").upload(path, file, { contentType: "application/pdf", cacheControl: "31536000", upsert: false });
     if (error) throw error;
     return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
+  },
+  // ── Notas importadas (anti-duplicidade) ──
+  async getPurchaseImports(noteId) {
+    const { data, error } = await supabase.from("purchase_imports").select("*").eq("note_id", noteId);
+    if (error) throw error; return data || [];
+  },
+  async getAllPurchaseImports() {
+    const { data, error } = await supabase.from("purchase_imports").select("note_id,item_key,items_total,destination,created_at");
+    if (error) throw error; return data || [];
+  },
+  // reserva o item: falha (dup=true) se já foi importado por alguém
+  async claimPurchaseImport(row) {
+    const { data, error } = await supabase.from("purchase_imports").insert([row]).select().single();
+    if (error) { if (error.code === "23505") return { dup: true }; throw error; }
+    return { dup: false, row: data };
+  },
+  async releasePurchaseImport(id) {
+    const { error } = await supabase.from("purchase_imports").delete().eq("id", id);
+    if (error) throw error;
+  },
+  async releaseNoteImports(noteId) {
+    const { error } = await supabase.from("purchase_imports").delete().eq("note_id", noteId);
+    if (error) throw error;
   },
   async getPartners() {
     const { data, error } = await supabase.from("partners").select("*").eq("active", true).order("name");

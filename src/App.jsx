@@ -4203,10 +4203,10 @@ async function pdfToLines(file) {
     let cur = null;
     items.forEach(it => {
       if (cur && Math.abs(cur.y - it.y) <= 3) cur.parts.push(it);
-      else { cur = { y: it.y, parts: [it] }; out.push(cur); }
+      else { cur = { y: it.y, p, parts: [it] }; out.push(cur); }
     });
   }
-  return out.map(l => l.parts.sort((a, b) => a.x - b.x).map(x => x.s).join("  "));
+  return out.map(l => ({ t: l.parts.sort((a, b) => a.x - b.x).map(x => x.s).join("  "), y: l.y, p: l.p }));
 }
 const _brNum = s => {
   const t = String(s).replace(/^R\$\s*/i, "").trim();
@@ -4214,48 +4214,67 @@ const _brNum = s => {
   const n = /,/.test(t) ? parseFloat(t.replace(/\./g, "").replace(",", ".")) : parseFloat(t);
   return isNaN(n) ? null : n;
 };
-function parsePurchaseLines(lines) {
+function parsePurchaseLines(lines0) {
+  const lines = lines0.map((l, i) => typeof l === "string" ? { t: l, y: -i * 12, p: 1 } : l);
   const rows = [];
-  const skip = /^(produtos|descontos|entrega|observa|venda|gerado|impresso|soma|total|subtotal|valor|desconto|cnpj|cpf|data|nota|nf|pedido|cliente|endere|telefone|p[aá]gina|descri|item|c[oó]d|qtd|quant|un\b|pre[cç]o|forma|pagamento|vencimento|parcela)/i;
-  lines.forEach(line => {
-    const toks = line.split(/\s{2,}|\s(?=R\$)/).flatMap(t => t.trim().split(/\s+/).length > 1 && t.trim().split(/\s+/).every(w => _brNum(w) != null || /^(un|pc|pç|cx|kit|jg|par|lt|l|kg|m|mt|und?)\.?$/i.test(w)) ? t.trim().split(/\s+/) : [t.trim()]).filter(Boolean);
+  const skip = /^(n[ºo°]\b|produtos|descontos|entrega|observa|venda|gerado|impresso|soma|n[uú]mero|total|subtotal|valor|desconto|cnpj|cpf|data|nota|nf|pedido|cliente|endere|telefone|celular|p[aá]gina|descri|item|c[oó]d|sku|qtd|quant|un\b|pre[cç]o|forma|pagamento|vencimento|parcela|proposta|para\b|vendedor|enviado|validade|condi|atenciosamente|departamento|www|osc)/i;
+  const unitRe = /^(un|und|pc|pç|cx|kit|jg|par|lt|l|kg|m|mt)\.?$/i;
+  const codeRe = /^(#?\d[\w-]*|[A-Z0-9#-]{2,12})$/;
+  const skuLike = t => !/\s/.test(t) && (/\d/.test(t) || /^[A-Z#-]{2,12}$/.test(t));
+  const loose = []; // linhas só de texto (podem ser continuação do nome)
+  lines.forEach(L => {
+    const line = L.t;
+    const toks = line.split(/\s{2,}|\s(?=R\$)/).flatMap(t => t.trim().split(/\s+/).length > 1 && t.trim().split(/\s+/).every(w => _brNum(w) != null || unitRe.test(w)) ? t.trim().split(/\s+/) : [t.trim()]).filter(Boolean);
     const nums = [];
     toks.forEach((t, i) => { const n = _brNum(t); if (n != null) nums.push({ i, n }); });
     if (/frete/i.test(line)) {
       const v = nums.length ? nums[nums.length - 1].n : null;
-      if (v > 0) rows.push({ name: "Frete", qty: 1, cost: v, kind: "freight", sure: true });
+      if (v > 0) rows.push({ name: "Frete", qty: 1, cost: v, kind: "freight", sure: true, y: L.y, p: L.p });
       return;
     }
-    // procura (qtd, unitário, total) com qtd*unit ≈ total: unit/total são os 2 últimos números, qtd é o 1º que bate
+    // (qtd, unitário, total): unit/total são os 2 últimos números, qtd é o 1º que bate (qtd*unit ≈ total)
     if (nums.length >= 3) {
       const U = nums[nums.length - 2], T = nums[nums.length - 1];
-      const Q = nums.slice(0, -2).find(x => x.n > 0 && U.n > 0 && Math.abs(x.n * U.n - T.n) <= Math.max(0.05, T.n * 0.01));
+      const Q = nums.slice(0, -2).filter(x => x.n > 0 && U.n > 0 && Math.abs(x.n * U.n - T.n) <= Math.max(0.05, T.n * 0.01)).pop(); // o mais próximo do unitário (o 1º pode ser o nº do item)
       if (Q) {
-        const unitRe = /^(un|und|pc|pç|cx|kit|jg|par|lt|l|kg|m|mt)\.?$/i;
-        const codeRe = /^(#?\d[\w-]*|[A-Z0-9#-]{2,12})$/;
-        let parts = Q.i === 0 ? toks.slice(1, U.i) : toks.slice(0, Q.i);
-        parts = parts.flatMap(t => t.split(/\s+/)).filter(Boolean);
+        let parts;
         if (Q.i === 0) {
-          if (parts.length > 1 && codeRe.test(parts[0]) && (parts[1] && (unitRe.test(parts[1]) || parts.length > 2))) parts = parts.slice(1);
+          // qtd, código, un, descrição, unit, total
+          parts = toks.slice(1, U.i).flatMap(t => t.split(/\s+/)).filter(Boolean);
+          if (parts.length > 1 && codeRe.test(parts[0]) && (unitRe.test(parts[1]) || parts.length > 2)) parts = parts.slice(1);
           if (parts.length > 1 && unitRe.test(parts[0])) parts = parts.slice(1);
         } else {
-          parts = parts.filter(t => !/^\d{3,}$/.test(t));
+          // nº, [descrição], sku, qtd, un, unit, total (descrição pode vir em linhas vizinhas)
+          let pre = toks.slice(0, Q.i);
+          if (pre.length && /^\d{1,3}$/.test(pre[0])) pre = pre.slice(1);
+          const multi = pre.filter(t => /\s/.test(t));
+          pre = multi.length ? multi : pre.filter(t => !skuLike(t));
+          parts = pre.flatMap(t => t.split(/\s+/)).filter(Boolean);
           if (parts.length > 1 && unitRe.test(parts[parts.length - 1])) parts = parts.slice(0, -1);
         }
         const name = parts.join(" ").trim();
-        if (name.length < 3 || skip.test(name)) return;
-        rows.push({ name, qty: Q.n, cost: U.n, kind: "item", sure: true });
+        rows.push({ name, qty: Q.n, cost: U.n, kind: "item", sure: true, y: L.y, p: L.p, data: true });
         return;
       }
     }
-    // fallback: texto + um valor no fim → revisar
+    // texto com um valor no fim → revisar
     if (nums.length >= 1 && toks[0] && _brNum(toks[0]) == null) {
       const name = toks.slice(0, nums[0].i).join(" ").replace(/^\d{3,}\s+/, "").trim();
-      if (name.length >= 4 && !skip.test(name) && !/\d{2}\/\d{2}\/\d{2,4}/.test(line) && nums[nums.length - 1].n > 0)
-        rows.push({ name, qty: 1, cost: nums[nums.length - 1].n, kind: "item", sure: false });
+      if (name.length >= 4 && !skip.test(name) && !/\d{2}\/\d{2}\/\d{2,4}/.test(line) && nums[nums.length - 1].n > 0) {
+        rows.push({ name, qty: 1, cost: nums[nums.length - 1].n, kind: "item", sure: false, y: L.y, p: L.p });
+        return;
+      }
     }
+    if (!nums.length && !skip.test(line.trim()) && line.trim().length >= 2) loose.push({ t: line.trim(), y: L.y, p: L.p });
   });
-  return rows;
+  // linhas de texto soltas viram continuação do nome do item mais próximo que ficou sem nome
+  const unnamed = rows.filter(r => r.data && !r.name);
+  loose.forEach(l => {
+    const near = rows.filter(r => r.data && r.p === l.p).sort((a, b) => Math.abs(a.y - l.y) - Math.abs(b.y - l.y))[0];
+    if (near && Math.abs(near.y - l.y) <= 28 && unnamed.includes(near)) (near.extra = near.extra || []).push(l);
+  });
+  unnamed.forEach(r => { r.name = (r.extra || []).sort((a, b) => b.y - a.y).map(l => l.t).join(" ").trim(); });
+  return rows.filter(r => r.name && r.name.length >= 3 && !skip.test(r.name)).map(({ name, qty, cost, kind, sure }) => ({ name, qty, cost, kind, sure }));
 }
 const _normName = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -11246,7 +11265,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.11.1";
+const APP_VERSION = "2026.11.11.2";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

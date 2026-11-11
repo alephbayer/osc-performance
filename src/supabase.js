@@ -1067,6 +1067,26 @@ export const db = {
     const { data, error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id).is("destination", null).select("id");
     if (error) throw error; return (data || []).length > 0;
   },
+  // ── Ferramentas (patrimônio) ─────────────────────────────────────────────
+  async getTools() {
+    const { data, error } = await supabase.from("tools").select("*").order("purchased_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
+    if (error) throw error; return data || [];
+  },
+  async addTool(t) {
+    const { data, error } = await supabase.from("tools").insert({
+      name: t.name, value: Number(t.value) || 0, qty: Math.max(1, Math.round(Number(t.qty) || 1)), purchased_at: t.purchased_at || null,
+      location: t.location || "", notes: t.notes || "", link: t.link || null, seller: t.seller || null, ml_item_id: t.ml_item_id || null,
+    }).select().single();
+    if (error) throw error; return data;
+  },
+  async updateTool(id, patch) {
+    const { error } = await supabase.from("tools").update(patch).eq("id", id);
+    if (error) throw error;
+  },
+  async deleteTool(id) {
+    const { error } = await supabase.from("tools").delete().eq("id", id);
+    if (error) throw error;
+  },
   // peça removida da OS volta para "Sem destino" (por id da linha ML ou, nas antigas, pelo link do anúncio + tarefa)
   async releaseMLItems(taskId, rowIds = [], links = []) {
     const clear = { destination: null, vehicle_id: null, vehicle_label: null, task_id: null, task_label: null, stock_id: null, assigned_by: null, assigned_at: null };

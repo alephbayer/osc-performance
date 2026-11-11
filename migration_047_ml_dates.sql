@@ -22,3 +22,21 @@ alter table ml_purchase_items add column if not exists delivery_key text;   -- p
 alter table ml_purchase_items add column if not exists ml_key text;         -- palavra-chave encontrada na API do ML
 alter table ml_purchase_items add column if not exists ship_probe jsonb;    -- diagnóstico: campos do envio que parecem código/senha
 alter table ml_purchase_items add column if not exists expense_id uuid;   -- despesa gerada ao destinar como Insumos
+
+-- Ferramentas (patrimônio da oficina; não é despesa)
+create table if not exists tools (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  value numeric default 0,
+  qty integer default 1,
+  purchased_at date,
+  location text default '',
+  notes text default '',
+  link text,
+  seller text,
+  ml_item_id uuid,
+  created_at timestamptz default now()
+);
+alter table ml_purchase_items add column if not exists tool_id uuid;
+alter table tools disable row level security;
+grant select, insert, update, delete on tools to anon, authenticated;

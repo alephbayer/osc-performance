@@ -6213,12 +6213,13 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const total=(Number(item.qty)||1)*(Number(item.unit_price)||0);
   const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const qNum=Number(String(qtyStr).replace(",","."))||0;
-  const qEff=mode==="stock"?Math.round(qNum):qNum;
+  const qEff=(mode==="stock"||mode==="tool")?Math.round(qNum):qNum;
   const freight=Number(item.freight)||0;
   const [incFr,setIncFr]=useState(freight>0);
   const [sdiv,setSdiv]=useState("ambos");
+  const [locStr,setLocStr]=useState("");
   const fr=incFr?freight:0;
-  const unitCost=qEff>0?(mode==="stock"?(total+fr)/qEff:total/qEff):0;
+  const unitCost=qEff>0?((mode==="stock"||mode==="tool")?(total+fr)/qEff:total/qEff):0;
   const frBox=freight>0?(<label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,background:B.gray900,borderRadius:8,padding:"8px 10px",cursor:"pointer"}}><input type="checkbox" checked={incFr} onChange={e=>setIncFr(e.target.checked)}/>Incluir frete pago no ML: <b style={{color:B.gray200}}>{fmtBRL(freight)}</b></label>):null;
   const qtyBox=(<div style={{background:B.gray900,borderRadius:8,padding:"8px 10px"}}>
     <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,flexWrap:"wrap"}}>Quantidade que entra <input value={qtyStr} onChange={e=>setQtyStr(e.target.value.replace(/[^\d.,]/g,""))} inputMode="decimal" style={{...inp,width:80,textAlign:"center"}}/><span style={{color:B.gray500}}>un.</span></div>
@@ -6228,7 +6229,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
     if(mode!=="ignored"&&mode!=="supplies"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
-    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,name:nameStr.trim()||item.title}); onClose(); }
+    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title}); onClose(); }
     catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
@@ -6242,7 +6243,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
           <div style={{fontSize:11,color:B.gray400,marginTop:3}}>{item.qty}× {fmtBRL(Number(item.unit_price)||0)} = <b style={{color:B.gray200}}>{fmtBRL(total)}</b></div>
         </div>
       </div>
-      <div style={{display:"flex",gap:6,marginBottom:12}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("supplies","Insumos")}{tabBtn("ignored","Ignorar")}</div>
+      <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("supplies","Insumos")}{tabBtn("tool","Ferramenta")}{tabBtn("ignored","Ignorar")}</div>
       {mode==="vehicle"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome da peça na OS" style={inp}/>
         <VehiclePicker value={vid} onChange={v=>{setVid(v);setTid("");}} vehicles={vehicles} clients={clients}/>
@@ -6264,6 +6265,13 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         {frBox}
         <div style={{display:"flex",gap:6}}>{[["ambos","⚙️🎨 Ambas"],["performance","⚙️ Performance"],["finishing","🎨 Finishing"]].map(([k,l])=><button key={k} onClick={()=>setSdiv(k)} style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${sdiv===k?B.amber:B.gray600}`,background:sdiv===k?`${B.amber}18`:B.gray900,color:sdiv===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
         <div style={{fontSize:11,color:B.gray500,lineHeight:1.45}}>Lança <b style={{color:B.gray200}}>{fmtBRL(total+fr)}</b> como despesa “Insumos” no mês da compra, no Financeiro. Não vai para OS nem para o estoque.</div>
+      </div>}
+      {mode==="tool"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome da ferramenta" style={inp}/>
+        {qtyBox}
+        {frBox}
+        <input value={locStr} onChange={e=>setLocStr(e.target.value)} placeholder="Onde fica / com quem (opcional)" style={inp}/>
+        <div style={{fontSize:11,color:B.gray500,lineHeight:1.45}}>Entra na lista de <b style={{color:B.gray200}}>Ferramentas</b> como patrimônio ({fmtBRL(total+fr)}). <b style={{color:B.gray200}}>Não vira despesa</b> e não reduz o lucro do mês.</div>
       </div>}
       {mode==="ignored"&&<div style={{fontSize:12,color:B.gray400}}>Marca como “não é da oficina” (uso pessoal, devolução…). Sai da lista de pendentes e não lança nada.</div>}
       {err&&<div style={{fontSize:12,color:B.red,marginTop:10}}>{err}</div>}
@@ -6332,11 +6340,11 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const chips=[["all","Todos"],["delivered","Entregue"],["shipped","A caminho"],["ready_to_ship","Pronto p/ envio"],["handling","Preparando"],["pending","Aguardando"],["none","Sem status"]].filter(([k])=>k==="all"||k===fil||cnt(k)>0);
   const openVeh=vehicles.filter(v=>v.status!=="delivered");
   const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(e.message); } };
-  const undoSupplies=async i=>{ if(!window.confirm("Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(e.message||"Erro ao desfazer"); } };
+  const undoSupplies=async i=>{ if(!window.confirm(i.destination==="tool"?"Desfazer? A ferramenta sai da lista de Ferramentas e a compra volta para “Sem destino”.":"Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(e.message||"Erro ao desfazer"); } };
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const fmtS=d=>{ if(!d) return ""; const x=new Date(d); const same=x.getFullYear()===new Date().getFullYear(); return x.toLocaleDateString("pt-BR",same?{day:"2-digit",month:"2-digit"}:{day:"2-digit",month:"2-digit",year:"2-digit"}); };
-  const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":i.destination==="supplies"?"🧴 Insumos · custo do mês":"— ignorado";
+  const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":i.destination==="supplies"?"🧴 Insumos · custo do mês":i.destination==="tool"?"🔧 Ferramentas · patrimônio":"— ignorado";
   const fmtT=d=>d?new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
   const timeline=i=>{
     const h={}; (Array.isArray(i.ship_history)?i.ship_history:[]).forEach(e=>{ if(e&&e.status&&e.date&&!h[e.status]) h[e.status]=e.date; });
@@ -6353,7 +6361,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       {k:"delivered",ic:"✅",l:"Entregue",d:h.delivered||(cur==="delivered"?i.status_at:null),done:cur==="delivered"||!!h.delivered},
     ];
     if(cur==="not_delivered") steps.push({k:"nd",ic:"⚠️",l:"Não entregue",d:h.not_delivered||i.status_at,done:true});
-    if(i.destination&&i.destination!=="ignored") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":"Destinada · Estoque",d:i.assigned_at,done:true,by:i.assigned_by});
+    if(i.destination&&i.destination!=="ignored") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":i.destination==="tool"?"Destinada · Ferramentas (patrimônio)":"Destinada · Estoque",d:i.assigned_at,done:true,by:i.assigned_by});
     if(i.destination==="ignored") steps.push({k:"ign",ic:"—",l:"Ignorada (não é da oficina)",d:i.assigned_at,done:true,by:i.assigned_by});
     return steps;
   };
@@ -6386,7 +6394,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
       {isPending?<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>
-        :i.destination==="supplies"?<button onClick={e=>{e.stopPropagation();undoSupplies(i);}} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer</button>
+        :(i.destination==="supplies"||i.destination==="tool")?<button onClick={e=>{e.stopPropagation();undoSupplies(i);}} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer</button>
         :i.destination==="ignored"&&<button onClick={e=>{e.stopPropagation();undoIgnore(i);}} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer</button>}
       <span style={{fontSize:11,color:B.gray500}}>{exp[i.id]?"▴":"▾"}</span>
     </div>
@@ -6468,6 +6476,91 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
 }
 
 // ─── Cadastro de fornecedores ────────────────────────────────────────────────
+function ToolsTab({showValues=true}) {
+  const [tools,setTools]=useState([]);
+  const [q,setQ]=useState("");
+  const [err,setErr]=useState("");
+  const [adding,setAdding]=useState(false);
+  const [form,setForm]=useState({name:"",value:"",qty:"1",location:""});
+  const [edit,setEdit]=useState(null);
+  const load=()=>db.getTools().then(setTools).catch(e=>setErr(e.message||"Erro ao carregar"));
+  useEffect(()=>{ load(); },[]);
+  const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const list=tools.filter(t=>!q.trim()||norm(t.name+" "+(t.location||"")+" "+(t.seller||"")).includes(norm(q)));
+  const total=tools.reduce((s,t)=>s+(Number(t.value)||0),0);
+  const count=tools.reduce((s,t)=>s+(Number(t.qty)||1),0);
+  const byLoc={}; tools.forEach(t=>{ const k=(t.location||"").trim()||"Sem local"; byLoc[k]=(byLoc[k]||0)+1; });
+  const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
+  const fmtS=d=>d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
+  const add=async()=>{
+    if(!form.name.trim()){ setErr("Informe o nome"); return; }
+    try{ await db.addTool({name:form.name.trim(),value:Number(String(form.value).replace(",","."))||0,qty:Number(form.qty)||1,location:form.location.trim(),purchased_at:new Date().toLocaleDateString("sv-SE")}); setForm({name:"",value:"",qty:"1",location:""}); setAdding(false); setErr(""); load(); }
+    catch(e){ setErr(e.message||"Erro ao salvar"); }
+  };
+  const save=async(t,patch)=>{ try{ await db.updateTool(t.id,patch); setEdit(null); load(); }catch(e){ setErr(e.message||"Erro ao salvar"); } };
+  const del=async t=>{ if(!window.confirm(`Remover “${t.name}” da lista de ferramentas?`)) return; try{ await db.deleteTool(t.id); load(); }catch(e){ setErr(e.message); } };
+  return (<div>
+    <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+      {showValues&&<div style={{flex:1,minWidth:150,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px"}}>
+        <div style={{fontSize:10,color:B.gray500,letterSpacing:.8,textTransform:"uppercase"}}>Patrimônio em ferramentas</div>
+        <div style={{fontSize:22,fontWeight:800,color:B.white,marginTop:2}}>{fmtBRL(total)}</div>
+        <div style={{fontSize:10.5,color:B.gray500,marginTop:2}}>Não entra como despesa nem reduz o lucro</div>
+      </div>}
+      <div style={{flex:1,minWidth:130,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px"}}>
+        <div style={{fontSize:10,color:B.gray500,letterSpacing:.8,textTransform:"uppercase"}}>Itens</div>
+        <div style={{fontSize:22,fontWeight:800,color:B.white,marginTop:2}}>{count}</div>
+        <div style={{fontSize:10.5,color:B.gray500,marginTop:2}}>{tools.length} registro{tools.length!==1?"s":""}</div>
+      </div>
+    </div>
+    <div style={{display:"flex",gap:8,marginBottom:10}}>
+      <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar ferramenta, local, vendedor…" style={{...inp,flex:1}}/>
+      <button onClick={()=>setAdding(a=>!a)} style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${B.amber}55`,background:`${B.amber}18`,color:B.amber,fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>{adding?"Cancelar":"+ Nova"}</button>
+    </div>
+    {adding&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:12,marginBottom:10,display:"flex",flexDirection:"column",gap:8}}>
+      <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nome da ferramenta" style={inp}/>
+      <div style={{display:"flex",gap:8}}>
+        {showValues&&<input value={form.value} onChange={e=>setForm(f=>({...f,value:e.target.value.replace(/[^\d.,]/g,"")}))} inputMode="decimal" placeholder="Valor pago (R$)" style={inp}/>}
+        <input value={form.qty} onChange={e=>setForm(f=>({...f,qty:e.target.value.replace(/\D/g,"")}))} inputMode="numeric" placeholder="Qtd." style={{...inp,width:80}}/>
+      </div>
+      <input value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))} placeholder="Onde fica / com quem (opcional)" style={inp}/>
+      <button onClick={add} style={{padding:"9px 0",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:13,cursor:"pointer"}}>Adicionar</button>
+    </div>}
+    {err&&<div style={{fontSize:12,color:B.red,marginBottom:8}}>{err}</div>}
+    {tools.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>{Object.entries(byLoc).sort((a,b)=>b[1]-a[1]).map(([k,n])=><button key={k} onClick={()=>setQ(k==="Sem local"?"":k)} style={{padding:"3px 10px",borderRadius:99,border:`1px solid ${B.gray700}`,background:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>{k} · {n}</button>)}</div>}
+    {tools.length===0&&!err&&<div style={{textAlign:"center",padding:"28px 0",color:B.gray500,fontSize:13}}>Nenhuma ferramenta ainda. Destine uma compra do Mercado Livre como “Ferramenta” ou toque em + Nova.</div>}
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {list.map(t=><div key={t.id} style={{background:B.gray900,borderRadius:12,padding:"11px 12px"}}>
+        {edit===t.id?<div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <input defaultValue={t.name} id={"tn"+t.id} style={inp}/>
+          <div style={{display:"flex",gap:8}}>
+            {showValues&&<input defaultValue={t.value} id={"tv"+t.id} inputMode="decimal" style={inp}/>}
+            <input defaultValue={t.qty} id={"tq"+t.id} inputMode="numeric" style={{...inp,width:80}}/>
+          </div>
+          <input defaultValue={t.location||""} id={"tl"+t.id} placeholder="Onde fica / com quem" style={inp}/>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>{ const g=id=>document.getElementById(id+t.id); const patch={name:g("tn").value.trim()||t.name,qty:Math.max(1,Math.round(Number(g("tq").value)||1)),location:g("tl").value.trim()}; if(showValues) patch.value=Number(String(g("tv").value).replace(",","."))||0; save(t,patch); }} style={{flex:1,padding:"8px 0",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:12,cursor:"pointer"}}>Salvar</button>
+            <button onClick={()=>setEdit(null)} style={{padding:"8px 14px",borderRadius:8,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+          </div>
+        </div>:<div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:600,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{t.name}{Number(t.qty)>1?<span style={{color:B.gray500,fontWeight:500}}> · {t.qty} un.</span>:null}</div>
+            <div style={{fontSize:11,color:B.gray500,marginTop:4,display:"flex",gap:"2px 10px",flexWrap:"wrap"}}>
+              {showValues&&<span style={{color:B.gray200,fontWeight:700}}>{fmtBRL(Number(t.value)||0)}</span>}
+              {t.purchased_at&&<span>{fmtS(t.purchased_at)}</span>}
+              {t.seller&&<span>{t.seller}</span>}
+              {t.link&&<a href={t.link} target="_blank" rel="noreferrer" style={{color:B.blue,textDecoration:"none"}}>anúncio ↗</a>}
+            </div>
+            <div style={{fontSize:11,marginTop:5,color:t.location?B.teal||"#14b8a6":B.gray600}}>📍 {t.location||"sem local definido"}</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+            <button onClick={()=>setEdit(t.id)} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>editar</button>
+            <button onClick={()=>del(t)} style={{background:"none",border:"none",color:B.gray600,fontSize:11,cursor:"pointer"}}>remover</button>
+          </div>
+        </div>}
+      </div>)}
+    </div>
+  </div>);
+}
 function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],stock=[],onAssignML,onUndoMLSupplies}) {
   const [list,setList]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -11954,9 +12047,9 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners","suppliers"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners","suppliers"],           envVar:"VITE_ADMIN_PASSWORD" },
-  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca","partners"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners","suppliers","tools"], envVar:"VITE_OWNER_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners","suppliers","tools"],           envVar:"VITE_ADMIN_PASSWORD" },
+  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca","partners","tools"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
 // Hash a string with SHA-256 — used to avoid storing plain passwords in memory
 async function sha256(str) {
@@ -12029,7 +12122,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.33";
+const APP_VERSION = "2026.11.11.34";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16014,6 +16107,11 @@ export default function App() {
         setExpenses(p=>[...p,exp]);
         await db.setMLItem(item.id,{expense_id:exp.id});
         toast_(`🧴 ${fmtBRL(total+frt)} lançado em Insumos (${new Date(item.ordered_at||Date.now()).toLocaleDateString("pt-BR")}) ✓`);
+      } else if(d.type==="tool"){
+        const nm=String(d.name||item.title||"").trim();
+        const tl=await db.addTool({name:nm,value:Math.round((total+frt)*100)/100,qty:Math.max(1,Math.round(qty)),purchased_at:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"}):null,location:d.location||"",link:item.permalink,seller:item.seller,ml_item_id:item.id});
+        await db.setMLItem(item.id,{tool_id:tl.id});
+        toast_("🔧 Ferramenta adicionada ao patrimônio ✓");
       } else if(d.type==="stock"){
         const sid=await importStockNote({items:[{pid:d.pid||"",name:String(d.name||item.title||"").trim(),qty:Math.max(1,Math.round(qty)),cost:Math.round((total+frt)/Math.max(1,Math.round(qty))*10000)/10000}],supplierName:"Mercado Livre",date:String(item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:"ML "+item.ml_order_id,markup:Number(d.markup)||0});
         if(sid) await db.setMLItem(item.id,{stock_id:sid});
@@ -16025,7 +16123,8 @@ export default function App() {
   };
   const undoMLSupplies=async item=>{
     if(item.expense_id){ await db.deleteExpense(item.expense_id); setExpenses(p=>p.filter(e=>e.id!==item.expense_id)); }
-    await db.setMLItem(item.id,{destination:null,vehicle_id:null,vehicle_label:null,task_id:null,task_label:null,stock_id:null,expense_id:null,assigned_by:null,assigned_at:null});
+    if(item.tool_id){ await db.deleteTool(item.tool_id); }
+    await db.setMLItem(item.id,{destination:null,vehicle_id:null,vehicle_label:null,task_id:null,task_label:null,stock_id:null,expense_id:null,tool_id:null,assigned_by:null,assigned_at:null});
     toast_("Insumo desfeito ✓");
   };
   const updatePurchase=async(id,patch)=>{
@@ -16253,7 +16352,7 @@ export default function App() {
 
   // Tab grouping by nav section
   const OFICINA_TABS=["clients","finishing","appointments","mechanics","partners"];
-  const CADASTROS_TABS=["vehicles","clientsMonitor","mechanics","suppliers"];
+  const CADASTROS_TABS=["vehicles","clientsMonitor","mechanics","suppliers","tools"];
   const GESTAO_TABS=["finance","investments","sales","presenca"];
   const COMPRAS_TABS=["stock","materiais","purchases"];
 
@@ -16772,6 +16871,7 @@ export default function App() {
               {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
               {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
               {allowedTabs.includes("suppliers")&&tabBtn("suppliers","Fornecedores",<IWarehouse s={13}/>,B.green)}
+              {allowedTabs.includes("tools")&&tabBtn("tools","Ferramentas",<IWrench s={13}/>,B.amber)}
             </>}
             {navSection==="gestao"&&<>
               {allowedTabs.includes("finance")&&tabBtn("finance","Financeiro",<IChart s={13}/>,B.green)}
@@ -17284,6 +17384,11 @@ export default function App() {
       {tab==="suppliers"&&allowedTabs.includes("suppliers")&&<>
         <TabHeader color={B.green} title="Fornecedores" subtitle="Cadastro de quem vende para a oficina — usado no autocompletar das compras de estoque"/>
         <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssignML={assignMLItem} onUndoMLSupplies={undoMLSupplies}/>
+      </>}
+
+      {tab==="tools"&&allowedTabs.includes("tools")&&<>
+        <TabHeader color={B.amber} title="Ferramentas" subtitle="Patrimônio da oficina — não entra como despesa nem reduz o lucro"/>
+        <ToolsTab showValues={adminRole!=="supervisor"}/>
       </>}
 
       {tab==="partners"&&allowedTabs.includes("partners")&&<>

@@ -5589,6 +5589,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
     {openItem&&<StockProductPanel
       item={stock.find(s=>s.id===openItem.id)||openItem}
       purchases={purchases.filter(p=>p.stockId===openItem.id)}
+      suppliers={buildSuppliers(purchases)}
       onSave={(id,patch)=>onUpdate(id,patch)}
       onDelete={id=>{onDelete(id);setOpenItem(null);}}
       onAddPurchase={onAddPurchase}
@@ -5644,7 +5645,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
 }
 
 // ─── Stock product panel: product data + purchase history ─────────────────────
-function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder}) {
+function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder}) {
   const [form,setForm]=useState({
     name:item.name, brand:item.brand, type:item.type, location:item.location||"", notes:item.notes||"",
     minQty:String(item.minQty??2), costPrice:String(item.costPrice), markup:String(item.markup), photo:item.photo||"",
@@ -5807,11 +5808,11 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
               </button>
             </div>
 
-            {showPurchaseForm&&<PurchaseForm stockId={item.id} onConfirm={(p)=>{onAddPurchase(p);setShowPF(false);}} onCancel={()=>setShowPF(false)}/>}
+            {showPurchaseForm&&<PurchaseForm suppliers={suppliers} stockId={item.id} onConfirm={(p)=>{onAddPurchase(p);setShowPF(false);}} onCancel={()=>setShowPF(false)}/>}
 
             {sortedPurchases.length===0?<div style={{textAlign:"center",padding:"16px 0",color:B.gray500,fontSize:13}}>Nenhuma compra registrada ainda.</div>
               :<div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {sortedPurchases.map(p=><PurchaseRow key={p.id} purchase={p} onUpdate={onUpdatePurchase} onDelete={onDeletePurchase}/>)}
+                {sortedPurchases.map(p=><PurchaseRow suppliers={suppliers} key={p.id} purchase={p} onUpdate={onUpdatePurchase} onDelete={onDeletePurchase}/>)}
               </div>}
           </div>
         </div>
@@ -5827,8 +5828,37 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
   </>);
 }
 
+// ─── Fornecedor com busca (mini base montada a partir das compras já lançadas) ─
+function buildSuppliers(purchases){
+  const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+  const map={};
+  (purchases||[]).forEach(p=>{
+    const n=String(p.supplier||"").trim(); if(!n) return;
+    const k=norm(n); const e=map[k]||(map[k]={key:k,count:0,spell:{}});
+    e.count++; e.spell[n]=(e.spell[n]||0)+1;
+  });
+  return Object.values(map).map(e=>({key:e.key,count:e.count,name:Object.entries(e.spell).sort((a,b)=>b[1]-a[1])[0][0]})).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,"pt-BR"));
+}
+function SupplierInput({value,onChange,suppliers=[],placeholder="Nome do fornecedor",style}) {
+  const [open,setOpen]=useState(false);
+  const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+  const q=norm(value);
+  const list=suppliers.filter(x=>!q||x.key.includes(q)).slice(0,8);
+  const exact=suppliers.some(x=>x.key===q);
+  return (<div style={{position:"relative",width:"100%"}}>
+    <input value={value} onChange={e=>{onChange(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),150)} placeholder={placeholder} autoComplete="off" style={style}/>
+    {open&&(list.length>0||(q&&!exact))&&<div style={{position:"absolute",zIndex:30,left:0,right:0,top:"100%",marginTop:3,background:B.gray900,border:`1px solid ${B.green}55`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.5)",maxHeight:220,overflowY:"auto"}}>
+      {list.map(x=><div key={x.key} onMouseDown={e=>{e.preventDefault();onChange(x.name);setOpen(false);}}
+        style={{padding:"8px 11px",fontSize:13,color:x.key===q?B.green:B.white,cursor:"pointer",display:"flex",justifyContent:"space-between",gap:8,borderBottom:`1px solid ${B.gray800}`}}>
+        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.name}</span><span style={{fontSize:10,color:B.gray500,flexShrink:0}}>{x.count} compra{x.count!==1?"s":""}</span>
+      </div>)}
+      {q&&!exact&&<div style={{padding:"7px 11px",fontSize:11,color:B.amber}}>＋ Novo fornecedor: “{String(value).trim()}”</div>}
+    </div>}
+  </div>);
+}
+
 // ─── Purchase row — view or edit mode ──────────────────────────────────────────
-function PurchaseRow({purchase,onUpdate,onDelete}) {
+function PurchaseRow({purchase,onUpdate,onDelete,suppliers=[]}) {
   const [editing,setEditing]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
   const [form,setForm]=useState({
@@ -5857,8 +5887,7 @@ function PurchaseRow({purchase,onUpdate,onDelete}) {
             style={{padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12.5,outline:"none",width:"100%",boxSizing:"border-box"}}/>
         </Field>
         <Field label="Fornecedor" flex="1 1 140px">
-          <input value={form.supplier} onChange={e=>setForm(p=>({...p,supplier:e.target.value}))} placeholder="Fornecedor"
-            style={{padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12.5,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+          <SupplierInput value={form.supplier} onChange={v=>setForm(p=>({...p,supplier:v}))} suppliers={suppliers} placeholder="Fornecedor" style={{padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12.5,outline:"none",width:"100%",boxSizing:"border-box"}}/>
         </Field>
         <Field label="Número da NF" flex="1 1 110px">
           <input value={form.invoiceNumber} onChange={e=>setForm(p=>({...p,invoiceNumber:e.target.value}))} placeholder="NF"
@@ -5906,7 +5935,7 @@ function PurchaseRow({purchase,onUpdate,onDelete}) {
 }
 
 // ─── Purchase form (creates an immutable purchase record) ─────────────────────
-function PurchaseForm({stockId,onConfirm,onCancel}) {
+function PurchaseForm({stockId,onConfirm,onCancel,suppliers=[]}) {
   const [date,setDate]=useState(new Date().toISOString().slice(0,10));
   const [supplier,setSupplier]=useState("");
   const [qty,setQty]=useState("");
@@ -5929,8 +5958,7 @@ function PurchaseForm({stockId,onConfirm,onCancel}) {
           style={{padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
       </Field>
       <Field label="Fornecedor" flex="1 1 150px">
-        <input value={supplier} onChange={e=>setSupplier(e.target.value)} placeholder="Nome do fornecedor"
-          style={{padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+        <SupplierInput value={supplier} onChange={setSupplier} suppliers={suppliers} style={{padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
       </Field>
       <Field label="Número da NF" flex="1 1 120px">
         <input value={invoice} onChange={e=>setInvoice(e.target.value)} placeholder="Ex: 12345"
@@ -11271,7 +11299,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.11.3";
+const APP_VERSION = "2026.11.11.4";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

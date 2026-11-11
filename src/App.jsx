@@ -4313,14 +4313,32 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
   const [regSup, setRegSup] = useState([]);
   const [supplier, setSupplier] = useState("");
   const [autoSup, setAutoSup] = useState(false);
-  useEffect(() => { db.getSuppliers().then(setRegSup).catch(() => {}); }, []);
+  const [docs, setDocs] = useState([]);
+  const [showDocs, setShowDocs] = useState(false);
+  const [docQ, setDocQ] = useState("");
+  const [fromDoc, setFromDoc] = useState(null);
+  useEffect(() => { db.getSuppliers().then(setRegSup).catch(() => {}); db.getSupplierDocs().then(setDocs).catch(() => {}); }, []);
+  const pickDoc = async d => {
+    setErr(""); setBusy(true);
+    try {
+      const res = await fetch(d.file_url);
+      if (!res.ok) throw new Error("Não consegui baixar a nota (" + res.status + ")");
+      const blob = await res.blob();
+      const f = new File([blob], d.file_name || "nota.pdf", { type: "application/pdf" });
+      const sp = regSup.find(x => x.id === d.supplier_id);
+      setShowDocs(false);
+      await pick(f);
+      setFromDoc({ url: d.file_url, supplierId: d.supplier_id });
+      if (sp) { setSupplier(sp.name); setAutoSup(true); }
+    } catch (e) { setErr(e.message || "Erro ao abrir a nota"); setBusy(false); }
+  };
   const regMatch = regSup.find(x => _normName(x.name) === _normName(supplier)) || null;
   const existing = vts.flatMap(t => (Array.isArray(t.materials) ? t.materials : []).map(m => ({ n: _normName(m.name), c: Number(m.cost || 0) })));
   const fieldS = { background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "5px 7px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box" };
 
   const pick = async f => {
     if (!f) return;
-    setFile(f); setErr(""); setBusy(true); setRows(null);
+    setFile(f); setErr(""); setBusy(true); setRows(null); setFromDoc(null);
     try {
       const lines = await pdfToLines(f);
       // tenta reconhecer o fornecedor pelo CNPJ ou pelo nome dentro do PDF
@@ -4348,7 +4366,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
   const go = async () => {
     if (!sel.length || sel.some(r => !(r.tid || taskId))) return;
     setSaving(true);
-    try { await onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk, supplier: regMatch, supplierName: supplier.trim() }); onClose(); }
+    try { await onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk, supplier: regMatch, supplierName: supplier.trim(), existingDoc: keepPdf ? fromDoc : null }); onClose(); }
     catch (e) { setErr(e.message || "Erro ao importar"); setSaving(false); }
   };
 
@@ -4366,6 +4384,22 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
           {busy ? "Lendo PDF…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF da compra"}
           <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { pick(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
+        <button type="button" onClick={() => setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📚 Usar nota já guardada de um fornecedor {showDocs ? "▲" : "▼"}</button>
+        {showDocs && (() => {
+          const nq = _normName(docQ);
+          const nameOf = d => regSup.find(x => x.id === d.supplier_id)?.name || "";
+          const list = [...docs].filter(d => !nq || _normName(nameOf(d) + " " + (d.file_name || "") + " " + (d.vehicle_label || "")).includes(nq)).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          return (<div style={{ background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 8, padding: 8 }}>
+            <input value={docQ} onChange={e => setDocQ(e.target.value)} placeholder="Filtrar por fornecedor ou arquivo…" style={{ ...fieldS, marginBottom: 6 }} />
+            <div style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+              {list.length === 0 && <div style={{ fontSize: 11, color: B.gray500, padding: 6 }}>{docs.length ? "Nenhuma nota encontrada." : "Ainda não há notas anexadas aos fornecedores."}</div>}
+              {list.map(d => (<div key={d.id} onClick={() => pickDoc(d)} style={{ padding: "7px 9px", borderRadius: 7, background: B.gray800, cursor: "pointer", border: `1px solid ${B.gray700}` }}>
+                <div style={{ fontSize: 12, color: B.white, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nameOf(d) || "Fornecedor"} · {d.file_name || "nota.pdf"}</div>
+                <div style={{ fontSize: 10, color: B.gray500 }}>{new Date(d.created_at).toLocaleDateString("pt-BR")}{d.vehicle_label ? ` · ${d.vehicle_label}` : ""}{d.total != null ? ` · ${fmtBRL(Number(d.total))}` : ""}</div>
+              </div>))}
+            </div>
+          </div>);
+        })()}
         {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
         {rows && rows.length > 0 && <>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -4724,11 +4758,12 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       {showParts&&<div style={{padding:"12px 16px",background:B.black,borderBottom:`1px solid ${B.gray700}`}}>
         <VehiclePartsList vehicle={vehicle} onUpdateVehicle={onUpdateVehicle} managerMode={managerMode} isFD={isFD} tasks={tasks}/>
       </div>}
-      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items:items0,markup,supplier,supplierName})=>{
+      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items:items0,markup,supplier,supplierName,existingDoc})=>{
         let items=items0;
         let receiptUrl=null;
-        if(file){ try{ receiptUrl=await db.uploadPurchasePdf(vehicle.id,file); }catch(e){ console.warn("receipt upload",e); } }
-        if(receiptUrl&&supplier){ try{ await db.addSupplierDoc({supplier_id:supplier.id,file_url:receiptUrl,file_name:file.name,vehicle_label:`${vehicle.model||""} · ${vehicle.plate||""}`.trim(),total:Math.round(items0.reduce((s,r)=>s+(Number(r.cost)||0)*(Number(r.qty)||1),0)*100)/100,note:`${items0.length} item(ns) importado(s)`,created_by:(()=>{try{return sessionStorage.getItem(ADMIN_SESSION_KEY)||"";}catch{return "";}})()}); }catch(e){ console.warn("supplier doc",e); } }
+        if(existingDoc){ receiptUrl=existingDoc.url; }
+        else if(file){ try{ receiptUrl=await db.uploadPurchasePdf(vehicle.id,file); }catch(e){ console.warn("receipt upload",e); } }
+        if(receiptUrl&&supplier&&!existingDoc){ try{ await db.addSupplierDoc({supplier_id:supplier.id,file_url:receiptUrl,file_name:file.name,vehicle_label:`${vehicle.model||""} · ${vehicle.plate||""}`.trim(),total:Math.round(items0.reduce((s,r)=>s+(Number(r.cost)||0)*(Number(r.qty)||1),0)*100)/100,note:`${items0.length} item(ns) importado(s)`,created_by:(()=>{try{return sessionStorage.getItem(ADMIN_SESSION_KEY)||"";}catch{return "";}})()}); }catch(e){ console.warn("supplier doc",e); } }
         const newMap={};
         for(const lbl of [...new Set(items.map(r=>r.tid).filter(x=>x.startsWith("new:")))]){
           const row=await onAddTask(vehicle.id,lbl.slice(4),null,isFD?"finishing":"performance");
@@ -11436,7 +11471,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.11.6";
+const APP_VERSION = "2026.11.11.7";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -1016,6 +1016,24 @@ export const db = {
     const { error } = await supabase.from("suppliers").update({ active: false }).eq("id", id);
     if (error) throw error;
   },
+  async getSupplierDocs() {
+    const { data, error } = await supabase.from("supplier_documents").select("*").order("created_at", { ascending: false });
+    if (error) throw error; return data || [];
+  },
+  async addSupplierDoc(d) {
+    const { data, error } = await supabase.from("supplier_documents").insert([d]).select().single();
+    if (error) throw error; return data;
+  },
+  async deleteSupplierDoc(id) {
+    const { error } = await supabase.from("supplier_documents").delete().eq("id", id);
+    if (error) throw error;
+  },
+  async uploadSupplierPdf(supplierId, file) {
+    const path = `fornecedores/${supplierId}/${Date.now()}.pdf`;
+    const { error } = await supabase.storage.from("photos").upload(path, file, { contentType: "application/pdf", cacheControl: "31536000", upsert: false });
+    if (error) throw error;
+    return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
+  },
   async getPartners() {
     const { data, error } = await supabase.from("partners").select("*").eq("active", true).order("name");
     if (error) throw error; return data || [];

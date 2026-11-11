@@ -4310,6 +4310,11 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
   const [markup, setMarkup] = useState("50");
   const [keepPdf, setKeepPdf] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [regSup, setRegSup] = useState([]);
+  const [supplier, setSupplier] = useState("");
+  const [autoSup, setAutoSup] = useState(false);
+  useEffect(() => { db.getSuppliers().then(setRegSup).catch(() => {}); }, []);
+  const regMatch = regSup.find(x => _normName(x.name) === _normName(supplier)) || null;
   const existing = vts.flatMap(t => (Array.isArray(t.materials) ? t.materials : []).map(m => ({ n: _normName(m.name), c: Number(m.cost || 0) })));
   const fieldS = { background: B.gray900, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "5px 7px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box" };
 
@@ -4318,6 +4323,14 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
     setFile(f); setErr(""); setBusy(true); setRows(null);
     try {
       const lines = await pdfToLines(f);
+      // tenta reconhecer o fornecedor pelo CNPJ ou pelo nome dentro do PDF
+      try {
+        const regs = regSup.length ? regSup : await db.getSuppliers();
+        const text = lines.map(l => (typeof l === "string" ? l : l.t)).join(" ");
+        const digits = text.replace(/\D/g, ""), ntext = _normName(text);
+        const hit = regs.find(x => { const c = String(x.cnpj || "").replace(/\D/g, ""); return (c.length >= 11 && digits.includes(c)) || (_normName(x.name).length >= 4 && ntext.includes(_normName(x.name))); });
+        if (hit) { setSupplier(hit.name); setAutoSup(true); }
+      } catch {}
       const parsed = parsePurchaseLines(lines).map((r, i) => {
         const dup = existing.some(e => e.n === _normName(r.name) && Math.abs(e.c - r.cost) < 0.01);
         return { ...r, id: i, dup, on: r.sure && !dup && r.kind !== "freight", tid: "" };
@@ -4335,7 +4348,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
   const go = async () => {
     if (!sel.length || sel.some(r => !(r.tid || taskId))) return;
     setSaving(true);
-    try { await onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk }); onClose(); }
+    try { await onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk, supplier: regMatch, supplierName: supplier.trim() }); onClose(); }
     catch (e) { setErr(e.message || "Erro ao importar"); setSaving(false); }
   };
 
@@ -4365,6 +4378,12 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
               <input value={markup} onChange={e => setMarkup(e.target.value)} inputMode="decimal" style={fieldS} />
             </div>
           </div>
+          <div>
+            <div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Fornecedor {autoSup && regMatch ? <span style={{ color: B.green }}>· reconhecido no PDF</span> : null}</div>
+            <SupplierInput value={supplier} onChange={v => { setSupplier(v); setAutoSup(false); }} suppliers={buildSuppliers([], regSup)} placeholder="Quem vendeu (opcional)" style={fieldS} />
+            {supplier.trim() && !regMatch && <div style={{ fontSize: 10, color: B.amber, marginTop: 3 }}>Fornecedor sem cadastro — o PDF só é anexado a fornecedores cadastrados (Cadastros → Fornecedores).</div>}
+            {regMatch && keepPdf && <div style={{ fontSize: 10, color: B.gray400, marginTop: 3 }}>A nota será anexada ao cadastro de {regMatch.name}.</div>}
+          </div>
           <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens. Linhas com ⚠ foram lidas com menos certeza.</div>
           {rows.map(r => (
             <div key={r.id} style={{ minWidth: 0, boxSizing: "border-box", background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on ? B.orange + "66" : B.gray700}`, opacity: r.on ? 1 : 0.6 }}>
@@ -4385,7 +4404,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
             </div>
           ))}
           <label style={{ fontSize: 12, color: B.gray200, display: "flex", gap: 6, alignItems: "center" }}>
-            <input type="checkbox" checked={keepPdf} onChange={e => setKeepPdf(e.target.checked)} /> Guardar o PDF como comprovante
+            <input type="checkbox" checked={keepPdf} onChange={e => setKeepPdf(e.target.checked)} /> Guardar o PDF (comprovante e nota do fornecedor)
           </label>
         </>}
       </div>
@@ -4705,10 +4724,11 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       {showParts&&<div style={{padding:"12px 16px",background:B.black,borderBottom:`1px solid ${B.gray700}`}}>
         <VehiclePartsList vehicle={vehicle} onUpdateVehicle={onUpdateVehicle} managerMode={managerMode} isFD={isFD} tasks={tasks}/>
       </div>}
-      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items:items0,markup})=>{
+      {showImportPO&&<ImportPurchaseModal vehicle={vehicle} vts={vts} onClose={()=>setShowImportPO(false)} onImport={async({file,items:items0,markup,supplier,supplierName})=>{
         let items=items0;
         let receiptUrl=null;
         if(file){ try{ receiptUrl=await db.uploadPurchasePdf(vehicle.id,file); }catch(e){ console.warn("receipt upload",e); } }
+        if(receiptUrl&&supplier){ try{ await db.addSupplierDoc({supplier_id:supplier.id,file_url:receiptUrl,file_name:file.name,vehicle_label:`${vehicle.model||""} · ${vehicle.plate||""}`.trim(),total:Math.round(items0.reduce((s,r)=>s+(Number(r.cost)||0)*(Number(r.qty)||1),0)*100)/100,note:`${items0.length} item(ns) importado(s)`,created_by:(()=>{try{return sessionStorage.getItem(ADMIN_SESSION_KEY)||"";}catch{return "";}})()}); }catch(e){ console.warn("supplier doc",e); } }
         const newMap={};
         for(const lbl of [...new Set(items.map(r=>r.tid).filter(x=>x.startsWith("new:")))]){
           const row=await onAddTask(vehicle.id,lbl.slice(4),null,isFD?"finishing":"performance");
@@ -4717,7 +4737,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         }
         items=items.map(r=>({...r,tid:newMap[r.tid]||r.tid}));
         const byTask={};
-        items.forEach(r=>{ (byTask[r.tid]=byTask[r.tid]||[]).push({name:r.name.trim(),brand:"",cost:Number(r.cost)||0,markup:r.kind==="freight"?0:markup,qty:Number(r.qty)>0?Number(r.qty):1,freight:0,fromStock:false,...(receiptUrl?{receiptUrl}:{})}); });
+        items.forEach(r=>{ (byTask[r.tid]=byTask[r.tid]||[]).push({name:r.name.trim(),brand:"",cost:Number(r.cost)||0,markup:r.kind==="freight"?0:markup,qty:Number(r.qty)>0?Number(r.qty):1,freight:0,fromStock:false,...(supplierName?{supplier:supplierName}:{}),...(receiptUrl?{receiptUrl}:{})}); });
         for(const tid of Object.keys(byTask)){
           const cur=tasks.find(x=>x.id===tid); const base=Array.isArray(cur?.materials)?cur.materials:[];
           await onUpdateTask(tid,{materials:[...base,...byTask[tid]]});
@@ -5871,8 +5891,19 @@ function SuppliersTab({purchases=[],actor=""}) {
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState("");
   const [confirmDel,setConfirmDel]=useState(null);
+  const [docs,setDocs]=useState([]);
+  const [openDocs,setOpenDocs]=useState(null);
+  const [upBusy,setUpBusy]=useState(false);
   const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
-  const load=()=>db.getSuppliers().then(r=>{setList(r);setLoading(false);}).catch(e=>{setErr(e.message||"Erro ao carregar");setLoading(false);});
+  const loadDocs=()=>db.getSupplierDocs().then(setDocs).catch(()=>{});
+  const attach=async(sp,f)=>{
+    if(!f) return; setUpBusy(true); setErr("");
+    try{ const url=await db.uploadSupplierPdf(sp.id,f); await db.addSupplierDoc({supplier_id:sp.id,file_url:url,file_name:f.name,created_by:actor||null}); await loadDocs(); setOpenDocs(sp.id); }
+    catch(e){ setErr(e.message||"Erro ao anexar PDF"); }
+    setUpBusy(false);
+  };
+  const delDoc=async id=>{ try{ await db.deleteSupplierDoc(id); await loadDocs(); }catch(e){ setErr(e.message||"Erro ao remover"); } };
+  const load=()=>{ loadDocs(); return db.getSuppliers().then(r=>{setList(r);setLoading(false);}).catch(e=>{setErr(e.message||"Erro ao carregar");setLoading(false);}); };
   useEffect(()=>{load();},[]);
   const stats=name=>{const k=norm(name);const ps=purchases.filter(p=>norm(p.supplier)===k);return {n:ps.length,total:ps.reduce((s,p)=>s+Number(p.totalCost||0),0),last:ps.map(p=>p.purchaseDate).sort().pop()||null};};
   const regKeys=new Set(list.map(x=>norm(x.name)));
@@ -5935,6 +5966,22 @@ function SuppliersTab({purchases=[],actor=""}) {
         </div>
         {sp.address&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{sp.address}</div>}
         {sp.notes&&<div style={{fontSize:11,color:B.gray500,marginTop:4,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{sp.notes}</div>}
+        {(()=>{const sd=docs.filter(d=>d.supplier_id===sp.id);return (<div style={{marginTop:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <button onClick={()=>setOpenDocs(openDocs===sp.id?null:sp.id)} style={{padding:"3px 10px",borderRadius:7,background:`${B.blue}12`,border:`1px solid ${B.blue}44`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer"}}>📄 Notas ({sd.length}) {openDocs===sp.id?"▲":"▼"}</button>
+            <label style={{padding:"3px 10px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,fontSize:11,cursor:"pointer",opacity:upBusy?.6:1}}>{upBusy?"Enviando…":"＋ Anexar PDF"}
+              <input type="file" accept="application/pdf" style={{display:"none"}} disabled={upBusy} onChange={e=>{attach(sp,e.target.files?.[0]);e.target.value="";}}/>
+            </label>
+          </div>
+          {openDocs===sp.id&&<div style={{display:"flex",flexDirection:"column",gap:5,marginTop:8}}>
+            {sd.length===0&&<div style={{fontSize:11,color:B.gray500}}>Nenhuma nota anexada. As notas importadas em uma OS (com este fornecedor) aparecem aqui.</div>}
+            {sd.map(d=><div key={d.id} style={{background:B.gray900,borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <a href={d.file_url} target="_blank" rel="noreferrer" style={{color:B.blue,fontSize:12,fontWeight:700,textDecoration:"none",flex:"1 1 160px",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📄 {d.file_name||"nota.pdf"}</a>
+              <span style={{fontSize:10,color:B.gray500}}>{new Date(d.created_at).toLocaleDateString("pt-BR")}{d.vehicle_label?` · ${d.vehicle_label}`:""}{d.total!=null?` · ${fmtBRL(Number(d.total))}`:""}</span>
+              <button onClick={()=>{if(window.confirm("Remover esta nota?"))delDoc(d.id);}} style={{background:"none",border:"none",color:B.red,fontSize:11,cursor:"pointer"}}>remover</button>
+            </div>)}
+          </div>}
+        </div>);})()}
         <div style={{fontSize:10,color:B.gray500,marginTop:6}}>{st.n>0?`${st.n} compra${st.n!==1?"s":""} · ${fmtBRL(st.total)}${st.last?` · última em ${new Date(st.last+"T00:00:00").toLocaleDateString("pt-BR")}`:""}`:"Nenhuma compra ainda"}</div>
       </div>);})())}
     </div>
@@ -11389,7 +11436,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.11.5";
+const APP_VERSION = "2026.11.11.6";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

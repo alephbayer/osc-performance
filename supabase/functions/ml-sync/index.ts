@@ -92,16 +92,23 @@ async function sync(days: number) {
 
   // status de entrega (só pedidos ainda não entregues)
   const orderIds = orders.map((o) => String(o.id));
-  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status").in("ml_order_id", orderIds);
+  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at").in("ml_order_id", orderIds);
   const known = new Set((ex || []).map((x: any) => `${x.ml_order_id}|${x.ml_item_id}|${x.variation_id}`));
   const delivered = new Set((ex || []).filter((x: any) => x.ship_status === "delivered").map((x: any) => x.ml_order_id));
-  const ship: Record<string, string> = {};
+  const ship: Record<string, any> = {};
+  // pedidos que não foram reconsultados mantêm o que já está salvo (o upsert em lote não pode zerar colunas)
+  for (const x of ex || []) if (!ship[x.ml_order_id] && x.ship_status !== undefined) ship[x.ml_order_id] = { status: x.ship_status, at: x.status_at, shipped: x.shipped_at, delivered: x.delivered_at };
   let n = 0;
   for (const o of orders) {
     const sid = o.shipping?.id;
     if (!sid || delivered.has(String(o.id)) || n >= 40) continue;
     n++;
-    try { const s = await ml(`/shipments/${sid}`, t.access_token); ship[String(o.id)] = s.status || ""; } catch { /* opcional */ }
+    try {
+      const s = await ml(`/shipments/${sid}`, t.access_token);
+      const h = s.status_history || {};
+      const at = ({ delivered: h.date_delivered, shipped: h.date_shipped, ready_to_ship: h.date_ready_to_ship, handling: h.date_handling, pending: h.date_created } as any)[s.status] || s.last_updated || null;
+      ship[String(o.id)] = { status: s.status || "", at, shipped: h.date_shipped || null, delivered: h.date_delivered || null };
+    } catch { /* opcional */ }
   }
 
   const rows: any[] = [];
@@ -118,7 +125,10 @@ async function sync(days: number) {
         unit_price: Number(it.unit_price) || 0,
         ordered_at: o.date_created,
         order_status: o.status,
-        ...(ship[String(o.id)] !== undefined ? { ship_status: ship[String(o.id)] } : {}),
+        ship_status: ship[String(o.id)]?.status ?? null,
+        status_at: ship[String(o.id)]?.at ?? null,
+        shipped_at: ship[String(o.id)]?.shipped ?? null,
+        delivered_at: ship[String(o.id)]?.delivered ?? null,
         seller: o.seller?.nickname || null,
         permalink: info[iid]?.permalink || null,
         thumbnail: info[iid]?.thumbnail || null,

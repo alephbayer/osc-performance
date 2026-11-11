@@ -6306,16 +6306,22 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
   const openVeh=vehicles.filter(v=>v.status!=="delivered");
   const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(e.message); } };
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
-  const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR"):"";
+  const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":"— ignorado";
   const row=(i,isPending)=><div key={i.id} style={{background:B.gray900,borderRadius:10,padding:"9px 10px",display:"flex",gap:10,alignItems:"flex-start",minWidth:0}}>
     {i.thumbnail?<img src={i.thumbnail} alt="" style={{width:46,height:46,objectFit:"cover",borderRadius:7,flexShrink:0}}/>:<div style={{width:46,height:46,borderRadius:7,background:B.gray800,flexShrink:0}}/>}
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:12.5,fontWeight:700,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{i.title}</div>
       <div style={{fontSize:11,color:B.gray400,marginTop:3,display:"flex",gap:8,flexWrap:"wrap"}}>
-        <span>{i.qty}× {fmtBRL(Number(i.unit_price)||0)}</span><span>{fmtD(i.ordered_at)}</span>{i.seller&&<span>{i.seller}</span>}
-        {i.ship_status&&<span style={{color:i.ship_status==="delivered"?B.green:B.amber,fontWeight:700}}>{ML_SHIP[i.ship_status]||i.ship_status}</span>}
+        <span>{i.qty}× {fmtBRL(Number(i.unit_price)||0)}</span>{i.seller&&<span>{i.seller}</span>}
         {i.permalink&&<a href={i.permalink} target="_blank" rel="noreferrer" style={{color:B.blue,textDecoration:"none"}}>anúncio ↗</a>}
+      </div>
+      <div style={{fontSize:11,marginTop:3,display:"flex",gap:"2px 10px",flexWrap:"wrap"}}>
+        <span style={{color:B.gray300}}>🛒 Comprado em {fmtD(i.ordered_at)}</span>
+        {i.ship_status&&(i.ship_status==="delivered"
+          ?<span style={{color:B.green,fontWeight:700}}>✓ Entregue{(i.delivered_at||i.status_at)?` em ${fmtD(i.delivered_at||i.status_at)}`:""}</span>
+          :<span style={{color:B.amber,fontWeight:700}}>{ML_SHIP[i.ship_status]||i.ship_status}{i.status_at?` desde ${fmtD(i.status_at)}`:""}</span>)}
+        {!isPending&&i.assigned_at&&<span style={{color:B.gray400}}>📌 Destinada em {fmtD(i.assigned_at)}</span>}
       </div>
       {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:3}}>{destLbl(i)}</div>}
     </div>
@@ -11932,7 +11938,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.16";
+const APP_VERSION = "2026.11.11.17";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

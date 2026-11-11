@@ -4592,6 +4592,21 @@ function StockProductPicker({ value, onChange, stock }) {
 const _SYN_PHRASES=[["pega poeira","pegapo"],["pega po","pegapo"],["tack rag","pegapo"],["fita crepe","fitacrepe"],["fita mascara","fitacrepe"],["fita de mascaramento","fitacrepe"],["fita mascaramento","fitacrepe"],["papel toalha","papeltoalha"],["toalha de papel","papeltoalha"],["toalha papel","papeltoalha"],["papel interfolha","papeltoalha"],["lixa dagua","lixaagua"],["lixa d agua","lixaagua"],["lixa de agua","lixaagua"],["lixa agua","lixaagua"],["disco de corte","discocorte"],["disco corte","discocorte"],["disco de desbaste","discodesbaste"],["disco flap","discoflap"],["fundo preparador","primer"],["massa poliester","massapoli"],["massa rapida","massapoli"],["massa plastica","massapoli"],["limpa pecas","desengraxante"],["limpa contato","limpacontato"],["silicone em spray","siliconespray"],["silicone spray","siliconespray"],["oleo lubrificante","lubrificante"],["wd 40","desengripante"],["wd40","desengripante"],["fita isolante","fitaisolante"],["fita veda rosca","vedarosca"],["veda rosca","vedarosca"],["cola instantanea","superbonder"],["super bonder","superbonder"],["super cola","superbonder"],["pote descartavel","pote"],["marmitex","pote"],["cano pvc","tubopvc"],["mascara de solda","mascarasolda"],["mascara solda","mascarasolda"],["vidro de mascara","lentemascara"],["lente mascara","lentemascara"],["lentes mascara","lentemascara"],["lentes externa","lentemascara"],["lente externa","lentemascara"],["luva nitrilica","luvanitrilica"],["luva de nitrilo","luvanitrilica"],["luva descartavel","luvanitrilica"],["luvas descartaveis","luvanitrilica"]];
 const _SYN_WORDS={tiner:"thinner",diluente:"thinner",solvente:"thinner",flanela:"pano",estopa:"pano",desengordurante:"desengraxante",desengripante:"desengripante",abracadeira:"abracadeira",tubo:"mangueira",cabo:"fio",respirador:"mascara",lubrificante:"lubrificante",graxa:"graxa",grafite:"grafite",parafusos:"parafuso",porcas:"porca",arruelas:"arruela",rebites:"rebite",luvas:"luva",panos:"pano",lixas:"lixa",discos:"disco",fitas:"fita",colas:"cola",oleos:"oleo",tintas:"tinta",vernizes:"verniz"};
 const _SYN_NOISE=new Set(["de","da","do","das","dos","para","p","c","com","e","em","a","o","kit","jogo","par","un","und","unid","unidade","unidades","pcs","pc","peca","pecas","original","novo","nova","cor","tamanho","tam","embalagem","caixa","cx","pacote","pct","rolo","litro","litros","lt","l","ml","g","kg","mm","cm","m","x","uso","profissional","automotivo","automotiva","premium","top"]);
+// medidas (1/2, 18mm, 5l, 600, 20w50, tamanho G…) — precisam ser iguais para dois itens serem "parecidos"
+function _stockMeasures(txt){
+  let t=String(txt||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const out=new Set();
+  t=t.replace(/\b(?:c\s*\/\s*|kit\s+|jogo\s+|com\s+|x\s*)\d+\s*(?:un|und|unid|unidades?|pcs|pecas?|pares?)?\b/g," ").replace(/\b\d+\s*(?:un|und|unid|unidades?|pcs|pecas?|pares?|par)\b/g," ");
+  t=t.replace(/(\d+)\s*\/\s*(\d+)/g,(m,a,b)=>{ out.add(a+"/"+b); return " "; });
+  const U={litros:"l",litro:"l",lt:"l"};
+  t=t.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|ml|litros?|lt|kg|w|v|a|pol|g|m|l)(?![a-z])/g,(m,n,u)=>{ out.add(n.replace(",",".")+(U[u]||u)); return " "; });
+  t=t.replace(/\b(\d+(?:[.,]\d+)?)\b/g,(m,n)=>{ out.add(n.replace(",",".")); return " "; });
+  const sz=t.match(/\b(?:tamanho|tam)\s+(pp|p|m|g|gg|xg|eg|xl)\b/); if(sz) out.add("tam"+sz[1]);
+  const ws=t.split(/[^a-z0-9]+/).filter(Boolean);
+  for(const w of ws) if(["pp","gg","xg","eg","xl"].includes(w)) out.add("tam"+w);
+  const last=ws[ws.length-1]; if(["p","m","g"].includes(last)&&ws.length>1) out.add("tam"+last);
+  return out;
+}
 function _stockTokens(txt){
   let n=" "+_normName(txt)+" ";
   for(const [a,b] of _SYN_PHRASES) n=n.split(" "+a+" ").join(" "+b+" ");
@@ -4607,12 +4622,15 @@ function _stockTokens(txt){
 // devolve até n produtos do estoque parecidos com o nome (score 0–1), do melhor ao pior
 function suggestStockItems(name, stock, n = 3) {
   const A=_stockTokens(name); if(!A.size) return [];
+  const MA=_stockMeasures(name);
   const res=[];
   for(const s of stock){
     const S=_stockTokens(s.name+" "+(s.brand||"")); if(!S.size) continue;
     const inter=[...A].filter(x=>S.has(x)).length; if(!inter) continue;
+    const MS=_stockMeasures(s.name);
+    if(MA.size&&MS.size&&!([...MS].every(x=>MA.has(x))||[...MA].every(x=>MS.has(x)))) continue; // medidas conflitantes = item diferente
     const cont=inter/Math.min(A.size,S.size); const jac=inter/new Set([...A,...S]).size;
-    const score=0.6*cont+0.4*jac;
+    const score=(0.6*cont+0.4*jac)*((MA.size||MS.size)&&!(MA.size&&MS.size)?0.9:1);
     if(cont>=0.6&&score>=0.6) res.push({id:s.id,name:s.name,brand:s.brand||"",score});
   }
   return res.sort((a,b)=>b.score-a.score).slice(0,n);
@@ -12158,7 +12176,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.35";
+const APP_VERSION = "2026.11.11.36";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

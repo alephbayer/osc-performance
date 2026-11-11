@@ -6260,7 +6260,7 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
   const isDone=i=>i.destination==="ignored"||(!!i.destination&&i.ship_status==="delivered");
   const byFil=i=>fil==="all"||(fil==="none"?!i.ship_status:i.ship_status===fil);
   const byDate=(x,y)=>new Date(y.ordered_at)-new Date(x.ordered_at);
-  const srt=a=>[...a].sort(sortBy==="status"?(x,y)=>(SORT_ORD[x.ship_status]??9)-(SORT_ORD[y.ship_status]??9)||byDate(x,y):byDate);
+  const srt=a=>[...a].sort(sortBy==="status"?(x,y)=>(SORT_ORD[x.ship_status]??9)-(SORT_ORD[y.ship_status]??9)||byDate(x,y):sortBy==="old"?(x,y)=>byDate(y,x):sortBy==="value"?(x,y)=>(Number(y.qty)*Number(y.unit_price)||0)-(Number(x.qty)*Number(x.unit_price)||0)||byDate(x,y):byDate);
   const active=live.filter(i=>!isDone(i));
   const pendingAll=live.filter(i=>!i.destination);
   const pending=srt(pendingAll.filter(byFil));
@@ -6308,8 +6308,15 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
     {st?.connected&&<div style={{marginTop:12}}>
       {active.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
         {chips.map(([k,l])=><button key={k} onClick={()=>setFil(k)} style={{padding:"3px 10px",borderRadius:99,border:`1px solid ${fil===k?B.amber:B.gray600}`,background:fil===k?`${B.amber}22`:"transparent",color:fil===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l} <span style={{opacity:.7}}>{cnt(k)}</span></button>)}
-        <span style={{flex:1}}/>
-        <button onClick={()=>setSortBy(v=>v==="date"?"status":"date")} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>ordem: {sortBy==="date"?"mais recentes":"por status"} ⇅</button>
+      </div>}
+      {active.length>0&&<div style={{display:"flex",alignItems:"center",gap:8,borderTop:`1px solid ${B.gray700}`,paddingTop:9,marginBottom:10}}>
+        <span style={{fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.6}}>Ordem</span>
+        <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{padding:"5px 9px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",cursor:"pointer"}}>
+          <option value="date">Mais recentes</option>
+          <option value="old">Mais antigas</option>
+          <option value="status">Por status de entrega</option>
+          <option value="value">Maior valor</option>
+        </select>
       </div>}
       {pending.length>0&&<><div style={{fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"2px 0 6px"}}>Sem destino ({pending.length})</div>
         <div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div></>}
@@ -11886,7 +11893,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.10";
+const APP_VERSION = "2026.11.11.11";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

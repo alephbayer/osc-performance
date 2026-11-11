@@ -6216,6 +6216,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const qEff=mode==="stock"?Math.round(qNum):qNum;
   const freight=Number(item.freight)||0;
   const [incFr,setIncFr]=useState(freight>0);
+  const [sdiv,setSdiv]=useState("ambos");
   const fr=incFr?freight:0;
   const unitCost=qEff>0?(mode==="stock"?(total+fr)/qEff:total/qEff):0;
   const frBox=freight>0?(<label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,background:B.gray900,borderRadius:8,padding:"8px 10px",cursor:"pointer"}}><input type="checkbox" checked={incFr} onChange={e=>setIncFr(e.target.checked)}/>Incluir frete pago no ML: <b style={{color:B.gray200}}>{fmtBRL(freight)}</b></label>):null;
@@ -6225,9 +6226,9 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   </div>);
   const go=async()=>{
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
-    if(mode!=="ignored"&&!(qEff>0)){setErr("Informe a quantidade");return;}
+    if(mode!=="ignored"&&mode!=="supplies"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
-    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff,freight:fr,name:nameStr.trim()||item.title}); onClose(); }
+    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,name:nameStr.trim()||item.title}); onClose(); }
     catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
@@ -6241,7 +6242,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
           <div style={{fontSize:11,color:B.gray400,marginTop:3}}>{item.qty}× {fmtBRL(Number(item.unit_price)||0)} = <b style={{color:B.gray200}}>{fmtBRL(total)}</b></div>
         </div>
       </div>
-      <div style={{display:"flex",gap:6,marginBottom:12}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("ignored","Ignorar")}</div>
+      <div style={{display:"flex",gap:6,marginBottom:12}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("supplies","Insumos")}{tabBtn("ignored","Ignorar")}</div>
       {mode==="vehicle"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome da peça na OS" style={inp}/>
         <VehiclePicker value={vid} onChange={v=>{setVid(v);setTid("");}} vehicles={vehicles} clients={clients}/>
@@ -6258,6 +6259,12 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         {!pid&&<div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Produto novo — margem <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>}
         <div style={{fontSize:11,color:B.gray500}}>Entra como compra no estoque (fornecedor Mercado Livre) e soma a quantidade.</div>
       </div>}
+      {mode==="supplies"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome do insumo" style={inp}/>
+        {frBox}
+        <div style={{display:"flex",gap:6}}>{[["ambos","⚙️🎨 Ambas"],["performance","⚙️ Performance"],["finishing","🎨 Finishing"]].map(([k,l])=><button key={k} onClick={()=>setSdiv(k)} style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${sdiv===k?B.amber:B.gray600}`,background:sdiv===k?`${B.amber}18`:B.gray900,color:sdiv===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+        <div style={{fontSize:11,color:B.gray500,lineHeight:1.45}}>Lança <b style={{color:B.gray200}}>{fmtBRL(total+fr)}</b> como despesa “Insumos” no mês da compra, no Financeiro. Não vai para OS nem para o estoque.</div>
+      </div>}
       {mode==="ignored"&&<div style={{fontSize:12,color:B.gray400}}>Marca como “não é da oficina” (uso pessoal, devolução…). Sai da lista de pendentes e não lança nada.</div>}
       {err&&<div style={{fontSize:12,color:B.red,marginTop:10}}>{err}</div>}
       <div style={{display:"flex",gap:8,marginTop:14}}>
@@ -6267,7 +6274,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     </div>
   </div>);
 }
-function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
+function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUndoSupplies}) {
   const [st,setSt]=useState(null);
   const [items,setItems]=useState([]);
   const [busy,setBusy]=useState("");
@@ -6325,9 +6332,10 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
   const chips=[["all","Todos"],["delivered","Entregue"],["shipped","A caminho"],["ready_to_ship","Pronto p/ envio"],["handling","Preparando"],["pending","Aguardando"],["none","Sem status"]].filter(([k])=>k==="all"||k===fil||cnt(k)>0);
   const openVeh=vehicles.filter(v=>v.status!=="delivered");
   const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(e.message); } };
+  const undoSupplies=async i=>{ if(!window.confirm("Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(e.message||"Erro ao desfazer"); } };
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
-  const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":"— ignorado";
+  const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":i.destination==="supplies"?"🧴 Insumos · custo do mês":"— ignorado";
   const fmtT=d=>d?new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
   const timeline=i=>{
     const h={}; (Array.isArray(i.ship_history)?i.ship_history:[]).forEach(e=>{ if(e&&e.status&&e.date&&!h[e.status]) h[e.status]=e.date; });
@@ -6344,7 +6352,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
       {k:"delivered",ic:"✅",l:"Entregue",d:h.delivered||(cur==="delivered"?i.status_at:null),done:cur==="delivered"||!!h.delivered},
     ];
     if(cur==="not_delivered") steps.push({k:"nd",ic:"⚠️",l:"Não entregue",d:h.not_delivered||i.status_at,done:true});
-    if(i.destination&&i.destination!=="ignored") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:"Destinada · Estoque",d:i.assigned_at,done:true,by:i.assigned_by});
+    if(i.destination&&i.destination!=="ignored") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":"Destinada · Estoque",d:i.assigned_at,done:true,by:i.assigned_by});
     if(i.destination==="ignored") steps.push({k:"ign",ic:"—",l:"Ignorada (não é da oficina)",d:i.assigned_at,done:true,by:i.assigned_by});
     return steps;
   };
@@ -6372,6 +6380,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
       {isPending?<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>
+        :i.destination==="supplies"?<button onClick={e=>{e.stopPropagation();undoSupplies(i);}} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer</button>
         :i.destination==="ignored"&&<button onClick={e=>{e.stopPropagation();undoIgnore(i);}} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer</button>}
       <span style={{fontSize:11,color:B.gray500}}>{exp[i.id]?"▴":"▾"}</span>
     </div>
@@ -6448,7 +6457,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
 }
 
 // ─── Cadastro de fornecedores ────────────────────────────────────────────────
-function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],stock=[],onAssignML}) {
+function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],stock=[],onAssignML,onUndoMLSupplies}) {
   const [list,setList]=useState([]);
   const [loading,setLoading]=useState(true);
   const [q,setQ]=useState("");
@@ -6510,7 +6519,7 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
     </div>
   </div>);
   return (<div>
-    {onAssignML&&<MLPurchasesCard vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssign={onAssignML}/>}
+    {onAssignML&&<MLPurchasesCard vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssign={onAssignML} onUndoSupplies={onUndoMLSupplies}/>}
     <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar fornecedor…" style={{...inp,flex:"1 1 220px",maxWidth:340}}/>
       {editId!=="new"&&<button onClick={()=>startEdit(null)} style={{padding:"8px 16px",borderRadius:8,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>＋ Novo fornecedor</button>}
@@ -10259,6 +10268,7 @@ const EXPENSE_CATS = [
   {id:"aluguel",  label:"Aluguel",   color:"#f59e0b", icon:"🏢"},
   {id:"servicos", label:"Serviços",  color:"#8b5cf6", icon:"🔌"},
   {id:"outros",   label:"Outros",    color:"#6b7280", icon:"📦"},
+  {id:"insumos",  label:"Insumos",   color:"#14b8a6", icon:"🧴"},
 ];
 
 function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
@@ -10570,7 +10580,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   const totalOSRevenue=divPayments.reduce((s,p)=>s+Number(p.amount),0);
   const totalSalesRevenue=filteredSales.reduce((s,sale)=>s+Number(sale.total),0);
   const totalRevenue=totalOSRevenue+totalSalesRevenue;
-  const filteredExpenses=expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&inRange(e.date));
+  const filteredExpenses=expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&(e.recurrent||inRange(e.date)));
   const totalExpenses=filteredExpenses.reduce((s,e)=>s+Number(e.amount),0);
 
   // Summary box
@@ -10682,7 +10692,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
   const divPayments = payments.filter(p=>(p.division||"performance")===finDiv&&!p.osHistoryId&&inRange(p.paidAt));
   const divPaymentsHistory = payments.filter(p=>(p.division||"performance")===finDiv&&!!p.osHistoryId&&inRange(p.paidAt));
   const allDivPayments = payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt));
-  const filteredExpenses = expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&inRange(e.date));
+  const filteredExpenses = expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&(e.recurrent||inRange(e.date)));
 
   // ALL payments (no date filter) — for balance/receivable calculations
   const allDivPaymentsGlobal = payments.filter(p=>(p.division||"performance")===finDiv);
@@ -12008,7 +12018,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.29";
+const APP_VERSION = "2026.11.11.30";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15987,6 +15997,12 @@ export default function App() {
         await updTask(tid,{materials:[...base,mat]});
         await db.setMLItem(item.id,{task_id:String(tid),task_label:tlabel});
         toast_("Peça lançada na OS ✓");
+      } else if(d.type==="supplies"){
+        const nm=String(d.name||item.title||"").trim();
+        const exp=await db.addExpense({name:`Insumos: ${nm}`.slice(0,160),amount:Math.round((total+frt)*100)/100,category:"insumos",division:d.division||"ambos",recurrent:false,date:item.ordered_at||undefined});
+        setExpenses(p=>[...p,exp]);
+        await db.setMLItem(item.id,{expense_id:exp.id});
+        toast_(`🧴 ${fmtBRL(total+frt)} lançado em Insumos (${new Date(item.ordered_at||Date.now()).toLocaleDateString("pt-BR")}) ✓`);
       } else if(d.type==="stock"){
         const sid=await importStockNote({items:[{pid:d.pid||"",name:String(d.name||item.title||"").trim(),qty:Math.max(1,Math.round(qty)),cost:Math.round((total+frt)/Math.max(1,Math.round(qty))*10000)/10000}],supplierName:"Mercado Livre",date:String(item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:"ML "+item.ml_order_id,markup:Number(d.markup)||0});
         if(sid) await db.setMLItem(item.id,{stock_id:sid});
@@ -15995,6 +16011,11 @@ export default function App() {
       try{ await db.setMLItem(item.id,{destination:null,vehicle_id:null,vehicle_label:null,task_id:null,task_label:null,stock_id:null,assigned_by:null,assigned_at:null}); }catch{}
       throw e;
     }
+  };
+  const undoMLSupplies=async item=>{
+    if(item.expense_id){ await db.deleteExpense(item.expense_id); setExpenses(p=>p.filter(e=>e.id!==item.expense_id)); }
+    await db.setMLItem(item.id,{destination:null,vehicle_id:null,vehicle_label:null,task_id:null,task_label:null,stock_id:null,expense_id:null,assigned_by:null,assigned_at:null});
+    toast_("Insumo desfeito ✓");
   };
   const updatePurchase=async(id,patch)=>{
     const oldPurchase=stockPurchases.find(p=>p.id===id);
@@ -17251,7 +17272,7 @@ export default function App() {
 
       {tab==="suppliers"&&allowedTabs.includes("suppliers")&&<>
         <TabHeader color={B.green} title="Fornecedores" subtitle="Cadastro de quem vende para a oficina — usado no autocompletar das compras de estoque"/>
-        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssignML={assignMLItem}/>
+        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssignML={assignMLItem} onUndoMLSupplies={undoMLSupplies}/>
       </>}
 
       {tab==="partners"&&allowedTabs.includes("partners")&&<>

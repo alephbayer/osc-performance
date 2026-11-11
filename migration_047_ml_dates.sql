@@ -21,3 +21,4 @@ alter table ml_purchase_items add column if not exists freight numeric default 0
 alter table ml_purchase_items add column if not exists delivery_key text;   -- palavra-chave de entrega (manual)
 alter table ml_purchase_items add column if not exists ml_key text;         -- palavra-chave encontrada na API do ML
 alter table ml_purchase_items add column if not exists ship_probe jsonb;    -- diagnóstico: campos do envio que parecem código/senha
+alter table ml_purchase_items add column if not exists expense_id uuid;   -- despesa gerada ao destinar como Insumos

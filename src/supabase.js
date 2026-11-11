@@ -925,16 +925,17 @@ export const db = {
     if (error) throw error;
     return (data || []).map(e=>({
       id: e.id, name: e.name, amount: Number(e.amount), category: e.category,
-      recurrent: e.recurrent, division: e.division, createdAt: e.created_at,
+      recurrent: e.recurrent, division: e.division, createdAt: e.created_at, date: e.created_at,
     }));
   },
   async addExpense(exp) {
     const { data, error } = await supabase.from("expenses").insert({
       name: exp.name, amount: exp.amount, category: exp.category||"outros",
       recurrent: exp.recurrent!==false, division: exp.division||"ambos",
+      ...(exp.date ? { created_at: exp.date } : {}),
     }).select().single();
     if (error) throw error;
-    return { id:data.id, name:data.name, amount:Number(data.amount), category:data.category, recurrent:data.recurrent, division:data.division, createdAt:data.created_at };
+    return { id:data.id, name:data.name, amount:Number(data.amount), category:data.category, recurrent:data.recurrent, division:data.division, createdAt:data.created_at, date:data.created_at };
   },
   async updateExpense(id, patch) {
     const { error } = await supabase.from("expenses").update({

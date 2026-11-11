@@ -6394,6 +6394,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
       {pendingAll.length>0&&<span style={{fontSize:10,fontWeight:800,background:B.amber,color:B.black,borderRadius:99,padding:"1px 8px"}}>{pendingAll.length} sem destino</span>}
       <span style={{flex:1}}/>
       {st?.connected&&<><button onClick={()=>doSync(false)} disabled={!!busy} style={{padding:"5px 12px",borderRadius:8,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,color:B.amber,fontSize:12,fontWeight:700,cursor:"pointer",opacity:busy?.6:1}}>{busy==="sync"?"Sincronizando…":"↻ Sincronizar"}</button>
+        {st.authUrl&&<a href={st.authUrl} style={{color:B.blue,fontSize:11,textDecoration:"none"}}>↻ reautorizar</a>}
         <button onClick={disconnect} style={{background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>desconectar</button></>}
     </div>
     {busy==="connect"&&<div style={{fontSize:12,color:B.gray300,marginTop:10}}>Conectando…</div>}
@@ -11997,7 +11998,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.22";
+const APP_VERSION = "2026.11.11.23";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

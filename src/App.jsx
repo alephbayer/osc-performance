@@ -6350,7 +6350,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign}) {
   };
   const row=(i,isPending)=><div key={i.id} style={{background:B.gray900,borderRadius:10,padding:"9px 10px",minWidth:0}}>
    <div onClick={()=>setExp(x=>({...x,[i.id]:!x[i.id]}))} style={{display:"flex",gap:10,alignItems:"flex-start",minWidth:0,cursor:"pointer"}}>
-    {i.thumbnail?<img src={i.thumbnail} alt="" style={{width:46,height:46,objectFit:"cover",borderRadius:7,flexShrink:0}}/>:<div style={{width:46,height:46,borderRadius:7,background:B.gray800,flexShrink:0}}/>}
+    {i.thumbnail?<img src={i.thumbnail} alt="" style={{width:46,height:46,objectFit:"cover",borderRadius:7,flexShrink:0}}/>:null}
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:12.5,fontWeight:700,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{i.title}</div>
       <div style={{fontSize:11,color:B.gray400,marginTop:3,display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -12008,7 +12008,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.26";
+const APP_VERSION = "2026.11.11.27";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

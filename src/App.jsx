@@ -5488,6 +5488,8 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
 }
 
 function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder}) {
+  const [regSuppliers,setRegSuppliers]=useState([]);
+  useEffect(()=>{db.getSuppliers().then(setRegSuppliers).catch(()=>{});},[]);
   const emptyForm = {name:"",brand:"",type:"",location:"",notes:"",minQty:"",costPrice:"",markup:"",photo:""};
   const [form,setForm]=useState(emptyForm);
   const [showAdd,setShowAdd]=useState(false);
@@ -5589,7 +5591,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
     {openItem&&<StockProductPanel
       item={stock.find(s=>s.id===openItem.id)||openItem}
       purchases={purchases.filter(p=>p.stockId===openItem.id)}
-      suppliers={buildSuppliers(purchases)}
+      suppliers={buildSuppliers(purchases,regSuppliers)}
       onSave={(id,patch)=>onUpdate(id,patch)}
       onDelete={id=>{onDelete(id);setOpenItem(null);}}
       onAddPurchase={onAddPurchase}
@@ -5829,7 +5831,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
 }
 
 // ─── Fornecedor com busca (mini base montada a partir das compras já lançadas) ─
-function buildSuppliers(purchases){
+function buildSuppliers(purchases,registered=[]){
   const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
   const map={};
   (purchases||[]).forEach(p=>{
@@ -5837,6 +5839,7 @@ function buildSuppliers(purchases){
     const k=norm(n); const e=map[k]||(map[k]={key:k,count:0,spell:{}});
     e.count++; e.spell[n]=(e.spell[n]||0)+1;
   });
+  (registered||[]).forEach(r=>{const n=String(r.name||"").trim(); if(!n) return; const k=norm(n); const e=map[k]||(map[k]={key:k,count:0,spell:{}}); e.spell={[n]:1e9};});
   return Object.values(map).map(e=>({key:e.key,count:e.count,name:Object.entries(e.spell).sort((a,b)=>b[1]-a[1])[0][0]})).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,"pt-BR"));
 }
 function SupplierInput({value,onChange,suppliers=[],placeholder="Nome do fornecedor",style}) {
@@ -5853,6 +5856,93 @@ function SupplierInput({value,onChange,suppliers=[],placeholder="Nome do fornece
         <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.name}</span><span style={{fontSize:10,color:B.gray500,flexShrink:0}}>{x.count} compra{x.count!==1?"s":""}</span>
       </div>)}
       {q&&!exact&&<div style={{padding:"7px 11px",fontSize:11,color:B.amber}}>＋ Novo fornecedor: “{String(value).trim()}”</div>}
+    </div>}
+  </div>);
+}
+
+// ─── Cadastro de fornecedores ────────────────────────────────────────────────
+function SuppliersTab({purchases=[],actor=""}) {
+  const [list,setList]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [q,setQ]=useState("");
+  const [editId,setEditId]=useState(null); // id | "new"
+  const empty={name:"",cnpj:"",phone:"",email:"",contact:"",address:"",notes:""};
+  const [form,setForm]=useState(empty);
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+  const [confirmDel,setConfirmDel]=useState(null);
+  const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+  const load=()=>db.getSuppliers().then(r=>{setList(r);setLoading(false);}).catch(e=>{setErr(e.message||"Erro ao carregar");setLoading(false);});
+  useEffect(()=>{load();},[]);
+  const stats=name=>{const k=norm(name);const ps=purchases.filter(p=>norm(p.supplier)===k);return {n:ps.length,total:ps.reduce((s,p)=>s+Number(p.totalCost||0),0),last:ps.map(p=>p.purchaseDate).sort().pop()||null};};
+  const regKeys=new Set(list.map(x=>norm(x.name)));
+  const unregistered=Object.values(purchases.reduce((m,p)=>{const n=String(p.supplier||"").trim();if(!n||regKeys.has(norm(n)))return m;const k=norm(n);(m[k]=m[k]||{name:n,count:0}).count++;return m;},{})).sort((a,b)=>b.count-a.count);
+  const startEdit=sp=>{setErr("");setEditId(sp?sp.id:"new");setForm(sp?{name:sp.name||"",cnpj:sp.cnpj||"",phone:sp.phone||"",email:sp.email||"",contact:sp.contact||"",address:sp.address||"",notes:sp.notes||""}:empty);};
+  const save=async()=>{
+    const name=form.name.trim(); if(!name){setErr("Informe o nome do fornecedor");return;}
+    const dup=list.find(x=>norm(x.name)===norm(name)&&x.id!==editId); if(dup){setErr("Já existe um fornecedor com esse nome");return;}
+    setBusy(true);setErr("");
+    try{
+      const row={name,cnpj:form.cnpj.trim()||null,phone:form.phone.trim()||null,email:form.email.trim()||null,contact:form.contact.trim()||null,address:form.address.trim()||null,notes:form.notes.trim()||null};
+      if(editId==="new") await db.addSupplier(row);
+      else await db.updateSupplier(editId,row,list.find(x=>x.id===editId)?.name);
+      setEditId(null); await load();
+    }catch(e){setErr(e.message||"Erro ao salvar");}
+    setBusy(false);
+  };
+  const del=async id=>{try{await db.deleteSupplier(id);setConfirmDel(null);await load();}catch(e){setErr(e.message||"Erro ao remover");}};
+  const inp={padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
+  const shown=list.filter(x=>!q||norm([x.name,x.cnpj,x.phone,x.contact,x.email].join(" ")).includes(norm(q)));
+  const formBox=(<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.green}55`,padding:14,marginBottom:14}}>
+    <div style={{fontSize:11,color:B.green,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>{editId==="new"?"Novo fornecedor":"Editar fornecedor"}</div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      <div style={{flex:"1 1 100%"}}><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="Nome do fornecedor *" style={inp} autoFocus/></div>
+      <div style={{flex:"1 1 150px"}}><input value={form.cnpj} onChange={e=>setForm(p=>({...p,cnpj:e.target.value}))} placeholder="CNPJ / CPF" style={inp}/></div>
+      <div style={{flex:"1 1 150px"}}><input value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} placeholder="Telefone / WhatsApp" inputMode="tel" style={inp}/></div>
+      <div style={{flex:"1 1 150px"}}><input value={form.contact} onChange={e=>setForm(p=>({...p,contact:e.target.value}))} placeholder="Contato (vendedor)" style={inp}/></div>
+      <div style={{flex:"1 1 150px"}}><input value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} placeholder="E-mail" type="email" style={inp}/></div>
+      <div style={{flex:"1 1 100%"}}><input value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} placeholder="Endereço / site" style={inp}/></div>
+      <div style={{flex:"1 1 100%"}}><textarea value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Observações (prazo, condições, o que costuma vender…)" rows={2} style={{...inp,resize:"vertical",fontFamily:"inherit"}}/></div>
+    </div>
+    {err&&<div style={{fontSize:12,color:B.red,marginTop:8}}>{err}</div>}
+    <div style={{display:"flex",gap:8,marginTop:10}}>
+      <button onClick={save} disabled={busy} style={{padding:"8px 18px",borderRadius:8,background:B.green,border:"none",color:B.black,fontWeight:800,fontSize:13,cursor:"pointer",opacity:busy?.6:1}}>{busy?"Salvando…":"Salvar"}</button>
+      <button onClick={()=>{setEditId(null);setErr("");}} style={{padding:"8px 14px",borderRadius:8,background:B.gray700,border:"none",color:B.gray200,fontSize:13,cursor:"pointer"}}>Cancelar</button>
+    </div>
+  </div>);
+  return (<div>
+    <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+      <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar fornecedor…" style={{...inp,flex:"1 1 220px",maxWidth:340}}/>
+      {editId!=="new"&&<button onClick={()=>startEdit(null)} style={{padding:"8px 16px",borderRadius:8,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>＋ Novo fornecedor</button>}
+    </div>
+    {editId==="new"&&formBox}
+    {!editId&&err&&<div style={{fontSize:12,color:B.red,marginBottom:10}}>{err}</div>}
+    {loading?<div style={{color:B.gray400,fontSize:13}}>Carregando…</div>:shown.length===0&&editId!=="new"?<div style={{color:B.gray400,fontSize:13,padding:"14px 0"}}>{list.length?"Nenhum fornecedor encontrado.":"Nenhum fornecedor cadastrado ainda."}</div>:null}
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {shown.map(sp=>editId===sp.id?<div key={sp.id}>{formBox}</div>:(()=>{const st=stats(sp.name);const wa=String(sp.phone||"").replace(/\D/g,"");return (<div key={sp.id} style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.gray700}`,padding:"12px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontWeight:800,fontSize:14,color:B.white,flex:1,minWidth:0}}>{sp.name}</span>
+          <button onClick={()=>startEdit(sp)} style={{padding:"4px 10px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,fontSize:12,cursor:"pointer"}}>Editar</button>
+          {confirmDel===sp.id
+            ?<><button onClick={()=>del(sp.id)} style={{padding:"4px 10px",borderRadius:7,background:B.red,border:"none",color:B.white,fontSize:12,fontWeight:700,cursor:"pointer"}}>Confirmar</button><button onClick={()=>setConfirmDel(null)} style={{padding:"4px 8px",borderRadius:7,background:"none",border:"none",color:B.gray400,fontSize:12,cursor:"pointer"}}>Não</button></>
+            :<button onClick={()=>setConfirmDel(sp.id)} style={{padding:"4px 8px",borderRadius:7,background:"none",border:`1px solid ${B.red}44`,color:B.red,fontSize:12,cursor:"pointer"}}>Remover</button>}
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,fontSize:11,color:B.gray300}}>
+          {sp.cnpj&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{sp.cnpj}</span>}
+          {sp.phone&&<a href={wa?`https://wa.me/${wa.length<=11?"55"+wa:wa}`:undefined} target="_blank" rel="noreferrer" style={{background:B.gray700,borderRadius:5,padding:"1px 7px",color:B.green,textDecoration:"none"}}>📞 {sp.phone}</a>}
+          {sp.contact&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>👤 {sp.contact}</span>}
+          {sp.email&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>✉ {sp.email}</span>}
+        </div>
+        {sp.address&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{sp.address}</div>}
+        {sp.notes&&<div style={{fontSize:11,color:B.gray500,marginTop:4,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{sp.notes}</div>}
+        <div style={{fontSize:10,color:B.gray500,marginTop:6}}>{st.n>0?`${st.n} compra${st.n!==1?"s":""} · ${fmtBRL(st.total)}${st.last?` · última em ${new Date(st.last+"T00:00:00").toLocaleDateString("pt-BR")}`:""}`:"Nenhuma compra ainda"}</div>
+      </div>);})())}
+    </div>
+    {unregistered.length>0&&!editId&&<div style={{marginTop:18}}>
+      <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Aparecem nas compras, sem cadastro</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        {unregistered.map(u=><button key={u.name} onClick={()=>{startEdit(null);setForm({...empty,name:u.name});}} style={{padding:"4px 10px",borderRadius:99,background:`${B.amber}12`,border:`1px solid ${B.amber}44`,color:B.amber,fontSize:12,cursor:"pointer"}}>＋ {u.name} <span style={{opacity:.7}}>({u.count})</span></button>)}
+      </div>
     </div>}
   </div>);
 }
@@ -11226,8 +11316,8 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners"],           envVar:"VITE_ADMIN_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners","suppliers"], envVar:"VITE_OWNER_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners","suppliers"],           envVar:"VITE_ADMIN_PASSWORD" },
   supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca","partners"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
 // Hash a string with SHA-256 — used to avoid storing plain passwords in memory
@@ -11299,7 +11389,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.11.4";
+const APP_VERSION = "2026.11.11.5";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15365,7 +15455,7 @@ export default function App() {
 
   // Tab grouping by nav section
   const OFICINA_TABS=["clients","finishing","appointments","mechanics","partners"];
-  const CADASTROS_TABS=["vehicles","clientsMonitor","mechanics"];
+  const CADASTROS_TABS=["vehicles","clientsMonitor","mechanics","suppliers"];
   const GESTAO_TABS=["finance","investments","sales","presenca"];
   const COMPRAS_TABS=["stock","materiais","purchases"];
 
@@ -15882,6 +15972,7 @@ export default function App() {
               {allowedTabs.includes("vehicles")&&tabBtn("vehicles","Veículos",<ICar s={13}/>,B.blue)}
               {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
               {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
+              {allowedTabs.includes("suppliers")&&tabBtn("suppliers","Fornecedores",<IWarehouse s={13}/>,B.green)}
             </>}
             {navSection==="gestao"&&<>
               {allowedTabs.includes("finance")&&tabBtn("finance","Financeiro",<IChart s={13}/>,B.green)}
@@ -16389,6 +16480,11 @@ export default function App() {
       {tab==="presenca"&&allowedTabs.includes("presenca")&&<>
         <TabHeader color={B.blue} title="Lista de Presenças" subtitle="Controle de presença, atrasos e faltas da equipe"/>
         <PresencaTab employees={employees} isOwner={adminRole==="owner"}/>
+      </>}
+
+      {tab==="suppliers"&&allowedTabs.includes("suppliers")&&<>
+        <TabHeader color={B.green} title="Fornecedores" subtitle="Cadastro de quem vende para a oficina — usado no autocompletar das compras de estoque"/>
+        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""}/>
       </>}
 
       {tab==="partners"&&allowedTabs.includes("partners")&&<>

@@ -993,6 +993,29 @@ export const db = {
   },
 
   // ── Parceiros (empresas que terceirizam serviços pontuais) ─────────────────
+  // ── Fornecedores (cadastro) ──
+  async getSuppliers() {
+    const { data, error } = await supabase.from("suppliers").select("*").eq("active", true).order("name");
+    if (error) throw error; return data || [];
+  },
+  async addSupplier(sp) {
+    const { data, error } = await supabase.from("suppliers").insert([sp]).select().single();
+    if (error) throw error; return data;
+  },
+  async updateSupplier(id, patch, oldName = null) {
+    const { data, error } = await supabase.from("suppliers").update(patch).eq("id", id).select().single();
+    if (error) throw error;
+    // renomeou: mantém as compras antigas ligadas ao mesmo fornecedor
+    if (oldName && patch.name && oldName.trim() !== patch.name.trim()) {
+      const { error: e2 } = await supabase.from("stock_purchases").update({ supplier: patch.name.trim() }).eq("supplier", oldName);
+      if (e2) console.warn("rename supplier in purchases", e2);
+    }
+    return data;
+  },
+  async deleteSupplier(id) {
+    const { error } = await supabase.from("suppliers").update({ active: false }).eq("id", id);
+    if (error) throw error;
+  },
   async getPartners() {
     const { data, error } = await supabase.from("partners").select("*").eq("active", true).order("name");
     if (error) throw error; return data || [];

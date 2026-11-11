@@ -5488,7 +5488,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
 }
 
 function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder}) {
-  const emptyForm = {name:"",brand:"",type:"",location:"",minQty:"",costPrice:"",markup:"",photo:""};
+  const emptyForm = {name:"",brand:"",type:"",location:"",notes:"",minQty:"",costPrice:"",markup:"",photo:""};
   const [form,setForm]=useState(emptyForm);
   const [showAdd,setShowAdd]=useState(false);
   const [search,setSearch]=useState("");
@@ -5553,6 +5553,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
           {k:"brand",ph:"Marca",fl:"1 1 130px"},
           {k:"type",ph:"Tipo/Categoria",fl:"1 1 130px"},
           {k:"location",ph:"Localização (ex: Prateleira A3)",fl:"1 1 180px"},
+          {k:"notes",ph:"Observação interna (opcional)",fl:"1 1 100%"},
           {k:"minQty",ph:"Qtd mínima (ex: 2)",fl:"0 0 150px",tp:"number"},
           {k:"costPrice",ph:"Custo unitário (R$)",fl:"0 0 150px",tp:"number"},
           {k:"markup",ph:"Markup (ex: 100%)",fl:"0 0 140px",tp:"number"},
@@ -5619,6 +5620,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
         {item.type&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{item.type}</span>}
         {item.location&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>📍 {item.location}</span>}
       </div>
+      {item.notes&&<div style={{fontSize:11,color:B.gray500,marginTop:3,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{item.notes}</div>}
     </div>
 
     {/* saldo */}
@@ -5644,7 +5646,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
 // ─── Stock product panel: product data + purchase history ─────────────────────
 function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder}) {
   const [form,setForm]=useState({
-    name:item.name, brand:item.brand, type:item.type, location:item.location||"",
+    name:item.name, brand:item.brand, type:item.type, location:item.location||"", notes:item.notes||"",
     minQty:String(item.minQty??2), costPrice:String(item.costPrice), markup:String(item.markup), photo:item.photo||"",
     orderLink:item.orderLink||"",
   });
@@ -5658,7 +5660,7 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
   const save=()=>{
     if(!form.name.trim())return;
     onSave(item.id,{
-      name:form.name.trim(), brand:form.brand.trim(), type:form.type.trim(), location:form.location.trim(),
+      name:form.name.trim(), brand:form.brand.trim(), type:form.type.trim(), location:form.location.trim(), notes:(form.notes||"").trim(),
       minQty:Math.max(0,Number(form.minQty||0)), costPrice:Number(form.costPrice||0), markup:Number(form.markup||0),
       salePrice, photo:form.photo||null, orderLink:form.orderLink||"",
     });
@@ -5705,6 +5707,10 @@ function StockProductPanel({item,purchases,onSave,onDelete,onAddPurchase,onUpdat
                   style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
               </Field>
             </div>
+            <Field label="Observação interna">
+              <textarea value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} rows={2} placeholder="Só para identificação interna (não aparece para o cliente)"
+                style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box",resize:"vertical",fontFamily:"inherit"}}/>
+            </Field>
             <div style={{display:"flex",gap:8}}>
               <Field label="Localização">
                 <input value={form.location} onChange={e=>setForm(p=>({...p,location:e.target.value}))} placeholder="Ex: Prateleira A3"
@@ -11265,7 +11271,7 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.11.2";
+const APP_VERSION = "2026.11.11.3";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

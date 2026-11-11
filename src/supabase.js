@@ -204,6 +204,7 @@ const mapStockIn = (s) => ({
   location: s.location || "",
   minQty: s.min_qty != null ? s.min_qty : 2,
   orderLink: s.order_link || "",
+  notes: s.notes || "",
 });
 const mapStockOut = (s) => ({
   name: s.name,
@@ -216,6 +217,7 @@ const mapStockOut = (s) => ({
   photo: s.photo,
   location: s.location || "",
   min_qty: s.minQty != null ? s.minQty : 2,
+  notes: s.notes || null,
 });
 
 const mapPurchaseIn = (p) => ({
@@ -583,7 +585,7 @@ export const db = {
   },
   async updateStock(id, patch) {
     const dbPatch = {};
-    const map = { name:"name", brand:"brand", type:"type", qty:"qty", costPrice:"cost_price", markup:"markup", salePrice:"sale_price", photo:"photo", location:"location", minQty:"min_qty", orderLink:"order_link" };
+    const map = { name:"name", brand:"brand", type:"type", qty:"qty", costPrice:"cost_price", markup:"markup", salePrice:"sale_price", photo:"photo", location:"location", minQty:"min_qty", orderLink:"order_link", notes:"notes" };
     Object.keys(patch).forEach((k) => { if (map[k]) dbPatch[map[k]] = patch[k]; });
     const { error } = await supabase.from("stock").update(dbPatch).eq("id", id);
     if (error) throw error;

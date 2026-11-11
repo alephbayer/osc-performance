@@ -60,6 +60,35 @@ async function ml(path: string, token: string, extra: Record<string, string> = {
   return d;
 }
 
+const brDay = (d: Date | string) => new Date(d).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+async function pushAdmins(title: string, items: any[]) {
+  const names = items.slice(0, 3).map((i) => String(i.title || "").slice(0, 48));
+  const body = names.join(" · ") + (items.length > 3 ? ` +${items.length - 3}` : "");
+  await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+    body: JSON.stringify({ adminAll: true, title, body, url: "/?" }),
+  });
+}
+// avisa gestor/administrador: saiu para entrega, chega hoje, entregue (cada item só uma vez)
+async function notifyDeliveries(orderIds: string[]) {
+  const { data } = await sb.from("ml_purchase_items")
+    .select("id,title,ship_status,ship_substatus,eta_at,delivered_at,notif_route_at,notif_today_at,notif_delivered_at")
+    .in("ml_order_id", orderIds);
+  const rows = data || [];
+  const today = brDay(new Date());
+  const live = ["pending", "handling", "ready_to_ship", "shipped"];
+  const route = rows.filter((r: any) => r.ship_status === "shipped" && r.ship_substatus === "out_for_delivery" && !r.notif_route_at);
+  const routeIds = new Set(route.map((r: any) => r.id));
+  const dueToday = rows.filter((r: any) => live.includes(r.ship_status) && r.eta_at && brDay(r.eta_at) === today && !r.notif_today_at && !r.notif_route_at && !routeIds.has(r.id));
+  const done = rows.filter((r: any) => r.ship_status === "delivered" && r.delivered_at && Date.now() - new Date(r.delivered_at).getTime() < 24 * 3600000 && !r.notif_delivered_at);
+  const now = new Date().toISOString();
+  if (route.length) { await pushAdmins(route.length > 1 ? `🚚 ${route.length} peças saíram para entrega` : "🚚 Peça saiu para entrega", route); await sb.from("ml_purchase_items").update({ notif_route_at: now, notif_today_at: now }).in("id", route.map((r: any) => r.id)); }
+  if (dueToday.length) { await pushAdmins(dueToday.length > 1 ? `📦 ${dueToday.length} peças chegam hoje` : "📦 Peça chega hoje", dueToday); await sb.from("ml_purchase_items").update({ notif_today_at: now }).in("id", dueToday.map((r: any) => r.id)); }
+  if (done.length) { await pushAdmins(done.length > 1 ? `✅ ${done.length} peças entregues` : "✅ Peça entregue", done); await sb.from("ml_purchase_items").update({ notif_delivered_at: now }).in("id", done.map((r: any) => r.id)); }
+  return route.length + dueToday.length + done.length;
+}
+
 async function sync(days: number) {
   const t = await getAccess();
   const uid = t.ml_user_id;
@@ -93,12 +122,12 @@ async function sync(days: number) {
 
   // status de entrega (só pedidos ainda não entregues)
   const orderIds = orders.map((o) => String(o.id));
-  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at,ship_history").in("ml_order_id", orderIds);
+  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at,ship_history,ship_substatus,eta_at").in("ml_order_id", orderIds);
   const known = new Set((ex || []).map((x: any) => `${x.ml_order_id}|${x.ml_item_id}|${x.variation_id}`));
   const delivered = new Set((ex || []).filter((x: any) => (x.ship_status === "delivered" || x.ship_status === "cancelled") && Array.isArray(x.ship_history) && x.ship_history.length).map((x: any) => x.ml_order_id));
   const ship: Record<string, any> = {};
   // pedidos que não foram reconsultados mantêm o que já está salvo (o upsert em lote não pode zerar colunas)
-  for (const x of ex || []) if (!ship[x.ml_order_id] && x.ship_status !== undefined) ship[x.ml_order_id] = { status: x.ship_status, at: x.status_at, shipped: x.shipped_at, delivered: x.delivered_at, hist: x.ship_history };
+  for (const x of ex || []) if (!ship[x.ml_order_id] && x.ship_status !== undefined) ship[x.ml_order_id] = { status: x.ship_status, at: x.status_at, shipped: x.shipped_at, delivered: x.delivered_at, hist: x.ship_history, sub: x.ship_substatus, eta: x.eta_at };
   const todo = orders
     .filter((o) => o.shipping?.id && !delivered.has(String(o.id)))
     .sort((a, b) => (ship[String(a.id)]?.status ? 1 : 0) - (ship[String(b.id)]?.status ? 1 : 0))
@@ -124,7 +153,9 @@ async function sync(days: number) {
       const status = s.status || "";
       const at = first(status) || s.last_updated || null;
       if (!hist.length && status && at) hist = [{ status, date: at }];
-      ship[String(o.id)] = { status, at, shipped: first("shipped"), delivered: first("delivered") || (status === "delivered" ? at : null), hist };
+      const lt = s.lead_time || {}, so = s.shipping_option || {};
+      const eta = lt.estimated_delivery_final?.date || lt.estimated_delivery_time?.date || so.estimated_delivery_final?.date || so.estimated_delivery_time?.date || null;
+      ship[String(o.id)] = { status, at, shipped: first("shipped"), delivered: first("delivered") || (status === "delivered" ? at : null), hist, sub: s.substatus || null, eta };
     } catch { /* opcional */ }
   };
   for (let i = 0; i < todo.length; i += 8) await Promise.all(todo.slice(i, i + 8).map(fetchShip));
@@ -150,6 +181,8 @@ async function sync(days: number) {
         shipped_at: ship[String(o.id)]?.shipped ?? null,
         delivered_at: ship[String(o.id)]?.delivered ?? null,
         ship_history: ship[String(o.id)]?.hist ?? null,
+        ship_substatus: ship[String(o.id)]?.sub ?? null,
+        eta_at: ship[String(o.id)]?.eta ?? null,
         paid_at: ((o.payments || []).map((p: any) => p.date_approved).filter(Boolean).sort()[0]) || null,
         seller: o.seller?.nickname || null,
         permalink: info[iid]?.permalink || null,
@@ -165,7 +198,9 @@ async function sync(days: number) {
     if (error) throw new Error(error.message);
   }
   await sb.from("ml_tokens").update({ last_sync_at: new Date().toISOString() }).eq("id", 1);
-  return { ok: true, added, orders: orders.length, warn };
+  let notified = 0;
+  try { notified = await notifyDeliveries(orderIds); } catch (e) { warn = warn || "push: " + (e as Error).message; }
+  return { ok: true, added, orders: orders.length, warn, notified };
 }
 
 Deno.serve(async (req) => {

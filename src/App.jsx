@@ -11990,7 +11990,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.19";
+const APP_VERSION = "2026.11.11.20";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13836,6 +13836,33 @@ function DashAlert({color,label,sub,icon,onClick}){
       <div style={{width:8,height:8,borderRadius:99,background:color,flexShrink:0}}/>
     </div>
   );
+}
+
+// ─── Dashboard: peças do Mercado Livre chegando (saiu para entrega / chega hoje) ─
+function MLArrivalsAlert({show,onOpen}) {
+  const [rows,setRows]=useState([]);
+  useEffect(()=>{
+    if(!show) return;
+    let alive=true;
+    const load=()=>db.getMLArriving().then(r=>{if(alive)setRows(r);}).catch(()=>{});
+    load(); const t=setInterval(load,5*60000);
+    return()=>{alive=false;clearInterval(t);};
+  },[show]);
+  if(!show||!rows.length) return null;
+  const day=d=>new Date(d).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});
+  const today=day(new Date());
+  const route=rows.filter(r=>r.ship_status==="shipped"&&r.ship_substatus==="out_for_delivery");
+  const rid=new Set(route.map(r=>r.id));
+  const dueToday=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)===today);
+  const late=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)<today);
+  if(!route.length&&!dueToday.length&&!late.length) return null;
+  const names=a=>a.slice(0,3).map(r=>String(r.title||"").slice(0,40)).join(" · ")+(a.length>3?` +${a.length-3}`:"");
+  const pl=(n,s,p)=>`${n} ${n!==1?p:s}`;
+  return (<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.amber}55`}}>
+    {route.length>0&&<DashAlert color={B.green} icon={<span style={{fontSize:16}}>🚚</span>} label={`${pl(route.length,"peça saiu","peças saíram")} para entrega`} sub={names(route)} onClick={onOpen}/>}
+    {dueToday.length>0&&<DashAlert color={B.amber} icon={<span style={{fontSize:16}}>📦</span>} label={`${pl(dueToday.length,"peça chega","peças chegam")} hoje`} sub={names(dueToday)} onClick={onOpen}/>}
+    {late.length>0&&<DashAlert color={B.red} icon={<span style={{fontSize:16}}>⏳</span>} label={`${pl(late.length,"peça com entrega atrasada","peças com entrega atrasada")}`} sub={names(late)} onClick={onOpen}/>}
+  </div>);
 }
 
 // ─── Quick Action Sheet ───────────────────────────────────────────────────────
@@ -16157,7 +16184,8 @@ export default function App() {
     const today=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});
     const todayCapital=today.charAt(0).toUpperCase()+today.slice(1);
 
-    const AlertsBlock=()=>{
+    const AlertsBlock=()=>(<><MLArrivalsAlert show={adminRole==="owner"||adminRole==="admin"} onOpen={()=>goSection("cadastros","suppliers")}/><AlertsBlockInner/></>);
+    const AlertsBlockInner=()=>{
       const hasPurchases=pendingPurchaseCount>0;
       const hasInvest=pendingInvestmentCount>0;
       const hasNotes=pendingNotesCount>0;
@@ -16293,7 +16321,7 @@ export default function App() {
           })}
         </>}
         <SL2 label="Atenção necessária"/>
-        <AlertsBlock/>
+        {AlertsBlock()}
       </div>);
     }
 
@@ -16308,7 +16336,7 @@ export default function App() {
           <DashCard color={B.purple} icon={iconBox} label="Itens estoque" value={stock.length} onClick={()=>goSection("gestao","stock")}/>
         </div>
         <SL2 label="Atenção necessária"/>
-        <AlertsBlock/>
+        {AlertsBlock()}
       </div>);
     }
 
@@ -16358,7 +16386,7 @@ export default function App() {
       <ReceivablesPanel vehicles={vehicles} tasks={tasks} payments={payments} osHistory={osHistory} clients={clients} clientCredits={clientCredits} defaultRate={defaultRate} hide={hideRevenue}/>
 
       <SL2 label="Atenção necessária"/>
-      <AlertsBlock/>
+      {AlertsBlock()}
 
       <SL2 label="Resumo do mês"/>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>

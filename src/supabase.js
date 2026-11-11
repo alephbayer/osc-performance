@@ -1048,6 +1048,11 @@ export const db = {
     }
     return data;
   },
+  async getMLArriving() {
+    const { data, error } = await supabase.from("ml_purchase_items").select("id,title,ship_status,ship_substatus,eta_at,order_status,destination")
+      .in("ship_status", ["pending", "handling", "ready_to_ship", "shipped"]).neq("order_status", "cancelled").limit(300);
+    if (error) throw error; return data || [];
+  },
   async getMLItems() {
     const { data, error } = await supabase.from("ml_purchase_items").select("*").order("ordered_at", { ascending: false }).limit(600);
     if (error) throw error; return data || [];

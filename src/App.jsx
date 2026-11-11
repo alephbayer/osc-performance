@@ -6247,6 +6247,7 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
   const [showDone,setShowDone]=useState(false);
   const [pick,setPick]=useState(null);
   const [fil,setFil]=useState("all");
+  const [qs,setQs]=useState("");
   const [sortBy,setSortBy]=useState("date");
   const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
   const doSync=async(silent)=>{
@@ -6269,14 +6270,16 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
   const live=items.filter(i=>i.order_status!=="cancelled"&&i.ship_status!=="cancelled");
   const SORT_ORD={delivered:0,shipped:1,ready_to_ship:2,handling:3,pending:4,not_delivered:5};
   const isDone=i=>i.destination==="ignored"||(!!i.destination&&i.ship_status==="delivered");
-  const byFil=i=>fil==="all"||(fil==="none"?!i.ship_status:i.ship_status===fil);
+  const nqs=_normName(qs);
+  const bySearch=i=>!nqs||_normName([i.title,i.seller,i.vehicle_label,i.task_label].join(" ")).includes(nqs);
+  const byFil=i=>bySearch(i)&&(fil==="all"||(fil==="none"?!i.ship_status:i.ship_status===fil));
   const byDate=(x,y)=>new Date(y.ordered_at)-new Date(x.ordered_at);
   const srt=a=>[...a].sort(sortBy==="status"?(x,y)=>(SORT_ORD[x.ship_status]??9)-(SORT_ORD[y.ship_status]??9)||byDate(x,y):sortBy==="old"?(x,y)=>byDate(y,x):sortBy==="value"?(x,y)=>(Number(y.qty)*Number(y.unit_price)||0)-(Number(x.qty)*Number(x.unit_price)||0)||byDate(x,y):byDate);
   const active=live.filter(i=>!isDone(i));
   const pendingAll=live.filter(i=>!i.destination);
   const pending=srt(pendingAll.filter(byFil));
   const waiting=srt(live.filter(i=>i.destination&&!isDone(i)).filter(byFil));
-  const done=srt(live.filter(isDone));
+  const done=srt(live.filter(isDone).filter(bySearch));
   const cnt=k=>k==="all"?active.length:active.filter(i=>k==="none"?!i.ship_status:i.ship_status===k).length;
   const chips=[["all","Todos"],["delivered","Entregue"],["shipped","A caminho"],["ready_to_ship","Pronto p/ envio"],["handling","Preparando"],["pending","Aguardando"],["none","Sem status"]].filter(([k])=>k==="all"||k===fil||cnt(k)>0);
   const openVeh=vehicles.filter(v=>v.status!=="delivered");
@@ -6317,6 +6320,10 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
     {err&&<div style={{fontSize:12,color:B.red,marginTop:10,wordBreak:"break-word"}}>{err}</div>}
     {msg&&!err&&<div style={{fontSize:12,color:B.green,marginTop:10}}>{msg}</div>}
     {st?.connected&&<div style={{marginTop:12}}>
+      {items.length>0&&<div style={{position:"relative",marginBottom:10}}>
+        <input value={qs} onChange={e=>setQs(e.target.value)} placeholder="Buscar peça, vendedor, carro…" style={{padding:"8px 30px 8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+        {qs&&<button onClick={()=>setQs("")} style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,fontSize:15,cursor:"pointer",padding:"2px 6px"}}>✕</button>}
+      </div>}
       {active.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
         {chips.map(([k,l])=><button key={k} onClick={()=>setFil(k)} style={{padding:"3px 10px",borderRadius:99,border:`1px solid ${fil===k?B.amber:B.gray600}`,background:fil===k?`${B.amber}22`:"transparent",color:fil===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l} <span style={{opacity:.7}}>{cnt(k)}</span></button>)}
       </div>}
@@ -6333,10 +6340,10 @@ function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
         <div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div></>}
       {waiting.length>0&&<><div style={{fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}>Destinadas · aguardando entrega ({waiting.length})</div>
         <div style={{display:"flex",flexDirection:"column",gap:6}}>{waiting.map(i=>row(i,false))}</div></>}
-      {pending.length===0&&waiting.length===0&&<div style={{fontSize:12,color:B.gray500}}>{!items.length?"Nenhuma compra ainda — toque em Sincronizar.":active.length&&fil!=="all"?"Nada neste filtro.":"Tudo concluído. 👌"}</div>}
+      {pending.length===0&&waiting.length===0&&<div style={{fontSize:12,color:B.gray500}}>{!items.length?"Nenhuma compra ainda — toque em Sincronizar.":(fil!=="all"||nqs)?(done.length?null:"Nada encontrado."):"Tudo concluído. 👌"}</div>}
       {done.length>0&&<div style={{marginTop:12}}>
-        <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.green,fontSize:11,fontWeight:700,cursor:"pointer",padding:0}}>{showDone?"▾":"▸"} ✓ Concluídas — entregues e destinadas ({done.length})</button>
-        {showDone&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>{done.map(i=>row(i,false))}</div>}
+        <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.green,fontSize:11,fontWeight:700,cursor:"pointer",padding:0}}>{(showDone||nqs)?"▾":"▸"} ✓ Concluídas — entregues e destinadas ({done.length})</button>
+        {(showDone||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>{done.map(i=>row(i,false))}</div>}
       </div>}
     </div>}
     {pick&&<MLAssignModal item={pick} vehicles={openVeh} tasks={tasks} stock={stock} onClose={()=>setPick(null)} onAssign={async(it,d)=>{ await onAssign(it,d); await loadItems(); }}/>}
@@ -11904,7 +11911,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.13";
+const APP_VERSION = "2026.11.11.14";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

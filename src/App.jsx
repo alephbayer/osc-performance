@@ -12029,7 +12029,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.32";
+const APP_VERSION = "2026.11.11.33";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13897,7 +13897,7 @@ function MLArrivalsAlert({show,onOpen}) {
   if(!route.length&&!dueToday.length&&!late.length) return null;
   const names=a=>a.slice(0,3).map(r=>{const k=r.delivery_key||r.ml_key;return (k?`🔑 ${k} — `:"")+String(r.title||"").slice(0,40);}).join(" · ")+(a.length>3?` +${a.length-3}`:"");
   const pl=(n,s,p)=>`${n} ${n!==1?p:s}`;
-  return (<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.amber}55`}}>
+  return (<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",marginBottom:10,border:`1px solid ${B.amber}55`}}>
     {route.length>0&&<DashAlert color={B.green} icon={<span style={{fontSize:16}}>🚚</span>} label={`${pl(route.length,"peça saiu","peças saíram")} para entrega`} sub={names(route)} onClick={onOpen}/>}
     {dueToday.length>0&&<DashAlert color={B.amber} icon={<span style={{fontSize:16}}>📦</span>} label={`${pl(dueToday.length,"peça chega","peças chegam")} hoje`} sub={names(dueToday)} onClick={onOpen}/>}
     {late.length>0&&<DashAlert color={B.red} icon={<span style={{fontSize:16}}>⏳</span>} label={`${pl(late.length,"peça com entrega atrasada","peças com entrega atrasada")}`} sub={names(late)} onClick={onOpen}/>}
@@ -16415,6 +16415,8 @@ export default function App() {
       }).filter(m=>m.vts>0||m.tTotal>0);
       return(<div>
         <DashHeader role={adminRole}/>
+        <SL2 label="Atenção necessária"/>
+        {AlertsBlock()}
         <SL2 label="Operação atual"/>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
           <DashCard color={B.orange} icon={iconWrench} label="OSs ativas" value={activeVehicleCount} sub="Performance" onClick={()=>goSection("oficina","clients")}/>
@@ -16436,14 +16438,14 @@ export default function App() {
             </div>);
           })}
         </>}
-        <SL2 label="Atenção necessária"/>
-        {AlertsBlock()}
       </div>);
     }
 
     if(adminRole==="admin"){
       return(<div>
         <DashHeader role={adminRole}/>
+        <SL2 label="Atenção necessária"/>
+        {AlertsBlock()}
         <SL2 label="Operação atual"/>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
           <DashCard color={B.orange} icon={iconWrench} label="OSs ativas" value={activeVehicleCount} sub="Performance" onClick={()=>goSection("oficina","clients")}/>
@@ -16451,8 +16453,6 @@ export default function App() {
           <DashCard color={B.blue} icon={iconPeople} label="Clientes ativos" value={clients.length} onClick={()=>goSection("oficina","clientsMonitor")}/>
           <DashCard color={B.purple} icon={iconBox} label="Itens estoque" value={stock.length} onClick={()=>goSection("gestao","stock")}/>
         </div>
-        <SL2 label="Atenção necessária"/>
-        {AlertsBlock()}
       </div>);
     }
 
@@ -16492,6 +16492,9 @@ export default function App() {
         </div>
       </div>
 
+      <SL2 label="Atenção necessária"/>
+      {AlertsBlock()}
+
       <SL2 label="Operação atual"/>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
         <DashCard color={B.orange} icon={iconWrench} label="OSs ativas" value={activeVehicleCount} sub="Performance" onClick={()=>goSection("oficina","clients")}/>
@@ -16500,9 +16503,6 @@ export default function App() {
 
       <SL2 label="A receber"/>
       <ReceivablesPanel vehicles={vehicles} tasks={tasks} payments={payments} osHistory={osHistory} clients={clients} clientCredits={clientCredits} defaultRate={defaultRate} hide={hideRevenue}/>
-
-      <SL2 label="Atenção necessária"/>
-      {AlertsBlock()}
 
       <SL2 label="Resumo do mês"/>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>

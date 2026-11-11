@@ -6203,6 +6203,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const [tid,setTid]=useState("");
   const [markup,setMarkup]=useState("50");
   const [qtyStr,setQtyStr]=useState(String(item.qty||1));
+  const [nameStr,setNameStr]=useState(item.title||"");
   const [pid,setPid]=useState(()=>matchStockItem(item.title||"",stock));
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState("");
@@ -6220,7 +6221,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
     if(mode!=="ignored"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
-    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff}); onClose(); }
+    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff,name:nameStr.trim()||item.title}); onClose(); }
     catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
@@ -6236,6 +6237,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
       </div>
       <div style={{display:"flex",gap:6,marginBottom:12}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("ignored","Ignorar")}</div>
       {mode==="vehicle"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome da peça na OS" style={inp}/>
         <VehiclePicker value={vid} onChange={v=>{setVid(v);setTid("");}} vehicles={vehicles} clients={clients}/>
         {vid&&<TaskPicker value={tid} onChange={setTid} vts={vts} placeholder="Escolha ou crie a tarefa…"/>}
         {qtyBox}
@@ -6244,6 +6246,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
       {mode==="stock"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <StockProductPicker value={pid} onChange={setPid} stock={stock}/>
         {qtyBox}
+        {!pid&&<input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome do produto novo" style={inp}/>}
         {!pid&&<div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Produto novo — margem <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>}
         <div style={{fontSize:11,color:B.gray500}}>Entra como compra no estoque (fornecedor Mercado Livre) e soma a quantidade.</div>
       </div>}
@@ -11929,7 +11932,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.15";
+const APP_VERSION = "2026.11.11.16";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15858,12 +15861,12 @@ export default function App() {
           tid=row.id;
         } else { tlabel=tasks.find(t=>t.id===tid)?.label||""; }
         const cur=tasks.find(t=>t.id===tid); const base=Array.isArray(cur?.materials)?cur.materials:[];
-        const mat={name:String(item.title||"").trim(),brand:"",cost,markup:Number(d.markup)||0,qty,freight:0,fromStock:false,bought:true,supplier:"Mercado Livre"+(item.seller?` · ${item.seller}`:""),...(item.permalink?{mlLink:item.permalink}:{})};
+        const mat={name:String(d.name||item.title||"").trim(),brand:"",cost,markup:Number(d.markup)||0,qty,freight:0,fromStock:false,bought:true,supplier:"Mercado Livre"+(item.seller?` · ${item.seller}`:""),...(item.permalink?{mlLink:item.permalink}:{})};
         await updTask(tid,{materials:[...base,mat]});
         await db.setMLItem(item.id,{task_id:String(tid),task_label:tlabel});
         toast_("Peça lançada na OS ✓");
       } else if(d.type==="stock"){
-        const sid=await importStockNote({items:[{pid:d.pid||"",name:String(item.title||"").trim(),qty:Math.max(1,Math.round(qty)),cost:Math.round(total/Math.max(1,Math.round(qty))*10000)/10000}],supplierName:"Mercado Livre",date:String(item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:"ML "+item.ml_order_id,markup:Number(d.markup)||0});
+        const sid=await importStockNote({items:[{pid:d.pid||"",name:String(d.name||item.title||"").trim(),qty:Math.max(1,Math.round(qty)),cost:Math.round(total/Math.max(1,Math.round(qty))*10000)/10000}],supplierName:"Mercado Livre",date:String(item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:"ML "+item.ml_order_id,markup:Number(d.markup)||0});
         if(sid) await db.setMLItem(item.id,{stock_id:sid});
       }
     }catch(e){

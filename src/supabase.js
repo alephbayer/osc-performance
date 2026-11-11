@@ -1038,6 +1038,29 @@ export const db = {
     if (error) throw error;
     return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
   },
+  // ── Mercado Livre (compras da conta) ──
+  async mlCall(action, body = {}) {
+    const { data, error } = await supabase.functions.invoke("ml-sync", { body: { action, ...body } });
+    if (error) {
+      let m = error.message;
+      try { const j = await error.context?.json?.(); if (j?.error) m = j.error; } catch {}
+      throw new Error(m);
+    }
+    return data;
+  },
+  async getMLItems() {
+    const { data, error } = await supabase.from("ml_purchase_items").select("*").order("ordered_at", { ascending: false }).limit(600);
+    if (error) throw error; return data || [];
+  },
+  // reserva o item (só se ainda estiver pendente): false = alguém já destinou
+  async claimMLItem(id, patch) {
+    const { data, error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id).is("destination", null).select("id");
+    if (error) throw error; return (data || []).length > 0;
+  },
+  async setMLItem(id, patch) {
+    const { error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id);
+    if (error) throw error;
+  },
   // ── Notas importadas (anti-duplicidade) ──
   async getPurchaseImports(noteId) {
     const { data, error } = await supabase.from("purchase_imports").select("*").eq("note_id", noteId);

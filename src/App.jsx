@@ -6174,8 +6174,139 @@ function SupplierInput({value,onChange,suppliers=[],placeholder="Nome do fornece
   </div>);
 }
 
+// ─── Mercado Livre: compras da conta → destino (OS / estoque) ────────────────
+const ML_SHIP={pending:"Aguardando envio",handling:"Preparando",ready_to_ship:"Pronto p/ envio",shipped:"A caminho",delivered:"Entregue",not_delivered:"Não entregue",cancelled:"Cancelado"};
+function MLAssignModal({item,vehicles,tasks,stock,onClose,onAssign}) {
+  const [mode,setMode]=useState("vehicle");
+  const [vid,setVid]=useState("");
+  const [tid,setTid]=useState("");
+  const [markup,setMarkup]=useState("50");
+  const [pid,setPid]=useState(()=>matchStockItem(item.title||"",stock));
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+  const vts=tasks.filter(t=>t.vehicleId===vid);
+  const total=(Number(item.qty)||1)*(Number(item.unit_price)||0);
+  const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
+  const go=async()=>{
+    if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
+    setBusy(true);setErr("");
+    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid}); onClose(); }
+    catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
+  };
+  const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
+  return (<div onClick={onClose} style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,.72)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px 16px calc(104px + env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.amber}55`,borderRadius:14,width:"100%",maxWidth:440,maxHeight:"calc(100vh - 120px - env(safe-area-inset-bottom))",minHeight:0,overflowY:"auto",overflowX:"hidden",overscrollBehavior:"contain",touchAction:"pan-y",padding:16,boxSizing:"border-box"}}>
+      <div style={{fontSize:11,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Destinar peça</div>
+      <div style={{display:"flex",gap:10,marginBottom:12,minWidth:0}}>
+        {item.thumbnail&&<img src={item.thumbnail} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,flexShrink:0}}/>}
+        <div style={{minWidth:0}}>
+          <div style={{fontSize:13,fontWeight:700,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{item.title}</div>
+          <div style={{fontSize:11,color:B.gray400,marginTop:3}}>{item.qty}× {fmtBRL(Number(item.unit_price)||0)} = <b style={{color:B.gray200}}>{fmtBRL(total)}</b></div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:12}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("ignored","Ignorar")}</div>
+      {mode==="vehicle"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <select value={vid} onChange={e=>{setVid(e.target.value);setTid("");}} style={inp}>
+          <option value="">Escolha o carro…</option>
+          {vehicles.map(v=><option key={v.id} value={v.id}>{(v.model||"Veículo")+" · "+(v.plate||"sem placa")}</option>)}
+        </select>
+        {vid&&<TaskPicker value={tid} onChange={setTid} vts={vts} placeholder="Escolha ou crie a tarefa…"/>}
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Margem sobre o custo <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>
+      </div>}
+      {mode==="stock"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <StockProductPicker value={pid} onChange={setPid} stock={stock}/>
+        {!pid&&<div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Produto novo — margem <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>}
+        <div style={{fontSize:11,color:B.gray500}}>Entra como compra no estoque (fornecedor Mercado Livre) e soma a quantidade.</div>
+      </div>}
+      {mode==="ignored"&&<div style={{fontSize:12,color:B.gray400}}>Marca como “não é da oficina” (uso pessoal, devolução…). Sai da lista de pendentes e não lança nada.</div>}
+      {err&&<div style={{fontSize:12,color:B.red,marginTop:10}}>{err}</div>}
+      <div style={{display:"flex",gap:8,marginTop:14}}>
+        <button onClick={go} disabled={busy} style={{flex:1,padding:"9px 0",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:13,cursor:"pointer",opacity:busy?.6:1}}>{busy?"Lançando…":"Confirmar"}</button>
+        <button onClick={onClose} style={{padding:"9px 14px",borderRadius:8,background:B.gray700,border:"none",color:B.gray200,fontSize:13,cursor:"pointer"}}>Cancelar</button>
+      </div>
+    </div>
+  </div>);
+}
+function MLPurchasesCard({vehicles=[],tasks=[],stock=[],onAssign}) {
+  const [st,setSt]=useState(null);
+  const [items,setItems]=useState([]);
+  const [busy,setBusy]=useState("");
+  const [err,setErr]=useState("");
+  const [msg,setMsg]=useState("");
+  const [showDone,setShowDone]=useState(false);
+  const [pick,setPick]=useState(null);
+  const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
+  const doSync=async(silent)=>{
+    setBusy("sync");setErr("");if(!silent)setMsg("");
+    try{ const r=await db.mlCall("sync",{days:90}); if(r.ok===false){ setErr(r.error||"Erro ao sincronizar"); if(r.code) setSt(s=>({...(s||{}),connected:false})); } else { setMsg(r.added?`${r.added} item(ns) novo(s) ✓`:"Tudo em dia — nenhuma compra nova"); if(r.warn) setErr("Aviso: "+r.warn); await loadItems(); setSt(s=>({...(s||{}),lastSync:new Date().toISOString()})); } }
+    catch(e){ setErr(e.message||"Erro ao sincronizar"); }
+    setBusy("");
+  };
+  useEffect(()=>{
+    (async()=>{
+      try{
+        let code=null; try{ code=sessionStorage.getItem("osc_ml_code"); }catch{}
+        if(code){ try{ sessionStorage.removeItem("osc_ml_code"); }catch{} setBusy("connect"); const r=await db.mlCall("connect",{code}); if(r.ok===false) setErr(r.error||"Falha ao conectar"); else setMsg("Conta conectada ✓"); setBusy(""); }
+        const s=await db.mlCall("status"); setSt(s); await loadItems();
+        if(s.connected&&(!s.lastSync||Date.now()-new Date(s.lastSync).getTime()>30*60000)) doSync(true);
+      }catch(e){ setErr(e.message||"Erro ao consultar o Mercado Livre"); setBusy(""); }
+    })();
+  // eslint-disable-next-line
+  },[]);
+  const live=items.filter(i=>i.order_status!=="cancelled"&&i.ship_status!=="cancelled");
+  const pending=live.filter(i=>!i.destination);
+  const done=live.filter(i=>i.destination);
+  const openVeh=vehicles.filter(v=>v.status!=="delivered");
+  const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(e.message); } };
+  const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
+  const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR"):"";
+  const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?"📦 Estoque":"— ignorado";
+  const row=(i,isPending)=><div key={i.id} style={{background:B.gray900,borderRadius:10,padding:"9px 10px",display:"flex",gap:10,alignItems:"flex-start",minWidth:0}}>
+    {i.thumbnail?<img src={i.thumbnail} alt="" style={{width:46,height:46,objectFit:"cover",borderRadius:7,flexShrink:0}}/>:<div style={{width:46,height:46,borderRadius:7,background:B.gray800,flexShrink:0}}/>}
+    <div style={{flex:1,minWidth:0}}>
+      <div style={{fontSize:12.5,fontWeight:700,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{i.title}</div>
+      <div style={{fontSize:11,color:B.gray400,marginTop:3,display:"flex",gap:8,flexWrap:"wrap"}}>
+        <span>{i.qty}× {fmtBRL(Number(i.unit_price)||0)}</span><span>{fmtD(i.ordered_at)}</span>{i.seller&&<span>{i.seller}</span>}
+        {i.ship_status&&<span style={{color:i.ship_status==="delivered"?B.green:B.amber,fontWeight:700}}>{ML_SHIP[i.ship_status]||i.ship_status}</span>}
+        {i.permalink&&<a href={i.permalink} target="_blank" rel="noreferrer" style={{color:B.blue,textDecoration:"none"}}>anúncio ↗</a>}
+      </div>
+      {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:3}}>{destLbl(i)}</div>}
+    </div>
+    {isPending?<button onClick={()=>setPick(i)} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer",flexShrink:0}}>Destinar</button>
+      :i.destination==="ignored"&&<button onClick={()=>undoIgnore(i)} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer",flexShrink:0}}>desfazer</button>}
+  </div>;
+  return (<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.amber}44`,padding:14,marginBottom:16}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+      <span style={{fontSize:13,fontWeight:800,color:B.amber,letterSpacing:.4}}>Mercado Livre</span>
+      {st?.connected&&<span style={{fontSize:10,color:B.gray400}}>{st.nickname?`@${st.nickname} · `:""}{st.lastSync?`sincronizado ${new Date(st.lastSync).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}`:"nunca sincronizado"}</span>}
+      {pending.length>0&&<span style={{fontSize:10,fontWeight:800,background:B.amber,color:B.black,borderRadius:99,padding:"1px 8px"}}>{pending.length} pendente{pending.length!==1?"s":""}</span>}
+      <span style={{flex:1}}/>
+      {st?.connected&&<><button onClick={()=>doSync(false)} disabled={!!busy} style={{padding:"5px 12px",borderRadius:8,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,color:B.amber,fontSize:12,fontWeight:700,cursor:"pointer",opacity:busy?.6:1}}>{busy==="sync"?"Sincronizando…":"↻ Sincronizar"}</button>
+        <button onClick={disconnect} style={{background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>desconectar</button></>}
+    </div>
+    {busy==="connect"&&<div style={{fontSize:12,color:B.gray300,marginTop:10}}>Conectando…</div>}
+    {st&&!st.connected&&busy!=="connect"&&<div style={{marginTop:10}}>
+      {!st.hasSecret
+        ?<div style={{fontSize:12,color:B.amber,lineHeight:1.5}}>Falta cadastrar a chave secreta do aplicativo no Supabase (Edge Functions → Secrets → <b>ML_CLIENT_SECRET</b>).</div>
+        :<><div style={{fontSize:12,color:B.gray400,marginBottom:8,lineHeight:1.5}}>Conecte a conta que faz as compras. O app puxa os pedidos e você destina cada peça à OS certa.</div>
+          <a href={st.authUrl} style={{display:"inline-block",padding:"8px 16px",borderRadius:8,background:B.amber,color:B.black,fontWeight:800,fontSize:13,textDecoration:"none"}}>Conectar Mercado Livre</a></>}
+    </div>}
+    {err&&<div style={{fontSize:12,color:B.red,marginTop:10,wordBreak:"break-word"}}>{err}</div>}
+    {msg&&!err&&<div style={{fontSize:12,color:B.green,marginTop:10}}>{msg}</div>}
+    {st?.connected&&<div style={{marginTop:12}}>
+      {pending.length===0?<div style={{fontSize:12,color:B.gray500}}>{items.length?"Nenhuma peça pendente. 👌":"Nenhuma compra ainda — toque em Sincronizar."}</div>
+        :<div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div>}
+      {done.length>0&&<div style={{marginTop:10}}>
+        <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer",padding:0}}>{showDone?"▾":"▸"} Já destinadas ({done.length})</button>
+        {showDone&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>{done.map(i=>row(i,false))}</div>}
+      </div>}
+    </div>}
+    {pick&&<MLAssignModal item={pick} vehicles={openVeh} tasks={tasks} stock={stock} onClose={()=>setPick(null)} onAssign={async(it,d)=>{ await onAssign(it,d); await loadItems(); }}/>}
+  </div>);
+}
+
 // ─── Cadastro de fornecedores ────────────────────────────────────────────────
-function SuppliersTab({purchases=[],actor=""}) {
+function SuppliersTab({purchases=[],actor="",vehicles=[],tasks=[],stock=[],onAssignML}) {
   const [list,setList]=useState([]);
   const [loading,setLoading]=useState(true);
   const [q,setQ]=useState("");
@@ -6237,6 +6368,7 @@ function SuppliersTab({purchases=[],actor=""}) {
     </div>
   </div>);
   return (<div>
+    {onAssignML&&<MLPurchasesCard vehicles={vehicles} tasks={tasks} stock={stock} onAssign={onAssignML}/>}
     <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar fornecedor…" style={{...inp,flex:"1 1 220px",maxWidth:340}}/>
       {editId!=="new"&&<button onClick={()=>startEdit(null)} style={{padding:"8px 16px",borderRadius:8,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>＋ Novo fornecedor</button>}
@@ -11732,7 +11864,9 @@ async function getPushSubscription() {
 }
 
 // ─── Version & Changelog ─────────────────────────────────────────────────────
-const APP_VERSION = "2026.11.11.8";
+// Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
+try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
+const APP_VERSION = "2026.11.11.9";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15621,7 +15755,7 @@ export default function App() {
     }catch(e){errToast(e);}
   };
   const importStockNote=async({items,supplierName,date,invoice,markup})=>{
-    const qtyMap={}; let created=0, bought=0;
+    const qtyMap={}; let created=0, bought=0, lastSid=null;
     for(const it of items){
       let sid=it.pid; let itemRow=stock.find(s=>s.id===sid);
       if(!sid){
@@ -15637,9 +15771,40 @@ export default function App() {
       const sale=Math.round(cost*(1+Number(itemRow?.markup||0)/100)*100)/100;
       await db.updateStock(sid,{qty:newQty,costPrice:cost,salePrice:sale});
       setStk(p=>p.map(s=>s.id===sid?{...s,qty:newQty,costPrice:cost,salePrice:sale}:s));
-      bought++;
+      bought++; lastSid=sid;
     }
     toast_(`${bought} item(ns) lançado(s) no estoque${created?` (${created} produto${created!==1?"s":""} novo${created!==1?"s":""})`:""} ✓`);
+    return lastSid;
+  };
+  // Mercado Livre: destina uma peça comprada (carro/tarefa, estoque ou ignorar) com reserva anti-duplicidade
+  const assignMLItem=async(item,d)=>{
+    const veh=d.type==="vehicle"?vehicles.find(v=>v.id===d.vehicleId):null;
+    const vlabel=veh?`${veh.model||""} · ${veh.plate||""}`.trim():null;
+    const ok=await db.claimMLItem(item.id,{destination:d.type,vehicle_id:d.type==="vehicle"?d.vehicleId:null,vehicle_label:vlabel,assigned_by:ROLE_CONFIG[adminRole]?.label||null,assigned_at:new Date().toISOString()});
+    if(!ok) throw new Error("Esta peça já foi destinada por outra pessoa. Atualize a lista.");
+    try{
+      const qty=Number(item.qty)>0?Number(item.qty):1, cost=Number(item.unit_price)||0;
+      if(d.type==="vehicle"){
+        let tid=d.tid, tlabel="";
+        if(String(tid).startsWith("new:")){
+          tlabel=tid.slice(4);
+          const row=await addTask(d.vehicleId,tlabel,null,"performance");
+          if(!row) throw new Error("Não consegui criar a tarefa “"+tlabel+"”");
+          tid=row.id;
+        } else { tlabel=tasks.find(t=>t.id===tid)?.label||""; }
+        const cur=tasks.find(t=>t.id===tid); const base=Array.isArray(cur?.materials)?cur.materials:[];
+        const mat={name:String(item.title||"").trim(),brand:"",cost,markup:Number(d.markup)||0,qty,freight:0,fromStock:false,bought:true,supplier:"Mercado Livre"+(item.seller?` · ${item.seller}`:""),...(item.permalink?{mlLink:item.permalink}:{})};
+        await updTask(tid,{materials:[...base,mat]});
+        await db.setMLItem(item.id,{task_id:String(tid),task_label:tlabel});
+        toast_("Peça lançada na OS ✓");
+      } else if(d.type==="stock"){
+        const sid=await importStockNote({items:[{pid:d.pid||"",name:String(item.title||"").trim(),qty:Math.max(1,Math.round(qty)),cost}],supplierName:"Mercado Livre",date:String(item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:"ML "+item.ml_order_id,markup:Number(d.markup)||0});
+        if(sid) await db.setMLItem(item.id,{stock_id:sid});
+      }
+    }catch(e){
+      try{ await db.setMLItem(item.id,{destination:null,vehicle_id:null,vehicle_label:null,task_id:null,task_label:null,stock_id:null,assigned_by:null,assigned_at:null}); }catch{}
+      throw e;
+    }
   };
   const updatePurchase=async(id,patch)=>{
     const oldPurchase=stockPurchases.find(p=>p.id===id);
@@ -16848,7 +17013,7 @@ export default function App() {
 
       {tab==="suppliers"&&allowedTabs.includes("suppliers")&&<>
         <TabHeader color={B.green} title="Fornecedores" subtitle="Cadastro de quem vende para a oficina — usado no autocompletar das compras de estoque"/>
-        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""}/>
+        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} tasks={tasks} stock={stock} onAssignML={assignMLItem}/>
       </>}
 
       {tab==="partners"&&allowedTabs.includes("partners")&&<>

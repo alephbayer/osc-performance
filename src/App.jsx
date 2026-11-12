@@ -4633,9 +4633,9 @@ function _stockTokens(txt){
   return out;
 }
 // ─── Limpeza de título do Mercado Livre: nome enxuto + marca + anos de compatibilidade ───
-const _ML_BRANDS=["Bosch","Motul","Fuchs","Wurth","Würth","Liqui Moly","LiquiMoly","Mann","Mahle","Hengst","Tirreno","Metal Horse","NGK","Denso","Valeo","Sachs","Monroe","Cofap","Nakata","SKF","Dayco","Gates","Continental","Lonaflex","3M","Wynns","Castrol","Mobil","Shell","Petronas","Ipiranga","Lubrax","Havoline","Elring","Victor Reinz","Febi","Meyle","Lemforder","TRW","Brembo","Fremax","Cobreq","Pirelli","Michelin","Goodyear","Vonder","Tramontina","Gedore","Makita","Dewalt","Stanley","Tekbond","Loctite","Sika","Permatex","Tecfil","Fram","Wega","Mahle Metal Leve","Metal Leve","Delphi","Magneti Marelli","Marelli","Cofap","Varga","Sampel","Frasle","Jurid","Lucas","Hella","Osram","Philips","Narva","Blazer","Autogauge","Pioneer","Pierburg","Aisin","Luk","Ina","Fag","Cofle","Schadek","Mte","Thomson","Mte-Thomson","Ford","GM","Original"].filter(b=>!["Ford","GM","Original"].includes(b));
+const _ML_BRANDS=["Bosch","Motul","Fuchs","Wurth","Würth","Liqui Moly","LiquiMoly","Mann","Mahle","Hengst","Tirreno","Metal Horse","NGK","Denso","Valeo","Sachs","Monroe","Cofap","Nakata","SKF","Dayco","Gates","Continental","Lonaflex","3M","Wynns","Castrol","Mobil","Shell","Petronas","Ipiranga","Lubrax","Havoline","Elring","Victor Reinz","Febi","Meyle","Lemforder","TRW","Brembo","Fremax","Cobreq","Pirelli","Michelin","Goodyear","Vonder","Tramontina","Gedore","Makita","Dewalt","Stanley","Tekbond","Loctite","Sika","Permatex","Tecfil","Fram","Wega","Mahle Metal Leve","Metal Leve","Delphi","Magneti Marelli","Marelli","Cofap","Varga","Sampel","Frasle","Jurid","Lucas","Hella","Osram","Philips","Narva","Blazer","Autogauge","Pioneer","Pierburg","Aisin","Luk","Ina","Fag","Cofle","Schadek","Mte","Thomson","Mte-Thomson","Vonixx","Autoamerica","Cadillac","Meguiars","Menzerna","Koch-Chemie","Koch Chemie","Sonax","Turtle Wax","Armor All","Zacs","Easytech","Proauto","Lincoln","Granvia","Nobre Car","Rodabrill","Orbi","Maxi Rubber","Farben","Tapmatic","Centralsul","Chemical Guys","Ceramic Pro","Gtechniq","Gyeon","Shineco","Wurth","Mannol","Ravenol","Petronas","Selenia","Radnaq","Ypiranga","Ipiranga","Texaco","Bardahl","Wynns","Tekbond","Brascola","Quimatic","Dinitrol","Sikaflex","Colorex","Sherwin Williams","Sayerlack","Lazzuril","Glasurit","Spies Hecker","Standox","Ford","GM","Original"].filter(b=>!["Ford","GM","Original"].includes(b));
 const _ML_VEH=new Set("bmw ford chevrolet gm vw volkswagen fiat toyota honda hyundai nissan renault peugeot citroen mercedes mercedes-benz audi porsche dodge jeep mitsubishi kia volvo subaru suzuki chery jac opala maverick fusca kombi brasilia corsa celta monza chevette fiesta focus escort belina verona veraneio caravan santana passat civic corolla hilux cayenne macan panamera mustang camaro corvette charger challenger galaxie landau gol uno palio astra vectra omega zafira meriva s10 blazer silverado ranger f100 f1000 f250 f4000 c10 c20 d10 d20 a10 saveiro parati voyage golf jetta tiguan amarok polo".split(" "));
-const _ML_NOISE=new Set("original padrao origin novo nova ambos lados lado universal frete gratis envio full promocao oferta premium top importado nacional genuino genuina compativel compativeis modelo modelos linha pronta entrega".split(" "));
+const _ML_NOISE=new Set("original padrao origin novo nova ambos lados lado universal frete gratis envio full promocao oferta premium top importado nacional genuino genuina compativel compativeis modelo modelos linha pronta entrega veiculo veiculos automotivo automotiva automotivos automotivas carro carros uso profissional alta qualidade excelente melhor".split(" "));
 const _ML_CONN=new Set(["para","p","c","com","do","da","de","dos","das","e","em","a","o","na","no","-","–","/"]);
 function cleanMLTitle(title, brands=[]) {
   const raw=String(title||"").trim(); if(!raw) return {name:"",brand:"",years:""};
@@ -4665,6 +4665,7 @@ function cleanMLTitle(title, brands=[]) {
   while(out.length&&_ML_CONN.has(nrm(out[out.length-1]))) out.pop();
   // título todo em maiúsculas → Title Case
   let name=out.join(" ").replace(/\s+/g," ").replace(/\s[-–]\s*$/,"").trim();
+  name=name.replace(/(\d(?:[.,]\d+)?)\s*(l|lt|lts|litro|litros)\b/gi,(m,a)=>a+"L").replace(/(\d(?:[.,]\d+)?)\s*(ml|g|kg|mm|cm|m)\b/gi,(m,a,b)=>a+b.toLowerCase());
   if(name&&name===name.toUpperCase()&&/[A-Z]{4,}/.test(name)) name=name.toLowerCase().replace(/(^|\s)([a-zà-ú])/g,(m,a,b)=>a+b.toUpperCase());
   const bd=brand?(brands||[]).find(b=>nrm(b)===nrm(brand))||_ML_BRANDS.find(b=>nrm(b)===nrm(brand))||brand:"";
   return {name:name||raw,brand:bd,years};
@@ -12364,7 +12365,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.64";
+const APP_VERSION = "2026.11.12.65";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

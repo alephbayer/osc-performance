@@ -4590,7 +4590,7 @@ function StockProductPicker({ value, onChange, stock }) {
 }
 // ── Sugestão de estoque por sinônimos (ex.: "pano pega poeira" ≈ "pega pó") ───────
 const _SYN_PHRASES=[["anel de vedacao","oring"],["anel vedacao","oring"],["o ring","oring"],["junta liquida","juntaliquida"],["veda junta","juntaliquida"],["silicone formador de junta","juntaliquida"],["fluido de freio","fluidofreio"],["oleo de freio","fluidofreio"],["liquido de arrefecimento","arrefecimento"],["aditivo radiador","arrefecimento"],["aditivo de radiador","arrefecimento"],["agua destilada","aguadestilada"],["agua desmineralizada","aguadestilada"],["selo de oleo","retentor"],["reparo de pintura","retoque"],["tinta de retoque","retoque"],["pega poeira","pegapo"],["pega po","pegapo"],["tack rag","pegapo"],["fita crepe","fitacrepe"],["fita mascara","fitacrepe"],["fita de mascaramento","fitacrepe"],["fita mascaramento","fitacrepe"],["papel toalha","papeltoalha"],["toalha de papel","papeltoalha"],["toalha papel","papeltoalha"],["papel interfolha","papeltoalha"],["lixa dagua","lixaagua"],["lixa d agua","lixaagua"],["lixa de agua","lixaagua"],["lixa agua","lixaagua"],["disco de corte","discocorte"],["disco corte","discocorte"],["disco de desbaste","discodesbaste"],["disco flap","discoflap"],["fundo preparador","primer"],["massa poliester","massapoli"],["massa rapida","massapoli"],["massa plastica","massapoli"],["limpa pecas","desengraxante"],["limpa contato","limpacontato"],["silicone em spray","siliconespray"],["silicone spray","siliconespray"],["oleo lubrificante","lubrificante"],["wd 40","desengripante"],["wd40","desengripante"],["fita isolante","fitaisolante"],["fita veda rosca","vedarosca"],["veda rosca","vedarosca"],["cola instantanea","superbonder"],["super bonder","superbonder"],["super cola","superbonder"],["pote descartavel","pote"],["marmitex","pote"],["cano pvc","tubopvc"],["mascara de solda","mascarasolda"],["mascara solda","mascarasolda"],["vidro de mascara","lentemascara"],["lente mascara","lentemascara"],["lentes mascara","lentemascara"],["lentes externa","lentemascara"],["lente externa","lentemascara"],["luva nitrilica","luvanitrilica"],["luva de nitrilo","luvanitrilica"],["luva descartavel","luvanitrilica"],["luvas descartaveis","luvanitrilica"]];
-const _SYN_WORDS={vedacao:"junta",vedacoes:"junta",vedante:"junta",gaxeta:"junta",gaxetas:"junta",juntas:"junta",guarnicao:"junta",adesivo:"cola",mangote:"mangueira",decapante:"removedor",trincha:"pincel",clipe:"presilha",clipes:"presilha",grampo:"presilha",grampos:"presilha",coolant:"arrefecimento",esmeril:"esmerilhadeira",rebitador:"rebitadeira",tiner:"thinner",diluente:"thinner",solvente:"thinner",flanela:"pano",estopa:"pano",desengordurante:"desengraxante",desengripante:"desengripante",abracadeira:"abracadeira",tubo:"mangueira",cabo:"fio",respirador:"mascara",lubrificante:"lubrificante",graxa:"graxa",grafite:"grafite",parafusos:"parafuso",porcas:"porca",arruelas:"arruela",rebites:"rebite",luvas:"luva",panos:"pano",lixas:"lixa",discos:"disco",fitas:"fita",colas:"cola",oleos:"oleo",tintas:"tinta",vernizes:"verniz"};
+const _SYN_WORDS={farois:"farol",faroletes:"farolete",lanternas:"lanterna",vedacao:"junta",vedacoes:"junta",vedante:"junta",gaxeta:"junta",gaxetas:"junta",juntas:"junta",guarnicao:"junta",adesivo:"cola",mangote:"mangueira",decapante:"removedor",trincha:"pincel",clipe:"presilha",clipes:"presilha",grampo:"presilha",grampos:"presilha",coolant:"arrefecimento",esmeril:"esmerilhadeira",rebitador:"rebitadeira",tiner:"thinner",diluente:"thinner",solvente:"thinner",flanela:"pano",estopa:"pano",desengordurante:"desengraxante",desengripante:"desengripante",abracadeira:"abracadeira",tubo:"mangueira",cabo:"fio",respirador:"mascara",lubrificante:"lubrificante",graxa:"graxa",grafite:"grafite",parafusos:"parafuso",porcas:"porca",arruelas:"arruela",rebites:"rebite",luvas:"luva",panos:"pano",lixas:"lixa",discos:"disco",fitas:"fita",colas:"cola",oleos:"oleo",tintas:"tinta",vernizes:"verniz"};
 const _SYN_NOISE=new Set(["de","da","do","das","dos","para","p","c","com","e","em","a","o","kit","jogo","par","un","und","unid","unidade","unidades","pcs","pc","peca","pecas","original","novo","nova","cor","tamanho","tam","embalagem","caixa","cx","pacote","pct","rolo","litro","litros","lt","l","ml","g","kg","mm","cm","m","x","uso","profissional","automotivo","automotiva","premium","top"]);
 // medidas (1/2, 18mm, 5l, 600, 20w50, tamanho G…) — precisam ser iguais para dois itens serem "parecidos"
 function _stockMeasures(txt){
@@ -4620,7 +4620,7 @@ function _stockTokens(txt){
   return out;
 }
 // devolve até n produtos do estoque parecidos com o nome (score 0–1), do melhor ao pior
-function suggestStockItems(name, stock, n = 3) {
+function suggestStockItems(name, stock, n = 3, loose = false) {
   const A=_stockTokens(name); if(!A.size) return [];
   const MA=_stockMeasures(name);
   const res=[];
@@ -4630,8 +4630,8 @@ function suggestStockItems(name, stock, n = 3) {
     const MS=_stockMeasures(s.name);
     if(MA.size&&MS.size&&!([...MS].every(x=>MA.has(x))||[...MA].every(x=>MS.has(x)))) continue; // medidas conflitantes = item diferente
     const cont=inter/Math.min(A.size,S.size); const jac=inter/new Set([...A,...S]).size;
-    const score=(0.6*cont+0.4*jac)*((MA.size||MS.size)&&!(MA.size&&MS.size)?0.9:1);
-    if(cont>=0.6&&score>=0.6) res.push({id:s.id,name:s.name,brand:s.brand||"",score});
+    const score=loose?(0.85*cont+0.15*jac)*((MA.size||MS.size)&&!(MA.size&&MS.size)?0.95:1):(0.6*cont+0.4*jac)*((MA.size||MS.size)&&!(MA.size&&MS.size)?0.9:1);
+    if(loose?(cont>=0.5&&score>=0.42):(cont>=0.6&&score>=0.6)) res.push({id:s.id,name:s.name,brand:s.brand||"",score});
   }
   return res.sort((a,b)=>b.score-a.score).slice(0,n);
 }
@@ -6275,7 +6275,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const [err,setErr]=useState("");
   const vts=tasks.filter(t=>t.vehicleId===vid);
   const [lk,setLk]=useState(null); // {tid,idx} lançamento manual existente a corrigir
-  const lkCands=useMemo(()=>{ if(!vid) return []; const pool=[]; vts.forEach(t=>(Array.isArray(t.materials)?t.materials:[]).forEach((m,idx)=>{ if(m&&!m.mlItem&&!m.fromStock&&m.name) pool.push({id:t.id+"|"+idx,name:m.name,tid:t.id,idx,tl:t.label,m}); })); return suggestStockItems(item.title||"",pool,3).map(r=>pool.find(x=>x.id===r.id)); },[vid,tasks,item.id]);
+  const lkCands=useMemo(()=>{ if(!vid) return []; const pool=[]; vts.forEach(t=>(Array.isArray(t.materials)?t.materials:[]).forEach((m,idx)=>{ if(m&&!m.mlItem&&!m.fromStock&&m.name) pool.push({id:t.id+"|"+idx,name:m.name,tid:t.id,idx,tl:t.label,m}); })); return suggestStockItems(item.title||"",pool,3,true).map(r=>pool.find(x=>x.id===r.id)); },[vid,tasks,item.id]);
   const listQty=Number(item.qty)||1;
   const unitsNum=Math.min(listQty,Math.max(1,Math.round(Number(unitsStr)||listQty)));
   const total=unitsNum*(Number(item.unit_price)||0);
@@ -12213,7 +12213,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.48";
+const APP_VERSION = "2026.11.11.49";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

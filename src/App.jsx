@@ -12312,7 +12312,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.60";
+const APP_VERSION = "2026.11.12.62";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14162,6 +14162,7 @@ function DashAlert({color,label,sub,icon,onClick}){
 // ─── Dashboard: peças do Mercado Livre chegando (saiu para entrega / chega hoje) ─
 function MLArrivalsAlert({show,onOpen}) {
   const [rows,setRows]=useState([]);
+  const [open,setOpen]=useState({});
   useEffect(()=>{
     if(!show) return;
     let alive=true;
@@ -14177,12 +14178,37 @@ function MLArrivalsAlert({show,onOpen}) {
   const dueToday=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)===today);
   const late=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)<today);
   if(!route.length&&!dueToday.length&&!late.length) return null;
-  const names=a=>a.slice(0,3).map(r=>{const k=r.delivery_key||r.ml_key;return (k?`🔑 ${k} — `:"")+String(r.title||"").slice(0,40);}).join(" · ")+(a.length>3?` +${a.length-3}`:"");
-  const pl=(n,s,p)=>`${n} ${n!==1?p:s}`;
-  return (<div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",marginBottom:10,border:`1px solid ${B.amber}55`}}>
-    {route.length>0&&<DashAlert color={B.green} icon={<span style={{fontSize:16}}>🚚</span>} label={`${pl(route.length,"peça saiu","peças saíram")} para entrega`} sub={names(route)} onClick={onOpen}/>}
-    {dueToday.length>0&&<DashAlert color={B.amber} icon={<span style={{fontSize:16}}>📦</span>} label={`${pl(dueToday.length,"peça chega","peças chegam")} hoje`} sub={names(dueToday)} onClick={onOpen}/>}
-    {late.length>0&&<DashAlert color={B.red} icon={<span style={{fontSize:16}}>⏳</span>} label={`${pl(late.length,"peça com entrega atrasada","peças com entrega atrasada")}`} sub={names(late)} onClick={onOpen}/>}
+  const Ic=({ch})=><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{ch}</svg>;
+  const groups=[
+    {k:"route",color:B.green,rows:route,label:`${route.length} ${route.length!==1?"peças saíram":"peça saiu"} para entrega`,icon:<Ic ch={<><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>}/>},
+    {k:"today",color:B.amber,rows:dueToday,label:`${dueToday.length} ${dueToday.length!==1?"peças chegam":"peça chega"} hoje`,icon:<Ic ch={<><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.5L12 12.5l8.7-5"/><path d="M12 22V12.5"/></>}/>},
+    {k:"late",color:B.red,rows:late,label:`${late.length} ${late.length!==1?"peças com entrega atrasada":"peça com entrega atrasada"}`,icon:<Ic ch={<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>}/>},
+  ].filter(g=>g.rows.length);
+  const dest=r=>r.destination==="vehicle"?(r.vehicle_label||"Carro / OS"):r.destination==="stock"?"Estoque":r.destination==="supplies"?"Insumos":r.destination==="tool"?"Patrimônio":r.destination==="ignored"?"Ignorada":"Sem destino";
+  const fdt=d=>new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
+  return (<div style={{background:B.gray800,borderRadius:14,padding:"0 16px",marginBottom:10,border:`1px solid ${B.amber}55`}}>
+    {groups.map((g,gi)=>{ const o=!!open[g.k]; return (<div key={g.k} style={{borderTop:gi?`1px solid ${B.gray700}`:"none"}}>
+      <div onClick={()=>setOpen(v=>({...v,[g.k]:!v[g.k]}))} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",cursor:"pointer"}}>
+        <div style={{width:34,height:34,borderRadius:9,background:`${g.color}18`,color:g.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{g.icon}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:13,fontWeight:700,color:B.white}}>{g.label}</div>
+          {!o&&<div style={{fontSize:11,color:B.gray400,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.rows.slice(0,3).map(r=>String(r.title||"").slice(0,28)).join(" · ")}{g.rows.length>3?` +${g.rows.length-3}`:""}</div>}
+        </div>
+        <span style={{fontSize:11,color:B.gray500,display:"inline-block",transition:"transform .2s",transform:o?"rotate(90deg)":"none"}}>▸</span>
+      </div>
+      {o&&<div style={{paddingBottom:10,display:"flex",flexDirection:"column",gap:6}}>
+        {g.rows.map(r=>{ const k=r.delivery_key||r.ml_key; return (<div key={r.id} style={{background:B.gray900,borderRadius:10,padding:"8px 10px"}}>
+          <div style={{fontSize:12,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{r.title}</div>
+          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"3px 10px",marginTop:4,fontSize:10.5,color:B.gray400}}>
+            {Number(r.qty)>1&&<span>{r.qty}×</span>}
+            <span style={{color:r.destination?B.gray300:B.amber}}>{dest(r)}</span>
+            {r.eta_at&&<span>previsão {fdt(r.eta_at)}</span>}
+            {k&&<span style={{color:B.amber,fontWeight:700}}>palavra-chave: {k}</span>}
+          </div>
+        </div>); })}
+        <button onClick={onOpen} style={{alignSelf:"flex-start",background:"none",border:"none",padding:"2px 0",color:g.color,fontSize:11.5,fontWeight:700,cursor:"pointer"}}>Abrir compras do ML →</button>
+      </div>}
+    </div>); })}
   </div>);
 }
 

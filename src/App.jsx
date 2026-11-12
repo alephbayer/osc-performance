@@ -4607,6 +4607,19 @@ function _stockMeasures(txt){
   const last=ws[ws.length-1]; if(["p","m","g"].includes(last)&&ws.length>1) out.add("tam"+last);
   return out;
 }
+// plural → singular (botões→botão, faróis→farol, radiadores→radiador, luzes→luz, mangueiras→mangueira)
+function _singular(w){
+  if(w.length<4||w.endsWith("ss")) return w;
+  if(/(oes|aes)$/.test(w)) return w.slice(0,-3)+"ao";
+  if(w.endsWith("ais")) return w.slice(0,-3)+"al";
+  if(w.endsWith("eis")) return w.slice(0,-3)+"el";
+  if(w.endsWith("ois")) return w.slice(0,-3)+"ol";
+  if(w.endsWith("uis")) return w.slice(0,-3)+"ul";
+  if(/[rz]es$/.test(w)) return w.slice(0,-2);
+  if(w.endsWith("ns")) return w.slice(0,-2)+"m";
+  if(w.endsWith("s")) return w.slice(0,-1);
+  return w;
+}
 function _stockTokens(txt){
   let n=" "+_normName(txt)+" ";
   for(const [a,b] of _SYN_PHRASES) n=n.split(" "+a+" ").join(" "+b+" ");
@@ -4614,7 +4627,7 @@ function _stockTokens(txt){
   for(let w of n.trim().split(/\s+/)){
     if(!w||_SYN_NOISE.has(w)||/^\d+$/.test(w)||/^\d+[a-z]{1,3}$/.test(w)||w.length<2) continue;
     if(_SYN_WORDS[w]) w=_SYN_WORDS[w];
-    else if(w.length>4&&w.endsWith("s")&&!w.endsWith("ss")) w=w.slice(0,-1);
+    else { w=_singular(w); if(_SYN_WORDS[w]) w=_SYN_WORDS[w]; }
     out.add(w);
   }
   return out;
@@ -12215,7 +12228,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.50";
+const APP_VERSION = "2026.11.11.51";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

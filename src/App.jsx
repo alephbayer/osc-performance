@@ -7,12 +7,12 @@ import { db, resizeAndUpload, subscribeToChanges, supabase as supabaseClient } f
 const THEMES = {
   dark: {
     black:"#0a0a0a", gray900:"#111111", gray800:"#1a1a1a", gray700:"#2a2a2a",
-    gray600:"#3d3d3d", gray500:"#555555", gray400:"#888888", gray200:"#d4d4d4",
+    gray600:"#3d3d3d", gray500:"#555555", gray400:"#888888", gray300:"#b4b4b4", gray200:"#d4d4d4",
     white:"#ffffff",
   },
   light: {
     black:"#f0f2f5", gray900:"#ffffff", gray800:"#f8f9fa", gray700:"#e9ecef",
-    gray600:"#ced4da", gray500:"#868e96", gray400:"#495057", gray200:"#212529",
+    gray600:"#ced4da", gray500:"#868e96", gray400:"#495057", gray300:"#343a40", gray200:"#212529",
     white:"#0a0a0a",
   },
 };
@@ -45,6 +45,7 @@ const B = {
   get gray600(){ return THEMES[getTheme()].gray600;  },
   get gray500(){ return THEMES[getTheme()].gray500;  },
   get gray400(){ return THEMES[getTheme()].gray400;  },
+  get gray300(){ return THEMES[getTheme()].gray300;  },
   get gray200(){ return THEMES[getTheme()].gray200;  },
   get white()  { return THEMES[getTheme()].white;    },
   orange:"#DD8B34", orangeD:"#B06F28", orangeL:"#E8A55C",
@@ -12389,7 +12390,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.67";
+const APP_VERSION = "2026.11.12.68";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

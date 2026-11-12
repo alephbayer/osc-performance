@@ -6359,6 +6359,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
       </div>}
       {mode==="supplies"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome do insumo" style={inp}/>
+        {qtyBox}
         {frBox}
         <div style={{display:"flex",gap:6}}>{[["ambos","⚙️🎨 Ambas"],["performance","⚙️ Performance"],["finishing","🎨 Finishing"]].map(([k,l])=><button key={k} onClick={()=>setSdiv(k)} style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${sdiv===k?B.amber:B.gray600}`,background:sdiv===k?`${B.amber}18`:B.gray900,color:sdiv===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
         <div style={{fontSize:11,color:B.gray500,lineHeight:1.45}}>Lança <b style={{color:B.gray200}}>{fmtBRL(total+fr)}</b> como despesa “Insumos” no mês da compra, no Financeiro. Não vai para OS nem para o estoque.</div>
@@ -6584,6 +6585,80 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
 }
 
 // ─── Cadastro de fornecedores ────────────────────────────────────────────────
+// ─── Histórico de insumos: consumo x período de recompra ──────────────────────
+function InsumosTab({expenses=[]}) {
+  const [mlq,setMlq]=useState({});
+  const [open,setOpen]=useState({});
+  const [q,setQ]=useState("");
+  useEffect(()=>{ db.getMLItems().then(rows=>{ const m={}; rows.forEach(r=>{ if(r.expense_id) m[r.expense_id]=Number(r.qty)||null; }); setMlq(m); }).catch(()=>{}); },[]);
+  const entries=useMemo(()=>expenses.filter(e=>e.category==="insumos").map(e=>({id:e.id,name:String(e.name||"").replace(/^insumos:\s*/i,"").trim(),amount:Number(e.amount)||0,date:new Date(e.date||e.createdAt),qty:Number(e.qty)>0?Number(e.qty):(mlq[e.id]||null)})).filter(e=>!isNaN(e.date.getTime())).sort((a,b)=>a.date-b.date),[expenses,mlq]);
+  const groups=useMemo(()=>{
+    const gs=[];
+    entries.forEach(en=>{ const hit=suggestStockItems(en.name,gs.map(g=>({id:g.id,name:g.name})),1)[0]; let g=hit&&gs.find(x=>x.id===hit.id); if(!g){ g={id:"g"+gs.length,name:en.name,items:[]}; gs.push(g); } g.items.push(en); });
+    const DAY=86400000;
+    return gs.map(g=>{
+      const it=g.items, n=it.length, spent=it.reduce((a,x)=>a+x.amount,0);
+      const last=it[n-1], prev=n>1?it[n-2]:null;
+      const gaps=[]; for(let i=1;i<n;i++){ const d=(it[i].date-it[i-1].date)/DAY; if(d>=0.5) gaps.push(d); }
+      const avgInt=gaps.length?gaps.reduce((a,x)=>a+x,0)/gaps.length:null;
+      const span=n>1?(last.date-it[0].date)/DAY:0;
+      const used=it.slice(0,-1); const qAll=used.every(x=>x.qty);
+      const perMonth=(span>=10&&qAll)?used.reduce((a,x)=>a+x.qty,0)/span*30:null;
+      const spendMonth=span>=10?used.reduce((a,x)=>a+x.amount,0)/span*30:null;
+      const unit=x=>x&&x.qty?x.amount/x.qty:null;
+      const lu=unit(last), pu=unit(prev);
+      const next=avgInt?new Date(last.date.getTime()+avgInt*DAY):null;
+      return {...g,n,spent,last,avgInt,perMonth,spendMonth,lu,delta:(lu&&pu)?(lu-pu)/pu*100:null,next,hist:[...it].reverse()};
+    }).sort((a,b)=>b.spent-a.spent);
+  },[entries]);
+  const nq=_normName(q); const shown=groups.filter(g=>!nq||_normName(g.name).includes(nq));
+  const months=useMemo(()=>{ const m={}; entries.forEach(e=>{ const k=e.date.toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"}).slice(0,7); m[k]=(m[k]||0)+e.amount; }); return Object.entries(m).sort().slice(-6); },[entries]);
+  const maxM=Math.max(1,...months.map(x=>x[1]));
+  const fd=d=>d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"});
+  const fn=v=>String(Math.round(v*10)/10).replace(".",",");
+  if(!entries.length) return <div style={{textAlign:"center",padding:"28px 0",color:B.gray500,fontSize:13}}>Nenhum insumo lançado ainda. Destine uma compra do Mercado Livre como “Insumos” ou lance em Financeiro → Despesas.</div>;
+  return (<div>
+    {months.length>0&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:12,marginBottom:12}}>
+      <div style={{fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Gasto em insumos por mês</div>
+      <div style={{display:"flex",alignItems:"flex-end",gap:8,height:84}}>
+        {months.map(([k,v])=><div key={k} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:0}}>
+          <div style={{fontSize:9,color:B.gray300}}>{fmtBRL(v).replace(",00","")}</div>
+          <div style={{width:"100%",maxWidth:34,height:Math.max(3,Math.round(v/maxM*46)),background:`${B.teal||"#14b8a6"}`,borderRadius:4,opacity:.85}}/>
+          <div style={{fontSize:9,color:B.gray500}}>{k.slice(5)}/{k.slice(2,4)}</div>
+        </div>)}
+      </div>
+    </div>}
+    <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar insumo…" style={{padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box",marginBottom:10}}/>
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {shown.map(g=>{ const o=!!open[g.id]; return (<div key={g.id} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"10px 12px"}}>
+        <button onClick={()=>setOpen(v=>({...v,[g.id]:!v[g.id]}))} style={{display:"block",width:"100%",background:"none",border:"none",padding:0,cursor:"pointer",textAlign:"left"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:11,color:B.gray500,display:"inline-block",transition:"transform .2s",transform:o?"rotate(90deg)":"none"}}>▸</span>
+            <span style={{flex:1,minWidth:0,fontSize:13,fontWeight:700,color:B.white,wordBreak:"break-word"}}>{g.name}</span>
+            <span style={{fontSize:12,fontWeight:800,color:B.gray200,whiteSpace:"nowrap"}}>{fmtBRL(g.spent)}</span>
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:"2px 12px",marginTop:5,paddingLeft:19,fontSize:10.5,color:B.gray400}}>
+            <span>{g.n} {g.n===1?"compra":"compras"}</span>
+            {g.avgInt!=null&&<span>recompra a cada <b style={{color:B.gray200}}>~{Math.round(g.avgInt)} dias</b></span>}
+            {g.perMonth!=null&&<span>consumo <b style={{color:B.gray200}}>~{fn(g.perMonth)} un/mês</b></span>}
+            {g.spendMonth!=null&&<span><b style={{color:B.gray200}}>{fmtBRL(g.spendMonth)}</b>/mês</span>}
+            {g.next&&<span>próxima ~<b style={{color:g.next<new Date()?B.amber:B.gray200}}>{fd(g.next)}</b></span>}
+            {g.delta!=null&&Math.abs(g.delta)>=1&&<span style={{color:g.delta>0?B.red:B.green}}>{g.delta>0?"▲":"▼"} {fn(Math.abs(g.delta))}% preço</span>}
+          </div>
+        </button>
+        {o&&<div style={{marginTop:8,borderTop:`1px solid ${B.gray700}`,paddingTop:6}}>
+          {g.hist.map(h=><div key={h.id} style={{display:"flex",gap:8,fontSize:11,color:B.gray300,padding:"3px 0",alignItems:"baseline"}}>
+            <span style={{width:54,color:B.gray400}}>{fd(h.date)}</span>
+            <span style={{flex:1,minWidth:0}}>{h.qty?`${fn(h.qty)} un`:"qtd não informada"}{h.qty?<span style={{color:B.gray500}}> · {fmtBRL(h.amount/h.qty)}/un</span>:null}</span>
+            <span style={{fontWeight:700,color:B.gray200}}>{fmtBRL(h.amount)}</span>
+          </div>)}
+        </div>}
+      </div>); })}
+      {!shown.length&&<div style={{fontSize:12,color:B.gray500,textAlign:"center",padding:12}}>Nada encontrado.</div>}
+    </div>
+  </div>);
+}
+
 function ToolsTab({showValues=true}) {
   const [tools,setTools]=useState([]);
   const [q,setQ]=useState("");
@@ -10487,28 +10562,32 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
   const [open,setOpen]=useState(false);
   const [adding,setAdding]=useState(false);
   const [editId,setEditId]=useState(null);
-  const [form,setForm]=useState({name:"",amount:"",category:"salario",division:"ambos",recurrent:true});
+  const [form,setForm]=useState({name:"",amount:"",category:"salario",division:"ambos",recurrent:true,qty:"",date:""});
 
   const totalExpenses=expenses.reduce((s,e)=>s+e.amount,0);
   const byCat=EXPENSE_CATS.map(c=>({...c,items:expenses.filter(e=>e.category===c.id),total:expenses.filter(e=>e.category===c.id).reduce((s,e)=>s+e.amount,0)})).filter(c=>c.items.length>0);
 
-  const resetForm=()=>setForm({name:"",amount:"",category:"salario",division:"ambos",recurrent:true});
+  const resetForm=()=>setForm({name:"",amount:"",category:"salario",division:"ambos",recurrent:true,qty:"",date:""});
 
   const submit=async()=>{
     const amt=parseFloat(String(form.amount).replace(",","."));
     if(!form.name.trim()||!amt||amt<=0) return;
+    const isIns=form.category==="insumos";
+    const qn=parseFloat(String(form.qty).replace(",","."))||0;
+    if(isIns&&qn<=0){ alert("Informe a quantidade comprada do insumo."); return; }
+    const extra=isIns?{qty:qn,recurrent:false}:{qty:null};
     if(editId){
-      await onUpdate(editId,{...form,amount:amt});
+      await onUpdate(editId,{...form,...extra,amount:amt});
       setEditId(null);
     } else {
-      await onAdd({...form,amount:amt});
+      await onAdd({...form,...extra,amount:amt,...(isIns&&form.date?{date:form.date+"T12:00:00-03:00"}:{})});
       setAdding(false);
     }
     resetForm();
   };
 
   const startEdit=(e)=>{
-    setForm({name:e.name,amount:String(e.amount),category:e.category,division:e.division,recurrent:e.recurrent});
+    setForm({name:e.name,amount:String(e.amount),category:e.category,division:e.division,recurrent:e.recurrent,qty:e.qty?String(e.qty):"",date:""});
     setEditId(e.id);
     setAdding(false);
   };
@@ -10521,11 +10600,17 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
         <div style={{display:"flex",gap:8}}>
           <input value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} placeholder="Valor (R$)" type="number" min="0"
             style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-          <select value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))}
+          <select value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value,...(e.target.value==="insumos"?{recurrent:false}:{})}))}
             style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
             {EXPENSE_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
           </select>
         </div>
+        {form.category==="insumos"&&<div style={{display:"flex",gap:8}}>
+          <input value={form.qty} onChange={e=>setForm(p=>({...p,qty:e.target.value.replace(/[^\d.,]/g,"")}))} placeholder="Quantidade (un.)" inputMode="decimal"
+            style={{flex:1,minWidth:0,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+          {!editId&&<input value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))} type="date" title="Data da compra (opcional)"
+            style={{flex:1,minWidth:0,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>}
+        </div>}
         <div style={{display:"flex",gap:8}}>
           <select value={form.division} onChange={e=>setForm(p=>({...p,division:e.target.value}))}
             style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
@@ -12155,8 +12240,8 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners","suppliers","tools"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners","suppliers","tools"],           envVar:"VITE_ADMIN_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners","suppliers","tools","insumos"], envVar:"VITE_OWNER_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners","suppliers","tools","insumos"],           envVar:"VITE_ADMIN_PASSWORD" },
   supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca","partners","tools"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
 };
 // Hash a string with SHA-256 — used to avoid storing plain passwords in memory
@@ -12230,7 +12315,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.53";
+const APP_VERSION = "2026.11.11.54";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16221,7 +16306,7 @@ export default function App() {
         toast_(d.linkIdx!=null?"Lançamento da OS corrigido e vinculado ✓":"Peça lançada na OS ✓");
       } else if(d.type==="supplies"){
         const nm=String(d.name||item.title||"").trim();
-        const exp=await db.addExpense({name:`Insumos: ${nm}`.slice(0,160),amount:Math.round((total+frt)*100)/100,category:"insumos",division:d.division||"ambos",recurrent:false,date:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"})+"T12:00:00-03:00":undefined});
+        const exp=await db.addExpense({name:`Insumos: ${nm}`.slice(0,160),amount:Math.round((total+frt)*100)/100,category:"insumos",division:d.division||"ambos",recurrent:false,qty,date:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"})+"T12:00:00-03:00":undefined});
         setExpenses(p=>[...p,exp]);
         await db.setMLItem(item.id,{expense_id:exp.id});
         toast_(`🧴 ${fmtBRL(total+frt)} lançado em Insumos (${new Date(item.ordered_at||Date.now()).toLocaleDateString("pt-BR")}) ✓`);
@@ -16491,7 +16576,7 @@ export default function App() {
   const OFICINA_TABS=["clients","finishing","appointments","mechanics","partners"];
   const CADASTROS_TABS=["vehicles","clientsMonitor","mechanics","suppliers","tools"];
   const GESTAO_TABS=["finance","investments","sales","presenca"];
-  const COMPRAS_TABS=["stock","materiais","purchases"];
+  const COMPRAS_TABS=["stock","materiais","purchases","insumos"];
 
   const goSection=(section,tab)=>{
     setNavSectionPersist(section);
@@ -17019,6 +17104,7 @@ export default function App() {
             {navSection==="compras"&&<>
               {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
               {tabBtn("materiais","Ped. Compras",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 8v10a1 1 0 0 0 1 1h4M19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 8v10"/></svg>,B.orange)}
+              {allowedTabs.includes("insumos")&&tabBtn("insumos","Insumos",<span style={{fontSize:12,lineHeight:1}}>🧴</span>,"#14b8a6")}
               {allowedTabs.includes("purchases")&&tabBtn("purchases","Ped. Veículos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
             </>}
           </div>
@@ -17521,6 +17607,11 @@ export default function App() {
       {tab==="suppliers"&&allowedTabs.includes("suppliers")&&<>
         <TabHeader color={B.green} title="Fornecedores" subtitle="Cadastro de quem vende para a oficina — usado no autocompletar das compras de estoque"/>
         <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssignML={assignMLItem} onUndoMLSupplies={undoMLSupplies}/>
+      </>}
+
+      {tab==="insumos"&&allowedTabs.includes("insumos")&&<>
+        <TabHeader color="#14b8a6" title="Insumos" subtitle="Histórico de compras, consumo e período de recompra"/>
+        <InsumosTab expenses={expenses}/>
       </>}
 
       {tab==="tools"&&allowedTabs.includes("tools")&&<>

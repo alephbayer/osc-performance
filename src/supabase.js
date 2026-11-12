@@ -925,7 +925,7 @@ export const db = {
     if (error) throw error;
     return (data || []).map(e=>({
       id: e.id, name: e.name, amount: Number(e.amount), category: e.category,
-      recurrent: e.recurrent, division: e.division, createdAt: e.created_at, date: e.created_at,
+      recurrent: e.recurrent, division: e.division, createdAt: e.created_at, date: e.created_at, qty: e.qty!=null?Number(e.qty):null,
     }));
   },
   async addExpense(exp) {
@@ -933,14 +933,16 @@ export const db = {
       name: exp.name, amount: exp.amount, category: exp.category||"outros",
       recurrent: exp.recurrent!==false, division: exp.division||"ambos",
       ...(exp.date ? { created_at: exp.date } : {}),
+      ...(Number(exp.qty)>0 ? { qty: Number(exp.qty) } : {}),
     }).select().single();
     if (error) throw error;
-    return { id:data.id, name:data.name, amount:Number(data.amount), category:data.category, recurrent:data.recurrent, division:data.division, createdAt:data.created_at, date:data.created_at };
+    return { id:data.id, name:data.name, amount:Number(data.amount), category:data.category, recurrent:data.recurrent, division:data.division, createdAt:data.created_at, date:data.created_at, qty:data.qty!=null?Number(data.qty):null };
   },
   async updateExpense(id, patch) {
     const { error } = await supabase.from("expenses").update({
       name: patch.name, amount: patch.amount, category: patch.category,
       recurrent: patch.recurrent, division: patch.division,
+      ...(patch.qty!==undefined ? { qty: Number(patch.qty)>0 ? Number(patch.qty) : null } : {}),
     }).eq("id", id);
     if (error) throw error;
   },

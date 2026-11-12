@@ -12124,9 +12124,8 @@ function MechanicLoginScreen({employees,onLogin}) {
   return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",padding:20}}>
     <div style={{maxWidth:380,width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{width:56,height:56,borderRadius:14,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><IWrench s={28} c={B.white}/></div>
-        <OscLogo h={30} center/>
-        <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Acesso do Mecânico</div>
+        <OscLogo h={34} center/>
+        <div style={{fontSize:12,color:B.gray400,marginTop:6}}>Acesso do Mecânico</div>
       </div>
       <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
         <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:B.gray200,fontWeight:600,marginBottom:10}}><ILock s={14} c={B.orange}/>Seu número de WhatsApp</label>
@@ -12315,7 +12314,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.58";
+const APP_VERSION = "2026.11.11.59";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -12473,16 +12472,15 @@ function AdminLoginScreen({onLogin}) {
   return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",padding:20}}>
     <div style={{maxWidth:380,width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{width:56,height:56,borderRadius:14,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><IWrench s={28} c={B.white}/></div>
-        <OscLogo h={30} center/>
-        <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Acesso administrativo</div>
+        <OscLogo h={34} center/>
+        <div style={{fontSize:12,color:B.gray400,marginTop:6}}>Acesso administrativo</div>
       </div>
       <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
         {/* Biometric login button */}
         {bioAvailable&&hasBio&&<>
           <button onClick={handleBioLogin} disabled={bioLoading}
             style={{width:"100%",padding:"14px 0",borderRadius:11,background:bioLoading?B.gray700:`${B.orange}18`,border:`1px solid ${B.orange}44`,color:bioLoading?B.gray400:B.orange,fontWeight:800,fontSize:15,cursor:bioLoading?"not-allowed":"pointer",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-            <span style={{fontSize:22}}>{bioLoading?"…":"🔐"}</span>
+            <span style={{display:"flex"}}>{bioLoading?"…":<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M22 12a10 10 0 0 1-.6 3.4"/><path d="M18 12a6 6 0 0 0-1.5-4"/></svg>}</span>
             {bioLoading?"Verificando biometria…":"Entrar com biometria"}
           </button>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>

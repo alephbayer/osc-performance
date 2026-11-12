@@ -6238,6 +6238,7 @@ function SupplierInput({value,onChange,suppliers=[],placeholder="Nome do fornece
 // ─── Mercado Livre: compras da conta → destino (OS / estoque) ────────────────
 const ML_SUB={buffered:"Aguardando liberação",waiting_for_payment:"Aguardando pagamento",waiting_for_label_generation:"Gerando etiqueta",ready_to_print:"Etiqueta pronta",printed:"Etiqueta impressa",ready_to_pack:"Pronto p/ embalar",in_packing_list:"Separado p/ coleta",in_warehouse:"No armazém",in_hub:"No centro de distribuição",picked_up:"Coletado",dropped_off:"Postado",ready_for_pickup:"Pronto p/ coleta",in_transit:"Em trânsito",out_for_delivery:"Saiu para entrega",delayed:"Atrasado",waiting_for_withdrawal:"Aguardando retirada",contact_with_carrier:"Contato com a transportadora",receiver_absent:"Destinatário ausente",claimed_me:"Reclamado pelo comprador",retained:"Retido",soft_rejected:"Recusado",rejected_in_hub:"Recusado no centro",returning_to_sender:"Voltando ao remetente",returned:"Devolvido",stolen:"Extraviado (roubo)",lost:"Extraviado",destroyed:"Destruído",delivery_failed:"Falha na entrega",delivery_attempt:"Tentativa de entrega"};
 const mlSubLbl=x=>x?(ML_SUB[x]||String(x).replace(/_/g," ")):"";
+const SHOW_FLOAT_FAB=false; // botão "+" flutuante (lembretes/notas/calendário) — true para reativar
 const ML_SHIP={pending:"Aguardando envio",handling:"Preparando",ready_to_ship:"Pronto p/ envio",shipped:"A caminho",delivered:"Entregue",not_delivered:"Não entregue",cancelled:"Cancelado"};
 function VehiclePicker({value,onChange,vehicles,clients=[]}) {
   const [open,setOpen]=useState(false);
@@ -12190,7 +12191,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.39";
+const APP_VERSION = "2026.11.11.40";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17847,6 +17848,7 @@ export default function App() {
       {/* Floating mini-menu — collapsible */}
       {(()=>{
         const anyOpen=showReminders||showQuickNote||showCalendar;
+        if(!SHOW_FLOAT_FAB&&!anyOpen) return null;
         return(<div style={{position:"fixed",bottom:"calc(58px + env(safe-area-inset-bottom))",right:16,zIndex:1000,display:"flex",flexDirection:"row",alignItems:"center",gap:0}}>
           {/* Expandable pill */}
           <div style={{

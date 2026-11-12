@@ -254,7 +254,6 @@ function ClientLoginScreen({clients,onLogin}) {
 
 // ─── Collapsible Vehicle Group (for client portal tabs) ──────────────────────
 function CollapsibleVehicleGroup({vehicle,count,children}) {
-  const [adv,setAdv]=useState(false);
   const [open,setOpen]=useState(false);
   return (<div style={{marginBottom:12}}>
     <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:open?"12px 12px 0 0":12,cursor:"pointer",textAlign:"left"}}>
@@ -6365,6 +6364,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const [qs,setQs]=useState("");
   const [exp,setExp]=useState({});
   const [sortBy,setSortBy]=useState("date");
+  const [adv,setAdv]=useState(false);
   const [open,setOpen]=useState(()=>{try{return localStorage.getItem("osc_ml_open")!=="0";}catch(e){return true;}});
   const toggleOpen=()=>setOpen(v=>{const n=!v;try{localStorage.setItem("osc_ml_open",n?"1":"0");}catch(e){}return n;});
   const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
@@ -12201,7 +12201,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.44";
+const APP_VERSION = "2026.11.11.45";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

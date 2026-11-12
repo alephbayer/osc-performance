@@ -12094,10 +12094,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 function LoadingScreen() {
   return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
     <div style={{textAlign:"center"}}>
-      <div style={{width:48,height:48,borderRadius:12,background:B.orange,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",animation:"pulse 1.4s infinite"}}>
-        <IWrench s={24} c={B.white}/>
-      </div>
-      <div style={{color:B.gray400,fontSize:13}}>Carregando OSC Performance…</div>
+      <img src={getTheme()==="light"?"/osc-mark-light.png":"/osc-mark-dark.png"} alt="OSC" style={{display:"block",height:44,width:"auto",margin:"0 auto 18px",animation:"pulse 1.4s infinite"}}/>
+      <div style={{color:B.gray500,fontSize:11,letterSpacing:".3em",textTransform:"uppercase"}}>Carregando</div>
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
     </div>
   </div>);
@@ -12314,7 +12312,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.59";
+const APP_VERSION = "2026.11.12.60";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

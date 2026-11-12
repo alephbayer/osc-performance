@@ -5934,8 +5934,8 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
     (!filterType||s.type===filterType)
   )].sort((a,b)=>{
     // Low stock first
-    const aLow=(a.qty||0)<=(a.minQty||2);
-    const bLow=(b.qty||0)<=(b.minQty||2);
+    const aLow=isStockLow(a);
+    const bLow=isStockLow(b);
     if(aLow&&!bLow) return -1;
     if(!aLow&&bLow) return 1;
     // Then alphabetical
@@ -6033,9 +6033,12 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
   </div>);
 }
 
+// estoque mínimo 0 = sem alerta de estoque baixo
+const isStockLow=s=>{const m=s.minQty??2;return m>0&&(Number(s.qty)||0)<=m;};
+
 // ─── Stock row (list view) ────────────────────────────────────────────────────
 function StockRow({item,salePrice,onLightbox,onOpen}) {
-  const low=item.qty<=(item.minQty??2);
+  const low=isStockLow(item);
   return (<div style={{background:B.gray800,borderRadius:10,border:`1px solid ${low?B.red+"55":B.gray700}`,padding:"10px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} onClick={onOpen}>
     {/* photo thumb */}
     <div style={{position:"relative",flexShrink:0,width:48,height:48}}>
@@ -12406,7 +12409,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.81";
+const APP_VERSION = "2026.11.12.82";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16755,7 +16758,7 @@ export default function App() {
       const hasPurchases=pendingPurchaseCount>0;
       const hasInvest=pendingInvestmentCount>0;
       const hasNotes=pendingNotesCount>0;
-      const lowStock=stock.filter(s=>s.qty<=2).length;
+      const lowStock=stock.filter(isStockLow).length;
       const pendingMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="pending").length;
       const approvedMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="approved").length;
       const boughtMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="bought").length;

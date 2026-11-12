@@ -6273,6 +6273,8 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState("");
   const vts=tasks.filter(t=>t.vehicleId===vid);
+  const [lk,setLk]=useState(null); // {tid,idx} lançamento manual existente a corrigir
+  const lkCands=useMemo(()=>{ if(!vid) return []; const pool=[]; vts.forEach(t=>(Array.isArray(t.materials)?t.materials:[]).forEach((m,idx)=>{ if(m&&!m.mlItem&&!m.fromStock&&m.name) pool.push({id:t.id+"|"+idx,name:m.name,tid:t.id,idx,tl:t.label,m}); })); return suggestStockItems(item.title||"",pool,3).map(r=>pool.find(x=>x.id===r.id)); },[vid,tasks,item.id]);
   const total=(Number(item.qty)||1)*(Number(item.unit_price)||0);
   const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const qNum=Number(String(qtyStr).replace(",","."))||0;
@@ -6293,7 +6295,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
     if(mode!=="ignored"&&mode!=="supplies"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
-    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title}); onClose(); }
+    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,linkIdx:(mode==="vehicle"&&lk)?lk.idx:null,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title}); onClose(); }
     catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
@@ -6310,7 +6312,13 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
       <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("supplies","Insumos")}{tabBtn("tool","Ferramenta")}{tabBtn("ignored","Ignorar")}</div>
       {mode==="vehicle"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome da peça na OS" style={inp}/>
-        <VehiclePicker value={vid} onChange={v=>{setVid(v);setTid("");}} vehicles={vehicles} clients={clients}/>
+        <VehiclePicker value={vid} onChange={v=>{setVid(v);setTid("");setLk(null);}} vehicles={vehicles} clients={clients}/>
+        {vid&&lkCands.length>0&&<div style={{background:`${B.purple}14`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"7px 9px"}}>
+          <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:2}}>💡 Parece algo já lançado neste carro</div>
+          <div style={{fontSize:10.5,color:B.gray400,marginBottom:6,lineHeight:1.4}}>Toque para vincular e corrigir o lançamento (valor, quantidade) em vez de duplicar.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>{lkCands.map(c=>{const on=lk&&lk.tid===c.tid&&lk.idx===c.idx;const mc=Number(c.m.cost)||0,mq=Number(c.m.qty)||1;return <button key={c.tid+c.idx} onClick={()=>{if(on){setLk(null);}else{setLk({tid:c.tid,idx:c.idx});setTid(c.tid);setNameStr(c.name);setMarkup(String(c.m.markup??markup));}}} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${on?B.purple:B.purple+"55"}`,background:on?`${B.purple}33`:"none",color:B.white,fontSize:11.5,cursor:"pointer",textAlign:"left",lineHeight:1.4}}>{on?"✓ ":""}{c.name}<div style={{fontSize:10.5,color:B.gray400}}>{c.tl} · lançado {mq}× {fmtBRL(mc)} (custo){(Number(c.m.markup)||0)?` +${c.m.markup}%`:""}</div></button>;})}</div>
+          {lk&&<div style={{fontSize:10.5,color:B.amber,marginTop:6,lineHeight:1.4}}>Vai atualizar para {qEff||"?"}× {fmtBRL(unitCost)} (custo) conforme o Mercado Livre.</div>}
+        </div>}
         {vid&&<TaskPicker value={tid} onChange={setTid} vts={vts} placeholder="Escolha ou crie a tarefa…"/>}
         {qtyBox}
         {frBox}
@@ -12201,7 +12209,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.45";
+const APP_VERSION = "2026.11.11.46";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16177,9 +16185,13 @@ export default function App() {
         } else { tlabel=tasks.find(t=>t.id===tid)?.label||""; }
         const cur=tasks.find(t=>t.id===tid); const base=Array.isArray(cur?.materials)?cur.materials:[];
         const mat={name:String(d.name||item.title||"").trim(),brand:"",cost,markup:Number(d.markup)||0,qty,freight:frt,fromStock:false,bought:true,supplier:"Mercado Livre"+(item.seller?` · ${item.seller}`:""),mlItem:item.id,...(item.permalink?{mlLink:item.permalink}:{})};
-        await updTask(tid,{materials:[...base,mat]});
+        if(d.linkIdx!=null&&base[d.linkIdx]&&!base[d.linkIdx].mlItem){
+          const ex=base[d.linkIdx];
+          const upd={...ex,cost,markup:Number(d.markup)||0,qty,freight:frt,bought:true,supplier:mat.supplier,mlItem:item.id,...(item.permalink?{mlLink:item.permalink}:{})};
+          await updTask(tid,{materials:base.map((m,ix)=>ix===d.linkIdx?upd:m)});
+        } else await updTask(tid,{materials:[...base,mat]});
         await db.setMLItem(item.id,{task_id:String(tid),task_label:tlabel});
-        toast_("Peça lançada na OS ✓");
+        toast_(d.linkIdx!=null?"Lançamento da OS corrigido e vinculado ✓":"Peça lançada na OS ✓");
       } else if(d.type==="supplies"){
         const nm=String(d.name||item.title||"").trim();
         const exp=await db.addExpense({name:`Insumos: ${nm}`.slice(0,160),amount:Math.round((total+frt)*100)/100,category:"insumos",division:d.division||"ambos",recurrent:false,date:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"})+"T12:00:00-03:00":undefined});

@@ -12315,7 +12315,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.55";
+const APP_VERSION = "2026.11.11.56";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17093,7 +17093,7 @@ export default function App() {
               {allowedTabs.includes("clientsMonitor")&&tabBtn("clientsMonitor","Clientes",<IAddressBook s={13}/>,`#0891b2`)}
               {allowedTabs.includes("mechanics")&&tabBtn("mechanics","Mecânicos",<IWrench s={13}/>,B.orange)}
               {allowedTabs.includes("suppliers")&&tabBtn("suppliers","Fornecedores",<IWarehouse s={13}/>,B.green)}
-              {allowedTabs.includes("tools")&&tabBtn("tools","Ferramentas",<IWrench s={13}/>,B.amber)}
+              {allowedTabs.includes("tools")&&tabBtn("tools","Patrimônio",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>,B.amber)}
             </>}
             {navSection==="gestao"&&<>
               {allowedTabs.includes("finance")&&tabBtn("finance","Financeiro",<IChart s={13}/>,B.green)}
@@ -17615,7 +17615,7 @@ export default function App() {
       </>}
 
       {tab==="tools"&&allowedTabs.includes("tools")&&<>
-        <TabHeader color={B.amber} title="Ferramentas" subtitle="Patrimônio da oficina — não entra como despesa nem reduz o lucro"/>
+        <TabHeader color={B.amber} title="Patrimônio" subtitle="Ferramentas e bens da oficina — não entram como despesa nem reduzem o lucro"/>
         <ToolsTab showValues={adminRole!=="supervisor"}/>
       </>}
 

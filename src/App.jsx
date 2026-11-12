@@ -2962,8 +2962,8 @@ function ProgressBar({value,max}) {
   </div>);
 }
 function Toast({msg,onDone}) {
-  useEffect(()=>{const t=setTimeout(onDone,2500);return()=>clearTimeout(t);},[onDone]);
-  return <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:B.orange,color:B.white,padding:"10px 24px",borderRadius:99,fontWeight:700,fontSize:14,zIndex:999,boxShadow:"0 4px 24px rgba(255,107,0,.4)",pointerEvents:"none",whiteSpace:"nowrap"}}>{msg}</div>;
+  useEffect(()=>{const t=setTimeout(onDone,Math.min(6000,2500+Math.max(0,String(msg||"").length-40)*45));return()=>clearTimeout(t);},[onDone,msg]);
+  return <div style={{position:"fixed",bottom:"calc(28px + env(safe-area-inset-bottom))",left:"50%",transform:"translateX(-50%)",width:"max-content",maxWidth:"calc(100vw - 32px)",boxSizing:"border-box",textAlign:"center",lineHeight:1.35,background:B.orange,color:B.white,padding:"10px 20px",borderRadius:String(msg||"").length>38?18:99,fontWeight:700,fontSize:14,zIndex:999,boxShadow:"0 4px 24px rgba(255,107,0,.4)",pointerEvents:"none",whiteSpace:"normal",overflowWrap:"anywhere"}}>{msg}</div>;
 }
 function InlineEdit({value,onSave,placeholder,type="text",multiline=false,textStyle={}}) {
   const [e,sE]=useState(false); const [v,sV]=useState(value||"");
@@ -12190,7 +12190,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.38";
+const APP_VERSION = "2026.11.11.39";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

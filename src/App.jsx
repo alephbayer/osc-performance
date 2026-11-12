@@ -11249,6 +11249,7 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
             style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.amber}66`,background:B.gray900,color:B.white,fontSize:16,outline:"none",fontWeight:700}}/>
           <span style={{color:B.gray400,fontSize:13}}>/hora</span>
         </div>
+        <div style={{fontSize:11,color:B.gray400,marginTop:6,lineHeight:1.4}}>Ao alterar, as tarefas já existentes mantêm o valor atual; o novo preço vale para tarefas criadas ou preenchidas depois.</div>
 
         {/* Company info */}
         <div style={{fontSize:11,color:B.amber,fontWeight:700,marginTop:20,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Dados da empresa (aparecem no PDF de orçamento)</div>
@@ -12390,7 +12391,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.68";
+const APP_VERSION = "2026.11.12.69";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16491,8 +16492,17 @@ export default function App() {
 
   // ── Settings
   const saveRate=async r=>{
-    setDR(r);
-    try{ await db.setDefaultRate(r); toast_(`R$/h atualizado: ${fmtBRL(r)} ✓`); }catch(e){errToast(e);}
+    const old=Number(defaultRate||0);
+    try{
+      let frozen=0;
+      if(old>0&&r!==old){
+        const ids=await db.freezeTaskRates(old);
+        frozen=ids.length;
+        if(frozen){const set=new Set(ids);setTsk(p=>p.map(t=>set.has(t.id)?{...t,ratePerHour:old}:t));}
+      }
+      await db.setDefaultRate(r); setDR(r);
+      toast_(`R$/h atualizado: ${fmtBRL(r)} ✓${frozen?` · ${frozen} tarefas existentes mantêm ${fmtBRL(old)}`:""}`);
+    }catch(e){errToast(e);}
   };
   const saveCompany=async info=>{
     setCompany(info);

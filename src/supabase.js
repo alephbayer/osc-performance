@@ -622,6 +622,12 @@ export const db = {
   },
 
   // Settings
+  // Trava o valor/hora vigente nas tarefas que ainda usam o padrão (rate_per_hour nulo), antes de uma mudança da MO padrão
+  async freezeTaskRates(rate) {
+    const { data, error } = await supabase.from("tasks").update({ rate_per_hour: rate }).is("rate_per_hour", null).gt("hours", 0).select("id");
+    if (error) throw error;
+    return (data || []).map((r) => r.id);
+  },
   async setDefaultRate(rate) {
     const { error } = await supabase.from("settings").update({ default_rate: rate }).eq("id", 1);
     if (error) throw error;

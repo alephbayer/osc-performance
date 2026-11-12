@@ -6268,6 +6268,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const [markup,setMarkup]=useState("50");
   const [qtyStr,setQtyStr]=useState(String(item.qty||1));
   const [unitsStr,setUnitsStr]=useState(String(item.qty||1));
+  const [taskCat,setTaskCat]=useState("");
   const [nameStr,setNameStr]=useState(item.title||"");
   const [pid,setPid]=useState(()=>matchStockItem(item.title||"",stock));
   const sugg=useMemo(()=>suggestStockItems(item.title||"",stock),[item.id,stock]);
@@ -6298,7 +6299,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
     if(mode!=="ignored"&&mode!=="supplies"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
-    try{ await onAssign(item,{units:unitsNum,type:mode,vehicleId:vid,tid,linkIdx:(mode==="vehicle"&&lk)?lk.idx:null,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title}); onClose(); }
+    try{ await onAssign(item,{units:unitsNum,category:taskCat||null,type:mode,vehicleId:vid,tid,linkIdx:(mode==="vehicle"&&lk)?lk.idx:null,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title}); onClose(); }
     catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
@@ -6324,6 +6325,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
           {lk&&<div style={{fontSize:10.5,color:B.amber,marginTop:6,lineHeight:1.4}}>Vai atualizar para {qEff||"?"}× {fmtBRL(unitCost)} (custo) conforme o Mercado Livre.</div>}
         </div>}
         {vid&&<TaskPicker value={tid} onChange={setTid} vts={vts} placeholder="Escolha ou crie a tarefa…"/>}
+        {vid&&String(tid).startsWith("new:")&&<select value={taskCat} onChange={e=>setTaskCat(e.target.value)} style={{...inp,color:taskCat?B.white:B.gray400}}><option value="">Categoria da nova tarefa (opcional)</option>{CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.id}</option>)}</select>}
         {qtyBox}
         {frBox}
         <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Margem sobre o custo <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>
@@ -12213,7 +12215,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.49";
+const APP_VERSION = "2026.11.11.50";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16189,7 +16191,7 @@ export default function App() {
         let tid=d.tid, tlabel="";
         if(String(tid).startsWith("new:")){
           tlabel=tid.slice(4);
-          const row=await addTask(d.vehicleId,tlabel,null,"performance");
+          const row=await addTask(d.vehicleId,tlabel,d.category||null,"performance");
           if(!row) throw new Error("Não consegui criar a tarefa “"+tlabel+"”");
           tid=row.id;
         } else { tlabel=tasks.find(t=>t.id===tid)?.label||""; }

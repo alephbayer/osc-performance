@@ -4653,6 +4653,8 @@ function cleanMLTitle(title, brands=[]) {
   // medidas M5 X 30 → M5x30; pacote final (- 100un)
   t=t.replace(/\b([mM]\d+(?:[.,]\d+)?)\s*[xX]\s*(\d+)(?:\s*[xX]\s*(\d+))?\b/g,(m,a,b,c)=>a.toUpperCase()+"x"+b+(c?"x"+c:""));
   t=t.replace(/[-–]\s*\d+\s*(?:un|und|unid|unidades?|pcs|pecas?|peças?)\b/gi," ").replace(/\b(?:c\/|com|kit com)\s*\d+\s*(?:un|und|unid|unidades?|pcs|pecas?|peças?)\b/gi," ");
+  t=t.replace(/([a-zà-úA-ZÀ-Ú])(\d+(?:[.,]\d+)?\s?(?:ml|g|kg|l|lt|mm|cm|m)\b)/g,"$1 $2");
+  t=t.replace(/\bgrande\s+di[aâ]metro\b/gi," ").replace(/\bdi[aâ]metro\b/gi," ").replace(/\b(trava\s+rosca)\s+parafusos?\b/gi,"$1");
   const toks=t.split(/\s+/).filter(Boolean);
   // corta no primeiro carro/modelo/ano/código de chassi (a partir da 2ª palavra)
   let cut=toks.length;
@@ -4661,11 +4663,13 @@ function cleanMLTitle(title, brands=[]) {
   // lado/posição depois do carro (esquerdo, direito, dianteiro…) continua sendo informação da peça
   const sideRe=/^(esquerd|direit|dianteir|traseir|superior|inferior)/;
   toks.slice(cut).forEach(w=>{ const k=nrm(w).replace(/[^a-z]/g,""); if(sideRe.test(k)&&!out.some(x=>nrm(x)===nrm(w))) out.push(w); });
-  // remove repetições exatas e conectores no fim
-  const seen=new Set(); out=out.filter(w=>{ const k=nrm(w); if(/\d/.test(k)){ if(seen.has(k)) return false; seen.add(k);} return true; });
+  // código do produto colado à marca (Loctite 277 Trava Rosca) passa para depois do nome (Trava Rosca 277)
+  if(brand&&out.length>=3&&/^\d{2,4}$/.test(out[0])){ const code=out.shift(); out.splice(Math.min(2,out.length),0,code); }
+  // remove repetições (palavras iguais) e conectores no fim
+  const seen=new Set(); out=out.filter(w=>{ const k=nrm(w).replace(/[^a-z0-9]/g,""); if(!k) return true; if(seen.has(k)) return false; seen.add(k); return true; });
   while(out.length&&_ML_CONN.has(nrm(out[out.length-1]))) out.pop();
   // título todo em maiúsculas → Title Case
-  let name=out.join(" ").replace(/\s+/g," ").replace(/\s[-–]\s*$/,"").trim();
+  let name=out.join(" ").replace(/\s+/g," ").replace(/\s[-–]\s*$/,"").replace(/\s*\/\s*$/,"").trim();
   name=name.replace(/(\d(?:[.,]\d+)?)\s*(l|lt|lts|litro|litros)\b/gi,(m,a)=>a+"L").replace(/(\d(?:[.,]\d+)?)\s*(ml|g|kg|mm|cm|m)\b/gi,(m,a,b)=>a+b.toLowerCase());
   if(name&&name===name.toUpperCase()&&/[A-Z]{4,}/.test(name)) name=name.toLowerCase().replace(/(^|\s)([a-zà-ú])/g,(m,a,b)=>a+b.toUpperCase());
   const bd=brand?(brands||[]).find(b=>nrm(b)===nrm(brand))||_ML_BRANDS.find(b=>nrm(b)===nrm(brand))||brand:"";
@@ -12400,7 +12404,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.71";
+const APP_VERSION = "2026.11.12.72";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

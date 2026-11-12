@@ -254,6 +254,7 @@ function ClientLoginScreen({clients,onLogin}) {
 
 // ─── Collapsible Vehicle Group (for client portal tabs) ──────────────────────
 function CollapsibleVehicleGroup({vehicle,count,children}) {
+  const [adv,setAdv]=useState(false);
   const [open,setOpen]=useState(false);
   return (<div style={{marginBottom:12}}>
     <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:open?"12px 12px 0 0":12,cursor:"pointer",textAlign:"left"}}>
@@ -6506,9 +6507,11 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       {pendingAll.length>0&&<span style={{fontSize:10,fontWeight:800,background:B.amber,color:B.black,borderRadius:99,padding:"1px 8px"}}>{pendingAll.length} sem destino</span>}
       <span style={{flex:1}}/>
       {st?.connected&&<><button onClick={()=>doSync(false)} disabled={!!busy} style={{padding:"5px 12px",borderRadius:8,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,color:B.amber,fontSize:12,fontWeight:700,cursor:"pointer",opacity:busy?.6:1}}>{busy==="sync"?"Sincronizando…":"↻ Sincronizar"}</button>
-        {st.authUrl&&<a href={st.authUrl} style={{color:B.blue,fontSize:11,textDecoration:"none"}}>↻ reautorizar</a>}
-        <button onClick={disconnect} style={{background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>desconectar</button></>}
+        {(adv||err)&&st.authUrl&&<a href={st.authUrl} style={{color:B.blue,fontSize:11,textDecoration:"none"}}>↻ reautorizar</a>}
+        {(adv||err)&&<button onClick={disconnect} style={{background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>desconectar</button>}
+        {!err&&<button onClick={()=>setAdv(v=>!v)} aria-label="Mais opções" style={{background:"none",border:"none",color:B.gray500,fontSize:15,cursor:"pointer",padding:"0 4px",lineHeight:1}}>⋯</button>}</>}
     </div>
+    {!open&&st?.connected&&(()=>{const c={};live.filter(i=>i.ship_status!=="delivered").forEach(i=>{const k=i.ship_status||"none";c[k]=(c[k]||0)+1;});const ks=["pending","handling","ready_to_ship","shipped","not_delivered","none"].filter(k=>c[k]);if(!ks.length)return null;const colr=k=>k==="shipped"?B.blue:k==="pending"||k==="none"?B.gray400:k==="not_delivered"?B.red:B.amber;return <div style={{display:"flex",gap:"3px 12px",flexWrap:"wrap",marginTop:8,paddingLeft:17}}>{ks.map(k=><span key={k} style={{fontSize:10.5,color:B.gray400,display:"inline-flex",alignItems:"center",gap:5}}><span style={{width:5,height:5,borderRadius:99,background:colr(k)}}/>{ML_SHIP[k]||"Sem status"} <b style={{color:B.gray200}}>{c[k]}</b></span>)}</div>;})()}
     {open&&<>
     {busy==="connect"&&<div style={{fontSize:12,color:B.gray300,marginTop:10}}>Conectando…</div>}
     {st&&!st.connected&&busy!=="connect"&&<div style={{marginTop:10}}>
@@ -12198,7 +12201,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.43";
+const APP_VERSION = "2026.11.11.44";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -6046,7 +6046,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
     {/* name + tags */}
     <div style={{flex:"1 1 160px",minWidth:0}}>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-        {low&&<span style={{background:`${B.red}1f`,color:B.red,borderRadius:4,padding:"2px 8px",fontSize:9,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Estoque baixo</span>}
+        {low&&<span style={{background:`${B.red}1f`,color:B.red,borderRadius:4,padding:"2px 8px",fontSize:9,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Baixo</span>}
         {(()=>{const bm=String(item.name||"").match(/^\s*\[([^\]]+)\]\s*/);const br=String(item.brand||"").trim()||(bm?bm[1]:"");const nm=bm?String(item.name).slice(bm[0].length):item.name;
           return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase"}}>{br}</span>}{br&&<span style={{display:"inline-block",width:4,height:4,borderRadius:99,background:B.gray500,margin:"0 8px",verticalAlign:"middle"}}/>}{nm}</span>;})()}
       </div>
@@ -12404,7 +12404,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.78";
+const APP_VERSION = "2026.11.12.79";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

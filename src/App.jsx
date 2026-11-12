@@ -3003,22 +3003,28 @@ function PhotoEditor({file,aspect=1,onCancel,onDone,onFail}){
   st.current={zoom,off,rot,tilt};
 
   useEffect(()=>{
-    const url=URL.createObjectURL(file); const im=new Image();
-    im.onload=()=>setImg(im); im.onerror=()=>onFail&&onFail();
-    im.src=url; return ()=>URL.revokeObjectURL(url);
+    let url=null, dead=false; const im=new Image();
+    im.onload=()=>{ if(!dead) setImg(im); }; im.onerror=()=>{ if(!dead) onFail&&onFail(); };
+    (async()=>{
+      try{
+        const blob=typeof file==="string"?await (await fetch(file,{mode:"cors"})).blob():file;
+        url=URL.createObjectURL(blob); im.src=url;
+      }catch{ if(!dead) onFail&&onFail(); }
+    })();
+    return ()=>{ dead=true; if(url) URL.revokeObjectURL(url); };
   },[file]);
 
   const rr=(ctx,x,y,w,h,r)=>{ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
   const paint=(ctx,W,boxPx,overlay)=>{
     const {zoom:z,off:o,rot:r,tilt:t}=st.current, k=boxPx/BOX, c=W/2;
-    ctx.fillStyle=overlay?"#141414":"#fff"; ctx.fillRect(0,0,W,W);
+    ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,W);
     if(overlay){ctx.fillStyle="#fff";ctx.beginPath();rr(ctx,c-boxPx/2,c-boxPx/2,boxPx,boxPx,RAD*k);ctx.fill();}
     ctx.save(); ctx.translate(c+o.x*k,c+o.y*k); ctx.rotate((r*90+t)*Math.PI/180);
     const sc=(boxPx/Math.min(img.width,img.height))*z; ctx.scale(sc,sc);
     ctx.drawImage(img,-img.width/2,-img.height/2); ctx.restore();
     if(overlay){
-      ctx.fillStyle="rgba(0,0,0,.62)"; ctx.beginPath(); ctx.rect(0,0,W,W); rr(ctx,c-boxPx/2,c-boxPx/2,boxPx,boxPx,RAD*k); ctx.fill("evenodd");
-      ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=1; ctx.beginPath(); rr(ctx,c-boxPx/2,c-boxPx/2,boxPx,boxPx,RAD*k); ctx.stroke();
+      ctx.fillStyle="rgba(255,255,255,.74)"; ctx.beginPath(); ctx.rect(0,0,W,W); rr(ctx,c-boxPx/2,c-boxPx/2,boxPx,boxPx,RAD*k); ctx.fill("evenodd");
+      ctx.strokeStyle="rgba(0,0,0,.5)"; ctx.lineWidth=1.5; ctx.beginPath(); rr(ctx,c-boxPx/2,c-boxPx/2,boxPx,boxPx,RAD*k); ctx.stroke();
     }
   };
   useEffect(()=>{
@@ -3060,11 +3066,11 @@ function PhotoEditor({file,aspect=1,onCancel,onDone,onFail}){
   return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,padding:16}} onClick={onCancel}>
     <div style={{background:B.gray800,borderRadius:16,border:`1px solid ${B.gray700}`,padding:16,width:STAGE+32,maxWidth:"100%",maxHeight:"96vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
       <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",color:B.amber,marginBottom:10}}>Ajustar foto</div>
-      <div style={{width:STAGE,height:STAGE,borderRadius:10,overflow:"hidden",background:"#141414",margin:"0 auto"}}>
+      <div style={{width:STAGE,height:STAGE,borderRadius:10,overflow:"hidden",background:"#fff",border:`1px solid ${B.gray600}`,margin:"0 auto"}}>
         {img?<canvas ref={cv} style={{width:STAGE,height:STAGE,display:"block",touchAction:"none",cursor:"grab"}} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}/>
           :<div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",color:B.gray500,fontSize:12}}>Carregando…</div>}
       </div>
-      <div style={{fontSize:10.5,color:B.gray500,textAlign:"center",margin:"8px 0 12px"}}>A área clara é o que será exibido. Arraste para posicionar.</div>
+      <div style={{fontSize:10.5,color:B.gray500,textAlign:"center",margin:"8px 0 12px"}}>A área nítida é o que será exibido. Arraste para posicionar.</div>
       <div style={{display:"flex",flexDirection:"column",gap:9}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}><span style={lab}>Girar</span>
           <button style={btn} onClick={()=>setRot(r=>r-1)} title="Girar à esquerda">{ico('<path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>')}</button>
@@ -3084,13 +3090,15 @@ function PhotoEditor({file,aspect=1,onCancel,onDone,onFail}){
   </div>,document.body);
 }
 
-function UploadBtn({onFile,onFiles,label="Adicionar foto",accept="image/*",style={},folder="misc",multiple=false,editor=false}) {
+function UploadBtn({onFile,onFiles,label="Adicionar foto",accept="image/*",style={},folder="misc",multiple=false,editor=false,editSrc=""}) {
   const ref=useRef();
   const [busy,setBusy]=useState(false);
   const [pending,setPending]=useState(null);
   const sendOne=async f=>{setBusy(true);try{const u=await uploadImg(f,folder);onFile&&onFile(u);}catch(err){alert("Erro ao enviar foto: "+err.message);}setBusy(false);};
   return (<>
-    {pending&&<PhotoEditor file={pending} onCancel={()=>setPending(null)} onFail={()=>{const f=pending;setPending(null);sendOne(f);}} onDone={f=>{setPending(null);sendOne(f);}}/>}
+    {pending&&<PhotoEditor file={pending} onCancel={()=>setPending(null)} onFail={()=>{const f=pending;setPending(null);if(typeof f==="string") alert("Não foi possível abrir a foto para edição."); else sendOne(f);}} onDone={f=>{setPending(null);sendOne(f);}}/>}
+    {editor&&editSrc&&<button onClick={()=>setPending(editSrc)} disabled={busy} style={{padding:"6px 12px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:busy?"wait":"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Editar foto</button>}
     <button onClick={()=>ref.current.click()} disabled={busy} style={{padding:"6px 12px",borderRadius:7,background:B.purpleBg,border:`1px dashed ${B.purple}66`,color:B.purple,cursor:busy?"wait":"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5,opacity:busy?.6:1,...style}}>
       <IPhoto s={13} c={B.purple}/>{busy?"Enviando…":label}
     </button>
@@ -6124,7 +6132,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       {/* Photo upload */}
       <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
         {form.photo?<img src={form.photo} alt="" style={{width:60,height:60,objectFit:"cover",borderRadius:8,border:`1px solid ${B.gray600}`}}/>:null}
-        <UploadBtn editor onFile={src=>setForm(p=>({...p,photo:src}))} folder="stock" label={form.photo?"Trocar foto":"+ Foto do produto"}/>
+        <UploadBtn editor editSrc={form.photo} onFile={src=>setForm(p=>({...p,photo:src}))} folder="stock" label={form.photo?"Trocar foto":"+ Foto do produto"}/>
       </div>
       <div style={{display:"flex",gap:8,marginTop:14}}>
         <button onClick={addItem} style={{padding:"8px 20px",borderRadius:8,background:B.purple,border:"none",color:B.white,cursor:"pointer",fontWeight:800,fontSize:13}}>Cadastrar produto</button>
@@ -6299,7 +6307,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
             <Field label="Foto do produto">
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 {form.photo?<img src={form.photo} alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,border:`1px solid ${B.gray600}`}}/>:null}
-                <UploadBtn editor onFile={src=>setForm(p=>({...p,photo:src}))} folder="stock" label={form.photo?"Trocar foto":"+ Foto do produto"}/>
+                <UploadBtn editor editSrc={form.photo} onFile={src=>setForm(p=>({...p,photo:src}))} folder="stock" label={form.photo?"Trocar foto":"+ Foto do produto"}/>
                 {form.photo&&<button onClick={()=>setForm(p=>({...p,photo:""}))} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500}}><IX s={14}/></button>}
               </div>
             </Field>
@@ -12534,7 +12542,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.88";
+const APP_VERSION = "2026.11.12.89";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

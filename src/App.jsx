@@ -6079,8 +6079,8 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
     {/* name + tags */}
     <div style={{flex:"1 1 160px",minWidth:0}}>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-        {(()=>{const bm=String(item.name||"").match(/^\s*\[([^\]]+)\]\s*/);let br=String(item.brand||"").trim()||(bm?bm[1]:"");let nm=bm?String(item.name).slice(bm[0].length):String(item.name||"");if(!br&&/\binox\b/i.test(nm)){const n2=nm.replace(/\s*\binox\b\s*/i," ").replace(/\s+/g," ").trim();if(n2){br="Inox";nm=n2;}}
-          return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase"}}>{br}</span>}{br&&<span style={{display:"inline-block",width:4,height:4,borderRadius:99,background:B.gray500,margin:"0 8px",verticalAlign:"middle"}}/>}{nm}</span>;})()}
+        {(()=>{const bm=String(item.name||"").match(/^\s*\[([^\]]+)\]\s*/);let br=String(item.brand||"").trim()||(bm?bm[1]:"");let nm=bm?String(item.name).slice(bm[0].length):String(item.name||"");let ix=false;if(/\binox\b/i.test(nm)){const n2=nm.replace(/\s*\binox\b\s*/i," ").replace(/\s+/g," ").trim();if(n2){ix=true;nm=n2;}}
+          return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase"}}>{br}</span>}{ix&&<span style={{color:"#7aa2c4",fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase",marginLeft:br?7:0}}>Inox</span>}{(br||ix)&&<span style={{display:"inline-block",width:4,height:4,borderRadius:99,background:B.gray500,margin:"0 8px",verticalAlign:"middle"}}/>}{nm}</span>;})()}
       </div>
       <div style={{fontSize:11,color:B.gray400,marginTop:2,display:"flex",gap:6,flexWrap:"wrap"}}>
         {item.type&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{item.type}</span>}
@@ -12436,7 +12436,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.86";
+const APP_VERSION = "2026.11.12.87";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

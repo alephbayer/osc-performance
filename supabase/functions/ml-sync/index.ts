@@ -203,7 +203,7 @@ async function sync(days: number) {
 
   // status de entrega (só pedidos ainda não entregues)
   const orderIds = orders.map((o) => String(o.id));
-  const { data: ex } = await sb.from("ml_purchase_items").select("ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at,ship_history,ship_substatus,eta_at,ml_key,ship_probe").in("ml_order_id", orderIds);
+  const { data: ex } = await sb.from("ml_purchase_items").select("id,is_split,ml_order_id,ml_item_id,variation_id,ship_status,status_at,shipped_at,delivered_at,ship_history,ship_substatus,eta_at,ml_key,ship_probe").in("ml_order_id", orderIds);
   const known = new Set((ex || []).map((x: any) => `${x.ml_order_id}|${x.ml_item_id}|${x.variation_id}`));
   const delivered = new Set((ex || []).filter((x: any) => (x.ship_status === "delivered" || x.ship_status === "cancelled") && Array.isArray(x.ship_history) && x.ship_history.length).map((x: any) => x.ml_order_id));
   const ship: Record<string, any> = {};
@@ -294,9 +294,22 @@ async function sync(days: number) {
   const rows: any[] = [...rowMap.values()];
   const added = rows.filter((r) => !known.has(`${r.ml_order_id}|${r.ml_item_id}|${r.variation_id}`)).length;
   // upsert só com colunas do ML: destino (vehicle/task/stock) nunca é sobrescrito
-  for (let i = 0; i < rows.length; i += 100) {
-    const { error } = await sb.from("ml_purchase_items").upsert(rows.slice(i, i + 100), { onConflict: "ml_order_id,ml_item_id,variation_id" });
-    if (error) throw new Error(error.message);
+  // linhas divididas (destinadas em partes): qty/freight ficam como estão, só o resto é atualizado
+  const splitKeys = new Set((ex || []).filter((x: any) => x.is_split).map((x: any) => `${x.ml_order_id}|${x.ml_item_id}|${x.variation_id}`));
+  const isSplitRow = (r: any) => splitKeys.has(`${r.ml_order_id}|${r.ml_item_id}|${r.variation_id}`);
+  const normal = rows.filter((r) => !isSplitRow(r));
+  const splitRows = rows.filter(isSplitRow).map((r) => { const { qty: _q, freight: _f, ...rest } = r; return rest; });
+  for (const grp of [normal, splitRows]) {
+    for (let i = 0; i < grp.length; i += 100) {
+      const { error } = await sb.from("ml_purchase_items").upsert(grp.slice(i, i + 100), { onConflict: "ml_order_id,ml_item_id,variation_id" });
+      if (error) throw new Error(error.message);
+    }
+  }
+  // partes já destinadas (variation_id "…#sN") herdam o status de entrega da linha de origem
+  for (const c of (ex || []).filter((x: any) => String(x.variation_id).includes("#s"))) {
+    const r = rowMap.get(`${c.ml_order_id}|${c.ml_item_id}|${String(c.variation_id).split("#s")[0]}`);
+    if (!r) continue;
+    await sb.from("ml_purchase_items").update({ order_status: r.order_status, ship_status: r.ship_status, status_at: r.status_at, shipped_at: r.shipped_at, delivered_at: r.delivered_at, ship_history: r.ship_history, ship_substatus: r.ship_substatus, eta_at: r.eta_at, ml_key: r.ml_key }).eq("id", c.id);
   }
   await sb.from("ml_tokens").update({ last_sync_at: new Date().toISOString() }).eq("id", 1);
   let linked = 0;

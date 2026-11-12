@@ -6267,6 +6267,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const [tid,setTid]=useState("");
   const [markup,setMarkup]=useState("50");
   const [qtyStr,setQtyStr]=useState(String(item.qty||1));
+  const [unitsStr,setUnitsStr]=useState(String(item.qty||1));
   const [nameStr,setNameStr]=useState(item.title||"");
   const [pid,setPid]=useState(()=>matchStockItem(item.title||"",stock));
   const sugg=useMemo(()=>suggestStockItems(item.title||"",stock),[item.id,stock]);
@@ -6275,11 +6276,13 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const vts=tasks.filter(t=>t.vehicleId===vid);
   const [lk,setLk]=useState(null); // {tid,idx} lançamento manual existente a corrigir
   const lkCands=useMemo(()=>{ if(!vid) return []; const pool=[]; vts.forEach(t=>(Array.isArray(t.materials)?t.materials:[]).forEach((m,idx)=>{ if(m&&!m.mlItem&&!m.fromStock&&m.name) pool.push({id:t.id+"|"+idx,name:m.name,tid:t.id,idx,tl:t.label,m}); })); return suggestStockItems(item.title||"",pool,3).map(r=>pool.find(x=>x.id===r.id)); },[vid,tasks,item.id]);
-  const total=(Number(item.qty)||1)*(Number(item.unit_price)||0);
+  const listQty=Number(item.qty)||1;
+  const unitsNum=Math.min(listQty,Math.max(1,Math.round(Number(unitsStr)||listQty)));
+  const total=unitsNum*(Number(item.unit_price)||0);
   const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const qNum=Number(String(qtyStr).replace(",","."))||0;
   const qEff=(mode==="stock"||mode==="tool")?Math.round(qNum):qNum;
-  const freight=Number(item.freight)||0;
+  const freight=Math.round((Number(item.freight)||0)*unitsNum/listQty*100)/100;
   const [incFr,setIncFr]=useState(freight>0);
   const [sdiv,setSdiv]=useState("ambos");
   const [locStr,setLocStr]=useState("");
@@ -6295,7 +6298,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
     if(mode!=="ignored"&&mode!=="supplies"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
-    try{ await onAssign(item,{type:mode,vehicleId:vid,tid,linkIdx:(mode==="vehicle"&&lk)?lk.idx:null,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title}); onClose(); }
+    try{ await onAssign(item,{units:unitsNum,type:mode,vehicleId:vid,tid,linkIdx:(mode==="vehicle"&&lk)?lk.idx:null,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title}); onClose(); }
     catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
@@ -6309,6 +6312,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
           <div style={{fontSize:11,color:B.gray400,marginTop:3}}>{item.qty}× {fmtBRL(Number(item.unit_price)||0)} = <b style={{color:B.gray200}}>{fmtBRL(total)}</b></div>
         </div>
       </div>
+      {listQty>1&&<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",fontSize:12,color:B.gray300,marginBottom:12,background:B.gray900,borderRadius:8,padding:"8px 10px"}}>Destinar <input value={unitsStr} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setUnitsStr(v);const n=Math.min(listQty,Math.max(1,Number(v)||listQty));setQtyStr(String(n));}} inputMode="numeric" style={{...inp,width:56,textAlign:"center",padding:"6px 8px"}}/> de {listQty} unidades do anúncio{unitsNum<listQty&&<span style={{flexBasis:"100%",fontSize:11,color:B.gray500}}>As outras {listQty-unitsNum} continuam sem destino para outro uso.</span>}</div>}
       <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("supplies","Insumos")}{tabBtn("tool","Ferramenta")}{tabBtn("ignored","Ignorar")}</div>
       {mode==="vehicle"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome da peça na OS" style={inp}/>
@@ -12209,7 +12213,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.46";
+const APP_VERSION = "2026.11.11.47";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16166,6 +16170,12 @@ export default function App() {
   };
   // Mercado Livre: destina uma peça comprada (carro/tarefa, estoque ou ignorar) com reserva anti-duplicidade
   const assignMLItem=async(item,d)=>{
+    const _units=Number(d.units)||0;
+    if(_units>0&&_units<(Number(item.qty)||1)){
+      const child=await db.splitMLItem(item,_units);
+      if(!child) throw new Error("Esta peça já foi destinada por outra pessoa. Atualize a lista.");
+      item=child;
+    }
     const veh=d.type==="vehicle"?vehicles.find(v=>v.id===d.vehicleId):null;
     const vlabel=veh?`${veh.model||""} · ${veh.plate||""}`.trim():null;
     const ok=await db.claimMLItem(item.id,{destination:d.type,vehicle_id:d.type==="vehicle"?d.vehicleId:null,vehicle_label:vlabel,assigned_by:ROLE_CONFIG[adminRole]?.label||null,assigned_at:new Date().toISOString()});

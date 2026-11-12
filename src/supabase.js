@@ -1067,6 +1067,21 @@ export const db = {
     const { data, error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id).is("destination", null).select("id");
     if (error) throw error; return (data || []).length > 0;
   },
+  // destinar só parte das unidades: a parte destinada vira uma linha própria (variation_id "…#sN") e o resto continua sem destino
+  async splitMLItem(item, units) {
+    const n = Number(item.qty) || 1, k = Math.round(Number(units) || 0);
+    if (k < 1 || k >= n) return item;
+    const fr = Number(item.freight) || 0, frK = Math.round(fr * k / n * 100) / 100;
+    const { data, error } = await supabase.from("ml_purchase_items")
+      .update({ qty: n - k, freight: Math.round((fr - frK) * 100) / 100, is_split: true })
+      .eq("id", item.id).is("destination", null).eq("qty", n).select("id");
+    if (error) throw error; if (!data || !data.length) return null;
+    const { id, created_at, ...rest } = item;
+    const row = { ...rest, variation_id: (item.variation_id || "") + "#s" + Date.now().toString(36), qty: k, freight: frK, is_split: false };
+    const { data: ch, error: e2 } = await supabase.from("ml_purchase_items").insert(row).select().single();
+    if (e2) { await supabase.from("ml_purchase_items").update({ qty: n, freight: fr }).eq("id", item.id); throw e2; }
+    return ch;
+  },
   // estoque: entrada só quando o ML marca "entregue" (plano guardado em stock_plan)
   async getMLStockPending() {
     const { data, error } = await supabase.from("ml_purchase_items").select("id,stock_plan,delivered_at,status_at,ordered_at,ml_order_id")

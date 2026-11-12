@@ -4638,6 +4638,32 @@ const _ML_BRANDS=["Bosch","Motul","Fuchs","Wurth","Würth","Liqui Moly","LiquiMo
 const _ML_VEH=new Set("bmw ford chevrolet gm vw volkswagen fiat toyota honda hyundai nissan renault peugeot citroen mercedes mercedes-benz audi porsche dodge jeep mitsubishi kia volvo subaru suzuki chery jac opala maverick fusca kombi brasilia corsa celta monza chevette fiesta focus escort belina verona veraneio caravan santana passat civic corolla hilux cayenne macan panamera mustang camaro corvette charger challenger galaxie landau gol uno palio astra vectra omega zafira meriva s10 blazer silverado ranger f100 f1000 f250 f4000 c10 c20 d10 d20 a10 saveiro parati voyage golf jetta tiguan amarok polo".split(" "));
 const _ML_NOISE=new Set("original padrao origin novo nova ambos lados lado universal frete gratis envio full promocao oferta premium top importado nacional genuino genuina compativel compativeis modelo modelos linha pronta entrega veiculo veiculos automotivo automotiva automotivos automotivas carro carros uso profissional alta qualidade excelente melhor".split(" "));
 const _ML_CONN=new Set(["para","p","c","com","do","da","de","dos","das","e","em","a","o","na","no","-","–","/"]);
+// Padrão de nome de item: só a 1ª letra maiúscula; siglas, códigos e medidas preservados (marcas de linha de produto mantêm o nome oficial)
+const _NAME_KEEP_BRANDS=new Set(["motul","fuchs","red line","liqui moly","liquimoly","vonixx","rust-oleum","autoclean","texaco"]);
+const _NAME_ACR=new Set("an npt ptfe abs epi led pu ls gti atf dot pvc gm vw bmw iii ii iv ca".split(" "));
+const _NAME_PROPER=new Set("opala caravan maverick ford chevrolet fiat audi honda toyota volkswagen mustang camaro allen".split(" "));
+function normItemName(name,brand=""){
+  const raw=String(name||"").trim(); if(!raw) return raw;
+  if(_NAME_KEEP_BRANDS.has(String(brand||"").trim().toLowerCase())) return raw;
+  const out=raw.split(/\s+/).map(w=>{
+    const k=w.toLowerCase(), bare=k.replace(/[^a-zà-ú0-9]/g,"");
+    if(/^\d+(?:[.,]\d+)?l$/i.test(w)) return w.slice(0,-1)+"L";
+    if(/^\d+(?:[.,]\d+)?(mm|cm|ml|g|kg|m)$/i.test(w)) return k;
+    if(/^\d+w-?\d+$/i.test(w)) return k;
+    if(/^\d+an$/i.test(w)) return w.toUpperCase();
+    if(/^m\d+(?:[.,]\d+)?(?:x\d+(?:[.,]\d+)?)?$/i.test(w)) return w.toUpperCase().replace("X","x");
+    if(/^[a-z]{1,4}\d+[a-z]*(?:-[a-z])?$/i.test(w)) return w.toUpperCase();
+    if(/\d/.test(w)) return w;
+    if(w.length===1&&/[a-z]/i.test(w)) return ["a","e","o","x"].includes(k)?k:w.toUpperCase();
+    if(/[a-zà-ú][A-ZÀ-Ú]/.test(w.slice(1))||/^[A-Z]-/.test(w)||/[A-ZÀ-Ú]{2,}.*-/.test(w)) return w;
+    if(_NAME_ACR.has(bare)) return w.toUpperCase();
+    if(w.length>1&&w===w.toUpperCase()&&/[A-ZÀ-Ú]{2,}/.test(w)&&w.length<=5) return w;
+    if(_NAME_PROPER.has(bare)) return w[0].toUpperCase()+w.slice(1).toLowerCase();
+    return k;
+  });
+  out[0]=out[0][0].toUpperCase()+out[0].slice(1);
+  return out.join(" ");
+}
 function cleanMLTitle(title, brands=[]) {
   const raw=String(title||"").trim(); if(!raw) return {name:"",brand:"",years:""};
   const nrm=x=>String(x).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
@@ -4673,7 +4699,7 @@ function cleanMLTitle(title, brands=[]) {
   name=name.replace(/(\d(?:[.,]\d+)?)\s*(l|lt|lts|litro|litros)\b/gi,(m,a)=>a+"L").replace(/(\d(?:[.,]\d+)?)\s*(ml|g|kg|mm|cm|m)\b/gi,(m,a,b)=>a+b.toLowerCase());
   if(name&&name===name.toUpperCase()&&/[A-Z]{4,}/.test(name)) name=name.toLowerCase().replace(/(^|\s)([a-zà-ú])/g,(m,a,b)=>a+b.toUpperCase());
   const bd=brand?(brands||[]).find(b=>nrm(b)===nrm(brand))||_ML_BRANDS.find(b=>nrm(b)===nrm(brand))||brand:"";
-  return {name:name||raw,brand:bd,years};
+  return {name:name?normItemName(name,bd):raw,brand:bd,years};
 }
 // devolve até n produtos do estoque parecidos com o nome (score 0–1), do melhor ao pior
 function suggestStockItems(name, stock, n = 3, loose = false) {
@@ -5949,7 +5975,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
     if(!form.name.trim())return;
     const costPrice=Number(form.costPrice||0), markup=Number(form.markup||0), minQty=Math.max(0,Number(form.minQty||2));
     const sp=costPrice*(1+markup/100);
-    onAdd({...form,qty:0,costPrice,markup,minQty,salePrice:sp});
+    onAdd({...form,name:normItemName(form.name,form.brand),qty:0,costPrice,markup,minQty,salePrice:sp});
     setForm(emptyForm);
     setShowAdd(false);
   };
@@ -6099,7 +6125,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
   const save=()=>{
     if(!form.name.trim())return;
     onSave(item.id,{
-      name:form.name.trim(), brand:form.brand.trim(), type:form.type.trim(), location:form.location.trim(), notes:(form.notes||"").trim(),
+      name:normItemName(form.name,form.brand), brand:form.brand.trim(), type:form.type.trim(), location:form.location.trim(), notes:(form.notes||"").trim(),
       minQty:Math.max(0,Number(form.minQty||0)), costPrice:Number(form.costPrice||0), markup:Number(form.markup||0),
       salePrice, photo:form.photo||null, orderLink:form.orderLink||"",
     });
@@ -12409,7 +12435,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.82";
+const APP_VERSION = "2026.11.12.83";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

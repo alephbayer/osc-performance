@@ -6364,6 +6364,8 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const [qs,setQs]=useState("");
   const [exp,setExp]=useState({});
   const [sortBy,setSortBy]=useState("date");
+  const [open,setOpen]=useState(()=>{try{return localStorage.getItem("osc_ml_open")!=="0";}catch(e){return true;}});
+  const toggleOpen=()=>setOpen(v=>{const n=!v;try{localStorage.setItem("osc_ml_open",n?"1":"0");}catch(e){}return n;});
   const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
   const doSync=async(silent)=>{
     setBusy("sync");setErr("");if(!silent)setMsg("");
@@ -6499,7 +6501,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   </div>;
   return (<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.amber}44`,padding:14,marginBottom:16}}>
     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-      <span style={{fontSize:13,fontWeight:800,color:B.amber,letterSpacing:.4}}>Mercado Livre</span>
+      <button onClick={toggleOpen} style={{background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",alignItems:"center",gap:6,color:B.amber,fontSize:13,fontWeight:800,letterSpacing:.4}}><span style={{fontSize:11,display:"inline-block",transition:"transform .2s",transform:open?"rotate(90deg)":"none"}}>▸</span>Mercado Livre</button>
       {st?.connected&&<span style={{fontSize:10,color:B.gray400}}>{st.nickname?`@${st.nickname} · `:""}{st.lastSync?`sincronizado ${new Date(st.lastSync).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}`:"nunca sincronizado"}</span>}
       {pendingAll.length>0&&<span style={{fontSize:10,fontWeight:800,background:B.amber,color:B.black,borderRadius:99,padding:"1px 8px"}}>{pendingAll.length} sem destino</span>}
       <span style={{flex:1}}/>
@@ -6507,6 +6509,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         {st.authUrl&&<a href={st.authUrl} style={{color:B.blue,fontSize:11,textDecoration:"none"}}>↻ reautorizar</a>}
         <button onClick={disconnect} style={{background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>desconectar</button></>}
     </div>
+    {open&&<>
     {busy==="connect"&&<div style={{fontSize:12,color:B.gray300,marginTop:10}}>Conectando…</div>}
     {st&&!st.connected&&busy!=="connect"&&<div style={{marginTop:10}}>
       {!st.hasSecret
@@ -6543,6 +6546,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         {(showDone||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>{done.map(i=>row(i,false))}</div>}
       </div>}
     </div>}
+    </>}
     {pick&&<MLAssignModal item={pick} vehicles={openVeh} clients={clients} tasks={tasks} stock={stock} onClose={()=>setPick(null)} onAssign={async(it,d)=>{ await onAssign(it,d); await loadItems(); }}/>}
   </div>);
 }
@@ -12194,7 +12198,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.42";
+const APP_VERSION = "2026.11.11.43";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

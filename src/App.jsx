@@ -12315,7 +12315,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.54";
+const APP_VERSION = "2026.11.11.55";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17104,7 +17104,7 @@ export default function App() {
             {navSection==="compras"&&<>
               {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
               {tabBtn("materiais","Ped. Compras",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 8v10a1 1 0 0 0 1 1h4M19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 8v10"/></svg>,B.orange)}
-              {allowedTabs.includes("insumos")&&tabBtn("insumos","Insumos",<span style={{fontSize:12,lineHeight:1}}>🧴</span>,"#14b8a6")}
+              {allowedTabs.includes("insumos")&&tabBtn("insumos","Insumos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.7s6 6.1 6 10.6a6 6 0 0 1-12 0C6 8.8 12 2.7 12 2.7z"/></svg>,"#14b8a6")}
               {allowedTabs.includes("purchases")&&tabBtn("purchases","Ped. Veículos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
             </>}
           </div>

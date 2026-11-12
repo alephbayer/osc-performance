@@ -6045,6 +6045,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
 
     {/* name + tags */}
     <div style={{flex:"1 1 160px",minWidth:0}}>
+      {low&&<div style={{display:"inline-block",background:`${B.red}1f`,color:B.red,borderRadius:4,padding:"1px 8px",fontSize:9,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",marginBottom:4}}>Estoque baixo</div>}
       <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
         {(()=>{const bm=String(item.name||"").match(/^\s*\[([^\]]+)\]\s*/);const br=String(item.brand||"").trim()||(bm?bm[1]:"");const nm=bm?String(item.name).slice(bm[0].length):item.name;
           return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase"}}>{br}</span>}{br&&<span style={{display:"inline-block",width:4,height:4,borderRadius:99,background:B.gray500,margin:"0 8px",verticalAlign:"middle"}}/>}{nm}</span>;})()}
@@ -6060,7 +6061,6 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
     <div style={{textAlign:"center",flexShrink:0,minWidth:50}}>
       <div style={{fontSize:10,color:B.gray400}}>Saldo</div>
       <div style={{fontWeight:800,fontSize:15,color:low?B.red:B.white}}>{item.qty}</div>
-      {low&&<div style={{fontSize:8.5,fontWeight:800,letterSpacing:1,textTransform:"uppercase",color:B.red,marginTop:1}}>baixo</div>}
     </div>
 
     {/* prices */}
@@ -12404,7 +12404,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.75";
+const APP_VERSION = "2026.11.12.76";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

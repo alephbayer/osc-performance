@@ -6392,6 +6392,8 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const [exp,setExp]=useState({});
   const [sortBy,setSortBy]=useState("date");
   const [adv,setAdv]=useState(false);
+  const [shut,setShut]=useState(()=>{try{return JSON.parse(localStorage.getItem("osc_ml_shut")||"{}");}catch(e){return {};}});
+  const tgShut=k=>setShut(v=>{const n={...v,[k]:!v[k]};try{localStorage.setItem("osc_ml_shut",JSON.stringify(n));}catch(e){}return n;});
   const [open,setOpen]=useState(()=>{try{return localStorage.getItem("osc_ml_open")!=="0";}catch(e){return true;}});
   const toggleOpen=()=>setOpen(v=>{const n=!v;try{localStorage.setItem("osc_ml_open",n?"1":"0");}catch(e){}return n;});
   const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
@@ -6566,10 +6568,10 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
           <option value="value">Maior valor</option>
         </select>
       </div>}
-      {pending.length>0&&<><div style={{fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"2px 0 6px"}}>Sem destino ({pending.length})</div>
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div></>}
-      {waiting.length>0&&<><div style={{fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}>Destinadas · aguardando entrega ({waiting.length})</div>
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>{waiting.map(i=>row(i,false))}</div></>}
+      {pending.length>0&&<><button onClick={()=>tgShut("pending")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"2px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.pending&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Sem destino ({pending.length})</button>
+        {(!shut.pending||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div>}</>}
+      {waiting.length>0&&<><button onClick={()=>tgShut("waiting")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.waiting&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Destinadas · aguardando entrega ({waiting.length})</button>
+        {(!shut.waiting||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{waiting.map(i=>row(i,false))}</div>}</>}
       {pending.length===0&&waiting.length===0&&<div style={{fontSize:12,color:B.gray500}}>{!items.length?"Nenhuma compra ainda — toque em Sincronizar.":(fil!=="all"||nqs)?(done.length?null:"Nada encontrado."):"Tudo concluído. 👌"}</div>}
       {done.length>0&&<div style={{marginTop:12}}>
         <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.green,fontSize:11,fontWeight:700,cursor:"pointer",padding:0}}>{(showDone||nqs)?"▾":"▸"} ✓ Concluídas — entregues e destinadas ({done.length})</button>
@@ -12228,7 +12230,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.51";
+const APP_VERSION = "2026.11.11.52";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

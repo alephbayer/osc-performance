@@ -6036,7 +6036,8 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
 // ─── Stock row (list view) ────────────────────────────────────────────────────
 function StockRow({item,salePrice,onLightbox,onOpen}) {
   const low=item.qty<=(item.minQty??2);
-  return (<div style={{background:B.gray800,borderRadius:10,border:`1px solid ${low?B.red+"55":B.gray700}`,padding:"10px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} onClick={onOpen}>
+  return (<div style={{background:B.gray800,borderRadius:10,border:`1px solid ${low?B.red+"55":B.gray700}`,padding:"10px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer",position:"relative"}} onClick={onOpen}>
+    {low&&<div style={{position:"absolute",top:10,left:74,background:`${B.red}1f`,color:B.red,borderRadius:4,padding:"1px 8px",fontSize:9,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",lineHeight:"12px"}}>Estoque baixo</div>}
     {/* photo thumb */}
     <div style={{width:48,height:48,borderRadius:8,background:B.gray700,flexShrink:0,cursor:item.photo?"pointer":"default",overflow:"hidden"}} onClick={e=>{e.stopPropagation();item.photo&&onLightbox(item.photo);}}>
       {item.photo?<img src={item.photo} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -6044,8 +6045,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
     </div>
 
     {/* name + tags */}
-    <div style={{flex:"1 1 160px",minWidth:0}}>
-      {low&&<div style={{display:"inline-block",background:`${B.red}1f`,color:B.red,borderRadius:4,padding:"1px 8px",fontSize:9,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",marginBottom:4}}>Estoque baixo</div>}
+    <div style={{flex:"1 1 160px",minWidth:0,paddingTop:low&&(item.type||item.location)?14:0}}>
       <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
         {(()=>{const bm=String(item.name||"").match(/^\s*\[([^\]]+)\]\s*/);const br=String(item.brand||"").trim()||(bm?bm[1]:"");const nm=bm?String(item.name).slice(bm[0].length):item.name;
           return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase"}}>{br}</span>}{br&&<span style={{display:"inline-block",width:4,height:4,borderRadius:99,background:B.gray500,margin:"0 8px",verticalAlign:"middle"}}/>}{nm}</span>;})()}
@@ -12404,7 +12404,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.76";
+const APP_VERSION = "2026.11.12.77";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

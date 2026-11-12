@@ -6284,6 +6284,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const fr=incFr?freight:0;
   const unitCost=qEff>0?((mode==="stock"||mode==="tool")?(total+fr)/qEff:total/qEff):0;
   const frBox=freight>0?(<label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,background:B.gray900,borderRadius:8,padding:"8px 10px",cursor:"pointer"}}><input type="checkbox" checked={incFr} onChange={e=>setIncFr(e.target.checked)}/>Incluir frete pago no ML: <b style={{color:B.gray200}}>{fmtBRL(freight)}</b></label>):null;
+  const projBox=qEff>0?(<div style={{fontSize:11,color:B.gray500,lineHeight:1.45}}>Venda por unidade: <b style={{color:B.green}}>{fmtBRL(unitCost*(1+(Number(markup)||0)/100))}</b> <span>({fmtBRL(unitCost)} + {Number(markup)||0}%)</span>{qEff>1&&<> · total <b style={{color:B.gray300}}>{fmtBRL(unitCost*(1+(Number(markup)||0)/100)*qEff)}</b></>}</div>):null;
   const qtyBox=(<div style={{background:B.gray900,borderRadius:8,padding:"8px 10px"}}>
     <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,flexWrap:"wrap"}}>Quantidade que entra <input value={qtyStr} onChange={e=>setQtyStr(e.target.value.replace(/[^\d.,]/g,""))} inputMode="decimal" style={{...inp,width:80,textAlign:"center"}}/><span style={{color:B.gray500}}>un.</span></div>
     <div style={{fontSize:11,color:B.gray500,marginTop:5,lineHeight:1.45}}>{qEff>0?<>Custo por unidade: <b style={{color:B.gray200}}>{fmtBRL(unitCost)}</b> ({fmtBRL(total)} ÷ {qEff})</>:"Informe a quantidade"}{Number(item.qty)!==qEff&&qEff>0?<span style={{color:B.amber}}> · o anúncio vendeu {item.qty}</span>:null}</div>
@@ -6314,6 +6315,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         {qtyBox}
         {frBox}
         <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Margem sobre o custo <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>
+        {projBox}
       </div>}
       {mode==="stock"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <StockProductPicker value={pid} onChange={setPid} stock={stock}/>
@@ -6325,6 +6327,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         {frBox}
         {!pid&&<input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome do produto novo" style={inp}/>}
         {!pid&&<div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Produto novo — margem <input value={markup} onChange={e=>setMarkup(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:70,textAlign:"center"}}/> %</div>}
+        {!pid&&projBox}
         <div style={{fontSize:11,color:B.gray500}}>Entra como compra no estoque (fornecedor Mercado Livre) e soma a quantidade.</div>
       </div>}
       {mode==="supplies"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -12191,7 +12194,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.11.40";
+const APP_VERSION = "2026.11.11.41";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

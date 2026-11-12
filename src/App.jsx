@@ -6047,7 +6047,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
     <div style={{flex:"1 1 160px",minWidth:0}}>
       <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
         {(()=>{const bm=String(item.name||"").match(/^\s*\[([^\]]+)\]\s*/);const br=String(item.brand||"").trim()||(bm?bm[1]:"");const nm=bm?String(item.name).slice(bm[0].length):item.name;
-          return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase",marginRight:7}}>{br}</span>}{nm}</span>;})()}
+          return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase"}}>{br}</span>}{br&&<span style={{display:"inline-block",width:4,height:4,borderRadius:99,background:B.gray500,margin:"0 8px",verticalAlign:"middle"}}/>}{nm}</span>;})()}
         {low&&<span style={{background:B.red,color:B.white,borderRadius:6,padding:"1px 7px",fontSize:10,fontWeight:700}}>⚠ Baixo</span>}
       </div>
       <div style={{fontSize:11,color:B.gray400,marginTop:2,display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -12404,7 +12404,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.73";
+const APP_VERSION = "2026.11.12.74";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

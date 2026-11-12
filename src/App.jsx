@@ -4655,8 +4655,8 @@ function normItemName(name,brand=""){
     if(/^[a-z]{1,4}\d+[a-z]*(?:-[a-z])?$/i.test(w)) return w.toUpperCase();
     if(/\d/.test(w)) return w;
     if(w.length===1&&/[a-z]/i.test(w)) return ["a","e","o","x"].includes(k)?k:w.toUpperCase();
-    if(/[a-zà-ú][A-ZÀ-Ú]/.test(w.slice(1))||/^[A-Z]-/.test(w)||/[A-ZÀ-Ú]{2,}.*-/.test(w)) return w;
     if(bare==="oring"||/^o[-']ring$/i.test(w)) return "o'ring";
+    if(/[a-zà-ú][A-ZÀ-Ú]/.test(w.slice(1))||/^[A-Z]-/.test(w)||/[A-ZÀ-Ú]{2,}.*-/.test(w)) return w;
     if(_NAME_ACR.has(bare)) return w.toUpperCase();
     if(w.length>1&&w===w.toUpperCase()&&/[A-ZÀ-Ú]{2,}/.test(w)&&w.length<=5) return w;
     if(_NAME_PROPER.has(bare)) return w[0].toUpperCase()+w.slice(1).toLowerCase();
@@ -12436,7 +12436,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.84";
+const APP_VERSION = "2026.11.12.85";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

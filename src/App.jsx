@@ -11364,6 +11364,17 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const catOrder=buildCatOrder(regularTs);
   const pubFin=publicFinInfo(v,perfTasks,finTasks,payments,defaultRate);
   const pendingNow=pubFin.pending;
+  const pendNote=(()=>{
+    const all=[...perfTasks,...finTasks];
+    const adv=!!(v.enteredAt||v.enteredAtFinishing);
+    const doneN=all.filter(t=>t.done).length;
+    if(!adv||!all.length||doneN===all.length) return "Referente ao serviço já executado até agora";
+    const open=all.filter(t=>!t.done);
+    const bought=boughtPendingValue(open,defaultRate,true)>0.005;
+    const outs=open.some(t=>t.outsourced&&!t.warranty&&taskCost(t,defaultRate).labor>0);
+    const base=doneN===0?"Entrada do serviço · 50% da mão de obra":"Serviços concluídos + entrada dos em andamento";
+    return base+(bought?" + peças já adquiridas":"")+(outs?" + serviços terceirizados":"");
+  })();
   const shownTl=tlAll?timeline:timeline.slice(0,5);
   const hasPecas=purchaseOrders.some(o=>o.vehicleId===v.id)||[...(v.partsList||[]),...(v.partsListFinishing||[])].some(p=>p.name);
   const hasFotos=[...photos,...photosF].some(p=>p.url);
@@ -11404,7 +11415,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           <div style={S.pad}>
             <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>Pagamento pendente</div>
             <div style={{fontSize:30,fontWeight:900,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{fmtBRLReal(pendingNow)}</div>
-            <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Referente ao serviço já executado até agora</div>
+            <div style={{fontSize:12,color:B.gray400,marginTop:4}}>{pendNote}</div>
             {compact?<>
               <div style={{display:"flex",gap:8,marginTop:14}}>
                 <button onClick={copyPix} style={{flex:1,minHeight:46,border:"none",borderRadius:10,background:B.amber,color:B.black,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>{pixCopied?"✓ Chave copiada":"Copiar chave Pix"}</button>
@@ -12391,7 +12402,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.69";
+const APP_VERSION = "2026.11.12.70";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

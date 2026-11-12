@@ -3063,7 +3063,7 @@ function PhotoEditor({file,aspect=1,onCancel,onDone,onFail}){
   const ico=(d)=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html:d}}/>;
   const btn={display:"inline-flex",alignItems:"center",justifyContent:"center",width:34,height:30,borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.gray200,cursor:"pointer"};
   const lab={fontSize:9.5,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:B.gray400,width:54,flexShrink:0};
-  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,padding:16}} onClick={onCancel}>
+  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,padding:16,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}} onClick={onCancel}>
     <div style={{background:B.gray800,borderRadius:16,border:`1px solid ${B.gray700}`,padding:16,width:STAGE+32,maxWidth:"100%",maxHeight:"96vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
       <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",color:B.amber,marginBottom:10}}>Ajustar foto</div>
       <div style={{width:STAGE,height:STAGE,borderRadius:10,overflow:"hidden",background:"#fff",border:`1px solid ${B.gray600}`,margin:"0 auto"}}>
@@ -12542,7 +12542,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.89";
+const APP_VERSION = "2026.11.12.90";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

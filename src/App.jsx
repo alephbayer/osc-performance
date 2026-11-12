@@ -6046,11 +6046,11 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
     {/* name + tags */}
     <div style={{flex:"1 1 160px",minWidth:0}}>
       <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
-        <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{item.name}</span>
+        {(()=>{const bm=String(item.name||"").match(/^\s*\[([^\]]+)\]\s*/);const br=String(item.brand||"").trim()||(bm?bm[1]:"");const nm=bm?String(item.name).slice(bm[0].length):item.name;
+          return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase",marginRight:7}}>{br}</span>}{nm}</span>;})()}
         {low&&<span style={{background:B.red,color:B.white,borderRadius:6,padding:"1px 7px",fontSize:10,fontWeight:700}}>⚠ Baixo</span>}
       </div>
       <div style={{fontSize:11,color:B.gray400,marginTop:2,display:"flex",gap:6,flexWrap:"wrap"}}>
-        {item.brand&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{item.brand}</span>}
         {item.type&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{item.type}</span>}
         {item.location&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>📍 {item.location}</span>}
       </div>
@@ -12404,7 +12404,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.72";
+const APP_VERSION = "2026.11.12.73";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16435,7 +16435,7 @@ export default function App() {
       } else if(d.type==="stock"){
         const q=Math.max(1,Math.round(qty));
         const _bn=String(d.brand||"").trim(), _nm=String(d.name||item.title||"").trim();
-        const plan={pid:d.pid||"",brand:_bn,name:(_bn&&!_nm.startsWith("[")&&!d.pid)?`[${_bn}] ${_nm}`:_nm,qty:q,cost:Math.round((total+frt)/q*10000)/10000,markup:Number(d.markup)||0,invoice:"ML "+item.ml_order_id};
+        const plan={pid:d.pid||"",brand:_bn,name:_nm,qty:q,cost:Math.round((total+frt)/q*10000)/10000,markup:Number(d.markup)||0,invoice:"ML "+item.ml_order_id};
         if(item.ship_status==="delivered"){
           const sid=await importStockNote({items:[{pid:plan.pid,brand:plan.brand,name:plan.name,qty:plan.qty,cost:plan.cost}],supplierName:"Mercado Livre",date:String(item.delivered_at||item.status_at||item.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:plan.invoice,markup:plan.markup});
           if(sid) await db.setMLItem(item.id,{stock_id:sid});

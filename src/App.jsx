@@ -6038,9 +6038,12 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
   const low=item.qty<=(item.minQty??2);
   return (<div style={{background:B.gray800,borderRadius:10,border:`1px solid ${low?B.red+"55":B.gray700}`,padding:"10px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} onClick={onOpen}>
     {/* photo thumb */}
-    <div style={{width:48,height:48,borderRadius:8,background:B.gray700,flexShrink:0,cursor:item.photo?"pointer":"default",overflow:"hidden"}} onClick={e=>{e.stopPropagation();item.photo&&onLightbox(item.photo);}}>
+    <div style={{position:"relative",flexShrink:0,width:48,height:48}}>
+    <div style={{width:48,height:48,borderRadius:8,background:B.gray700,cursor:item.photo?"pointer":"default",overflow:"hidden"}} onClick={e=>{e.stopPropagation();item.photo&&onLightbox(item.photo);}}>
       {item.photo?<img src={item.photo} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
         :<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:.3}}><IBox s={20} c={B.white}/></div>}
+    </div>
+      {low&&<span style={{position:"absolute",top:-6,left:"50%",transform:"translateX(-50%)",background:B.red,color:"#fff",borderRadius:4,padding:"1px 7px",fontSize:8.5,fontWeight:800,letterSpacing:1,textTransform:"uppercase",lineHeight:"12px",whiteSpace:"nowrap",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}>Baixo</span>}
     </div>
 
     {/* name + tags */}
@@ -6048,7 +6051,6 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         {(()=>{const bm=String(item.name||"").match(/^\s*\[([^\]]+)\]\s*/);const br=String(item.brand||"").trim()||(bm?bm[1]:"");const nm=bm?String(item.name).slice(bm[0].length):item.name;
           return <span style={{fontWeight:700,fontSize:13.5,color:B.white}}>{br&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase"}}>{br}</span>}{br&&<span style={{display:"inline-block",width:4,height:4,borderRadius:99,background:B.gray500,margin:"0 8px",verticalAlign:"middle"}}/>}{nm}</span>;})()}
-        {low&&<span style={{background:`${B.red}1f`,color:B.red,borderRadius:4,padding:"2px 8px",fontSize:9,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Baixo</span>}
       </div>
       <div style={{fontSize:11,color:B.gray400,marginTop:2,display:"flex",gap:6,flexWrap:"wrap"}}>
         {item.type&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{item.type}</span>}
@@ -12404,7 +12406,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.80";
+const APP_VERSION = "2026.11.12.81";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

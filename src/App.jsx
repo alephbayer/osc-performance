@@ -6320,6 +6320,8 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const [qtyStr,setQtyStr]=useState(String(item.qty||1));
   const [unitsStr,setUnitsStr]=useState(String(item.qty||1));
   const [taskCat,setTaskCat]=useState("");
+  const [retReason,setRetReason]=useState("Não serviu");
+  const [retDeadline,setRetDeadline]=useState(()=>{ const b=item.delivered_at?new Date(item.delivered_at):new Date(); b.setDate(b.getDate()+7); return b.toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"}); });
   const stockBrands=useMemo(()=>{ const set=new Set(); (stock||[]).forEach(x=>{ if(x.brand) set.add(String(x.brand).trim()); const m=String(x.name||"").match(/^\[([^\]]+)\]/); if(m) set.add(m[1].trim()); }); return [...set]; },[stock]);
   const sug=useMemo(()=>cleanMLTitle(item.title||"",stockBrands),[item.id,stockBrands]);
   const [nameStr,setNameStr]=useState(sug.name||item.title||"");
@@ -6359,9 +6361,9 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   </div>);
   const go=async()=>{
     if(mode==="vehicle"&&(!vid||!tid)){setErr("Escolha o carro e a tarefa");return;}
-    if(mode!=="ignored"&&mode!=="supplies"&&!(qEff>0)){setErr("Informe a quantidade");return;}
+    if(mode!=="ignored"&&mode!=="supplies"&&mode!=="return"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
-    try{ await onAssign(item,{units:unitsNum,category:taskCat||null,type:mode,vehicleId:vid,tid,linkIdx:(mode==="vehicle"&&lk)?lk.idx:null,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title,brand:brandStr.trim()}); onClose(); }
+    try{ await onAssign(item,{units:unitsNum,category:taskCat||null,type:mode,vehicleId:vid,tid,linkIdx:(mode==="vehicle"&&lk)?lk.idx:null,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title,brand:brandStr.trim(),returnReason:retReason,returnDeadline:retDeadline||null}); onClose(); }
     catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
@@ -6376,7 +6378,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         </div>
       </div>
       {listQty>1&&<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",fontSize:12,color:B.gray300,marginBottom:12,background:B.gray900,borderRadius:8,padding:"8px 10px"}}>Destinar <input value={unitsStr} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setUnitsStr(v);const n=Math.min(listQty,Math.max(1,Number(v)||listQty));setQtyStr(String(n));}} inputMode="numeric" style={{...inp,width:56,textAlign:"center",padding:"6px 8px"}}/> de {listQty} unidades do anúncio{unitsNum<listQty&&<span style={{flexBasis:"100%",fontSize:11,color:B.gray500}}>As outras {listQty-unitsNum} continuam sem destino para outro uso.</span>}</div>}
-      <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("supplies","Insumos")}{tabBtn("tool","Ferramenta")}{tabBtn("ignored","Ignorar")}</div>
+      <div style={{display:"flex",gap:5,marginBottom:12,flexWrap:"wrap"}}>{tabBtn("vehicle","Carro / OS")}{tabBtn("stock","Estoque")}{tabBtn("supplies","Insumos")}{tabBtn("tool","Ferramenta")}{tabBtn("return","Devolução")}{tabBtn("ignored","Ignorar")}</div>
       {mode==="vehicle"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
         <input value={nameStr} onChange={e=>setNameStr(e.target.value)} placeholder="Nome da peça na OS" style={inp}/>
         {nameHelp(true)}
@@ -6424,7 +6426,12 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         <input value={locStr} onChange={e=>setLocStr(e.target.value)} placeholder="Onde fica / com quem (opcional)" style={inp}/>
         <div style={{fontSize:11,color:B.gray500,lineHeight:1.45}}>Entra na lista de <b style={{color:B.gray200}}>Ferramentas</b> como patrimônio ({fmtBRL(total+fr)}). <b style={{color:B.gray200}}>Não vira despesa</b> e não reduz o lucro do mês.</div>
       </div>}
-      {mode==="ignored"&&<div style={{fontSize:12,color:B.gray400}}>Marca como “não é da oficina” (uso pessoal, devolução…). Sai da lista de pendentes e não lança nada.</div>}
+      {mode==="return"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{fontSize:11,color:B.gray400,lineHeight:1.45}}>Só controle interno — a devolução em si você faz no Mercado Livre. O app guarda o prazo e avisa antes de vencer.</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["Não serviu","Veio errado","Defeito","Outro"].map(r=><button key={r} onClick={()=>setRetReason(r)} style={{padding:"6px 11px",borderRadius:99,border:`1px solid ${retReason===r?B.amber:B.gray600}`,background:retReason===r?`${B.amber}18`:"none",color:retReason===r?B.amber:B.gray300,fontSize:12,cursor:"pointer"}}>{r}</button>)}</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,flexWrap:"wrap"}}>Devolver até <input type="date" value={retDeadline} onChange={e=>setRetDeadline(e.target.value)} style={{...inp,width:150}}/><span style={{fontSize:11,color:B.gray500}}>{item.delivered_at?"7 dias após a entrega":"7 dias a partir de hoje"} · ajuste se o ML der mais</span></div>
+      </div>}
+      {mode==="ignored"&&<div style={{fontSize:12,color:B.gray400}}>Marca como “não é da oficina” (uso pessoal, presente…). Sai da lista de pendentes e não lança nada.</div>}
       {err&&<div style={{fontSize:12,color:B.red,marginTop:10}}>{err}</div>}
       <div style={{display:"flex",gap:8,marginTop:14}}>
         <button onClick={go} disabled={busy} style={{flex:1,padding:"9px 0",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:13,cursor:"pointer",opacity:busy?.6:1}}>{busy?"Lançando…":"Confirmar"}</button>
@@ -6481,27 +6488,32 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   },[]);
   const live=items.filter(i=>i.order_status!=="cancelled"&&i.ship_status!=="cancelled");
   const SORT_ORD={delivered:0,shipped:1,ready_to_ship:2,handling:3,pending:4,not_delivered:5};
-  const isDone=i=>i.destination==="ignored"||(!!i.destination&&i.ship_status==="delivered");
+  const isDone=i=>i.destination==="ignored"||(i.destination==="return"?i.return_status==="done":(!!i.destination&&i.ship_status==="delivered"));
   const nqs=_normName(qs);
   const bySearch=i=>!nqs||_normName([i.title,i.seller,i.vehicle_label,i.task_label].join(" ")).includes(nqs);
-  const byFil=i=>bySearch(i)&&(fil==="all"||(fil==="none"?!i.ship_status:i.ship_status===fil));
+  const byFil=i=>bySearch(i)&&(fil==="all"?i.destination!=="return":fil==="return"?i.destination==="return":(fil==="none"?!i.ship_status:i.ship_status===fil));
   const byDate=(x,y)=>new Date(y.ordered_at)-new Date(x.ordered_at);
   const srt=a=>[...a].sort(sortBy==="status"?(x,y)=>(SORT_ORD[x.ship_status]??9)-(SORT_ORD[y.ship_status]??9)||byDate(x,y):sortBy==="old"?(x,y)=>byDate(y,x):sortBy==="value"?(x,y)=>(Number(y.qty)*Number(y.unit_price)||0)-(Number(x.qty)*Number(x.unit_price)||0)||byDate(x,y):byDate);
   const active=live.filter(i=>!isDone(i));
   const pendingAll=live.filter(i=>!i.destination);
   const stockHints=useMemo(()=>{ const h={}; if(!stock?.length) return h; pendingAll.forEach(i=>{ const g=suggestStockItems(i.title||"",stock,1)[0]; if(g&&g.score>=0.75) h[i.id]=g; }); return h; },[items,stock]);
   const pending=srt(pendingAll.filter(byFil));
-  const waiting=srt(live.filter(i=>i.destination&&!isDone(i)).filter(byFil));
+  const waiting=srt(live.filter(i=>i.destination&&i.destination!=="return"&&!isDone(i)).filter(byFil));
+  const returns=live.filter(i=>i.destination==="return"&&!isDone(i)).filter(bySearch).sort((a,b)=>String(a.return_deadline||"9999").localeCompare(String(b.return_deadline||"9999")));
+  const retTotal=returns.reduce((a,i)=>a+(Number(i.qty)||1)*(Number(i.unit_price)||0)+(Number(i.freight)||0),0);
+  const retDays=d=>d?Math.ceil((new Date(d+"T23:59:59-03:00")-Date.now())/86400000):null;
+  const RET_ST={todo:"A devolver",asked:"Solicitada no ML",done:"Concluída"};
+  const setRet=async(i,patch)=>{ try{ await db.setMLItem(i.id,patch); await loadItems(); }catch(e){ setErr(e.message); } };
   const done=srt(live.filter(isDone).filter(bySearch));
-  const cnt=k=>k==="all"?active.length:active.filter(i=>k==="none"?!i.ship_status:i.ship_status===k).length;
-  const chips=[["all","Todos"],["delivered","Entregue"],["shipped","A caminho"],["ready_to_ship","Pronto p/ envio"],["handling","Preparando"],["pending","Aguardando"],["none","Sem status"]].filter(([k])=>k==="all"||k===fil||cnt(k)>0);
+  const cnt=k=>k==="all"?active.filter(i=>i.destination!=="return").length:k==="return"?returns.length:active.filter(i=>i.destination!=="return"&&(k==="none"?!i.ship_status:i.ship_status===k)).length;
+  const chips=[["all","Todos"],["delivered","Entregue"],["shipped","A caminho"],["ready_to_ship","Pronto p/ envio"],["handling","Preparando"],["pending","Aguardando"],["none","Sem status"],["return","Devolução"]].filter(([k])=>k==="all"||k===fil||cnt(k)>0);
   const openVeh=vehicles.filter(v=>v.status!=="delivered");
   const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(e.message); } };
   const undoSupplies=async i=>{ if(!window.confirm(i.destination==="tool"?"Desfazer? A ferramenta sai da lista de Ferramentas e a compra volta para “Sem destino”.":"Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(e.message||"Erro ao desfazer"); } };
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const fmtS=d=>{ if(!d) return ""; const x=new Date(d); const same=x.getFullYear()===new Date().getFullYear(); return x.toLocaleDateString("pt-BR",same?{day:"2-digit",month:"2-digit"}:{day:"2-digit",month:"2-digit",year:"2-digit"}); };
-  const destLbl=i=>i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?(i.stock_plan&&!i.stock_id?"📦 Estoque · entra quando for entregue":"📦 Estoque"):i.destination==="supplies"?"🧴 Insumos · custo do mês":i.destination==="tool"?"🔧 Ferramentas · patrimônio":"— ignorado";
+  const destLbl=i=>i.destination==="return"?`↩ Devolução${i.return_reason?` · ${i.return_reason}`:""}`:i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?(i.stock_plan&&!i.stock_id?"📦 Estoque · entra quando for entregue":"📦 Estoque"):i.destination==="supplies"?"🧴 Insumos · custo do mês":i.destination==="tool"?"🔧 Ferramentas · patrimônio":"— ignorado";
   const fmtT=d=>d?new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
   const timeline=i=>{
     const h={}; (Array.isArray(i.ship_history)?i.ship_history:[]).forEach(e=>{ if(e&&e.status&&e.date&&!h[e.status]) h[e.status]=e.date; });
@@ -6518,7 +6530,8 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       {k:"delivered",ic:"✅",l:"Entregue",d:h.delivered||(cur==="delivered"?i.status_at:null),done:cur==="delivered"||!!h.delivered},
     ];
     if(cur==="not_delivered") steps.push({k:"nd",ic:"⚠️",l:"Não entregue",d:h.not_delivered||i.status_at,done:true});
-    if(i.destination&&i.destination!=="ignored") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":i.destination==="tool"?"Destinada · Ferramentas (patrimônio)":(i.stock_plan&&!i.stock_id?"Destinada · Estoque (entra na entrega)":"Destinada · Estoque"),d:i.assigned_at,done:true,by:i.assigned_by});
+    if(i.destination==="return") steps.push({k:"ret",ic:"↩",l:`Devolução · ${RET_ST[i.return_status||"todo"]}${i.return_reason?` (${i.return_reason})`:""}`,d:i.assigned_at,done:true,by:i.assigned_by});
+    if(i.destination&&i.destination!=="ignored"&&i.destination!=="return") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":i.destination==="tool"?"Destinada · Ferramentas (patrimônio)":(i.stock_plan&&!i.stock_id?"Destinada · Estoque (entra na entrega)":"Destinada · Estoque"),d:i.assigned_at,done:true,by:i.assigned_by});
     if(i.destination==="ignored") steps.push({k:"ign",ic:"—",l:"Ignorada (não é da oficina)",d:i.assigned_at,done:true,by:i.assigned_by});
     return steps;
   };
@@ -6548,6 +6561,10 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       })()}
       {isPending&&(()=>{ const sg=stockHints[i.id]; return sg?<div style={{fontSize:11,color:B.purple,marginTop:6,wordBreak:"break-word"}}>💡 Parece estoque: {sg.name}{sg.brand?` · ${sg.brand}`:""}</div>:null; })()}
       {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:6,wordBreak:"break-word"}}>{destLbl(i)}</div>}
+      {i.destination==="return"&&(()=>{ const dd=retDays(i.return_deadline); const done=i.return_status==="done"; const col=done?B.green:dd==null?B.gray400:dd<0||dd<=2?B.red:dd<=4?B.amber:B.gray300; return (<div style={{display:"flex",gap:"4px 8px",flexWrap:"wrap",alignItems:"center",marginTop:6}}>
+        <span style={{fontSize:11,fontWeight:700,color:col,background:`${col}1f`,borderRadius:99,padding:"2px 9px"}}>{done?"Devolução concluída":i.return_deadline?(dd<0?`prazo venceu há ${-dd}d`:dd===0?"devolver até hoje":`devolver até ${fmtS(i.return_deadline+"T12:00:00-03:00")} · ${dd}d`):"sem prazo definido"}</span>
+        <span style={{fontSize:11,color:B.gray400}}>{RET_ST[i.return_status||"todo"]}</span>
+      </div>); })()}
       {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}>🔗 {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
@@ -6563,6 +6580,11 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
        {!isPending&&i.assigned_at&&<span>📌 Destinada em <b style={{color:B.gray200,fontWeight:600}}>{fmtD(i.assigned_at)}</b></span>}
        {i.permalink&&<a href={i.permalink} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:B.blue,textDecoration:"none"}}>ver anúncio ↗</a>}
      </div>
+     {i.destination==="return"&&<div onClick={e=>e.stopPropagation()} style={{background:B.gray800,borderRadius:10,padding:"9px 10px",marginBottom:10,display:"flex",flexDirection:"column",gap:8}}>
+       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["todo","asked","done"].map(k2=>{ const on=(i.return_status||"todo")===k2; return <button key={k2} onClick={()=>setRet(i,{return_status:k2})} style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${on?B.amber:B.gray600}`,background:on?`${B.amber}18`:"none",color:on?B.amber:B.gray300,fontSize:11.5,fontWeight:700,cursor:"pointer"}}>{RET_ST[k2]}</button>; })}</div>
+       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",fontSize:11,color:B.gray400}}>Prazo <input key={i.id+"|"+(i.return_deadline||"")} type="date" defaultValue={i.return_deadline||""} onBlur={e=>{ if(e.target.value!==(i.return_deadline||"")) setRet(i,{return_deadline:e.target.value||null}); }} style={{padding:"5px 8px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
+         <button onClick={()=>{ if(window.confirm("Desfazer a devolução? A compra volta para “Sem destino”.")) setRet(i,{destination:null,return_status:null,return_deadline:null,return_reason:null,assigned_by:null,assigned_at:null}); }} style={{marginLeft:"auto",background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer devolução</button></div>
+     </div>}
      {i.ship_status!=="delivered"&&i.ship_status!=="cancelled"&&<div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10,fontSize:11,color:B.gray300}}>
        🔑 Palavra-chave p/ entregador
        <input key={i.id+"|"+(i.delivery_key||"")} defaultValue={i.delivery_key||""} placeholder={i.ml_key?`${i.ml_key} (do ML)`:"digite a palavra"} onBlur={async e=>{const v=e.target.value.trim(); if(v===(i.delivery_key||"")) return; try{ await db.setMLItem(i.id,{delivery_key:v||null}); await loadItems(); }catch(er){ setErr(er.message||"Erro ao salvar"); }}} style={{flex:1,minWidth:120,padding:"6px 9px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
@@ -6624,6 +6646,8 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       </div>}
       {pending.length>0&&<><button onClick={()=>tgShut("pending")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"2px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.pending&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Sem destino ({pending.length})</button>
         {(!shut.pending||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div>}</>}
+      {returns.length>0&&<><button onClick={()=>tgShut("returns")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.returns&&fil!=="return"&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Devoluções ({returns.length}) · {fmtBRL(retTotal)} a recuperar</button>
+        {(!shut.returns||fil==="return"||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{returns.map(i=>row(i,false))}</div>}</>}
       {waiting.length>0&&<><button onClick={()=>tgShut("waiting")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.waiting&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Destinadas · aguardando entrega ({waiting.length})</button>
         {(!shut.waiting||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{waiting.map(i=>row(i,false))}</div>}</>}
       {pending.length===0&&waiting.length===0&&<div style={{fontSize:12,color:B.gray500}}>{!items.length?"Nenhuma compra ainda — toque em Sincronizar.":(fil!=="all"||nqs)?(done.length?null:"Nada encontrado."):"Tudo concluído. 👌"}</div>}
@@ -12365,7 +12389,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.65";
+const APP_VERSION = "2026.11.12.67";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14215,29 +14239,32 @@ function DashAlert({color,label,sub,icon,onClick}){
 // ─── Dashboard: peças do Mercado Livre chegando (saiu para entrega / chega hoje) ─
 function MLArrivalsAlert({show,onOpen}) {
   const [rows,setRows]=useState([]);
+  const [rets,setRets]=useState([]);
   const [open,setOpen]=useState({});
   useEffect(()=>{
     if(!show) return;
     let alive=true;
-    const load=()=>db.getMLArriving().then(r=>{if(alive)setRows(r);}).catch(()=>{});
+    const load=()=>{ db.getMLArriving().then(r=>{if(alive)setRows(r);}).catch(()=>{}); db.getMLReturns().then(r=>{if(alive)setRets(r);}).catch(()=>{}); };
     load(); const t=setInterval(load,5*60000);
     return()=>{alive=false;clearInterval(t);};
   },[show]);
-  if(!show||!rows.length) return null;
+  if(!show||(!rows.length&&!rets.length)) return null;
   const day=d=>new Date(d).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});
   const today=day(new Date());
   const route=rows.filter(r=>r.ship_status==="shipped"&&r.ship_substatus==="out_for_delivery");
   const rid=new Set(route.map(r=>r.id));
   const dueToday=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)===today);
   const late=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)<today);
-  if(!route.length&&!dueToday.length&&!late.length) return null;
+  const retDue=rets.filter(r=>r.return_deadline&&Math.ceil((new Date(r.return_deadline+"T23:59:59-03:00")-Date.now())/86400000)<=3).map(r=>({...r,destination:"return",_ret:true})).sort((a,b)=>String(a.return_deadline).localeCompare(String(b.return_deadline)));
+  if(!route.length&&!dueToday.length&&!late.length&&!retDue.length) return null;
   const Ic=({ch})=><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{ch}</svg>;
   const groups=[
     {k:"route",color:B.green,rows:route,label:`${route.length} ${route.length!==1?"peças saíram":"peça saiu"} para entrega`,icon:<Ic ch={<><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>}/>},
     {k:"today",color:B.amber,rows:dueToday,label:`${dueToday.length} ${dueToday.length!==1?"peças chegam":"peça chega"} hoje`,icon:<Ic ch={<><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.5L12 12.5l8.7-5"/><path d="M12 22V12.5"/></>}/>},
     {k:"late",color:B.red,rows:late,label:`${late.length} ${late.length!==1?"peças com entrega atrasada":"peça com entrega atrasada"}`,icon:<Ic ch={<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>}/>},
+    {k:"ret",color:B.red,rows:retDue,label:`${retDue.length} ${retDue.length!==1?"devoluções com prazo vencendo":"devolução com prazo vencendo"}`,icon:<Ic ch={<><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></>}/>},
   ].filter(g=>g.rows.length);
-  const dest=r=>r.destination==="vehicle"?(r.vehicle_label||"Carro / OS"):r.destination==="stock"?"Estoque":r.destination==="supplies"?"Insumos":r.destination==="tool"?"Patrimônio":r.destination==="ignored"?"Ignorada":"Sem destino";
+  const dest=r=>r.destination==="return"?"Devolução":r.destination==="vehicle"?(r.vehicle_label||"Carro / OS"):r.destination==="stock"?"Estoque":r.destination==="supplies"?"Insumos":r.destination==="tool"?"Patrimônio":r.destination==="ignored"?"Ignorada":"Sem destino";
   const fdt=d=>new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
   return (<div style={{background:B.gray800,borderRadius:14,padding:"0 16px",marginBottom:10,border:`1px solid ${B.amber}55`}}>
     {groups.map((g,gi)=>{ const o=!!open[g.k]; return (<div key={g.k} style={{borderTop:gi?`1px solid ${B.gray700}`:"none"}}>
@@ -14255,7 +14282,7 @@ function MLArrivalsAlert({show,onOpen}) {
           <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"3px 10px",marginTop:4,fontSize:10.5,color:B.gray400}}>
             {Number(r.qty)>1&&<span>{r.qty}×</span>}
             <span style={{color:r.destination?B.gray300:B.amber}}>{dest(r)}</span>
-            {r.eta_at&&<span>previsão {fdt(r.eta_at)}</span>}
+            {r._ret?<span style={{color:B.red,fontWeight:700}}>devolver até {fdt(r.return_deadline+"T12:00:00-03:00")}{r.return_reason?` · ${r.return_reason}`:""}</span>:r.eta_at&&<span>previsão {fdt(r.eta_at)}</span>}
             {k&&<span style={{color:B.amber,fontWeight:700}}>palavra-chave: {k}</span>}
           </div>
         </div>); })}
@@ -16355,7 +16382,7 @@ export default function App() {
     }
     const veh=d.type==="vehicle"?vehicles.find(v=>v.id===d.vehicleId):null;
     const vlabel=veh?`${veh.model||""} · ${veh.plate||""}`.trim():null;
-    const ok=await db.claimMLItem(item.id,{destination:d.type,vehicle_id:d.type==="vehicle"?d.vehicleId:null,vehicle_label:vlabel,assigned_by:ROLE_CONFIG[adminRole]?.label||null,assigned_at:new Date().toISOString()});
+    const ok=await db.claimMLItem(item.id,{destination:d.type,vehicle_id:d.type==="vehicle"?d.vehicleId:null,vehicle_label:vlabel,assigned_by:ROLE_CONFIG[adminRole]?.label||null,assigned_at:new Date().toISOString(),...(d.type==="return"?{return_status:"todo",return_deadline:d.returnDeadline||null,return_reason:d.returnReason||null}:{})});
     if(!ok) throw new Error("Esta peça já foi destinada por outra pessoa. Atualize a lista.");
     try{
       const total=(Number(item.qty)||1)*(Number(item.unit_price)||0);

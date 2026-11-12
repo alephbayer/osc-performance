@@ -1065,6 +1065,11 @@ export const db = {
     if (error) throw error; return data || [];
   },
   // reserva o item (só se ainda estiver pendente): false = alguém já destinou
+  async getMLReturns() {
+    const { data, error } = await supabase.from("ml_purchase_items").select("id,title,qty,unit_price,return_status,return_deadline,return_reason")
+      .eq("destination", "return").neq("return_status", "done").limit(200);
+    if (error) throw error; return data || [];
+  },
   async claimMLItem(id, patch) {
     const { data, error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id).is("destination", null).select("id");
     if (error) throw error; return (data || []).length > 0;

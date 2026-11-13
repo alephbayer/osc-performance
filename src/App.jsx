@@ -1730,8 +1730,6 @@ async function generateImportPartsPDF(vehicle, client, company) {
   y+=4;
   let total=0;
   parts.forEach((ip,i)=>{
-    const base=Number(ip.amount||0)*Number(ip.rate||0);
-    const tax=base*Number(ip.taxPct||0)/100;
     const fin=importFinal(ip); total+=fin;
     if(y>235){ doc.addPage(); y=16; }
     doc.setFillColor(248,248,248); doc.setDrawColor(230,230,230); doc.rect(mx,y,cw,9,"FD");
@@ -1739,14 +1737,9 @@ async function generateImportPartsPDF(vehicle, client, company) {
     doc.text(`${i+1}. ${ip.name||"Peca"}`,mx+3,y+6);
     doc.text(`R$ ${nf(fin)}`,pageW-mx-3,y+6,{align:"right"}); y+=9;
     const rows=[
-      [`Valor original (${ip.cur||"USD"})`,`${nf(ip.amount)} ${ip.cur||"USD"}`],
-      [`Cotacao`,`R$ ${Number(ip.rate||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})}`],
-      [`Valor convertido`,`R$ ${nf(base)}`],
-      [`Imposto e taxas de importacao (${String(ip.taxPct||0).replace(".",",")}%)`,`R$ ${nf(tax)}`],
-      [`Frete`,`R$ ${nf(ip.extra)}`],
-      ...(Number(ip.discount||0)>0?[[`Desconto`,`- R$ ${nf(ip.discount)}`]]:[]),
+      [`Valor original`,`${nf(ip.amount)} ${ip.cur||"USD"}`],
+      [`Situacao`,ip.arrived?`Chegou${ip.arrivedAt?` em ${new Date(ip.arrivedAt).toLocaleDateString("pt-BR")}`:""}`:"A caminho"],
     ];
-    rows.push([`Situacao`,ip.arrived?`Chegou${ip.arrivedAt?` em ${new Date(ip.arrivedAt).toLocaleDateString("pt-BR")}`:""}`:"A caminho"]);
     if(ip.taskRef) rows.push([`Servico vinculado`,ip.taskRef]);
     doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
     rows.forEach(([a,b])=>{ doc.setTextColor(...gray); doc.text(a,mx+5,y+5); doc.setTextColor(...black); doc.text(String(b),pageW-mx-3,y+5,{align:"right"}); y+=6; });
@@ -1757,7 +1750,7 @@ async function generateImportPartsPDF(vehicle, client, company) {
   doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(...black);
   doc.text("TOTAL",mx,y); doc.text(`R$ ${nf(total)}`,pageW-mx,y,{align:"right"}); y+=8;
   doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...gray);
-  doc.text("Valores convertidos pela cotacao informada na data da emissao. Impostos e taxas conforme a importacao.",mx,y);
+  doc.text("O valor final em reais inclui conversao cambial, frete, imposto e taxas de importacao.",mx,y);
   doc.save(`pecas-importadas-${(vehicle.plate||vehicle.model||"veiculo").toString().replace(/[^a-z0-9]+/gi,"-")}.pdf`);
 }
 async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride, payments=[]) {
@@ -12856,7 +12849,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.117";
+const APP_VERSION = "2026.11.13.118";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

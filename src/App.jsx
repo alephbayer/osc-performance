@@ -11237,6 +11237,8 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
 function FinanceEntriesCard({payments=[],vehicles=[],clients=[]}){
   const [q,setQ]=useState("");
   const [lim,setLim]=useState(15);
+  const [df,setDf]=useState("");
+  const [dt,setDt]=useState("");
   const norm=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const rows=useMemo(()=>payments.map(p=>{
     const v=vehicles.find(x=>x.id===p.vehicleId);
@@ -11246,7 +11248,7 @@ function FinanceEntriesCard({payments=[],vehicles=[],clients=[]}){
       hay:norm([title,c?.name,p.method,p.note,String(p.amount).replace(".",","),Number(p.amount).toLocaleString("pt-BR",{minimumFractionDigits:2})].join(" "))};
   }).sort((a,b)=>String(b.p.paidAt||"").localeCompare(String(a.p.paidAt||""))),[payments,vehicles,clients]);
   const nq=norm(q.trim());
-  const list=nq?rows.filter(r=>r.hay.includes(nq)):rows;
+  const list=rows.filter(r=>{const d=String(r.p.paidAt||"").slice(0,10);return (!nq||r.hay.includes(nq))&&(!df||d>=df)&&(!dt||d<=dt);});
   const total=list.reduce((s,r)=>s+Number(r.p.amount||0),0);
   const fd=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   return(<div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:14,padding:14,marginBottom:24}}>
@@ -11258,7 +11260,13 @@ function FinanceEntriesCard({payments=[],vehicles=[],clients=[]}){
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)"}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input value={q} onChange={e=>{setQ(e.target.value);setLim(15);}} placeholder="Buscar por carro, cliente, forma, valor…" style={{width:"100%",boxSizing:"border-box",padding:"8px 10px 8px 30px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
     </div>
-    {list.length===0?<div style={{textAlign:"center",padding:"18px 0",color:B.gray500,fontSize:12}}>{q?"Nenhuma entrada encontrada.":"Nenhuma entrada no período."}</div>
+    <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10}}>
+      <input type="date" value={df} onChange={e=>{setDf(e.target.value);setLim(15);}} style={{flex:1,minWidth:0,padding:"6px 8px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11.5,outline:"none",fontFamily:"inherit",colorScheme:"dark"}}/>
+      <span style={{color:B.gray500,fontSize:11}}>→</span>
+      <input type="date" value={dt} onChange={e=>{setDt(e.target.value);setLim(15);}} style={{flex:1,minWidth:0,padding:"6px 8px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11.5,outline:"none",fontFamily:"inherit",colorScheme:"dark"}}/>
+      {(df||dt)&&<button onClick={()=>{setDf("");setDt("");}} style={{padding:"6px 9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>}
+    </div>
+    {list.length===0?<div style={{textAlign:"center",padding:"18px 0",color:B.gray500,fontSize:12}}>{q||df||dt?"Nenhuma entrada encontrada.":"Nenhuma entrada no período."}</div>
     :<div style={{display:"flex",flexDirection:"column"}}>
       {list.slice(0,lim).map((r,i)=>(<div key={r.p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderTop:i?`1px solid ${B.gray800}`:"none"}}>
         <div style={{width:44,flexShrink:0,fontSize:10.5,color:B.gray500,fontWeight:600}}>{fd(r.p.paidAt)}</div>
@@ -12625,7 +12633,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.96";
+const APP_VERSION = "2026.11.13.97";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

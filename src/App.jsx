@@ -548,25 +548,24 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </div>
     </div>}
     {/* Header */}
-    <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"0 18px",paddingTop:"calc(28px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
-      <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",paddingBottom:14,gap:14}}>
-        <div style={{width:40,height:40,borderRadius:11,background:blue,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={19} c={B.white}/></div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:800,fontSize:15,color:B.white,letterSpacing:-.2}}>{client.name}</div>
-          <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,marginTop:1}}>Portal do Cliente</div>
+    <div style={{background:B.black,padding:"0 18px",paddingTop:"calc(18px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+      <div style={{maxWidth:680,margin:"0 auto",paddingBottom:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{flex:1,minWidth:0}}><OscLockup h={34}/></div>
+          {toggleTheme&&<button onClick={toggleTheme} title="Alternar tema" aria-label="Alternar tema"
+            style={{width:34,height:34,borderRadius:99,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            {themePref==="auto"
+              ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+              :theme==="dark"
+                ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                :<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>}
+          </button>}
+          <button onClick={onLogout} title="Sair" aria-label="Sair" style={{width:34,height:34,borderRadius:99,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <ILogout s={14} c={B.gray400}/>
+          </button>
         </div>
-        {toggleTheme&&<button onClick={toggleTheme} title="Alternar tema"
-          style={{padding:"6px 10px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:themePref==="auto"?B.blue:B.amber,cursor:"pointer",display:"flex",alignItems:"center",gap:5,flexShrink:0,fontSize:11,fontWeight:700}}>
-          {themePref==="auto"
-            ?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-            :theme==="dark"
-              ?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-              :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>}
-          {themePref==="auto"?"Auto":theme==="dark"?"Escuro":"Claro"}
-        </button>}
-        <button onClick={onLogout} style={{padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
-          <ILogout s={13} c={B.gray300}/>Sair
-        </button>
+        <div style={{height:1,background:B.gray700,margin:"10px 0 8px"}}/>
+        <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Portal do cliente · <span style={{color:B.gray300,fontWeight:700}}>{client.name}</span></div>
       </div>
     </div>
 
@@ -967,9 +966,9 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
     </div>
     </div>{/* end scroll */}
 
-    {/* Bottom LiquidNav */}
-    <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:200,display:"flex",justifyContent:"center",paddingBottom:"calc(8px + env(safe-area-inset-bottom))"}}>
-      <div style={{display:"flex",borderRadius:99,background:theme==="light"?"rgba(240,240,245,0.92)":"rgba(16,16,20,0.75)",backdropFilter:"blur(40px) saturate(1.8)",WebkitBackdropFilter:"blur(40px) saturate(1.8)",border:theme==="light"?"1px solid rgba(0,0,0,0.12)":"1px solid rgba(255,255,255,0.12)",boxShadow:theme==="light"?"0 6px 28px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.85)":"0 6px 28px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.10)",padding:"5px",gap:0}}>
+    {/* Bottom nav — mesmo estilo do acompanhamento */}
+    <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:200,padding:"28px 16px calc(12px + env(safe-area-inset-bottom))",pointerEvents:"none",background:`linear-gradient(to bottom,transparent,${B.black} 55%)`}}>
+      <div style={{pointerEvents:"auto",maxWidth:440,margin:"0 auto",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:99,display:"flex",gap:2,padding:5,overflowX:"auto",scrollbarWidth:"none"}}>
         {[
           {id:"active",  label:"Início",     icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>},
           {id:"history", label:"Histórico",     icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>},
@@ -980,10 +979,10 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           {id:"notes",   label:"Anotações",    icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>},
         ].map(n=>{
           const on=tab===n.id;
-          return(<button key={n.id} onClick={()=>setTab(n.id)}
-            style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"8px 12px",borderRadius:99,border:"none",cursor:"pointer",background:"transparent",color:on?blue:theme==="light"?B.gray500:B.gray400,position:"relative",transition:"all .2s",gap:3,minWidth:0}}>
-            <div style={{transform:on?"scale(1.05)":"scale(0.9)",transition:"transform .2s"}}>{n.icon}</div>
-            <span style={{fontSize:9,fontWeight:on?800:500,letterSpacing:.2,whiteSpace:"nowrap"}}>{n.label}</span>
+          return(<button key={n.id} onClick={()=>{setTab(n.id);try{window.scrollTo({top:0});}catch{}}} aria-current={on?"page":undefined}
+            style={{flex:"1 0 auto",minWidth:56,minHeight:52,padding:"0 8px",background:on?`${B.orange}22`:"none",border:"none",borderRadius:99,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,color:on?B.orange:B.gray400,fontFamily:"inherit",position:"relative"}}>
+            {n.icon}
+            <span style={{fontSize:10,fontWeight:on?800:700,whiteSpace:"nowrap"}}>{n.label}</span>
             {n.badge>0&&<span style={{position:"absolute",top:5,right:6,background:B.red,color:B.white,fontSize:8,fontWeight:800,borderRadius:99,minWidth:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 2px"}}>{n.badge}</span>}
           </button>);
         })}
@@ -13120,7 +13119,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.128";
+const APP_VERSION = "2026.11.13.129";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

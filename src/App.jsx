@@ -12583,7 +12583,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.94";
+const APP_VERSION = "2026.11.13.95";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14531,7 +14531,7 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
     </div>
     {upcoming.length>0&&<><div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Próximos</div>
       <div style={{display:"flex",flexDirection:"column",gap:6}}>{upcoming.map(e=><div key={e.id} onClick={()=>{setSel(e.date<todayS?todayS:e.date);setCur(new Date(+(e.date<todayS?todayS:e.date).slice(0,4),+(e.date<todayS?todayS:e.date).slice(5,7)-1,1));}} style={{cursor:"pointer"}}><Row e={e}/></div>)}</div></>}
-    {form&&createPortal(<div onClick={()=>setForm(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    {form&&createPortal(<div onClick={()=>setForm(null)} style={{position:"fixed",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div onClick={e=>e.stopPropagation()} style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:16,padding:16,width:"100%",maxWidth:380,maxHeight:"92vh",overflowY:"auto",display:"flex",flexDirection:"column",gap:9}}>
         <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",color:B.amber}}>{form.id?"Editar":"Novo"} item</div>
         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
@@ -15322,7 +15322,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
           <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}>🗑</button>
         </div>
       ))}
-      {showShelfForm&&createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:window.innerWidth>=700?"center":"flex-end",justifyContent:"center"}} onClick={()=>setShowShelfForm(false)}>
+      {showShelfForm&&createPortal(<div style={{position:"fixed",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:window.innerWidth>=700?"center":"flex-end",justifyContent:"center"}} onClick={()=>setShowShelfForm(false)}>
         <div style={{width:"100%",maxWidth:window.innerWidth>=700?480:undefined,background:B.gray900,borderRadius:window.innerWidth>=700?20:"20px 20px 0 0",padding:"20px 16px",paddingBottom:window.innerWidth>=700?20:"calc(40px + env(safe-area-inset-bottom))",border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
           <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:16}}>{editItem?"Editar item":"Novo item"}</div>
           <input value={sfName} onChange={e=>setSfName(e.target.value)} placeholder="Nome do item" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
@@ -15337,7 +15337,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
           <button onClick={saveShelfItem} style={{width:"100%",padding:"11px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Salvar</button>
         </div>
       </div>, document.body)}
-      {confirmDel&&createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setConfirmDel(null)}>
+      {confirmDel&&createPortal(<div style={{position:"fixed",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setConfirmDel(null)}>
         <div style={{background:B.gray900,borderRadius:16,padding:24,margin:20,border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
           <div style={{fontWeight:700,color:B.white,marginBottom:16}}>Remover item da prateleira?</div>
           <div style={{display:"flex",gap:8}}>

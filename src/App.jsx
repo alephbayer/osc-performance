@@ -1711,46 +1711,51 @@ const CHECKLIST_ITEMS = [
 async function generateImportPartsPDF(vehicle, client, company) {
   const jsPDFCtor = await loadJsPDF();
   const doc = new jsPDFCtor({ unit:"mm", format:"a4" });
-  const pageW=210, mx=14, cw=pageW-mx*2;
-  const black=[20,20,20], gray=[110,110,110], white=[255,255,255], orange=[234,88,12];
+  const pageW=210, pageH=297, mx=22, cw=pageW-mx*2;
+  const ink=[28,28,30], gray=[128,128,132], line=[222,222,224], accent=[234,88,12];
   const parts=(vehicle.importParts||[]).filter(p=>importFinal(p)>0);
   const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-  doc.setFillColor(...orange); doc.rect(0,0,pageW,28,"F");
-  doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.setTextColor(...white);
-  doc.text("PECAS IMPORTADAS",mx,12);
-  doc.setFontSize(8); doc.setFont("helvetica","normal");
-  doc.text(company?.name||"OSC Group",mx,19);
-  doc.text(new Date().toLocaleDateString("pt-BR"),pageW-mx,19,{align:"right"});
-  let y=37;
-  doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(...black);
-  doc.text(vehicle.model||"Veiculo",mx,y); y+=6;
-  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...gray);
-  if(vehicle.plate){ doc.text(`Placa: ${vehicle.plate}`,mx,y); y+=5; }
-  if(client?.name){ doc.text(`Cliente: ${client.name}`,mx,y); y+=5; }
-  y+=4;
+  const cap=(t,x,y,size,color,opts={})=>{doc.setFont("helvetica","normal");doc.setFontSize(size);doc.setTextColor(...color);doc.text(String(t).toUpperCase(),x,y,{charSpace:0.9,...opts});};
+  const hair=(y,c=line,w=0.2)=>{doc.setDrawColor(...c);doc.setLineWidth(w);doc.line(mx,y,pageW-mx,y);};
+  const footer=()=>{hair(pageH-18);cap(company?.name||"OSC Group",mx,pageH-12,6.5,gray);cap(new Date().toLocaleDateString("pt-BR"),pageW-mx,pageH-12,6.5,gray,{align:"right"});};
+  // Cabeçalho
+  doc.setFillColor(...accent); doc.rect(mx,22,10,0.9,"F");
+  cap(company?.name||"OSC Group",mx,32,7.5,ink);
+  cap(new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"}),pageW-mx,32,7,gray,{align:"right"});
+  doc.setFont("times","normal"); doc.setFontSize(30); doc.setTextColor(...ink);
+  doc.text("Peças importadas",mx,52);
+  let y=62;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...ink);
+  doc.text([vehicle.model,vehicle.plate].filter(Boolean).join("  ·  ")||"Veículo",mx,y); y+=5.5;
+  if(client?.name){ doc.setFontSize(9); doc.setTextColor(...gray); doc.text(client.name,mx,y); y+=5.5; }
+  y+=8; hair(y); y+=2;
   let total=0;
   parts.forEach((ip,i)=>{
     const fin=importFinal(ip); total+=fin;
-    if(y>235){ doc.addPage(); y=16; }
-    doc.setFillColor(248,248,248); doc.setDrawColor(230,230,230); doc.rect(mx,y,cw,9,"FD");
-    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...black);
-    doc.text(`${i+1}. ${ip.name||"Peca"}`,mx+3,y+6);
-    doc.text(`R$ ${nf(fin)}`,pageW-mx-3,y+6,{align:"right"}); y+=9;
-    const rows=[
-      [`Valor original`,`${nf(ip.amount)} ${ip.cur||"USD"}`],
-      [`Situacao`,ip.arrived?`Chegou${ip.arrivedAt?` em ${new Date(ip.arrivedAt).toLocaleDateString("pt-BR")}`:""}`:"A caminho"],
-    ];
-    if(ip.taskRef) rows.push([`Servico vinculado`,ip.taskRef]);
-    doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-    rows.forEach(([a,b])=>{ doc.setTextColor(...gray); doc.text(a,mx+5,y+5); doc.setTextColor(...black); doc.text(String(b),pageW-mx-3,y+5,{align:"right"}); y+=6; });
-    y+=5;
+    const sub=[`${nf(ip.amount)} ${ip.cur||"USD"}`,ip.arrived?`Chegou${ip.arrivedAt?` em ${new Date(ip.arrivedAt).toLocaleDateString("pt-BR")}`:""}`:"A caminho"];
+    if(ip.taskRef) sub.push(ip.taskRef);
+    const nameLines=doc.splitTextToSize(ip.name||"Peça",cw-52);
+    const rowH=12+nameLines.length*5.5+5;
+    if(y+rowH>pageH-34){ footer(); doc.addPage(); y=24; }
+    cap(String(i+1).padStart(2,"0"),mx,y+10,7,accent);
+    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...ink);
+    doc.text(nameLines,mx+12,y+10);
+    let yy=y+10+(nameLines.length-1)*5.5+6;
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...gray);
+    doc.text(doc.splitTextToSize(sub.join("   ·   "),cw-52),mx+12,yy);
+    doc.setFont("times","normal"); doc.setFontSize(15); doc.setTextColor(...ink);
+    doc.text(`R$ ${nf(fin)}`,pageW-mx,y+10,{align:"right"});
+    y+=rowH; hair(y);y+=2;
   });
-  if(y>262){ doc.addPage(); y=16; }
-  doc.setDrawColor(...orange); doc.setLineWidth(0.5); doc.line(mx,y,pageW-mx,y); y+=7;
-  doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(...black);
-  doc.text("TOTAL",mx,y); doc.text(`R$ ${nf(total)}`,pageW-mx,y,{align:"right"}); y+=8;
-  doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...gray);
-  doc.text("O valor final em reais inclui conversao cambial, frete, imposto e taxas de importacao.",mx,y);
+  if(y>pageH-60){ footer(); doc.addPage(); y=24; }
+  y+=10;
+  cap("Total",mx,y+7,8,gray);
+  doc.setFont("times","normal"); doc.setFontSize(24); doc.setTextColor(...ink);
+  doc.text(`R$ ${nf(total)}`,pageW-mx,y+8,{align:"right"});
+  y+=20;
+  doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray);
+  doc.text(doc.splitTextToSize("O valor final em reais inclui conversão cambial, frete, imposto e taxas de importação.",cw),mx,y);
+  footer();
   doc.save(`pecas-importadas-${(vehicle.plate||vehicle.model||"veiculo").toString().replace(/[^a-z0-9]+/gi,"-")}.pdf`);
 }
 async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride, payments=[]) {
@@ -12849,7 +12854,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.118";
+const APP_VERSION = "2026.11.13.119";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

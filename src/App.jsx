@@ -1907,8 +1907,11 @@ async function renderElegantQuote(o) {
   }
 
   // Totais
-  const laborSum=ts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-  const osDiscountAmt=laborSum*Number(osDiscountPct||0)/100;
+  const labOf=l=>l.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+  const finLab=perf?labOf(ts.filter(t=>t.division==="finishing")):0;
+  const perfLab=labOf(ts)-finLab;
+  const osDiscountAmt=perfLab*Number(osDiscountPct||0)/100+finLab*Number(o.osDiscountPctFin||0)/100;
+  const discLabel=(Number(osDiscountPct||0)>0&&!(finLab>0&&Number(o.osDiscountPctFin||0)>0))?`Desconto sobre mão de obra (${osDiscountPct}%)`:(finLab>0&&Number(o.osDiscountPctFin||0)>0&&!(Number(osDiscountPct||0)>0)?`Desconto sobre mão de obra (${o.osDiscountPctFin}%)`:"Desconto sobre mão de obra");
   const grandTotal=partsTotal+freightTotal+laborTotal+fuelTotal+towTotal+freightTotal2+importTot-osDiscountAmt;
   const bx=W-mx-80;
   const tl=(l,v,neg)=>{ txt(l,bx,y,{s:9,c:neg?red:body}); txt((neg?"– ":"")+R(v),cT,y,{s:9,c:neg?red:body,al:"right"}); y+=6; };
@@ -1919,7 +1922,7 @@ async function renderElegantQuote(o) {
   if(towTotal>0) tl("Reboque",towTotal);
   if(freightTotal2>0) tl("Frete",freightTotal2);
   if(importTot>0) tl("Peças importadas",importTot);
-  if(osDiscountAmt>0) tl(`Desconto sobre mão de obra (${osDiscountPct}%)`,osDiscountAmt,true);
+  if(osDiscountAmt>0) tl(discLabel,osDiscountAmt,true);
   y+=1; hair(y,ink,0.35,bx,W-mx); y+=9;
   cap("Total geral",bx,y,7.5,ink); serif(R(grandTotal),cT,y+1,22,{align:"right"}); y+=12;
 
@@ -1970,7 +1973,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
     vehicle, ts: allTs.filter(t=>!t.warranty), warrantyTs: allTs.filter(t=>t.warranty), client, employee, company, defaultRate,
     accent:[221,139,52], accentText:[190,105,25], divisionName: company?.name||"OSC Group", osLabel: vehicle.osNumber?fmtOS(vehicle.osNumber):"",
     notes: vehicle.notes, checklist: Array.isArray(vehicle.checklist)?vehicle.checklist:[], perf:true,
-    payments:(payments||[]).filter(p=>(p.division||"performance")==="performance"), osDiscountPct:vehicle.osDiscountPct,
+    payments:(payments||[]), osDiscountPct:vehicle.osDiscountPct, osDiscountPctFin:vehicle.osDiscountPctFinishing,
     tagline:`${company?.name || "OSC Group"} — Excelência em cada revisão`,
     fileName:`orcamento-${(vehicle.plate||"").replace(/\s/g,"")}-${new Date().toISOString().slice(0,10)}.pdf`,
   });
@@ -13084,7 +13087,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.121";
+const APP_VERSION = "2026.11.13.122";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

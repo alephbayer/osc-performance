@@ -1076,6 +1076,12 @@ export const db = {
       .eq("destination", "return").neq("return_status", "done").limit(200);
     if (error) throw error; return data || [];
   },
+  // reflete no card do ML o destino dado pelo lado dos Pedidos de Compra (só se a peça ainda estiver sem destino)
+  async syncMLByLink(linkType, linkId, patch) {
+    if (!linkType || !linkId) return 0;
+    const { data, error } = await supabase.from("ml_purchase_items").update(patch).eq("link_type", linkType).eq("link_id", linkId).is("destination", null).select("id");
+    if (error) throw error; return (data || []).length;
+  },
   async claimMLItem(id, patch) {
     const { data, error } = await supabase.from("ml_purchase_items").update(patch).eq("id", id).is("destination", null).select("id");
     if (error) throw error; return (data || []).length > 0;

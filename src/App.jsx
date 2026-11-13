@@ -4676,6 +4676,35 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
 }
 
 // ─── Importar nota no ESTOQUE ────────────────────────────────────────────────
+// Popup para escolher um item do estoque que vai receber a compra (sem "apenas orçamento", mostra também itens com saldo zero)
+function StockItemPickModal({stock,suggested=[],onPick,onClose}){
+  const [q,setQ]=useState("");
+  const sugIds=new Set(suggested.map(x=>x.id));
+  const base=stock.filter(s=>stockSearchMatch(q,s.name+" "+(s.brand||"")+" "+(s.type||"")));
+  const list=q?base.slice(0,80):[...stock.filter(s=>sugIds.has(s.id)),...stock.filter(s=>!sugIds.has(s.id))].slice(0,80);
+  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:16,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",overflow:"hidden",border:`1px solid ${B.gray600}`}} onClick={e=>e.stopPropagation()}>
+      <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.purple}`}}>
+        <div style={{fontWeight:700,fontSize:14,color:B.white}}>Adicionar compra a um item existente</div>
+        <div style={{fontSize:12,color:B.gray400}}>Escolha o item do estoque que recebe esta compra</div>
+      </div>
+      <div style={{padding:16}}>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar produto…" autoFocus style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:10,fontFamily:"inherit"}}/>
+        <div style={{maxHeight:340,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
+          {!q&&suggested.length>0&&<div style={{fontSize:9.5,fontWeight:800,letterSpacing:1,textTransform:"uppercase",color:B.purple}}>Sugeridos primeiro</div>}
+          {list.length===0?<div style={{textAlign:"center",padding:"16px 0",color:B.gray400,fontSize:13}}>Nenhum produto encontrado.</div>
+            :list.map(s=><button key={s.id} type="button" onClick={()=>onPick(s.id)} style={{width:"100%",textAlign:"left",display:"flex",alignItems:"center",gap:10,padding:"8px 10px",borderRadius:9,background:B.gray700,border:`1px solid ${sugIds.has(s.id)&&!q?B.purple+"88":B.gray600}`,color:B.white,cursor:"pointer",fontFamily:"inherit"}}>
+              {s.photo?<img src={s.photo} alt="" style={{width:36,height:36,borderRadius:7,objectFit:"cover",flexShrink:0}}/>:<div style={{width:36,height:36,borderRadius:7,background:B.purpleBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IBox s={16} c={B.purple}/></div>}
+              <div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.brand?<span style={{color:B.amber,fontSize:11,letterSpacing:.6,textTransform:"uppercase",marginRight:6}}>{s.brand}</span>:null}{s.name}</div>
+                <div style={{fontSize:11,color:B.gray400}}>Saldo: {s.qty}{s.type?` · ${s.type}`:""}</div></div>
+            </button>)}
+        </div>
+        <button type="button" onClick={onClose} style={{width:"100%",marginTop:12,padding:"9px 0",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.gray200,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Cancelar</button>
+      </div>
+    </div>
+  </div>,document.body);
+}
+
 function StockProductPicker({ value, onChange, stock }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -6473,6 +6502,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
   const yrSfx=sug.years?` (${sug.years})`:"";
   const toggleYears=v=>{ setIncYears(v); setNameStr(n=>{ const base=yrSfx&&n.endsWith(yrSfx)?n.slice(0,-yrSfx.length):n; return v?base+yrSfx:base; }); };
   const [pid,setPid]=useState(()=>matchStockItem(item.title||"",stock));
+  const [pickOpen,setPickOpen]=useState(false);
   const sugg=useMemo(()=>suggestStockItems(item.title||"",stock),[item.id,stock]);
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState("");
@@ -6540,7 +6570,18 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         {projBox}
       </div>}
       {mode==="stock"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
-        <StockProductPicker value={pid} onChange={setPid} stock={stock}/>
+        {(()=>{const cur=stock.find(x=>x.id===pid);return cur
+          ?<div style={{display:"flex",alignItems:"center",gap:10,background:`${B.purple}14`,border:`1px solid ${B.purple}66`,borderRadius:10,padding:"8px 10px"}}>
+            {cur.photo?<img src={cur.photo} alt="" style={{width:34,height:34,borderRadius:7,objectFit:"cover",flexShrink:0}}/>:<div style={{width:34,height:34,borderRadius:7,background:B.purpleBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IBox s={15} c={B.purple}/></div>}
+            <div style={{flex:1,minWidth:0}}><div style={{fontSize:9.5,fontWeight:800,letterSpacing:1,textTransform:"uppercase",color:B.purple}}>Compra entra neste item</div>
+              <div style={{fontSize:13,fontWeight:700,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cur.brand?<span style={{color:B.amber,fontSize:11,letterSpacing:.6,textTransform:"uppercase",marginRight:6}}>{cur.brand}</span>:null}{cur.name}</div>
+              <div style={{fontSize:11,color:B.gray400}}>Saldo atual: {cur.qty}</div></div>
+            <button type="button" onClick={()=>setPickOpen(true)} style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:7,color:B.gray200,fontSize:11,padding:"4px 9px",cursor:"pointer",fontFamily:"inherit"}}>Trocar</button>
+            <button type="button" onClick={()=>setPid("")} style={{background:"none",border:"none",color:B.gray400,fontSize:11,textDecoration:"underline",cursor:"pointer",fontFamily:"inherit"}}>Novo</button>
+          </div>
+          :<button type="button" onClick={()=>setPickOpen(true)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,width:"100%",padding:"10px 12px",borderRadius:10,border:`1px dashed ${B.purple}88`,background:`${B.purple}10`,color:B.purple,fontWeight:700,fontSize:12.5,cursor:"pointer",fontFamily:"inherit"}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>Adicionar compra a um item existente</button>;})()}
+        {pickOpen&&<StockItemPickModal stock={stock} suggested={sugg} onPick={id=>{setPid(id);setPickOpen(false);}} onClose={()=>setPickOpen(false)}/>}
         {!pid&&sugg.length>0&&<div style={{background:`${B.purple}14`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"7px 9px"}}>
           <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:5}}>💡 Parece um item que já existe no estoque</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{sugg.map(x=><button key={x.id} onClick={()=>setPid(x.id)} style={{padding:"4px 10px",borderRadius:99,border:`1px solid ${B.purple}66`,background:"none",color:B.white,fontSize:11.5,cursor:"pointer",textAlign:"left"}}>{x.name}{x.brand?` · ${x.brand}`:""}</button>)}</div>
@@ -12542,7 +12583,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.91";
+const APP_VERSION = "2026.11.13.92";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16343,6 +16384,12 @@ export default function App() {
             const n=await db.releaseMLItems(id,gone.map(g=>g.mlItem).filter(Boolean),gone.filter(g=>!g.mlItem).map(g=>g.mlLink).filter(Boolean));
             if(n) toast_(`↩ ${n===1?"Peça voltou":"Peças voltaram"} para “Sem destino” no Mercado Livre`);
           }
+          // pedido de compra lançado numa tarefa: a compra do ML ligada a ele ganha o destino (carro + tarefa)
+          const addedPO=patch.materials.filter(nm=>nm&&nm.purchaseOrderId&&!oldM.some(om=>om.purchaseOrderId===nm.purchaseOrderId));
+          if(addedPO.length){
+            const tk=tasks.find(x=>x.id===id), vh=vehicles.find(x=>x.id===tk?.vehicleId);
+            if(vh) for(const nm of addedPO){ await db.syncMLByLink("po",nm.purchaseOrderId,{destination:"vehicle",vehicle_id:vh.id,vehicle_label:`${vh.model||""} · ${vh.plate||""}`.trim(),task_id:String(id),task_label:tk?.label||null,assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }
+          }
         }catch(e){ console.warn("ml release",e); }
       }
       // Auto-assign specialty mechanic when category matches
@@ -16699,6 +16746,7 @@ export default function App() {
             const newList=[...existing,newPart];
             setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
             try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}
+            try{ await db.syncMLByLink("po",o.id,{destination:"vehicle",vehicle_id:v.id,vehicle_label:`${v.model||""} · ${v.plate||""}`.trim(),assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }catch(e){ console.warn("ml sync reserve",e); }
           };
   mlRecvFn.current=async()=>{
     if(adminRole!=="owner"&&adminRole!=="admin") return;
@@ -16749,7 +16797,7 @@ export default function App() {
                   toast_(`💰 Financeiro ajustado: ${fmtBRL(oldTotal)} → ${fmtBRL(newTotal)}`);
                 }
               }catch(e){ console.warn("ml expense fix",e); }
-              if(inv.stockItemId) await addPurchase({stockId:inv.stockItemId,qty:inv.quantity||1,unitCost:unit,purchaseDate:new Date().toISOString().slice(0,10),supplier:"Mercado Livre",note:"Recebido automaticamente (Mercado Livre)"});
+              if(inv.stockItemId){ await addPurchase({stockId:inv.stockItemId,qty:inv.quantity||1,unitCost:unit,purchaseDate:new Date().toISOString().slice(0,10),supplier:"Mercado Livre",note:"Recebido automaticamente (Mercado Livre)"}); try{ await db.syncMLByLink("inv",inv.id,{destination:"stock",stock_id:inv.stockItemId,assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }catch{} }
               toast_(`📦 "${inv.name}" recebido — entrega confirmada no Mercado Livre ✓`);
             }
           }
@@ -17855,6 +17903,7 @@ export default function App() {
                 const qty=inv.quantity||1;
                 const unitCost=inv.value||0;
                 await addPurchase({stockId:inv.stockItemId,qty,unitCost,purchaseDate:new Date().toISOString().slice(0,10),supplier:"",note:`Pedido via Materiais Sortidos`});
+                try{ await db.syncMLByLink("inv",inv.id,{destination:"stock",stock_id:inv.stockItemId,assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }catch(e){ console.warn("ml sync inv",e); }
                 toast_(`Estoque de "${inv.name}" atualizado ✓`);
               }
             }

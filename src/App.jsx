@@ -12049,12 +12049,14 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const shownTl=tlAll?timeline:timeline.slice(0,5);
   const hasPecas=purchaseOrders.some(o=>o.vehicleId===v.id)||[...(v.partsList||[]),...(v.partsListFinishing||[])].some(p=>p.name);
   const hasFotos=[...photos,...photosF].some(p=>p.url);
+  const hasImport=(v.importParts||[]).some(p=>importFinal(p)>0);
   const hasChecklist=(Array.isArray(v.checklist)?v.checklist:[]).some(c=>c.status);
   const tabs=[
     {id:"resumo",label:"Resumo",icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'},
     {id:"servicos",label:"Serviços",icon:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'},
     ...(hasChecklist?[{id:"checklist",label:"Checklist",icon:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'}]:[]),
     ...(hasFotos?[{id:"fotos",label:"Fotos",icon:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>'}]:[]),
+    ...(hasImport?[{id:"importacao",label:"Importação",icon:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>'}]:[]),
     ...(hasPecas?[{id:"pecas",label:"Peças",icon:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>'}]:[]),
     {id:"conta",label:"Conta",dot:pendingNow>0.005,icon:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'},
   ];
@@ -12265,7 +12267,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
           {/* Tasks grouped by category */}
           {/* Fuel and tows */}
-          {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0||(v.freights||[]).filter(f=>Number(f.value||0)>0).length>0||importTotal(v)>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
+          {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0||(v.freights||[]).filter(f=>Number(f.value||0)>0).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
             {(v.fuels||[]).filter(f=>Number(f.value||0)>0).map((f,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
                 <span style={{fontSize:16}}>⛽</span>
@@ -12286,22 +12288,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 <span style={{fontSize:13,fontWeight:700,color:"#60a5fa",flexShrink:0}}>{fmtBRL(t.value)}</span>
               </div>
             ))}
-            {(v.importParts||[]).filter(p=>importFinal(p)>0).map((p,i)=>{
-              const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-              return(
-              <div key={"ip"+i} style={{display:"flex",flexDirection:"column",gap:4,background:"#60a5fa08",border:"1px solid #60a5fa33",borderRadius:8,padding:"10px 12px"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,color:B.white,fontWeight:700}}>{p.name||"Peça importada"}</div>
-                    <div style={{fontSize:10,color:"#60a5fa",marginTop:1}}>Peça importada{p.taskRef?` · ${p.taskRef}`:""} · <span style={{color:p.arrived?B.green:B.gray400,fontWeight:700}}>{p.arrived?"Chegou":"A caminho"}</span></div>
-                  </div>
-                  <span style={{fontSize:13,fontWeight:800,color:"#60a5fa",flexShrink:0}}>{fmtBRL(importFinal(p))}</span>
-                </div>
-                <div style={{fontSize:11,color:B.gray400,lineHeight:1.5}}>
-                  Valor original: {nf(p.amount)} {p.cur||"USD"} · Valor final em reais acima, somando frete, imposto e taxa de importação.
-                </div>
-              </div>);
-            })}
             {(v.freights||[]).filter(f=>Number(f.value||0)>0).map((f,i)=>(
               <div key={i} style={{display:"flex",flexDirection:"column",gap:6,background:`${B.purple}08`,border:`1px solid ${B.purple}33`,borderRadius:8,padding:"10px 12px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -12840,6 +12826,35 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       })()}
 
       </>}
+      {tab==="importacao"&&<>
+      {(()=>{
+        const imps=(v.importParts||[]).filter(p=>importFinal(p)>0);
+        const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+        const tot=imps.reduce((s,p)=>s+importFinal(p),0);
+        const arrived=imps.filter(p=>p.arrived).length;
+        return (<div style={S.card}><div style={S.pad}>
+          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}}>
+            <div style={{fontWeight:800,fontSize:15,color:B.white}}>Peças importadas</div>
+            <span style={{fontSize:11,color:B.gray500,fontWeight:600}}>· {arrived}/{imps.length} chegaram</span>
+          </div>
+          <div style={{fontSize:11,color:B.gray500,lineHeight:1.5,marginBottom:14}}>O valor final em reais soma conversão cambial, frete, imposto e taxas de importação.</div>
+          {imps.map((p,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 0",borderTop:i?`1px solid ${B.gray700}`:"none"}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:14,color:B.white,fontWeight:700}}>{p.name||"Peça importada"}</div>
+                <div style={{fontSize:11,color:B.gray400,marginTop:3}}>{nf(p.amount)} {p.cur||"USD"}{p.taskRef?` · ${p.taskRef}`:""}</div>
+                <div style={{fontSize:10,fontWeight:700,marginTop:4,letterSpacing:.3,color:p.arrived?B.green:B.gray400}}>{p.arrived?`CHEGOU${p.arrivedAt?` · ${new Date(p.arrivedAt).toLocaleDateString("pt-BR")}`:""}`:"A CAMINHO"}</div>
+              </div>
+              <div style={{fontSize:15,fontWeight:800,color:B.white,flexShrink:0}}>{fmtBRL(importFinal(p))}</div>
+            </div>
+          ))}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",borderTop:`1px solid ${B.gray600}`,marginTop:4,paddingTop:12}}>
+            <span style={{fontSize:11,color:B.gray400,letterSpacing:.6,fontWeight:700}}>TOTAL</span>
+            <span style={{fontSize:18,fontWeight:800,color:B.orange}}>{fmtBRL(tot)}</span>
+          </div>
+        </div></div>);
+      })()}
+      </>}
       {tab==="fotos"&&<>
       {/* ── Fotos (galeria) ── */}
       {(()=>{
@@ -13087,7 +13102,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.124";
+const APP_VERSION = "2026.11.13.125";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

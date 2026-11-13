@@ -1746,6 +1746,7 @@ async function generateImportPartsPDF(vehicle, client, company) {
       [`Frete`,`R$ ${nf(ip.extra)}`],
       ...(Number(ip.discount||0)>0?[[`Desconto`,`- R$ ${nf(ip.discount)}`]]:[]),
     ];
+    rows.push([`Situacao`,ip.arrived?`Chegou${ip.arrivedAt?` em ${new Date(ip.arrivedAt).toLocaleDateString("pt-BR")}`:""}`:"A caminho"]);
     if(ip.taskRef) rows.push([`Servico vinculado`,ip.taskRef]);
     doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
     rows.forEach(([a,b])=>{ doc.setTextColor(...gray); doc.text(a,mx+5,y+5); doc.setTextColor(...black); doc.text(String(b),pageW-mx-3,y+5,{align:"right"}); y+=6; });
@@ -5589,6 +5590,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:B.gray400}}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
               <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Peças importadas</span>
               {importTot>0&&<span style={{fontSize:11,color:B.blue||"#60a5fa",fontWeight:700}}>{fmtBRL(importTot)}</span>}
+              {(vehicle.importParts||[]).length>0&&<span style={{fontSize:10,color:B.gray500}}>{(vehicle.importParts||[]).filter(p=>p.arrived).length}/{(vehicle.importParts||[]).length} chegaram</span>}
               {importTot>0&&<button onClick={()=>generateImportPartsPDF(vehicle,cli,company).catch(e=>notify("Erro ao gerar PDF: "+errMsg(e)))}
                 style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></svg>PDF
@@ -5608,6 +5610,13 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               <div key={ii} style={{display:"flex",flexDirection:"column",gap:10,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"10px 12px",marginBottom:6,overflow:"hidden"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <ImpField value={ip.name||""} onSave={v=>upd({name:v})} placeholder="Nome da peça" text style={{flex:1,fontWeight:600,fontSize:13,borderBottom:"none"}}/>
+                  <button onClick={()=>upd(ip.arrived?{arrived:false,arrivedAt:""}:{arrived:true,arrivedAt:new Date().toISOString()})}
+                    title={ip.arrived&&ip.arrivedAt?`Chegou em ${new Date(ip.arrivedAt).toLocaleDateString("pt-BR")}`:"Marcar como chegou"}
+                    style={{flexShrink:0,display:"flex",alignItems:"center",gap:4,padding:"2px 9px",borderRadius:99,cursor:"pointer",fontSize:10,fontWeight:700,letterSpacing:.3,
+                      background:ip.arrived?`${B.green}22`:"transparent",border:`1px solid ${ip.arrived?B.green+"66":B.gray600}`,color:ip.arrived?B.green:B.gray400}}>
+                    {ip.arrived?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>:<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>}
+                    {ip.arrived?"Chegou":"A caminho"}
+                  </button>
                   <button onClick={()=>{const importParts=(vehicle.importParts||[]).filter((_,i)=>i!==ii);onUpdateVehicle(vehicle.id,{importParts});}}
                     style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
                     onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={12}/></button>
@@ -12053,7 +12062,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:13,color:B.white,fontWeight:700}}>{p.name||"Peça importada"}</div>
-                    <div style={{fontSize:10,color:"#60a5fa",marginTop:1}}>Peça importada{p.taskRef?` · ${p.taskRef}`:""}</div>
+                    <div style={{fontSize:10,color:"#60a5fa",marginTop:1}}>Peça importada{p.taskRef?` · ${p.taskRef}`:""} · <span style={{color:p.arrived?B.green:B.gray400,fontWeight:700}}>{p.arrived?"Chegou":"A caminho"}</span></div>
                   </div>
                   <span style={{fontSize:13,fontWeight:800,color:"#60a5fa",flexShrink:0}}>{fmtBRL(importFinal(p))}</span>
                 </div>
@@ -12847,7 +12856,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.116";
+const APP_VERSION = "2026.11.13.117";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

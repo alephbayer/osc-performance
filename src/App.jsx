@@ -6166,8 +6166,8 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
   </div>);
 }
 
-// estoque mínimo 0 = sem alerta de estoque baixo
-const isStockLow=s=>{const m=s.minQty??2;return m>0&&(Number(s.qty)||0)<=m;};
+// alerta de estoque baixo só quando o saldo fica abaixo do mínimo (mínimo 0 = sem alerta)
+const isStockLow=s=>{const m=s.minQty??2;return m>0&&(Number(s.qty)||0)<m;};
 
 // ─── Stock row (list view) ────────────────────────────────────────────────────
 function StockRow({item,salePrice,onLightbox,onOpen}) {
@@ -12542,7 +12542,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.12.90";
+const APP_VERSION = "2026.11.13.91";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

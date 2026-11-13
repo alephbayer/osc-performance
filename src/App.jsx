@@ -276,6 +276,27 @@ function CollapsibleVehicleGroup({vehicle,count,children}) {
   </div>);
 }
 
+function PortalPhotoBtn({onPick,hasPhoto,compact=false,style={}}) {
+  const ref=useRef();
+  const [busy,setBusy]=useState(false);
+  return (<>
+    <button onClick={e=>{e.stopPropagation();ref.current?.click();}} disabled={busy} aria-label={hasPhoto?"Trocar foto do veículo":"Adicionar foto do veículo"}
+      style={{display:"flex",alignItems:"center",gap:6,height:compact?34:30,padding:compact?"0 10px":"0 12px 0 10px",borderRadius:99,cursor:busy?"wait":"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,
+        background:compact?"none":"rgba(0,0,0,.62)",backdropFilter:compact?undefined:"blur(6px)",WebkitBackdropFilter:compact?undefined:"blur(6px)",border:compact?`1px solid ${B.gray600}`:"1px solid rgba(255,255,255,.22)",color:compact?B.gray300:"#fff",...style}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      {busy?"Enviando…":compact?null:(hasPhoto?"Trocar foto":"Adicionar foto")}
+    </button>
+    <input ref={ref} type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{
+      const f=e.target.files?.[0]; e.target.value="";
+      if(!f) return;
+      setBusy(true);
+      try{ const url=await uploadImg(f,"vehicles"); await onPick(url); }
+      catch(err){ alert("Não foi possível enviar a foto: "+(err?.message||err)); }
+      setBusy(false);
+    }}/>
+  </>);
+}
+
 function PortalHistoryCard({h,v,payments}) {
   const [open,setOpen]=useState(false);
   const div=h.division||"performance";
@@ -324,7 +345,7 @@ function PortalHistoryCard({h,v,payments}) {
   </div>);
 }
 
-function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen}) {
+function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen,onPhoto}) {
   const vts=tasks.filter(t=>t.vehicleId===v.id&&!t.warranty);
   const done=vts.filter(t=>t.done).length;
   const pct=vts.length?Math.round(done/vts.length*100):0;
@@ -338,7 +359,9 @@ function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen}) {
   const finTotal=v.enteredAtFinishing?finLabor+finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).mat,0)-finLabor*Number(v.osDiscountPctFinishing||0)/100:0;
   const paid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((a,p)=>a+Number(p.amount),0);
   const balance=perfTotal+finTotal-paid;
-  return (<button onClick={onOpen} style={{display:"block",width:"100%",textAlign:"left",padding:0,marginBottom:14,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16,overflow:"hidden",cursor:"pointer",fontFamily:"inherit",color:B.white}}>
+  return (<div style={{position:"relative",marginBottom:14}}>
+    {onPhoto&&<PortalPhotoBtn hasPhoto={!!v.photo} onPick={onPhoto} style={{position:"absolute",top:10,left:10,zIndex:2}}/>}
+    <button onClick={onOpen} style={{display:"block",width:"100%",textAlign:"left",padding:0,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16,overflow:"hidden",cursor:"pointer",fontFamily:"inherit",color:B.white}}>
     <div style={{height:132,background:v.photo?`url(${v.photo}) center/cover`:`linear-gradient(135deg,${B.gray700},${B.gray900})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
       {!v.photo&&<ICar s={44} c={B.gray500}/>}
       <span style={{position:"absolute",top:10,right:10,fontSize:10,fontWeight:800,letterSpacing:.6,textTransform:"uppercase",color:st.c,background:"rgba(0,0,0,.62)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:`1px solid ${st.c}66`,borderRadius:99,padding:"4px 10px"}}>{st.l}</span>
@@ -366,7 +389,8 @@ function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen}) {
         <span style={{fontSize:14,fontWeight:800,color:B.white}}>{fmtBRL(balance)}</span>
       </div>}
     </div>
-  </button>);
+  </button>
+  </div>);
 }
 
 // ─── Client Notes Tab ─────────────────────────────────────────────────────────
@@ -473,7 +497,7 @@ function PixPaymentBox() {
   );
 }
 
-function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[],clients=[],purchaseOrders=[],stock=[]}) {
+function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[],clients=[],purchaseOrders=[],stock=[],onVehiclePhoto}) {
   const [openVid,setOpenVid]=useState(null);
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
@@ -585,7 +609,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </div>
     </div>}
     {/* Header */}
-    <div style={{background:B.black,padding:"0 18px",paddingTop:"calc(18px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+    <div style={{background:B.black,padding:"0 18px",paddingTop:"calc(40px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",paddingBottom:10}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <div style={{flex:1,minWidth:0}}><OscLockup h={34}/></div>
@@ -637,7 +661,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum veículo em serviço</div>
             <div style={{fontSize:13}}>Quando seu veículo entrar na oficina, ele aparece aqui.</div>
           </div>
-          :activeVehicles.map(v=><PortalVehicleCard key={v.id} v={v} tasks={tasks} payments={payments} defaultRate={defaultRate} onOpen={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}}/>)}
+          :activeVehicles.map(v=><PortalVehicleCard key={v.id} v={v} tasks={tasks} payments={payments} defaultRate={defaultRate} onPhoto={onVehiclePhoto?(url=>onVehiclePhoto(v.id,url)):undefined} onOpen={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}}/>)}
         {(()=>{
           const idle=cliVehicles.filter(v=>!activeVehicles.some(x=>x.id===v.id));
           if(idle.length===0) return null;
@@ -646,14 +670,17 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             {idle.map(v=>{
               const last=cliHistory.find(h=>(h.vehicle_id||h.vehicleId)===v.id);
               const ld=last&&(last.delivered_at||last.deliveredAt);
-              return (<button key={v.id} onClick={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",textAlign:"left",padding:"10px 14px",marginBottom:8,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,cursor:"pointer",fontFamily:"inherit",color:B.white}}>
+              return (<div key={v.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <button onClick={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}} style={{display:"flex",alignItems:"center",gap:12,flex:1,minWidth:0,textAlign:"left",padding:"10px 14px",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,cursor:"pointer",fontFamily:"inherit",color:B.white}}>
                 {v.photo?<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>:<div style={{width:44,height:44,borderRadius:10,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.gray400}/></div>}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
                   <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{v.plate}{v.color?` · ${v.color}`:""}{ld?` · última visita ${new Date(ld).toLocaleDateString("pt-BR")}`:""}</div>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
-              </button>);
+              </button>
+              {onVehiclePhoto&&<PortalPhotoBtn compact hasPhoto={!!v.photo} onPick={url=>onVehiclePhoto(v.id,url)} style={{height:44,width:44,padding:0,justifyContent:"center",borderRadius:14,flexShrink:0}}/>}
+              </div>);
             })}
           </>);
         })()}
@@ -12119,7 +12146,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     {/* Header */}
     <div className="pv-head" style={{background:B.black}}>
       {/* Top row: logos + name */}
-      <div style={{padding:"12px max(16px, calc((100% - 620px)/2 + 16px))",paddingTop:"calc(20px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"12px max(16px, calc((100% - 620px)/2 + 16px))",paddingTop:"calc(40px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <OscLockup h={40}/>
           <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
@@ -13096,7 +13123,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.136";
+const APP_VERSION = "2026.11.13.137";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16519,7 +16546,7 @@ export default function App() {
           : clients.find(c=>c.id===clientSession.id)||clientSession)
       : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={clientCredits} clients={clients} purchaseOrders={purchaseOrders} stock={stock} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
+    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={clientCredits} clients={clients} purchaseOrders={purchaseOrders} stock={stock} onVehiclePhoto={async(vid,url)=>{const vv=vehicles.find(x=>x.id===vid);if(!vv||vv.clientId!==liveCli.id) return; setVeh(p=>p.map(x=>x.id===vid?{...x,photo:url}:x)); await db.updateVehicle(vid,{photo:url}); db.sendPushToAdmins(`📷 Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${liveCli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──

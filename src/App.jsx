@@ -59,6 +59,7 @@ const B = {
 const qtyNum=v=>{const n=parseFloat(String(v).replace(",","."));return n>0?n:1;};
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtBRLReal=n=>fmtBRL(n);
+function errMsg(e){ const m=String((e&&e.message)||e||""); const off=typeof navigator!=="undefined"&&navigator.onLine===false; return (off||/failed to fetch|networkerror|load failed|network request failed|fetch failed|timeout/i.test(m))?"Sem internet — não foi salvo. Tente de novo quando a conexão voltar":m; }
 let _oscToast=null; const notify=m=>{try{_oscToast&&_oscToast(m);}catch{}};
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
 const partUsedQty=(part,vehicleId,tasks)=>Number(part.usedQty||0)+(tasks||[]).filter(t=>t.vehicleId===vehicleId).flatMap(t=>t.materials||[]).filter(m=>(part.id&&m.reservedPartId===part.id)||(part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);
@@ -6538,7 +6539,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     if(mode!=="ignored"&&mode!=="supplies"&&mode!=="return"&&!(qEff>0)){setErr("Informe a quantidade");return;}
     setBusy(true);setErr("");
     try{ await onAssign(item,{units:unitsNum,category:taskCat||null,type:mode,vehicleId:vid,tid,linkIdx:(mode==="vehicle"&&lk)?lk.idx:null,markup:Number(markup)||0,pid,qty:qEff,freight:fr,division:sdiv,location:locStr.trim(),name:nameStr.trim()||item.title,brand:brandStr.trim(),returnReason:retReason,returnDeadline:retDeadline||null}); onClose(); }
-    catch(e){ setErr(e.message||"Erro ao destinar"); setBusy(false); }
+    catch(e){ setErr(errMsg(e)||"Erro ao destinar"); setBusy(false); }
   };
   const tabBtn=(k,l)=><button onClick={()=>{setMode(k);setErr("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${mode===k?B.amber:B.gray600}`,background:mode===k?`${B.amber}18`:B.gray900,color:mode===k?B.amber:B.gray300,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>;
   return (<div onClick={onClose} style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,.72)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px 16px calc(104px + env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
@@ -6647,7 +6648,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const tgShut=k=>setShut(v=>{const n={...v,[k]:!v[k]};try{localStorage.setItem("osc_ml_shut",JSON.stringify(n));}catch(e){}return n;});
   const [open,setOpen]=useState(()=>{try{return localStorage.getItem("osc_ml_open")!=="0";}catch(e){return true;}});
   const toggleOpen=()=>setOpen(v=>{const n=!v;try{localStorage.setItem("osc_ml_open",n?"1":"0");}catch(e){}return n;});
-  const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(e.message||"Erro ao carregar compras"));
+  const loadItems=()=>db.getMLItems().then(setItems).catch(e=>setErr(errMsg(e)||"Erro ao carregar compras"));
   const doSync=async(silent)=>{
     setBusy("sync");setErr("");if(!silent)setMsg("");
     try{
@@ -6662,7 +6663,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         if(!left||left>=prev) break; prev=left;
       }
       setMsg(added?`${added} item(ns) novo(s) ✓`:"Tudo em dia — nenhuma compra nova"); setSt(s=>({...(s||{}),lastSync:new Date().toISOString()}));
-    }catch(e){ setErr(e.message||"Erro ao sincronizar"); }
+    }catch(e){ setErr(errMsg(e)||"Erro ao sincronizar"); }
     finally{ setBusy(""); }
   };
   useEffect(()=>{
@@ -6672,7 +6673,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         if(code){ try{ sessionStorage.removeItem("osc_ml_code"); }catch{} setBusy("connect"); const r=await db.mlCall("connect",{code}); if(r.ok===false) setErr(r.error||"Falha ao conectar"); else setMsg("Conta conectada ✓"); setBusy(""); }
         const s=await db.mlCall("status"); setSt(s); await loadItems();
         if(s.connected&&(!s.lastSync||Date.now()-new Date(s.lastSync).getTime()>30*60000)) doSync(true);
-      }catch(e){ setErr(e.message||"Erro ao consultar o Mercado Livre"); setBusy(""); }
+      }catch(e){ setErr(errMsg(e)||"Erro ao consultar o Mercado Livre"); setBusy(""); }
     })();
   // eslint-disable-next-line
   },[]);
@@ -6693,7 +6694,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const retTotal=returns.reduce((a,i)=>a+(Number(i.qty)||1)*(Number(i.unit_price)||0)+(Number(i.freight)||0),0);
   const retDays=d=>d?Math.ceil((new Date(d+"T23:59:59-03:00")-Date.now())/86400000):null;
   const RET_ST={todo:"A devolver",asked:"Solicitada no ML",done:"Concluída"};
-  const setRet=async(i,patch)=>{ try{ await db.setMLItem(i.id,patch); await loadItems(); }catch(e){ setErr(e.message); } };
+  const setRet=async(i,patch)=>{ try{ await db.setMLItem(i.id,patch); await loadItems(); }catch(e){ setErr(errMsg(e)); } };
   const done=srt(live.filter(isDone).filter(bySearch));
   const cnt=k=>k==="all"?active.filter(i=>i.destination!=="return").length:k==="return"?returns.length:active.filter(i=>i.destination!=="return"&&(k==="none"?!i.ship_status:i.ship_status===k)).length;
   const chips=[["all","Todos"],["delivered","Entregue"],["shipped","A caminho"],["ready_to_ship","Pronto p/ envio"],["handling","Preparando"],["pending","Aguardando"],["none","Sem status"],["return","Devolução"]].filter(([k])=>k==="all"||k===fil||cnt(k)>0);
@@ -6723,9 +6724,9 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     if(ok) setMsg(`${ok} ${ok!==1?"itens destinados":"item destinado"} ✓`);
     if(fails.length) setErr(`${fails.length} não ${fails.length!==1?"foram destinados":"foi destinado"}: ${fails.join(" · ")}`);
   };
-  const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(e.message); } };
-  const undoSupplies=async i=>{ if(!window.confirm(i.destination==="tool"?"Desfazer? A ferramenta sai da lista de Ferramentas e a compra volta para “Sem destino”.":"Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(e.message||"Erro ao desfazer"); } };
-  const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
+  const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(errMsg(e)); } };
+  const undoSupplies=async i=>{ if(!window.confirm(i.destination==="tool"?"Desfazer? A ferramenta sai da lista de Ferramentas e a compra volta para “Sem destino”.":"Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(errMsg(e)||"Erro ao desfazer"); } };
+  const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(errMsg(e)); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const fmtS=d=>{ if(!d) return ""; const x=new Date(d); const same=x.getFullYear()===new Date().getFullYear(); return x.toLocaleDateString("pt-BR",same?{day:"2-digit",month:"2-digit"}:{day:"2-digit",month:"2-digit",year:"2-digit"}); };
   const destLbl=i=>i.destination==="return"?`↩ Devolução${i.return_reason?` · ${i.return_reason}`:""}`:i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?(i.stock_plan&&!i.stock_id?"📦 Estoque · entra quando for entregue":"📦 Estoque"):i.destination==="supplies"?"🧴 Insumos · custo do mês":i.destination==="tool"?"🔧 Ferramentas · patrimônio":"— ignorado";
@@ -6983,7 +6984,7 @@ function ToolsTab({showValues=true}) {
   const [adding,setAdding]=useState(false);
   const [form,setForm]=useState({name:"",value:"",qty:"1",location:""});
   const [edit,setEdit]=useState(null);
-  const load=()=>db.getTools().then(setTools).catch(e=>setErr(e.message||"Erro ao carregar"));
+  const load=()=>db.getTools().then(setTools).catch(e=>setErr(errMsg(e)||"Erro ao carregar"));
   useEffect(()=>{ load(); },[]);
   const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const list=tools.filter(t=>!q.trim()||norm(t.name+" "+(t.location||"")+" "+(t.seller||"")).includes(norm(q)));
@@ -6995,10 +6996,10 @@ function ToolsTab({showValues=true}) {
   const add=async()=>{
     if(!form.name.trim()){ setErr("Informe o nome"); return; }
     try{ await db.addTool({name:form.name.trim(),value:Number(String(form.value).replace(",","."))||0,qty:Number(form.qty)||1,location:form.location.trim(),purchased_at:new Date().toLocaleDateString("sv-SE")}); setForm({name:"",value:"",qty:"1",location:""}); setAdding(false); setErr(""); load(); notify("Ferramenta adicionada ✓"); }
-    catch(e){ setErr(e.message||"Erro ao salvar"); }
+    catch(e){ setErr(errMsg(e)||"Erro ao salvar"); }
   };
-  const save=async(t,patch)=>{ try{ await db.updateTool(t.id,patch); setEdit(null); load(); notify("Ferramenta atualizada ✓"); }catch(e){ setErr(e.message||"Erro ao salvar"); } };
-  const del=async t=>{ if(!window.confirm(`Remover “${t.name}” da lista de ferramentas?`)) return; try{ await db.deleteTool(t.id); load(); notify("Ferramenta removida ✓"); }catch(e){ setErr(e.message); } };
+  const save=async(t,patch)=>{ try{ await db.updateTool(t.id,patch); setEdit(null); load(); notify("Ferramenta atualizada ✓"); }catch(e){ setErr(errMsg(e)||"Erro ao salvar"); } };
+  const del=async t=>{ if(!window.confirm(`Remover “${t.name}” da lista de ferramentas?`)) return; try{ await db.deleteTool(t.id); load(); notify("Ferramenta removida ✓"); }catch(e){ setErr(errMsg(e)); } };
   return (<div>
     <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
       {showValues&&<div style={{flex:1,minWidth:150,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px"}}>
@@ -7080,11 +7081,11 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
   const attach=async(sp,f)=>{
     if(!f) return; setUpBusy(true); setErr("");
     try{ const url=await db.uploadSupplierPdf(sp.id,f); await db.addSupplierDoc({supplier_id:sp.id,file_url:url,file_name:f.name,created_by:actor||null}); await loadDocs(); setOpenDocs(sp.id); }
-    catch(e){ setErr(e.message||"Erro ao anexar PDF"); }
+    catch(e){ setErr(errMsg(e)||"Erro ao anexar PDF"); }
     setUpBusy(false);
   };
-  const delDoc=async id=>{ try{ await db.deleteSupplierDoc(id); await loadDocs(); notify("Documento removido ✓"); }catch(e){ setErr(e.message||"Erro ao remover"); } };
-  const load=()=>{ loadDocs(); return db.getSuppliers().then(r=>{setList(r);setLoading(false);}).catch(e=>{setErr(e.message||"Erro ao carregar");setLoading(false);}); };
+  const delDoc=async id=>{ try{ await db.deleteSupplierDoc(id); await loadDocs(); notify("Documento removido ✓"); }catch(e){ setErr(errMsg(e)||"Erro ao remover"); } };
+  const load=()=>{ loadDocs(); return db.getSuppliers().then(r=>{setList(r);setLoading(false);}).catch(e=>{setErr(errMsg(e)||"Erro ao carregar");setLoading(false);}); };
   useEffect(()=>{load();},[]);
   const stats=name=>{const k=norm(name);const ps=purchases.filter(p=>norm(p.supplier)===k);return {n:ps.length,total:ps.reduce((s,p)=>s+Number(p.totalCost||0),0),last:ps.map(p=>p.purchaseDate).sort().pop()||null};};
   const regKeys=new Set(list.map(x=>norm(x.name)));
@@ -7099,10 +7100,10 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
       if(editId==="new") await db.addSupplier(row);
       else await db.updateSupplier(editId,row,list.find(x=>x.id===editId)?.name);
       setEditId(null); await load(); notify(editId==="new"?"Fornecedor adicionado ✓":"Fornecedor atualizado ✓");
-    }catch(e){setErr(e.message||"Erro ao salvar");}
+    }catch(e){setErr(errMsg(e)||"Erro ao salvar");}
     setBusy(false);
   };
-  const del=async id=>{try{await db.deleteSupplier(id);setConfirmDel(null);await load();notify("Fornecedor removido ✓");}catch(e){setErr(e.message||"Erro ao remover");}};
+  const del=async id=>{try{await db.deleteSupplier(id);setConfirmDel(null);await load();notify("Fornecedor removido ✓");}catch(e){setErr(errMsg(e)||"Erro ao remover");}};
   const inp={padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const shown=list.filter(x=>!q||norm([x.name,x.cnpj,x.phone,x.contact,x.email].join(" ")).includes(norm(q)));
   const formBox=(<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.green}55`,padding:14,marginBottom:14}}>
@@ -12689,7 +12690,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.102";
+const APP_VERSION = "2026.11.13.103";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14431,7 +14432,7 @@ function GlobalErrorDisplay() {
     const h=(e)=>{
       // Ignore cross-origin "Script error" — no useful info and not our code
       if(!e.message||e.message==="Script error"||e.message==="Script error.") return;
-      setErr(e.message||String(e.error)||"Erro desconhecido");
+      setErr(errMsg(e)||String(e.error)||"Erro desconhecido");
     };
     window.addEventListener("error",h);
     return()=>window.removeEventListener("error",h);
@@ -14822,7 +14823,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
   const partner=partners.find(p=>p.id===pid)||null;
   const pServices=services.filter(s=>s.partner_id===pid);
   const pJobs=jobs.filter(j=>j.partner_id===pid);
-  const fail=e=>alert((e&&e.message)||"Erro");
+  const fail=e=>alert(errMsg(e)||"Erro");
   const jobTotal=items=>items.reduce((s,i)=>s+(Number(i.value)||0),0);
 
   // Autopreencher modelo/cor pela placa
@@ -15101,7 +15102,7 @@ function PresencaTab({employees, isOwner=false}) {
 
   const save=async(newData, mk)=>{
     setData(p=>({...p,[mk]:newData}));
-    try{ await db.setPresenca(mk, newData); }catch(e){ console.error("presenca save:",e); }
+    try{ await db.setPresenca(mk, newData); }catch(e){ console.error("presenca save:",e); notify("⚠ Presença não foi salva — "+errMsg(e)); }
   };
 
   const isWorkday=(dateStr)=>{
@@ -15885,8 +15886,10 @@ export default function App() {
   const [cN,setCN]=useState(""); const [cP,setCP]=useState(""); const [cE,setCE]=useState("");
 
   const toast_=useCallback(m=>{setTst(null);setTimeout(()=>setTst(m),10);},[]);
-  const errToast=useCallback(e=>{console.error(e);toast_("⚠ Erro: "+(e.message||"falha de conexão"));},[toast_]);
+  const errToast=useCallback(e=>{console.error(e);toast_(errMsg(e).startsWith("Sem internet")?"⚠ "+errMsg(e):"⚠ Erro: "+(errMsg(e)||"falha de conexão"));},[toast_]);
   _oscToast=toast_;
+  const [online,setOnline]=useState(()=>typeof navigator==="undefined"||navigator.onLine!==false);
+  useEffect(()=>{ const on=()=>setOnline(true), off=()=>setOnline(false); window.addEventListener("online",on); window.addEventListener("offline",off); return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);}; },[]);
 
   // ── Admin push registration — offer when admin logs in ──
   const [adminPushStatus,setAdminPushStatus]=useState(null);
@@ -16755,7 +16758,7 @@ export default function App() {
     if(!item) return;
     const newSalePrice=Math.round(lastCost*(1+Number(item.markup||0)/100)*100)/100;
     setStk(p=>p.map(s=>s.id===stockId?{...s,costPrice:lastCost,salePrice:newSalePrice}:s));
-    try{ await db.updateStock(stockId,{costPrice:lastCost,salePrice:newSalePrice}); }catch(e){}
+    try{ await db.updateStock(stockId,{costPrice:lastCost,salePrice:newSalePrice}); }catch(e){ toast_("⚠ "+errMsg(e)); }
   };
 
   const addPurchase=async(purchase)=>{
@@ -17572,6 +17575,7 @@ export default function App() {
   ];
 
   return (<div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
+    {!online&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:2000,background:B.red,color:"#fff",fontSize:12,fontWeight:700,textAlign:"center",padding:"calc(6px + env(safe-area-inset-top)) 12px 6px",letterSpacing:.2}}>Sem conexão — as alterações não estão sendo salvas</div>}
 
     {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
     <style>{`@media(max-width:640px){.osc-sidebar{display:none!important}.osc-liquid-nav{display:flex!important}}@media(min-width:641px){.osc-sidebar{display:flex!important}.osc-liquid-nav{display:none!important}}`}</style>

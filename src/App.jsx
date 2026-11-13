@@ -12583,7 +12583,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.93";
+const APP_VERSION = "2026.11.13.94";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14436,6 +14436,7 @@ const CAL_KINDS=[
   {k:"reminder",label:"Lembrete",color:"#f59e0b",check:true},
   {k:"task",label:"Tarefa",color:"#3b82f6",check:true},
   {k:"important",label:"Dia importante",color:"#ef4444"},
+  {k:"holiday",label:"Feriado",color:"#84cc16"},
   {k:"vacation",label:"Férias",color:"#14b8a6",emp:true,range:true},
   {k:"maintenance",label:"Manutenção",color:"#f97316",range:true},
   {k:"visit",label:"Visita",color:"#06b6d4",veh:true},
@@ -14520,8 +14521,7 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
         {days.map((ds,i)=>{if(!ds)return<div key={i}/>;const ev=onDay(ds),isT=ds===todayS,isS=ds===sel;return(
           <div key={i} onClick={()=>setSel(ds)} onDoubleClick={()=>newEv(ds)} style={{minHeight:54,borderRadius:8,padding:"3px 3px 2px",cursor:"pointer",background:isS?`${B.orange}1c`:B.gray800,border:`1px solid ${isS?B.orange:isT?B.orange+"77":B.gray700}`,overflow:"hidden"}}>
             <div style={{fontSize:10.5,fontWeight:isT?800:600,color:isT?B.orange:B.gray300,marginBottom:2}}>{+ds.slice(8)}</div>
-            {ev.slice(0,2).map(e=>{const c=kindOf(e.kind).color;return<div key={e.id} style={{fontSize:8.5,lineHeight:"11px",padding:"0 3px",marginBottom:1,borderRadius:3,background:`${c}30`,color:c,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textDecoration:e.done?"line-through":"none"}}>{e.title}</div>;})}
-            {ev.length>2&&<div style={{fontSize:8.5,color:B.gray500,paddingLeft:2}}>+{ev.length-2}</div>}
+            {Object.entries(ev.reduce((g,e)=>{(g[e.kind]=g[e.kind]||[]).push(e);return g;},{})).slice(0,3).map(([k,l])=>{const kk=kindOf(k);return<div key={k} style={{display:"flex",alignItems:"center",gap:2,fontSize:8.5,lineHeight:"11px",padding:"0 3px",marginBottom:1,borderRadius:3,background:`${kk.color}30`,color:kk.color,fontWeight:700}}><span style={{flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{kk.label}</span>{l.length>1&&<span style={{flexShrink:0}}>{l.length}</span>}</div>;})}
           </div>);})}
       </div>
     </div>

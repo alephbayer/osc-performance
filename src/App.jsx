@@ -11160,8 +11160,8 @@ function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[
               {t.reason&&<span style={{color:B.gray300}}>· {t.reason}</span>}
             </div>
           </div>
-          <button onClick={()=>setConfirmDel(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
-            onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><ITrash s={14}/></button>
+          {t.auto?<span title="Calculado pelas peças das tarefas da Finishing; muda sozinho quando as peças mudam" style={{fontSize:9.5,fontWeight:800,letterSpacing:.6,textTransform:"uppercase",color:B.purple,background:`${B.purple}18`,borderRadius:6,padding:"2px 7px",flexShrink:0}}>Automático</span>:<button onClick={()=>setConfirmDel(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
+            onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><ITrash s={14}/></button>}
         </div>);
       })}
     </div>}
@@ -12699,7 +12699,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.108";
+const APP_VERSION = "2026.11.13.109";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15803,6 +15803,7 @@ export default function App() {
   const [defaultRate,setDR]=useState(0);
   const [expenses,setExpenses]=useState([]);
   const [internalTransfers,setInternalTransfers]=useState([]);
+  const [transfersLoaded,setTransfersLoaded]=useState(false);
   const [appointments,setAppts]=useState([]);
   const [quotes,setQuotes]=useState([]);
   const [allClientNotes,setAllClientNotes]=useState([]);
@@ -15930,6 +15931,24 @@ export default function App() {
     setAdminPushStatus("granted");
   };
 
+  // ── Acerto interno automático: peças das tarefas da Finishing são pagas pela Performance (preço de venda + frete) ──
+  useEffect(()=>{
+    if(loading||!transfersLoaded||(adminRole!=="owner"&&adminRole!=="admin")) return;
+    const tm=setTimeout(async()=>{
+      for(const v of vehicles){
+        if(v.status==="delivered") continue;
+        const vts=tasks.filter(x=>x.vehicleId===v.id);
+        if(!vts.length) continue;
+        const amt=Math.round(vts.filter(x=>(x.division||"performance")==="finishing").reduce((a,x)=>{const c=taskCost(x,defaultRate);return a+c.mat+c.freight;},0)*100)/100;
+        const cur=internalTransfers.find(x=>x.source_key==="auto-parts:"+v.id);
+        if(!cur&&amt<=0) continue;
+        if(cur&&Math.abs(Number(cur.amount)-amt)<0.005) continue;
+        try{ const r=await db.syncAutoPartsTransfer(v.id,amt,v.osNumber||null,cur); if(r) setInternalTransfers(p=>[r,...p.filter(x=>x.id!==r.id)]); else if(cur) setInternalTransfers(p=>p.filter(x=>x.id!==cur.id)); }catch(e){ console.error("acerto automático:",e); }
+      }
+    },2500);
+    return()=>clearTimeout(tm);
+  },[tasks,vehicles,internalTransfers,defaultRate,loading,transfersLoaded,adminRole]);
+
   // ── Initial load from Supabase ──
   useEffect(()=>{
     db.loadAll().then(d=>{
@@ -15942,7 +15961,7 @@ export default function App() {
       setOsHistory(d.osHistory||[]);
       setLoading(false);
       db.loadExpenses().then(setExpenses).catch(()=>{});
-      db.loadInternalTransfers().then(setInternalTransfers).catch(()=>{});
+      db.loadInternalTransfers().then(r=>{setInternalTransfers(r);setTransfersLoaded(true);}).catch(()=>{});
       db.loadAppointments().then(setAppts).catch(()=>{});
       db.loadQuotes().then(setQuotes).catch(()=>{});
       db.loadAllClientVehicleNotes().then(setAllClientNotes).catch(()=>{});

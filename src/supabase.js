@@ -1232,6 +1232,22 @@ export const db = {
     if (error) throw error;
     return data;
   },
+  // Acerto automático por veículo: peças (preço de venda + frete) das tarefas da Finishing, pagas pela Performance
+  async syncAutoPartsTransfer(vehicleId, amount, osNumber, cur) {
+    const key = "auto-parts:" + vehicleId;
+    if (!(amount > 0)) {
+      if (cur) { const { error } = await supabase.from("internal_transfers").delete().eq("source_key", key); if (error) throw error; }
+      return null;
+    }
+    const row = {
+      vehicle_id: vehicleId, os_number: osNumber || null, division_from: "finishing", division_to: "performance",
+      amount, reason: "Peças da Finishing pagas pela Performance (automático)",
+      date: cur?.date || new Date().toLocaleDateString("sv-SE"), auto: true, source_key: key,
+    };
+    const { data, error } = await supabase.from("internal_transfers").upsert(row, { onConflict: "source_key" }).select().single();
+    if (error) throw error;
+    return data;
+  },
   async deleteInternalTransfer(id) {
     const { error } = await supabase.from("internal_transfers").delete().eq("id", id);
     if (error) throw error;

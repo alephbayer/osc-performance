@@ -985,7 +985,7 @@ function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
   const freightTotal2=(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0), 0);
   const laborSum   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor, 0);
   const osDiscount = laborSum * (parseFloat(String(vehicle.osDiscountPct||0).replace(",","."))||0) / 100;
-  return tasksTotal + fuelTotal + towTotal + freightTotal2 - osDiscount;
+  return tasksTotal + fuelTotal + towTotal + freightTotal2 + importTotal(vehicle) - osDiscount;
 }
 // Valor já EXECUTADO: tarefas concluídas (M.O. + peças + frete) menos o desconto geral sobre a M.O. concluída,
 // mais os extras já lançados (combustível, reboque, frete avulso), que já foram gastos.
@@ -1025,10 +1025,14 @@ function boughtPendingValue(divTasks, defaultRate, osOpen=true) {
   });
   return v;
 }
+const IMPORT_CURS=["USD","EUR","GBP","JPY","CNY","CAD","AUD","CHF"];
+const importFinal=p=>{const base=Number(p.amount||0)*Number(p.rate||0);return base*(1+Number(p.taxPct||0)/100)+Number(p.extra||0);};
+const importTotal=v=>(v&&Array.isArray(v.importParts)?v.importParts:[]).reduce((s,p)=>s+importFinal(p),0);
 function vehicleExtras(v) {
   return (v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0)
     +(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)
-    +(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
+    +(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0)
+    +importTotal(v);
 }
 // Faixa "quanto já foi executado" (usada na página de acompanhamento e no portal do cliente)
 const outsourcedOpenValue=(divTasks,rate)=>divTasks.filter(t=>t.outsourced&&!t.warranty&&!t.done).reduce((s,t)=>s+taskCost(t,rate).labor,0);
@@ -5069,7 +5073,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const parseDiscount=v=>parseFloat(String(v||0).replace(",","."))||0;
   const laborSum    = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
   const osDiscount  = managerMode?laborSum*parseDiscount(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)/100:0;
-  const total       = managerMode?tasksTotal+fuelTotal+towTotal+freightTotal-osDiscount:0;
+  const importTot   = managerMode&&!isFD?importTotal(vehicle):0;
+  const total       = managerMode?tasksTotal+fuelTotal+towTotal+freightTotal+importTot-osDiscount:0;
   const executed    = managerMode?Math.min(total,executedValue(vts,defaultRate,isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct,fuelTotal+towTotal+freightTotal,isFD?!!vehicle.enteredAtFinishing:!!vehicle.enteredAt)):0;
   const photos= isFD ? (vehicle.photosFinishing||[]) : (vehicle.photos||[]);
   const pubLink=getPublicLink(vehicle.id);
@@ -5518,6 +5523,70 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           <button onClick={addT} style={{padding:"7px 13px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:5}}><IPlus s={14} c={B.white}/>Add</button>
         </div>
         {managerMode&&!isFD&&<div style={{marginTop:10,padding:"10px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,display:"flex",flexDirection:"column",gap:8}}>
+          {/* ── Peças importadas ── */}
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:B.gray400}}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
+              <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Peças importadas</span>
+              {importTot>0&&<span style={{fontSize:11,color:B.blue||"#60a5fa",fontWeight:700}}>{fmtBRL(importTot)}</span>}
+              <button onClick={()=>{const importParts=[...(vehicle.importParts||[]),{name:"",cur:"USD",amount:0,rate:0,taxPct:60,extra:0,taskRef:""}];onUpdateVehicle(vehicle.id,{importParts});}}
+                style={{marginLeft:"auto",background:"#60a5fa22",border:"1px solid #60a5fa44",borderRadius:6,padding:"2px 8px",cursor:"pointer",color:"#60a5fa",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                <IPlus s={11} c="#60a5fa"/>Adicionar peça
+              </button>
+            </div>
+            {(vehicle.importParts||[]).map((ip,ii)=>{
+              const upd=patch=>{const importParts=[...(vehicle.importParts||[])];importParts[ii]={...importParts[ii],...patch};onUpdateVehicle(vehicle.id,{importParts});};
+              const num=v=>parseFloat(String(v).replace(",","."))||0;
+              const conv=Number(ip.amount||0)*Number(ip.rate||0);
+              const fin=importFinal(ip);
+              const lbl={fontSize:10,color:B.gray500,flexShrink:0};
+              return(
+              <div key={ii} style={{display:"flex",flexDirection:"column",gap:5,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:7,padding:"8px 10px",marginBottom:5}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,color:B.gray500,fontWeight:700,flexShrink:0}}>#{ii+1}</span>
+                  <InlineEdit value={ip.name||""} onSave={v=>upd({name:v})} placeholder="Nome da peça"/>
+                  <button onClick={()=>{const importParts=(vehicle.importParts||[]).filter((_,i)=>i!==ii);onUpdateVehicle(vehicle.id,{importParts});}}
+                    style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex",marginLeft:"auto"}}
+                    onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={12}/></button>
+                </div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  <span style={lbl}>Valor</span>
+                  <select value={ip.cur||"USD"} onChange={e=>upd({cur:e.target.value,rate:0})}
+                    style={{padding:"3px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}>
+                    {IMPORT_CURS.map(c=><option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <InlineEdit value={ip.amount?fmtR2(ip.amount):""} onSave={v=>upd({amount:num(v)})} placeholder="0,00" type="number"/>
+                  <span style={lbl}>Cotação R$</span>
+                  <InlineEdit value={ip.rate?String(ip.rate).replace(".",","):""} onSave={v=>upd({rate:num(v)})} placeholder="0,00" type="number"/>
+                  <button title="Buscar cotação atual" onClick={async()=>{
+                    try{const cur=ip.cur||"USD";const r=await fetch(`https://economia.awesomeapi.com.br/last/${cur}-BRL`);const j=await r.json();const q=parseFloat(j[`${cur}BRL`]?.ask);if(!q)throw new Error("sem cotação");upd({rate:Math.round(q*10000)/10000});notify(`Cotação ${cur}: R$ ${fmtR2(q)}`);}
+                    catch(e){notify("Não consegui buscar a cotação: "+errMsg(e));}}}
+                    style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:6,cursor:"pointer",color:B.gray400,padding:"2px 6px",fontSize:10,display:"flex",alignItems:"center",gap:3}}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Atual
+                  </button>
+                  {conv>0&&<span style={{fontSize:11,color:B.gray300}}>= {fmtBRL(conv)}</span>}
+                </div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  <span style={lbl}>Imposto %</span>
+                  <InlineEdit value={ip.taxPct!=null?String(ip.taxPct).replace(".",","):""} onSave={v=>upd({taxPct:num(v)})} placeholder="0" type="number"/>
+                  <span style={lbl}>Frete/taxas R$</span>
+                  <InlineEdit value={ip.extra?fmtR2(ip.extra):""} onSave={v=>upd({extra:num(v)})} placeholder="0,00" type="number"/>
+                  {fin>0&&<span style={{fontSize:12,color:"#60a5fa",fontWeight:800,marginLeft:"auto"}}>Final {fmtBRL(fin)}</span>}
+                </div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  <span style={lbl}>Serviço:</span>
+                  <select value={ip.taskRef||""} onChange={e=>upd({taskRef:e.target.value})}
+                    style={{flex:1,minWidth:120,padding:"3px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:ip.taskRef?B.white:B.gray500,fontSize:11,outline:"none"}}>
+                    <option value="">Nenhum</option>
+                    {tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty).map(t=>(
+                      <option key={t.id} value={t.label}>{t.label}{t.done?" ✓":""}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>);
+            })}
+          </div>
+
           {/* Fuels array */}
           <div>
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
@@ -5656,6 +5725,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           if(fuelTotal>0) breakdown.push(`Combustível: ${fmtBRL(fuelTotal)}`);
           if(towTotal>0) breakdown.push(`Reboque: ${fmtBRL(towTotal)}`);
           if(freightTotal>0) breakdown.push(`Frete: ${fmtBRL(freightTotal)}`);
+          if(importTot>0) breakdown.push(`Peças importadas: ${fmtBRL(importTot)}`);
           return (<div style={{marginTop:8,padding:"8px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:12,color:B.gray400}}>Total deste veículo</span>
@@ -11613,7 +11683,7 @@ function publicFinInfo(v,perfTasks,finTasks,payments,defaultRate){
   const perfFr=perfTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
   const fuel=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)+Number(v.fuelCost||0);
   const tow=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
-  const vFr=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
+  const vFr=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0)+importTotal(v);
   const perfTotal=perfLabor+perfParts+perfFr+fuel+tow+vFr-perfLabor*Number(v.osDiscountPct||0)/100;
   const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
   const finTotal=finLabor+finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat+taskCost(t,defaultRate).freight,0)-finLabor*Number(v.osDiscountPctFinishing||0)/100;
@@ -12291,7 +12361,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         const fuelTotal=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)+Number(v.fuelCost||0);
         const towTotal=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
         const perfDiscount=perfLaborTotal*Number(v.osDiscountPct||0)/100;
-        const vFreightTotal=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
+        const vFreightTotal=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0)+importTotal(v);
         const perfTotal=perfLaborTotal+perfPartsTotal+perfFreightTotal+fuelTotal+towTotal+vFreightTotal-perfDiscount;
         const finLaborTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
         const finPartsTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
@@ -12699,7 +12769,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.109";
+const APP_VERSION = "2026.11.13.110";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13481,7 +13551,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const todo=vts.filter(t=>!t.done), done=vts.filter(t=>t.done).sort((a,b)=>new Date(b.completedAt||0)-new Date(a.completedAt||0));
   // Financeiro da OS (mesma regra do card: tarefas + combustível/reboque/frete − desconto sobre M.O.)
   const sumT=l=>l.reduce((a,t)=>a+taskCost(t,defaultRate).total,0);
-  const tows=(vehicle.tows||[]).reduce((a,t)=>a+Number(t.value||0),0), frs=(vehicle.freights||[]).reduce((a,f)=>a+Number(f.value||0),0);
+  const tows=(vehicle.tows||[]).reduce((a,t)=>a+Number(t.value||0),0), frs=(vehicle.freights||[]).reduce((a,f)=>a+Number(f.value||0),0)+(isFD?0:importTotal(vehicle));
   const fuels=isFD?0:(vehicle.fuels||[]).reduce((a,f)=>a+Number(f.value||0),0);
   const extrasV=tows+frs+fuels;
   const discPct=parseFloat(String((isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)||0).replace(",","."))||0;

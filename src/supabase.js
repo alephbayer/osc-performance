@@ -131,6 +131,7 @@ const mapVehicleIn = (v) => ({
   osDiscountPct: Number(v.os_discount_pct || 0),
   tows: Array.isArray(v.tows) ? v.tows : (v.tows ? JSON.parse(v.tows) : []),
   freights: Array.isArray(v.freights) ? v.freights : (v.freights ? JSON.parse(v.freights) : []),
+  importParts: Array.isArray(v.import_parts) ? v.import_parts : [],
   notes: v.notes || '',
   // Finishing Division
   osNumberFinishing: v.os_number_finishing || null,
@@ -386,6 +387,7 @@ export const db = {
     if ("fuels"                  in patch) dbPatch.fuels                    = patch.fuels;
     if ("tows"                   in patch) dbPatch.tows                     = patch.tows;
     if ("freights"               in patch) dbPatch.freights                 = patch.freights;
+    if ("importParts"            in patch) dbPatch.import_parts             = patch.importParts;
     if ("notes"                  in patch) dbPatch.notes                    = patch.notes;
     if ("pausedAt"               in patch) dbPatch.paused_at                = patch.pausedAt;
     if ("totalPausedMs"          in patch) dbPatch.total_paused_ms          = patch.totalPausedMs;

@@ -276,6 +276,51 @@ function CollapsibleVehicleGroup({vehicle,count,children}) {
   </div>);
 }
 
+function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen}) {
+  const vts=tasks.filter(t=>t.vehicleId===v.id&&!t.warranty);
+  const done=vts.filter(t=>t.done).length;
+  const pct=vts.length?Math.round(done/vts.length*100):0;
+  const perfTs=vts.filter(t=>(t.division||"performance")==="performance");
+  const finTs=vts.filter(t=>t.division==="finishing");
+  const hasPerf=!!v.enteredAt||perfTs.length>0, hasFin=!!v.enteredAtFinishing||finTs.length>0;
+  const st=v.status==="ready"||(vts.length>0&&done===vts.length)?{l:"Pronto",c:B.green}:v.status==="paused"?{l:"Pausado",c:B.amber}:{l:"Em serviço",c:B.orange};
+  const perfTotal=v.enteredAt?vehicleTotal(v.id,tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"),defaultRate,v):0;
+  const finTasks=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
+  const finLabor=finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0);
+  const finTotal=v.enteredAtFinishing?finLabor+finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).mat,0)-finLabor*Number(v.osDiscountPctFinishing||0)/100:0;
+  const paid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((a,p)=>a+Number(p.amount),0);
+  const balance=perfTotal+finTotal-paid;
+  return (<button onClick={onOpen} style={{display:"block",width:"100%",textAlign:"left",padding:0,marginBottom:14,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16,overflow:"hidden",cursor:"pointer",fontFamily:"inherit",color:B.white}}>
+    <div style={{height:132,background:v.photo?`url(${v.photo}) center/cover`:`linear-gradient(135deg,${B.gray700},${B.gray900})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+      {!v.photo&&<ICar s={44} c={B.gray500}/>}
+      <span style={{position:"absolute",top:10,right:10,fontSize:10,fontWeight:800,letterSpacing:.6,textTransform:"uppercase",color:st.c,background:"rgba(0,0,0,.62)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:`1px solid ${st.c}66`,borderRadius:99,padding:"4px 10px"}}>{st.l}</span>
+    </div>
+    <div style={{padding:"14px 16px 16px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:800,fontSize:16,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
+          <div style={{fontSize:11,color:B.gray400,marginTop:2,letterSpacing:.3}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      {(hasPerf&&v.osNumber||hasFin&&v.osNumberFinishing)&&<div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+        {hasPerf&&v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,border:`1px solid ${B.orange}44`,borderRadius:99,padding:"2px 9px"}}>{fmtOS(v.osNumber)}</span>}
+        {hasFin&&v.osNumberFinishing&&<span style={{fontSize:10,fontWeight:800,color:FD.primary,border:`1px solid ${FD.border}`,borderRadius:99,padding:"2px 9px"}}>{fmtOSFD(v.osNumberFinishing)}</span>}
+      </div>}
+      {vts.length>0?<div style={{marginTop:14}}>
+        <div style={{height:4,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:pct===100?B.green:B.orange,borderRadius:99}}/></div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:11,color:B.gray400}}>
+          <span>{done} de {vts.length} serviços concluídos</span><span>{pct}%</span>
+        </div>
+      </div>:<div style={{marginTop:12,fontSize:12,color:B.gray500}}>Serviços ainda não lançados</div>}
+      {balance>0.5&&(v.enteredAt||v.enteredAtFinishing)&&<div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${B.gray700}`,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+        <span style={{fontSize:10,letterSpacing:.6,color:B.gray500,fontWeight:700,textTransform:"uppercase"}}>Saldo em aberto</span>
+        <span style={{fontSize:14,fontWeight:800,color:B.white}}>{fmtBRL(balance)}</span>
+      </div>}
+    </div>
+  </button>);
+}
+
 // ─── Client Notes Tab ─────────────────────────────────────────────────────────
 function ClientNotesTab({client, vehicles}) {
   const [selectedVehicle,setSelectedVehicle]=useState(vehicles[0]?.id||null);
@@ -391,7 +436,8 @@ function PixPaymentBox() {
   );
 }
 
-function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[]}) {
+function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[],clients=[],purchaseOrders=[],stock=[]}) {
+  const [openVid,setOpenVid]=useState(null);
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
   const [showDebtPopup,setShowDebtPopup]=useState(false);
@@ -452,6 +498,10 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       <span style={{fontSize:10,lineHeight:1.2,textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{label}</span>
     </button>
   );
+
+  if(openVid&&vehicles.some(x=>x.id===openVid)) return (<div style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black}}>
+    <PublicVehicleView vehicleId={openVid} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients.length?clients:[client]} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock} onBack={()=>{setOpenVid(null);try{window.scrollTo({top:0});}catch{}}}/>
+  </div>);
 
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
 
@@ -527,64 +577,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum veículo em serviço</div>
             <div style={{fontSize:13}}>Quando seu veículo entrar na oficina, aparece aqui.</div>
           </div>
-          :activeVehicles.map(v=>{
-            const vts=tasks.filter(t=>t.vehicleId===v.id);
-            const perfTs=vts.filter(t=>(t.division||"performance")==="performance");
-            const finTs=vts.filter(t=>t.division==="finishing");
-            const hasPerf=!!v.enteredAt||perfTs.length>0;
-            const hasFin=!!v.enteredAtFinishing||finTs.length>0;
-            const done=vts.filter(t=>t.done).length;
-            const countLabel=`${done}/${vts.length} concluído${vts.length!==1?"s":""}`;
-            return (<CollapsibleVehicleGroup key={v.id} vehicle={v} count={countLabel}>
-              {/* OS number badges */}
-              <div style={{padding:"10px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                {hasPerf&&v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,background:`${B.orange}18`,border:`1px solid ${B.orange}33`,borderRadius:6,padding:"2px 8px"}}>{fmtOS(v.osNumber)}</span>}
-                {hasFin&&v.osNumberFinishing&&<span style={{fontSize:10,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:6,padding:"2px 8px"}}>{fmtOSFD(v.osNumberFinishing)}</span>}
-                <a href={getPublicLink(v.id)} target="_blank" rel="noreferrer"
-                  style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5,padding:"5px 12px",borderRadius:7,background:B.blue,color:B.white,fontWeight:700,fontSize:11,textDecoration:"none"}}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  Ver OS
-                </a>
-              </div>
-
-              {/* Performance tasks */}
-              {hasPerf&&perfTs.length>0&&<div style={{padding:"12px 16px",borderBottom:hasFin?`1px solid ${B.gray700}`:"none"}}>
-                <div style={{fontSize:11,fontWeight:700,color:B.orange,marginBottom:8,textTransform:"uppercase",letterSpacing:.5,display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Performance</div>
-                {buildCatOrder(perfTs).map(cat=>{
-                  const catTs=perfTs.filter(t=>(t.category||null)===cat);
-                  const catColor=cat?CAT_MAP[cat]||B.gray500:B.gray500;
-                  return <div key={cat||"__"} style={{marginBottom:8}}>
-                    {cat&&<div style={{fontSize:10,fontWeight:700,color:catColor,marginBottom:4,textTransform:"uppercase"}}>{cat}</div>}
-                    {catTs.map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.gray700}`}}>
-                      <span style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",width:18,height:18,borderRadius:4,border:`2px solid ${t.done?"#16a34a":"#6b7280"}`,background:t.done?"#16a34a":"transparent"}}>{t.done&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}</span>
-                      <span style={{fontSize:13,color:t.done?B.gray400:B.white,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
-                    </div>)}
-                  </div>;
-                })}
-                <div style={{marginTop:8,fontSize:12,color:B.gray400}}>{perfTs.filter(t=>t.done).length}/{perfTs.length} concluídos</div>
-              </div>}
-
-              {/* Finishing tasks */}
-              {hasFin&&finTs.length>0&&<div style={{padding:"12px 16px"}}>
-                <div style={{fontSize:11,fontWeight:700,color:FD.primary,marginBottom:8,textTransform:"uppercase",letterSpacing:.5,display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing Division</div>
-                {buildCatOrder(finTs).map(cat=>{
-                  const catTs=finTs.filter(t=>(t.category||null)===cat);
-                  const catColor=cat?CAT_MAP_FINISHING[cat]||B.gray500:B.gray500;
-                  return <div key={cat||"__"} style={{marginBottom:8}}>
-                    {cat&&<div style={{fontSize:10,fontWeight:700,color:catColor,marginBottom:4,textTransform:"uppercase"}}>{cat}</div>}
-                    {catTs.map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.gray700}`}}>
-                      <span style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",width:18,height:18,borderRadius:4,border:`2px solid ${t.done?"#16a34a":"#6b7280"}`,background:t.done?"#16a34a":"transparent"}}>{t.done&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}</span>
-                      <span style={{fontSize:13,color:t.done?B.gray400:B.white,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
-                    </div>)}
-                  </div>;
-                })}
-                <div style={{marginTop:8,fontSize:12,color:B.gray400}}>{finTs.filter(t=>t.done).length}/{finTs.length} concluídos</div>
-              </div>}
-
-              {/* No tasks yet */}
-              {vts.length===0&&<div style={{padding:"16px",fontSize:13,color:B.gray500,textAlign:"center"}}>Serviços ainda não lançados</div>}
-            </CollapsibleVehicleGroup>);
-          })}
+          :activeVehicles.map(v=><PortalVehicleCard key={v.id} v={v} tasks={tasks} payments={payments} defaultRate={defaultRate} onOpen={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}}/>)}
       </>}
 
       {/* ── History ── */}
@@ -11993,7 +11986,7 @@ function publicFinInfo(v,perfTasks,finTasks,payments,defaultRate){
   const executed=total>0?Math.min(total,executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)):0;
   return {total,paid,executed,balance:Math.max(0,total-paid),pending:Math.max(0,executed-paid)};
 }
-function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[]}) {
+function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[],onBack}) {
   const [hideNum,setHideNum]=useState(true); // valores ocultos por padrão (olho para mostrar)
   const [tab,setTab]=useState("resumo");
   const [tlAll,setTlAll]=useState(false);
@@ -12132,6 +12125,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
           <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Acompanhamento de serviço</div>
         </div>
+        {onBack&&<button onClick={onBack} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:`1px solid ${B.gray600}`,borderRadius:99,padding:"6px 12px 6px 8px",color:B.gray200,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Meus veículos</button>}
       </div>
     </div>
     {/* Barra de abas */}
@@ -13102,7 +13096,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.126";
+const APP_VERSION = "2026.11.13.127";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16525,7 +16519,7 @@ export default function App() {
           : clients.find(c=>c.id===clientSession.id)||clientSession)
       : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={clientCredits} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
+    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={clientCredits} clients={clients} purchaseOrders={purchaseOrders} stock={stock} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──

@@ -646,9 +646,28 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           ?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
             <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6l2-5h1a2 2 0 010 4h-1"/><circle cx="17" cy="17" r="2"/></svg></div>
             <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum veículo em serviço</div>
-            <div style={{fontSize:13}}>Quando seu veículo entrar na oficina, aparece aqui.</div>
+            <div style={{fontSize:13}}>Quando seu veículo entrar na oficina, ele aparece aqui.</div>
           </div>
           :activeVehicles.map(v=><PortalVehicleCard key={v.id} v={v} tasks={tasks} payments={payments} defaultRate={defaultRate} onOpen={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}}/>)}
+        {(()=>{
+          const idle=cliVehicles.filter(v=>!activeVehicles.some(x=>x.id===v.id));
+          if(idle.length===0) return null;
+          return (<>
+            <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"26px 2px 10px"}}>Na garagem</div>
+            {idle.map(v=>{
+              const last=cliHistory.find(h=>(h.vehicle_id||h.vehicleId)===v.id);
+              const ld=last&&(last.delivered_at||last.deliveredAt);
+              return (<button key={v.id} onClick={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",textAlign:"left",padding:"10px 14px",marginBottom:8,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,cursor:"pointer",fontFamily:"inherit",color:B.white}}>
+                {v.photo?<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>:<div style={{width:44,height:44,borderRadius:10,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.gray400}/></div>}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
+                  <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{v.plate}{v.color?` · ${v.color}`:""}{ld?` · última visita ${new Date(ld).toLocaleDateString("pt-BR")}`:""}</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
+              </button>);
+            })}
+          </>);
+        })()}
       </>}
 
       {/* ── History ── */}
@@ -13112,7 +13131,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.130";
+const APP_VERSION = "2026.11.13.131";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

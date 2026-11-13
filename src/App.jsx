@@ -1733,8 +1733,8 @@ async function generateImportPartsPDF(vehicle, client, company) {
       [`Valor original (${ip.cur||"USD"})`,`${nf(ip.amount)} ${ip.cur||"USD"}`],
       [`Cotacao`,`R$ ${Number(ip.rate||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})}`],
       [`Valor convertido`,`R$ ${nf(base)}`],
-      [`Imposto de importacao (${String(ip.taxPct||0).replace(".",",")}%)`,`R$ ${nf(tax)}`],
-      [`Frete / taxas`,`R$ ${nf(ip.extra)}`],
+      [`Imposto e taxas de importacao (${String(ip.taxPct||0).replace(".",",")}%)`,`R$ ${nf(tax)}`],
+      [`Frete`,`R$ ${nf(ip.extra)}`],
     ];
     if(ip.taskRef) rows.push([`Servico vinculado`,ip.taskRef]);
     doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
@@ -5621,9 +5621,9 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                   {conv>0&&<span style={{fontSize:11,color:B.gray300}}>= {fmtBRL(conv)}</span>}
                 </div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                  <span style={lbl}>Imposto %</span>
+                  <span style={lbl}>Imposto e taxas %</span>
                   <InlineEdit value={ip.taxPct!=null?String(ip.taxPct).replace(".",","):""} onSave={v=>upd({taxPct:num(v)})} placeholder="0" type="number"/>
-                  <span style={lbl}>Frete/taxas R$</span>
+                  <span style={lbl}>Frete R$</span>
                   <InlineEdit value={ip.extra?fmtR2(ip.extra):""} onSave={v=>upd({extra:num(v)})} placeholder="0,00" type="number"/>
                   {fin>0&&<span style={{fontSize:12,color:"#60a5fa",fontWeight:800,marginLeft:"auto"}}>Final {fmtBRL(fin)}</span>}
                 </div>
@@ -12839,7 +12839,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.112";
+const APP_VERSION = "2026.11.13.113";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

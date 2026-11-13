@@ -12039,7 +12039,6 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               </div>
             ))}
             {(v.importParts||[]).filter(p=>importFinal(p)>0).map((p,i)=>{
-              const base=Number(p.amount||0)*Number(p.rate||0);
               const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
               return(
               <div key={"ip"+i} style={{display:"flex",flexDirection:"column",gap:4,background:"#60a5fa08",border:"1px solid #60a5fa33",borderRadius:8,padding:"10px 12px"}}>
@@ -12051,9 +12050,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   <span style={{fontSize:13,fontWeight:800,color:"#60a5fa",flexShrink:0}}>{fmtBRL(importFinal(p))}</span>
                 </div>
                 <div style={{fontSize:11,color:B.gray400,lineHeight:1.5}}>
-                  {nf(p.amount)} {p.cur||"USD"} × R$ {Number(p.rate||0).toLocaleString("pt-BR",{maximumFractionDigits:4})} = {fmtBRL(base)}
-                  {Number(p.taxPct||0)>0&&<> · imposto {String(p.taxPct).replace(".",",")}% ({fmtBRL(base*Number(p.taxPct)/100)})</>}
-                  {Number(p.extra||0)>0&&<> · frete/taxas {fmtBRL(p.extra)}</>}
+                  Valor original: {nf(p.amount)} {p.cur||"USD"} · Valor final em reais acima, somando frete, imposto e taxa de importação.
                 </div>
               </div>);
             })}
@@ -12842,7 +12839,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.111";
+const APP_VERSION = "2026.11.13.112";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

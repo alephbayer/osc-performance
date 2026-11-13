@@ -5017,6 +5017,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [xfO, setXfO] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState({});
   const [taskQ, setTaskQ] = useState("");
+  const [taskParts, setTaskParts] = useState(false);
   const [showPhotos,setSP]=useState(false);
   const [cpLink,setCPL]=useState(false);
   const [showAccount,setSA]=useState(false);
@@ -5436,17 +5437,17 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             </div>
           </div>
         </div>}
-        {vts.length>=4&&<div style={{position:"relative",margin:"2px 0 6px"}}>
+        {vts.length>=4&&<div style={{display:"flex",alignItems:"center",gap:10,margin:"2px 0 6px"}}><div style={{position:"relative",flex:1,minWidth:0}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input value={taskQ} onChange={e=>setTaskQ(e.target.value)} placeholder={`Buscar serviço nesta OS (${vts.length})`} type="search" enterKeyHint="search" autoComplete="off"
+          <input value={taskQ} onChange={e=>setTaskQ(e.target.value)} placeholder={taskParts?`Serviço ou peça nesta OS (${vts.length})`:`Buscar serviço nesta OS (${vts.length})`} type="search" enterKeyHint="search" autoComplete="off"
             style={{width:"100%",boxSizing:"border-box",padding:"9px 34px 9px 32px",borderRadius:9,border:`1px solid ${taskQ?B.orange+"88":B.gray600}`,background:B.gray900,color:B.white,fontSize:16,outline:"none",fontFamily:"inherit"}}/>
           {taskQ&&<button onClick={()=>setTaskQ("")} aria-label="Limpar busca" style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",width:30,height:30,border:"none",background:"none",color:B.gray400,fontSize:18,cursor:"pointer"}}>×</button>}
-        </div>}
+        </div><PartsToggle on={taskParts} setOn={setTaskParts} color={B.orange}/></div>}
         {(()=>{
           // Group tasks by category: alphabetical, uncategorized last
           const nq=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
           const qq=nq(taskQ).trim();
-          const vtsQ=qq?vts.filter(t=>qq.split(/\s+/).every(w=>nq([t.label,t.category,t.description,...(t.materials||[]).map(m=>(m.name||"")+" "+(m.brand||""))].join(" ")).includes(w))):vts;
+          const vtsQ=qq?vts.filter(t=>qq.split(/\s+/).every(w=>nq([t.label,t.category,t.description,...(taskParts?(t.materials||[]).map(m=>(m.name||"")+" "+(m.brand||"")):[])].join(" ")).includes(w))):vts;
           if(qq&&vtsQ.length===0) return <div style={{padding:"14px 4px",fontSize:12.5,color:B.gray400,textAlign:"center"}}>Nenhum serviço encontrado para “{taskQ.trim()}”.</div>;
           const catOrder=buildCatOrder(vtsQ);
           return <>{qq&&<div style={{fontSize:11,color:B.gray400,margin:"0 2px 4px"}}>{vtsQ.length} de {vts.length} serviço{vts.length!==1?"s":""}</div>}{catOrder.map(cat=>{
@@ -12698,7 +12699,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.107";
+const APP_VERSION = "2026.11.13.108";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

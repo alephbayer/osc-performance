@@ -136,19 +136,19 @@ function PinInput({label, onSubmit, error, submitLabel="Confirmar", autoFocus=tr
     if(e.key==="Enter"&&pin.length===4) onSubmit(pin);
   };
   return(<div>
-    <div style={{fontSize:12,color:B.gray400,marginBottom:12,textAlign:"center"}}>{label}</div>
+    <div style={{fontSize:10,letterSpacing:1,textTransform:"uppercase",color:B.gray500,fontWeight:700,marginBottom:14,textAlign:"center"}}>{label}</div>
     <div style={{display:"flex",gap:10,justifyContent:"center",marginBottom:16}}>
       {inputs.map(i=>(
         <input key={i} ref={refs[i]} type="password" inputMode="numeric" maxLength={1}
           value={pin[i]||""} autoFocus={autoFocus&&i===0}
           onChange={e=>handleKey(i,e.target.value)}
           onKeyDown={e=>handleBackspace(i,e)}
-          style={{width:52,height:60,borderRadius:12,border:`2px solid ${error?B.red:pin[i]?B.blue:B.gray600}`,background:B.gray900,color:B.white,fontSize:28,textAlign:"center",outline:"none",caretColor:"transparent"}}/>
+          style={{width:52,height:60,borderRadius:14,border:`1px solid ${error?B.red:pin[i]?B.orange:B.gray600}`,background:B.gray900,color:B.white,fontSize:26,textAlign:"center",outline:"none",caretColor:"transparent",fontFamily:"inherit"}}/>
       ))}
     </div>
     {error&&<div style={{color:B.red,fontSize:12,textAlign:"center",marginBottom:10}}>{error}</div>}
     <button onClick={()=>onSubmit(pin)} disabled={pin.length<4}
-      style={{width:"100%",padding:"12px 0",borderRadius:10,background:pin.length===4?B.blue:"rgba(255,255,255,.1)",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:pin.length===4?"pointer":"default"}}>
+      style={{width:"100%",minHeight:46,borderRadius:12,background:pin.length===4?B.orange:B.gray700,border:"none",color:pin.length===4?B.white:B.gray500,fontWeight:800,fontSize:14,cursor:pin.length===4?"pointer":"default",fontFamily:"inherit"}}>
       {submitLabel}
     </button>
   </div>);
@@ -195,22 +195,22 @@ function ClientLoginScreen({clients,onLogin}) {
 
   return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",padding:20}}>
     <div style={{maxWidth:380,width:"100%"}}>
-      <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{width:56,height:56,borderRadius:14,background:B.blue,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><ICar s={28} c={B.white}/></div>
-        <OscLogo h={30} center/>
-        <div style={{fontSize:12,color:B.gray400,marginTop:4}}>Portal do Cliente</div>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:30}}>
+        <OscLockup h={52}/>
+        <div style={{height:1,width:48,background:B.gray700,margin:"14px 0 10px"}}/>
+        <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:1.2}}>Portal do cliente</div>
       </div>
-      <div style={{background:B.gray800,borderRadius:16,padding:24,border:`1px solid ${B.gray700}`}}>
+      <div style={{background:B.gray800,borderRadius:18,padding:"26px 24px",border:`1px solid ${B.gray700}`}}>
 
         {step==="phone"&&<>
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:B.gray200,fontWeight:600,marginBottom:10}}>
-            <ILock s={14} c={B.blue}/>Seu número de WhatsApp
+          <label style={{display:"block",fontSize:10,letterSpacing:1,textTransform:"uppercase",color:B.gray500,fontWeight:700,marginBottom:10}}>
+            Seu número de WhatsApp
           </label>
           <input value={phone} onChange={e=>{setPhone(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&tryPhone()}
             placeholder="Ex: 5511999998888" autoFocus
-            style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`1px solid ${err?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:15,outline:"none",boxSizing:"border-box"}}/>
+            style={{width:"100%",minHeight:48,padding:"0 14px",borderRadius:12,border:`1px solid ${err?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:15,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
           {err&&<div style={{color:B.red,fontSize:12,marginTop:8}}>{err}</div>}
-          <button onClick={tryPhone} style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:10,background:B.blue,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Continuar</button>
+          <button onClick={tryPhone} style={{width:"100%",marginTop:16,minHeight:46,borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>Continuar</button>
           <div style={{marginTop:14,fontSize:11.5,color:B.gray500,textAlign:"center",lineHeight:1.5}}>Use o mesmo número cadastrado pela oficina, com DDI e DDD (ex: 55119...)</div>
         </>}
 
@@ -13096,7 +13096,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.135";
+const APP_VERSION = "2026.11.13.136";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

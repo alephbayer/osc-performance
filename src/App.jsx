@@ -397,57 +397,52 @@ function ClientNotesTab({client, vehicles}) {
   };
 
   const blue=B.blue;
+  const sec={fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase"};
   return (<>
-    <div style={{marginBottom:16,padding:"10px 14px",background:`${blue}10`,border:`1px solid ${blue}33`,borderRadius:10}}>
-      <div style={{fontSize:12,fontWeight:700,color:blue,marginBottom:4}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Anotações para a oficina</div>
-      <div style={{fontSize:11,color:B.gray400,lineHeight:1.5}}>Descreva problemas ou itens que gostaria que fossem verificados quando seu veículo entrar na oficina. A equipe verá essas anotações ao receber o carro.</div>
-    </div>
+    <div style={{...sec,margin:"0 2px 6px"}}>Anotações para a oficina</div>
+    <div style={{fontSize:12,color:B.gray400,lineHeight:1.55,margin:"0 2px 16px"}}>Descreva problemas ou itens que gostaria que fossem verificados quando seu veículo entrar na oficina. A equipe verá essas anotações ao receber o carro.</div>
 
-    {/* Vehicle selector */}
     {vehicles.length>1&&<div style={{marginBottom:14,display:"flex",gap:6,flexWrap:"wrap"}}>
-      {vehicles.map(v=>(
+      {vehicles.map(v=>{const on=selectedVehicle===v.id;return(
         <button key={v.id} onClick={()=>setSelectedVehicle(v.id)}
-          style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${selectedVehicle===v.id?blue:B.gray600}`,background:selectedVehicle===v.id?`${blue}18`:"none",color:selectedVehicle===v.id?blue:B.gray400,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-          {v.photo&&<img src={v.photo} alt="" style={{width:18,height:18,borderRadius:4,objectFit:"cover"}}/>}
+          style={{minHeight:36,padding:"0 14px",borderRadius:99,border:`1px solid ${on?B.orange+"88":B.gray700}`,background:on?`${B.orange}18`:"none",color:on?B.orange:B.gray400,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontFamily:"inherit"}}>
+          {v.photo&&<img src={v.photo} alt="" style={{width:18,height:18,borderRadius:99,objectFit:"cover"}}/>}
           {v.model}
-        </button>
-      ))}
+        </button>);})}
     </div>}
 
-    {/* Add note */}
-    <div style={{background:B.gray800,borderRadius:12,padding:14,border:`1px solid ${B.gray700}`,marginBottom:16}}>
+    <div style={{background:B.gray800,borderRadius:16,padding:14,border:`1px solid ${B.gray700}`,marginBottom:18}}>
       <textarea value={newNote} onChange={e=>setNewNote(e.target.value)}
-        placeholder="Ex: Barulho estranho ao frear, Ar condicionado não gela, Luz do painel acesa..."
-        rows={3} style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",resize:"none",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.5}}/>
+        placeholder="Ex: Barulho estranho ao frear, ar-condicionado não gela, luz do painel acesa..."
+        rows={3} style={{width:"100%",padding:"4px 2px",border:"none",background:"transparent",color:B.white,fontSize:14,outline:"none",resize:"none",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.55}}/>
       <button onClick={addNote} disabled={!newNote.trim()}
-        style={{marginTop:8,width:"100%",padding:"10px 0",borderRadius:9,background:newNote.trim()?blue:B.gray700,border:"none",color:B.white,fontWeight:800,fontSize:13,cursor:newNote.trim()?"pointer":"not-allowed"}}>
+        style={{marginTop:8,width:"100%",minHeight:44,borderRadius:12,background:newNote.trim()?B.orange:B.gray700,border:"none",color:newNote.trim()?B.white:B.gray500,fontWeight:800,fontSize:13,cursor:newNote.trim()?"pointer":"not-allowed",fontFamily:"inherit"}}>
         Adicionar anotação
       </button>
     </div>
 
-    {/* Notes list */}
     {loading?<div style={{textAlign:"center",padding:20,color:B.gray400}}>Carregando...</div>
-    :notes.length===0?<div style={{textAlign:"center",padding:"32px 0",color:B.gray400}}>
-        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-        <div style={{fontSize:13}}>Nenhuma anotação ainda</div>
-      </div>
-    :notes.map(n=>(
-      <div key={n.id} style={{background:B.gray800,borderRadius:10,padding:"12px 14px",marginBottom:8,border:`1px solid ${n.resolved?B.green+"44":B.gray700}`,display:"flex",alignItems:"flex-start",gap:10}}>
-        <div style={{flex:1}}>
-          <div style={{fontSize:13,color:n.resolved?B.gray400:B.white,textDecoration:n.resolved?"line-through":"none",lineHeight:1.5}}>{n.note}</div>
-          <div style={{fontSize:10,color:B.gray500,marginTop:4}}>
-            {new Date(n.created_at).toLocaleDateString("pt-BR")}
-            {n.resolved&&<span style={{color:B.green,marginLeft:8,display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Recebido pela oficina</span>}
+    :notes.length===0?<div style={{textAlign:"center",padding:"28px 0",color:B.gray500,fontSize:13}}>Nenhuma anotação ainda</div>
+    :<>
+      <div style={{...sec,margin:"0 2px 8px"}}>Suas anotações · {notes.length}</div>
+      <div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
+        {notes.map((n,i)=>(
+          <div key={n.id} style={{padding:"13px 16px",borderTop:i?`1px solid ${B.gray700}`:"none",display:"flex",alignItems:"flex-start",gap:10}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,color:n.resolved?B.gray500:B.white,textDecoration:n.resolved?"line-through":"none",lineHeight:1.55}}>{n.note}</div>
+              <div style={{fontSize:10,color:B.gray500,marginTop:5,display:"flex",alignItems:"center",gap:8}}>
+                {new Date(n.created_at).toLocaleDateString("pt-BR")}
+                {n.resolved&&<span style={{color:B.green,fontWeight:700,letterSpacing:.5,textTransform:"uppercase"}}>Resolvida</span>}
+              </div>
+            </div>
+            {!n.resolved&&<button onClick={()=>deleteNote(n.id)} aria-label="Excluir anotação"
+              style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:6,flexShrink:0}}>
+              <ITrash s={14}/>
+            </button>}
           </div>
-        </div>
-        {!n.resolved&&<button onClick={()=>deleteNote(n.id)}
-          style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,flexShrink:0}}
-          onMouseEnter={e=>e.currentTarget.style.color=B.red}
-          onMouseLeave={e=>e.currentTarget.style.color=B.gray500}>
-          <ITrash s={14}/>
-        </button>}
+        ))}
       </div>
-    ))}
+    </>}
   </>);
 }
 
@@ -458,26 +453,20 @@ function PixPaymentBox() {
   const wa="5521966816241";
   const copy=()=>{navigator.clipboard?.writeText(pix).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});};
   return(
-    <div style={{background:"linear-gradient(135deg,#0d7a4e18,#0d7a4e08)",border:"2px solid #0d7a4e44",borderRadius:16,padding:"16px 18px",marginBottom:16}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-        <div style={{width:36,height:36,borderRadius:10,background:"#0d7a4e22",display:"flex",alignItems:"center",justifyContent:"center",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-        <div>
-          <div style={{fontWeight:800,fontSize:14,color:B.white}}>Pagar via PIX</div>
-          <div style={{fontSize:11,color:B.gray400}}>Chave CNPJ</div>
-        </div>
-      </div>
-      <div style={{background:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
+    <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16,padding:"18px",marginBottom:16}}>
+      <div style={{fontSize:10,letterSpacing:1.2,color:B.gray500,fontWeight:700,textTransform:"uppercase"}}>Pagar via PIX</div>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginTop:12}}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:10,color:B.gray500,marginBottom:2}}>Chave PIX</div>
-          <div style={{fontSize:14,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:.5}}>23.783.927/0001-40</div>
+          <div style={{fontSize:10,color:B.gray500,marginBottom:3}}>Chave CNPJ</div>
+          <div style={{fontSize:15,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:.5}}>23.783.927/0001-40</div>
         </div>
-        <button onClick={copy} style={{padding:"8px 14px",borderRadius:9,background:copied?"#0d7a4e":"#0d7a4e22",border:`1px solid ${copied?"#0d7a4e":"#0d7a4e66"}`,color:copied?B.white:"#4ade80",cursor:"pointer",fontWeight:800,fontSize:12,flexShrink:0,transition:"all .2s",whiteSpace:"nowrap"}}>
-          {copied?"✓ Copiado!":"Copiar chave"}
+        <button onClick={copy} style={{minHeight:40,padding:"0 16px",borderRadius:99,background:copied?B.green:"none",border:`1px solid ${copied?B.green:B.gray600}`,color:copied?B.white:B.gray200,cursor:"pointer",fontWeight:700,fontSize:12,flexShrink:0,transition:"all .2s",whiteSpace:"nowrap",fontFamily:"inherit"}}>
+          {copied?"Copiado":"Copiar chave"}
         </button>
       </div>
       <a href={`https://wa.me/${wa}?text=${encodeURIComponent("Olá! Segue o comprovante de pagamento.")}`} target="_blank" rel="noreferrer"
-        style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"#25d36618",border:"1px solid #25d36644",borderRadius:10,textDecoration:"none",color:"#25d366",fontWeight:700,fontSize:13}}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:14,minHeight:42,borderTop:`1px solid ${B.gray700}`,paddingTop:14,textDecoration:"none",color:B.gray300,fontWeight:600,fontSize:12}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
         Enviar comprovante pelo WhatsApp
       </a>
     </div>
@@ -13107,7 +13096,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.133";
+const APP_VERSION = "2026.11.13.134";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

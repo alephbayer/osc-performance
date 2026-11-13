@@ -12633,7 +12633,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.97";
+const APP_VERSION = "2026.11.13.98";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17224,8 +17224,6 @@ export default function App() {
       }).filter(m=>m.vts>0||m.tTotal>0);
       return(<div>
         <DashHeader role={adminRole}/>
-        <SL2 label="Atenção necessária"/>
-        {AlertsBlock()}
         <SL2 label="Operação atual"/>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
           <DashCard color={B.orange} icon={iconWrench} label="OSs ativas" value={activeVehicleCount} sub="Performance" onClick={()=>goSection("oficina","clients")}/>

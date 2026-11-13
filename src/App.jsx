@@ -12690,7 +12690,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.103";
+const APP_VERSION = "2026.11.13.104";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17575,7 +17575,7 @@ export default function App() {
   ];
 
   return (<div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
-    {!online&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:2000,background:B.red,color:"#fff",fontSize:12,fontWeight:700,textAlign:"center",padding:"calc(6px + env(safe-area-inset-top)) 12px 6px",letterSpacing:.2}}>Sem conexão — as alterações não estão sendo salvas</div>}
+    {!online&&<div style={{position:"fixed",top:"calc(env(safe-area-inset-top) + 6px)",left:0,right:0,zIndex:2000,display:"flex",justifyContent:"center",pointerEvents:"none"}}><div style={{display:"inline-flex",alignItems:"center",gap:7,background:"#b91c1c",color:"#fff",fontSize:11,fontWeight:700,letterSpacing:.3,padding:"6px 13px",borderRadius:99,boxShadow:"0 4px 16px rgba(0,0,0,.28)"}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 015.17-2.39"/><path d="M10.71 5.05A16 16 0 0122.58 9"/><path d="M1.42 9a15.91 15.91 0 014.7-2.88"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Sem conexão · alterações não estão sendo salvas</div></div>}
 
     {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
     <style>{`@media(max-width:640px){.osc-sidebar{display:none!important}.osc-liquid-nav{display:flex!important}}@media(min-width:641px){.osc-sidebar{display:flex!important}.osc-liquid-nav{display:none!important}}`}</style>

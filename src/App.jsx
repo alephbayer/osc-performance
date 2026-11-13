@@ -12845,12 +12845,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 <div style={{fontSize:11,color:B.gray400,marginTop:3}}>{nf(p.amount)} {p.cur||"USD"}{p.taskRef?` · ${p.taskRef}`:""}</div>
                 <div style={{fontSize:10,fontWeight:700,marginTop:4,letterSpacing:.3,color:p.arrived?B.green:B.gray400}}>{p.arrived?`CHEGOU${p.arrivedAt?` · ${new Date(p.arrivedAt).toLocaleDateString("pt-BR")}`:""}`:"A CAMINHO"}</div>
               </div>
-              <div style={{fontSize:15,fontWeight:800,color:B.white,flexShrink:0}}>{fmtBRL(importFinal(p))}</div>
+              <div style={{fontSize:15,fontWeight:800,color:B.white,flexShrink:0}}>{fmtBRLReal(importFinal(p))}</div>
             </div>
           ))}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",borderTop:`1px solid ${B.gray600}`,marginTop:4,paddingTop:12}}>
             <span style={{fontSize:11,color:B.gray400,letterSpacing:.6,fontWeight:700}}>TOTAL</span>
-            <span style={{fontSize:18,fontWeight:800,color:B.orange}}>{fmtBRL(tot)}</span>
+            <span style={{fontSize:18,fontWeight:800,color:B.orange}}>{fmtBRLReal(tot)}</span>
           </div>
         </div></div>);
       })()}
@@ -13102,7 +13102,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.125";
+const APP_VERSION = "2026.11.13.126";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -1715,7 +1715,7 @@ async function generateImportPartsPDF(vehicle, client, company) {
   const ink=[28,28,30], gray=[128,128,132], line=[222,222,224], accent=[234,88,12];
   const parts=(vehicle.importParts||[]).filter(p=>importFinal(p)>0);
   const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-  const cap=(t,x,y,size,color,opts={})=>{doc.setFont("helvetica","normal");doc.setFontSize(size);doc.setTextColor(...color);doc.text(String(t).toUpperCase(),x,y,{charSpace:0.9,...opts});};
+  const cap=(t,x,y,size,color,opts={})=>{doc.setFont("helvetica","normal");doc.setFontSize(size);doc.setTextColor(...color);const tx=String(t).toUpperCase();let px=x;if(opts.align==="right"){px=x-doc.getTextWidth(tx)-0.9*tx.length;}doc.text(tx,px,y,{charSpace:0.9});};
   const hair=(y,c=line,w=0.2)=>{doc.setDrawColor(...c);doc.setLineWidth(w);doc.line(mx,y,pageW-mx,y);};
   const footer=()=>{hair(pageH-18);cap(company?.name||"OSC Group",mx,pageH-12,6.5,gray);cap(new Date().toLocaleDateString("pt-BR"),pageW-mx,pageH-12,6.5,gray,{align:"right"});};
   // Cabeçalho
@@ -12854,7 +12854,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.119";
+const APP_VERSION = "2026.11.13.120";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

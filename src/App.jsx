@@ -1025,6 +1025,14 @@ function boughtPendingValue(divTasks, defaultRate, osOpen=true) {
   });
   return v;
 }
+function ImpField({value,onSave,placeholder,text,style={}}){
+  const [v,setV]=useState(value);
+  useEffect(()=>{setV(value);},[value]);
+  const commit=()=>{if(v!==value) onSave(v);};
+  return <input value={v} onChange={e=>setV(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter") e.currentTarget.blur();}}
+    placeholder={placeholder} inputMode={text?"text":"decimal"}
+    style={{width:"100%",boxSizing:"border-box",padding:"5px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",...style}}/>;
+}
 const IMPORT_CURS=["USD","EUR","GBP","JPY","CNY","CAD","AUD","CHF"];
 const importFinal=p=>{const base=Number(p.amount||0)*Number(p.rate||0);return Math.max(0,base*(1+Number(p.taxPct||0)/100)+Number(p.extra||0)-Number(p.discount||0));};
 const importTotal=v=>(v&&Array.isArray(v.importParts)?v.importParts:[]).reduce((s,p)=>s+importFinal(p),0);
@@ -5594,51 +5602,47 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               const num=v=>parseFloat(String(v).replace(",","."))||0;
               const conv=Number(ip.amount||0)*Number(ip.rate||0);
               const fin=importFinal(ip);
-              const lbl={fontSize:10,color:B.gray500,flexShrink:0};
+              const selSt={width:"100%",boxSizing:"border-box",padding:"5px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"};
               return(
-              <div key={ii} style={{display:"flex",flexDirection:"column",gap:5,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:7,padding:"8px 10px",marginBottom:5}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                  <span style={{fontSize:10,color:B.gray500,fontWeight:700,flexShrink:0}}>#{ii+1}</span>
-                  <InlineEdit value={ip.name||""} onSave={v=>upd({name:v})} placeholder="Nome da peça"/>
+              <div key={ii} style={{display:"flex",flexDirection:"column",gap:8,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"10px 12px",marginBottom:6}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <ImpField value={ip.name||""} onSave={v=>upd({name:v})} placeholder="Nome da peça" text style={{flex:1,fontWeight:600,fontSize:13}}/>
                   <button onClick={()=>{const importParts=(vehicle.importParts||[]).filter((_,i)=>i!==ii);onUpdateVehicle(vehicle.id,{importParts});}}
-                    style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex",marginLeft:"auto"}}
+                    style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
                     onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={12}/></button>
                 </div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                  <span style={lbl}>Valor</span>
-                  <select value={ip.cur||"USD"} onChange={e=>upd({cur:e.target.value,rate:0})}
-                    style={{padding:"3px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}>
-                    {IMPORT_CURS.map(c=><option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <InlineEdit value={ip.amount?fmtR2(ip.amount):""} onSave={v=>upd({amount:num(v)})} placeholder="0,00" type="number"/>
-                  <span style={lbl}>Cotação R$</span>
-                  <InlineEdit value={ip.rate?String(ip.rate).replace(".",","):""} onSave={v=>upd({rate:num(v)})} placeholder="0,00" type="number"/>
-                  <button title="Buscar cotação atual" onClick={async()=>{
-                    try{const cur=ip.cur||"USD";const r=await fetch(`https://economia.awesomeapi.com.br/last/${cur}-BRL`);const j=await r.json();const q=parseFloat(j[`${cur}BRL`]?.ask);if(!q)throw new Error("sem cotação");upd({rate:Math.round(q*10000)/10000});notify(`Cotação ${cur}: R$ ${fmtR2(q)}`);}
-                    catch(e){notify("Não consegui buscar a cotação: "+errMsg(e));}}}
-                    style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:6,cursor:"pointer",color:B.gray400,padding:"2px 6px",fontSize:10,display:"flex",alignItems:"center",gap:3}}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Atual
-                  </button>
-                  {conv>0&&<span style={{fontSize:11,color:B.gray300}}>= {fmtBRL(conv)}</span>}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+                  <div><div style={{fontSize:9,color:B.gray500,marginBottom:2,letterSpacing:.4}}>MOEDA</div>
+                    <select value={ip.cur||"USD"} onChange={e=>upd({cur:e.target.value,rate:0})} style={selSt}>
+                      {IMPORT_CURS.map(c=><option key={c} value={c}>{c}</option>)}
+                    </select></div>
+                  <div><div style={{fontSize:9,color:B.gray500,marginBottom:2,letterSpacing:.4}}>VALOR</div>
+                    <ImpField value={ip.amount?fmtR2(ip.amount):""} onSave={v=>upd({amount:num(v)})} placeholder="0,00"/></div>
+                  <div><div style={{fontSize:9,color:B.gray500,marginBottom:2,letterSpacing:.4,display:"flex",justifyContent:"space-between"}}>COTAÇÃO R$
+                    <span title="Buscar cotação atual" onClick={async()=>{
+                      try{const cur=ip.cur||"USD";const r=await fetch(`https://economia.awesomeapi.com.br/last/${cur}-BRL`);const j=await r.json();const q=parseFloat(j[`${cur}BRL`]?.ask);if(!q)throw new Error("sem cotação");upd({rate:Math.round(q*10000)/10000});notify(`Cotação ${cur}: R$ ${fmtR2(q)}`);}
+                      catch(e){notify("Não consegui buscar a cotação: "+errMsg(e));}}}
+                      style={{cursor:"pointer",color:"#60a5fa",fontWeight:700,letterSpacing:0}}>atual</span></div>
+                    <ImpField value={ip.rate?String(ip.rate).replace(".",","):""} onSave={v=>upd({rate:num(v)})} placeholder="0,00"/></div>
+                  <div><div style={{fontSize:9,color:B.gray500,marginBottom:2,letterSpacing:.4}}>IMPOSTO E TAXAS %</div>
+                    <ImpField value={ip.taxPct!=null?String(ip.taxPct).replace(".",","):""} onSave={v=>upd({taxPct:num(v)})} placeholder="0"/></div>
+                  <div><div style={{fontSize:9,color:B.gray500,marginBottom:2,letterSpacing:.4}}>FRETE R$</div>
+                    <ImpField value={ip.extra?fmtR2(ip.extra):""} onSave={v=>upd({extra:num(v)})} placeholder="0,00"/></div>
+                  <div><div style={{fontSize:9,color:B.gray500,marginBottom:2,letterSpacing:.4}}>DESCONTO R$</div>
+                    <ImpField value={ip.discount?fmtR2(ip.discount):""} onSave={v=>upd({discount:num(v)})} placeholder="0,00"/></div>
                 </div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                  <span style={lbl}>Imposto e taxas %</span>
-                  <InlineEdit value={ip.taxPct!=null?String(ip.taxPct).replace(".",","):""} onSave={v=>upd({taxPct:num(v)})} placeholder="0" type="number"/>
-                  <span style={lbl}>Frete R$</span>
-                  <InlineEdit value={ip.extra?fmtR2(ip.extra):""} onSave={v=>upd({extra:num(v)})} placeholder="0,00" type="number"/>
-                  <span style={lbl}>Desconto R$</span>
-                  <InlineEdit value={ip.discount?fmtR2(ip.discount):""} onSave={v=>upd({discount:num(v)})} placeholder="0,00" type="number"/>
-                  {fin>0&&<span style={{fontSize:12,color:"#60a5fa",fontWeight:800,marginLeft:"auto"}}>Final {fmtBRL(fin)}</span>}
-                </div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                  <span style={lbl}>Serviço:</span>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                   <select value={ip.taskRef||""} onChange={e=>upd({taskRef:e.target.value})}
-                    style={{flex:1,minWidth:120,padding:"3px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:ip.taskRef?B.white:B.gray500,fontSize:11,outline:"none"}}>
-                    <option value="">Nenhum</option>
+                    style={{...selSt,flex:"1 1 140px",width:"auto",fontSize:11,color:ip.taskRef?B.white:B.gray500}}>
+                    <option value="">Sem serviço vinculado</option>
                     {tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty).map(t=>(
                       <option key={t.id} value={t.label}>{t.label}{t.done?" ✓":""}</option>
                     ))}
                   </select>
+                  <div style={{textAlign:"right",marginLeft:"auto"}}>
+                    {conv>0&&<div style={{fontSize:10,color:B.gray500}}>convertido {fmtBRL(conv)}</div>}
+                    {fin>0&&<div style={{fontSize:14,color:"#60a5fa",fontWeight:800}}>{fmtBRL(fin)}</div>}
+                  </div>
                 </div>
               </div>);
             })}
@@ -12842,7 +12846,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.114";
+const APP_VERSION = "2026.11.13.115";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

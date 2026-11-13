@@ -1026,7 +1026,7 @@ function boughtPendingValue(divTasks, defaultRate, osOpen=true) {
   return v;
 }
 const IMPORT_CURS=["USD","EUR","GBP","JPY","CNY","CAD","AUD","CHF"];
-const importFinal=p=>{const base=Number(p.amount||0)*Number(p.rate||0);return base*(1+Number(p.taxPct||0)/100)+Number(p.extra||0);};
+const importFinal=p=>{const base=Number(p.amount||0)*Number(p.rate||0);return Math.max(0,base*(1+Number(p.taxPct||0)/100)+Number(p.extra||0)-Number(p.discount||0));};
 const importTotal=v=>(v&&Array.isArray(v.importParts)?v.importParts:[]).reduce((s,p)=>s+importFinal(p),0);
 function vehicleExtras(v) {
   return (v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0)
@@ -1735,6 +1735,7 @@ async function generateImportPartsPDF(vehicle, client, company) {
       [`Valor convertido`,`R$ ${nf(base)}`],
       [`Imposto e taxas de importacao (${String(ip.taxPct||0).replace(".",",")}%)`,`R$ ${nf(tax)}`],
       [`Frete`,`R$ ${nf(ip.extra)}`],
+      ...(Number(ip.discount||0)>0?[[`Desconto`,`- R$ ${nf(ip.discount)}`]]:[]),
     ];
     if(ip.taskRef) rows.push([`Servico vinculado`,ip.taskRef]);
     doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
@@ -5625,6 +5626,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                   <InlineEdit value={ip.taxPct!=null?String(ip.taxPct).replace(".",","):""} onSave={v=>upd({taxPct:num(v)})} placeholder="0" type="number"/>
                   <span style={lbl}>Frete R$</span>
                   <InlineEdit value={ip.extra?fmtR2(ip.extra):""} onSave={v=>upd({extra:num(v)})} placeholder="0,00" type="number"/>
+                  <span style={lbl}>Desconto R$</span>
+                  <InlineEdit value={ip.discount?fmtR2(ip.discount):""} onSave={v=>upd({discount:num(v)})} placeholder="0,00" type="number"/>
                   {fin>0&&<span style={{fontSize:12,color:"#60a5fa",fontWeight:800,marginLeft:"auto"}}>Final {fmtBRL(fin)}</span>}
                 </div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
@@ -12839,7 +12842,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.113";
+const APP_VERSION = "2026.11.13.114";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

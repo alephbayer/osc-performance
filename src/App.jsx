@@ -1858,7 +1858,7 @@ async function renderElegantQuote(o) {
       y+=5.5;
       doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(...(t.outsourced?accentText:ink));
       doc.text(nl,mx+4,y);
-      serif(R(c.total),cT,y+0.4,11.5,{align:"right"});
+      if(c.total>0.004) serif(R(c.total),cT,y+0.4,11.5,{align:"right"});
       y+=(nl.length-1)*4.5;
       if(dl.length){ doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray); y+=4; doc.text(dl,mx+4,y); y+=(dl.length-1)*4; }
       if(hasLabor){
@@ -13087,7 +13087,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.123";
+const APP_VERSION = "2026.11.13.124";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

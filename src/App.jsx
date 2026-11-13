@@ -4386,6 +4386,14 @@ function parsePurchaseLines(lines0) {
   return rows.filter(r => r.name && r.name.length >= 3 && !skip.test(r.name)).map(({ name, qty, cost, kind, sure }) => ({ name, qty, cost, kind, sure }));
 }
 const _normName = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+// busca por peças: o veículo entra se alguma peça (nome/marca) de qualquer tarefa combinar com o texto
+const vehHasPart=(v,q,tasks)=>{ const n=_normName(q); if(!n) return false; return tasks.some(t=>t.vehicleId===v.id&&(Array.isArray(t.materials)?t.materials:[]).some(m=>_normName((m.name||"")+" "+(m.brand||"")).includes(n))); };
+function PartsToggle({on,setOn,color}){
+  return(<label title="Incluir as peças lançadas nas tarefas na busca" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,cursor:"pointer",fontSize:11.5,fontWeight:700,color:on?color:B.gray400,userSelect:"none"}}>
+    <span style={{width:16,height:16,borderRadius:5,border:`1.5px solid ${on?color:B.gray500}`,background:on?color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}>{on&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}</span>
+    <input type="checkbox" checked={on} onChange={e=>setOn(e.target.checked)} style={{display:"none"}}/>Peças
+  </label>);
+}
 
 function TaskPicker({ value, onChange, vts, allowDefault = false, placeholder = "Tarefa" }) {
   const [open, setOpen] = useState(false);
@@ -12690,7 +12698,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.106";
+const APP_VERSION = "2026.11.13.107";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15884,6 +15892,8 @@ export default function App() {
   const [osSearch,setOsSearch]=useState("");
   const [showNewOSModal,setShowNewOSModal]=useState(null); // "performance" | "finishing" | null
   const [finSearch,setFinSearch]=useState("");
+  const [osParts,setOsParts]=useState(false);
+  const [finParts,setFinParts]=useState(false);
   const [testOpen,setTestOpen]=useState(false);
   const [confirmReadyId,setConfirmReadyId]=useState(null);
   const [cN,setCN]=useState(""); const [cP,setCP]=useState(""); const [cE,setCE]=useState("");
@@ -17714,7 +17724,8 @@ export default function App() {
             ? allActive.filter(v=>
                 v.model.toLowerCase().includes(osSearch.toLowerCase())||
                 v.plate.toLowerCase().includes(osSearch.toLowerCase())||
-                (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase())
+                (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase())||
+                (osParts&&vehHasPart(v,osSearch,tasks))
               )
             : allActive;
           if(allActive.length===0) return (
@@ -17732,7 +17743,8 @@ export default function App() {
             ? readyVehiclesAll.filter(v=>
                 v.model.toLowerCase().includes(osSearch.toLowerCase())||
                 v.plate.toLowerCase().includes(osSearch.toLowerCase())||
-                (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase()))
+                (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase())||
+                (osParts&&vehHasPart(v,osSearch,tasks)))
             : readyVehiclesAll;
           const allGroupable=[...activeVehicles,...readyVehicles.filter(r=>!activeVehicles.find(a=>a.id===r.id))];
           [...employees].filter(e=>e.division!=="finishing").sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).forEach(emp=>{
@@ -17751,11 +17763,12 @@ export default function App() {
           });
           return <><div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
             <div style={{position:"relative",flex:1}}>
-            <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
+            <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder={osParts?"Modelo, placa, cliente ou peça…":"Buscar por modelo, placa ou cliente…"}
               style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
             <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
             {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
             </div>
+            <PartsToggle on={osParts} setOn={setOsParts} color={B.orange}/>
             <button onClick={()=>setShowNewOSModal("performance")} style={{padding:"8px 14px",borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Nova OS
@@ -17905,10 +17918,11 @@ export default function App() {
         {/* Search */}
         <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
           <div style={{position:"relative",flex:1}}>
-          <input value={finSearch} onChange={e=>setFinSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
+          <input value={finSearch} onChange={e=>setFinSearch(e.target.value)} placeholder={finParts?"Modelo, placa, cliente ou peça…":"Buscar por modelo, placa ou cliente…"}
             style={{width:"100%",padding:"10px 36px 10px 14px",borderRadius:9,border:`1px solid ${finSearch?FD.border:B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           {finSearch&&<button onClick={()=>setFinSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
           </div>
+          <PartsToggle on={finParts} setOn={setFinParts} color={FD.primary}/>
           <button onClick={()=>setShowNewOSModal("finishing")} style={{padding:"8px 14px",borderRadius:8,background:`${FD.primary}22`,border:`1px solid ${FD.primary}44`,color:FD.primary,fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Nova OS
@@ -17919,7 +17933,8 @@ export default function App() {
           const filtered=finSearch?activeFin.filter(v=>
             v.model.toLowerCase().includes(finSearch.toLowerCase())||
             v.plate.toLowerCase().includes(finSearch.toLowerCase())||
-            (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(finSearch.toLowerCase())
+            (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(finSearch.toLowerCase())||
+            (finParts&&vehHasPart(v,finSearch,tasks))
           ):activeFin;
           if(activeFin.length===0) return (<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
             <div style={{fontSize:44,marginBottom:12}}>🎨</div>

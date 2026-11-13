@@ -276,23 +276,31 @@ function CollapsibleVehicleGroup({vehicle,count,children}) {
   </div>);
 }
 
-function PortalPhotoBtn({onPick,hasPhoto,compact=false,style={}}) {
+function PortalPhotoBtn({onPick,hasPhoto,variant="pill",style={}}) {
   const ref=useRef();
   const [busy,setBusy]=useState(false);
+  const [pending,setPending]=useState(null);
+  const send=async f=>{
+    setBusy(true);
+    try{ const url=await uploadImg(f,"vehicles"); await onPick(url); }
+    catch(err){ alert("Não foi possível enviar a foto: "+(err?.message||err)); }
+    setBusy(false);
+  };
+  const icon=<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>;
   return (<>
-    <button onClick={e=>{e.stopPropagation();ref.current?.click();}} disabled={busy} aria-label={hasPhoto?"Trocar foto do veículo":"Adicionar foto do veículo"}
-      style={{display:"flex",alignItems:"center",gap:6,height:compact?34:30,padding:compact?"0 10px":"0 12px 0 10px",borderRadius:99,cursor:busy?"wait":"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,
-        background:compact?"none":"rgba(0,0,0,.62)",backdropFilter:compact?undefined:"blur(6px)",WebkitBackdropFilter:compact?undefined:"blur(6px)",border:compact?`1px solid ${B.gray600}`:"1px solid rgba(255,255,255,.22)",color:compact?B.gray300:"#fff",...style}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      {busy?"Enviando…":compact?null:(hasPhoto?"Trocar foto":"Adicionar foto")}
-    </button>
-    <input ref={ref} type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{
+    {pending&&<PhotoEditor file={pending} aspect={16/9} onCancel={()=>setPending(null)} onFail={()=>{const f=pending;setPending(null);if(typeof f!=="string") send(f);}} onDone={f=>{setPending(null);send(f);}}/>}
+    {variant==="pill"
+      ?<button onClick={()=>ref.current?.click()} disabled={busy}
+        style={{display:"flex",alignItems:"center",gap:6,height:32,padding:"0 13px 0 11px",borderRadius:99,cursor:busy?"wait":"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,background:"rgba(0,0,0,.62)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,.22)",color:"#fff",...style}}>
+        {icon}{busy?"Enviando…":"Trocar foto"}
+      </button>
+      :<button onClick={()=>ref.current?.click()} disabled={busy}
+        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,width:"100%",minHeight:64,cursor:busy?"wait":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,background:B.gray900,border:"none",borderBottom:`1px dashed ${B.gray600}`,color:B.gray300,...style}}>
+        {icon}{busy?"Enviando…":"Adicionar foto do seu veículo"}
+      </button>}
+    <input ref={ref} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
       const f=e.target.files?.[0]; e.target.value="";
-      if(!f) return;
-      setBusy(true);
-      try{ const url=await uploadImg(f,"vehicles"); await onPick(url); }
-      catch(err){ alert("Não foi possível enviar a foto: "+(err?.message||err)); }
-      setBusy(false);
+      if(f) setPending(f);
     }}/>
   </>);
 }
@@ -360,7 +368,6 @@ function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen,onPhoto}) {
   const paid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((a,p)=>a+Number(p.amount),0);
   const balance=perfTotal+finTotal-paid;
   return (<div style={{position:"relative",marginBottom:14}}>
-    {onPhoto&&<PortalPhotoBtn hasPhoto={!!v.photo} onPick={onPhoto} style={{position:"absolute",top:10,left:10,zIndex:2}}/>}
     <button onClick={onOpen} style={{display:"block",width:"100%",textAlign:"left",padding:0,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16,overflow:"hidden",cursor:"pointer",fontFamily:"inherit",color:B.white}}>
     <div style={{height:132,background:v.photo?`url(${v.photo}) center/cover`:`linear-gradient(135deg,${B.gray700},${B.gray900})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
       {!v.photo&&<ICar s={44} c={B.gray500}/>}
@@ -574,7 +581,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   ];
 
   if(openVid&&vehicles.some(x=>x.id===openVid)) return (<div style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black}}>
-    <PublicVehicleView vehicleId={openVid} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients.length?clients:[client]} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock} onBack={()=>{setOpenVid(null);try{window.scrollTo({top:0});}catch{}}}/>
+    <PublicVehicleView vehicleId={openVid} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients.length?clients:[client]} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock} onPhoto={onVehiclePhoto?(url=>onVehiclePhoto(openVid,url)):undefined} onBack={()=>{setOpenVid(null);try{window.scrollTo({top:0});}catch{}}}/>
   </div>);
 
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
@@ -661,7 +668,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum veículo em serviço</div>
             <div style={{fontSize:13}}>Quando seu veículo entrar na oficina, ele aparece aqui.</div>
           </div>
-          :activeVehicles.map(v=><PortalVehicleCard key={v.id} v={v} tasks={tasks} payments={payments} defaultRate={defaultRate} onPhoto={onVehiclePhoto?(url=>onVehiclePhoto(v.id,url)):undefined} onOpen={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}}/>)}
+          :activeVehicles.map(v=><PortalVehicleCard key={v.id} v={v} tasks={tasks} payments={payments} defaultRate={defaultRate} onOpen={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}}/>)}
         {(()=>{
           const idle=cliVehicles.filter(v=>!activeVehicles.some(x=>x.id===v.id));
           if(idle.length===0) return null;
@@ -679,7 +686,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
               </button>
-              {onVehiclePhoto&&<PortalPhotoBtn compact hasPhoto={!!v.photo} onPick={url=>onVehiclePhoto(v.id,url)} style={{height:44,width:44,padding:0,justifyContent:"center",borderRadius:14,flexShrink:0}}/>}
               </div>);
             })}
           </>);
@@ -12013,7 +12019,7 @@ function publicFinInfo(v,perfTasks,finTasks,payments,defaultRate){
   const executed=total>0?Math.min(total,executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)):0;
   return {total,paid,executed,balance:Math.max(0,total-paid),pending:Math.max(0,executed-paid)};
 }
-function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[],onBack}) {
+function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[],onBack,onPhoto}) {
   const [hideNum,setHideNum]=useState(true); // valores ocultos por padrão (olho para mostrar)
   const [tab,setTab]=useState("resumo");
   const [tlAll,setTlAll]=useState(false);
@@ -12179,7 +12185,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       <div className="pv-grid">
       {/* ── Vehicle info ── */}
       <div style={S.card}>
-        {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:200,objectFit:"cover"}}/>}
+        {v.photo&&<div style={{position:"relative"}}>
+          <img src={v.photo} alt="" style={{display:"block",width:"100%",height:200,objectFit:"cover"}}/>
+          {onPhoto&&<PortalPhotoBtn hasPhoto onPick={onPhoto} style={{position:"absolute",right:10,bottom:10}}/>}
+        </div>}
+        {!v.photo&&onPhoto&&<PortalPhotoBtn variant="bar" onPick={onPhoto}/>}
         <div style={S.pad}>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:8}}>
             <span style={{fontSize:11,fontWeight:800,color:sc.color,background:sc.bg,borderRadius:99,padding:"3px 10px"}}>{sc.label}</span>
@@ -13123,7 +13133,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.137";
+const APP_VERSION = "2026.11.13.138";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

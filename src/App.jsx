@@ -6632,6 +6632,11 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const [msg,setMsg]=useState("");
   const [showDone,setShowDone]=useState(false);
   const [pick,setPick]=useState(null);
+  const [selMode,setSelMode]=useState(false);
+  const [sel,setSel]=useState({});
+  const [bulkBusy,setBulkBusy]=useState("");
+  const [bulkVeh,setBulkVeh]=useState(null);
+  const assignRef=useRef(onAssign); assignRef.current=onAssign;
   const [fil,setFil]=useState("all");
   const [qs,setQs]=useState("");
   const [exp,setExp]=useState({});
@@ -6692,6 +6697,31 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const cnt=k=>k==="all"?active.filter(i=>i.destination!=="return").length:k==="return"?returns.length:active.filter(i=>i.destination!=="return"&&(k==="none"?!i.ship_status:i.ship_status===k)).length;
   const chips=[["all","Todos"],["delivered","Entregue"],["shipped","A caminho"],["ready_to_ship","Pronto p/ envio"],["handling","Preparando"],["pending","Aguardando"],["none","Sem status"],["return","Devolução"]].filter(([k])=>k==="all"||k===fil||cnt(k)>0);
   const openVeh=vehicles.filter(v=>v.status!=="delivered");
+  const selIds=Object.keys(sel).filter(k=>sel[k]);
+  const selItems=pending.filter(i=>sel[i.id]);
+  const exitSel=()=>{setSelMode(false);setSel({});setBulkVeh(null);};
+  const bulkBrands=useMemo(()=>{ const set=new Set(); (stock||[]).forEach(x=>{ if(x.brand) set.add(String(x.brand).trim()); const m=String(x.name||"").match(/^\[([^\]]+)\]/); if(m) set.add(m[1].trim()); }); return [...set]; },[stock]);
+  const runBulk=async(kind,veh)=>{
+    const its=selItems; if(!its.length||bulkBusy) return;
+    if(kind==="ignored"&&!window.confirm(`Ignorar ${its.length} ${its.length!==1?"itens":"item"}? Eles saem da lista de pendentes.`)) return;
+    setBulkBusy(kind);setErr("");setMsg("");
+    let ok=0; const fails=[]; let tid=veh?.tid;
+    for(let n=0;n<its.length;n++){
+      const i=its[n]; const q=Number(i.qty)||1;
+      const sg=cleanMLTitle(i.title||"",bulkBrands);
+      const d={units:q,qty:q,freight:Number(i.freight)||0,type:kind,name:sg.name||i.title,brand:sg.brand||"",markup:50,division:"ambos",category:null};
+      if(kind==="stock") d.pid=matchStockItem(i.title||"",stock);
+      if(kind==="vehicle"){ d.vehicleId=veh.vid; d.tid=tid; d.category=veh.cat||null; }
+      try{
+        await assignRef.current(i,d); ok++;
+        if(kind==="vehicle"&&String(tid).startsWith("new:")){ const rows=await db.getMLItems(); const t=rows.find(x=>x.id===i.id)?.task_id; if(t) tid=String(t); }
+      }catch(e){ fails.push(`${String(i.title||"").slice(0,28)}: ${e.message||"erro"}`); }
+      await new Promise(rs=>setTimeout(rs,180));
+    }
+    await loadItems(); setBulkBusy(""); exitSel();
+    if(ok) setMsg(`${ok} ${ok!==1?"itens destinados":"item destinado"} ✓`);
+    if(fails.length) setErr(`${fails.length} não ${fails.length!==1?"foram destinados":"foi destinado"}: ${fails.join(" · ")}`);
+  };
   const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(e.message); } };
   const undoSupplies=async i=>{ if(!window.confirm(i.destination==="tool"?"Desfazer? A ferramenta sai da lista de Ferramentas e a compra volta para “Sem destino”.":"Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(e.message||"Erro ao desfazer"); } };
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(e.message); } };
@@ -6720,7 +6750,8 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     return steps;
   };
   const row=(i,isPending)=><div key={i.id} style={{background:B.gray900,borderRadius:12,padding:"11px 12px",minWidth:0}}>
-   <div onClick={()=>setExp(x=>({...x,[i.id]:!x[i.id]}))} style={{display:"flex",gap:10,alignItems:"flex-start",minWidth:0,cursor:"pointer"}}>
+   <div onClick={()=>(selMode&&isPending)?setSel(v=>({...v,[i.id]:!v[i.id]})):setExp(x=>({...x,[i.id]:!x[i.id]}))} style={{display:"flex",gap:10,alignItems:"flex-start",minWidth:0,cursor:"pointer"}}>
+    {selMode&&isPending&&<div style={{width:20,height:20,borderRadius:6,border:`1.5px solid ${sel[i.id]?B.amber:B.gray500}`,background:sel[i.id]?B.amber:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2,color:B.black}}>{sel[i.id]&&<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}</div>}
     {i.thumbnail?<img src={i.thumbnail} alt="" style={{width:46,height:46,objectFit:"cover",borderRadius:7,flexShrink:0}}/>:null}
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:B.white,lineHeight:1.35,wordBreak:"break-word",display:"-webkit-box",WebkitLineClamp:exp[i.id]?6:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{i.title}</div>
@@ -6752,7 +6783,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}>🔗 {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
-      {isPending?<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>
+      {isPending?(selMode?null:<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>)
         :(i.destination==="supplies"||i.destination==="tool")?<button onClick={e=>{e.stopPropagation();undoSupplies(i);}} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer</button>
         :i.destination==="ignored"&&<button onClick={e=>{e.stopPropagation();undoIgnore(i);}} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer</button>}
       <span style={{fontSize:11,color:B.gray500}}>{exp[i.id]?"▴":"▾"}</span>
@@ -6828,8 +6859,20 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
           <option value="value">Maior valor</option>
         </select>
       </div>}
+      {pending.length>0&&!selMode&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:-18,position:"relative",zIndex:1}}><button onClick={()=>{setSelMode(true);setSel({});}} style={{display:"flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:99,border:`1px solid ${B.gray600}`,background:"transparent",color:B.gray300,fontSize:10.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Selecionar</button></div>}
       {pending.length>0&&<><button onClick={()=>tgShut("pending")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"2px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.pending&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Sem destino ({pending.length})</button>
         {(!shut.pending||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{pending.map(i=>row(i,true))}</div>}</>}
+      {selMode&&<div style={{position:"sticky",bottom:8,zIndex:5,background:B.gray900,border:`1px solid ${B.amber}66`,borderRadius:12,padding:"9px 10px",margin:"10px 0",boxShadow:"0 6px 20px rgba(0,0,0,.35)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,fontSize:11.5,color:B.gray300}}>
+          <b style={{color:B.amber}}>{selIds.length}</b> selecionado{selIds.length!==1?"s":""}
+          <button onClick={()=>setSel(selIds.length===pending.length?{}:Object.fromEntries(pending.map(i=>[i.id,true])))} style={{background:"none",border:"none",color:B.blue,fontSize:11.5,cursor:"pointer",padding:0,fontFamily:"inherit"}}>{selIds.length===pending.length?"limpar":"todos"}</button>
+          <span style={{flex:1}}/>
+          <button onClick={exitSel} style={{background:"none",border:"none",color:B.gray400,fontSize:11.5,cursor:"pointer",padding:0,fontFamily:"inherit"}}>cancelar</button>
+        </div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+          {[["vehicle","Carro / OS"],["stock","Estoque"],["supplies","Insumos"],["tool","Ferramenta"],["ignored","Ignorar"]].map(([k,l])=>{const off=!selIds.length||!!bulkBusy;return <button key={k} disabled={off} onClick={()=>k==="vehicle"?setBulkVeh({vid:"",tid:"",cat:""}):runBulk(k)} style={{padding:"6px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:off?B.gray600:B.white,fontSize:11.5,fontWeight:700,cursor:off?"default":"pointer",fontFamily:"inherit"}}>{bulkBusy===k?"Destinando…":l}</button>;})}
+        </div>
+      </div>}
       {returns.length>0&&<><button onClick={()=>tgShut("returns")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.returns&&fil!=="return"&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Devoluções ({returns.length}) · {fmtBRL(retTotal)} a recuperar</button>
         {(!shut.returns||fil==="return"||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{returns.map(i=>row(i,false))}</div>}</>}
       {waiting.length>0&&<><button onClick={()=>tgShut("waiting")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.waiting&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Destinadas · aguardando entrega ({waiting.length})</button>
@@ -6841,6 +6884,19 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       </div>}
     </div>}
     </>}
+    {bulkVeh&&<div onClick={()=>!bulkBusy&&setBulkVeh(null)} style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,.72)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px 16px calc(104px + env(safe-area-inset-bottom))",boxSizing:"border-box",fontFamily:"inherit"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.amber}55`,borderRadius:14,width:"100%",maxWidth:440,maxHeight:"calc(100vh - 120px)",overflowY:"auto",padding:16,boxSizing:"border-box",display:"flex",flexDirection:"column",gap:8}}>
+        <div style={{fontSize:11,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.6}}>Destinar {selIds.length} {selIds.length!==1?"peças":"peça"} ao mesmo carro</div>
+        <VehiclePicker value={bulkVeh.vid} onChange={v=>setBulkVeh(b=>({...b,vid:v,tid:""}))} vehicles={openVeh} clients={clients}/>
+        {bulkVeh.vid&&<TaskPicker value={bulkVeh.tid} onChange={t=>setBulkVeh(b=>({...b,tid:t}))} vts={tasks.filter(t=>t.vehicleId===bulkVeh.vid)} placeholder="Escolha ou crie a tarefa…"/>}
+        {bulkVeh.vid&&String(bulkVeh.tid).startsWith("new:")&&<select value={bulkVeh.cat} onChange={e=>setBulkVeh(b=>({...b,cat:e.target.value}))} style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:bulkVeh.cat?B.white:B.gray400,fontSize:13,outline:"none",fontFamily:"inherit"}}><option value="">Categoria da nova tarefa (opcional)</option>{CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.id}</option>)}</select>}
+        <div style={{fontSize:10.5,color:B.gray500,lineHeight:1.4}}>Todas entram na mesma tarefa, com markup de 50% e o nome sugerido de cada peça.</div>
+        <div style={{display:"flex",gap:6,marginTop:4}}>
+          <button disabled={!bulkVeh.vid||!bulkVeh.tid||!!bulkBusy} onClick={()=>{const v=bulkVeh;setBulkVeh(null);runBulk("vehicle",v);}} style={{flex:1,padding:"9px 0",borderRadius:10,border:"none",background:bulkVeh.vid&&bulkVeh.tid?B.amber:B.gray700,color:bulkVeh.vid&&bulkVeh.tid?B.black:B.gray500,fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Destinar</button>
+          <button onClick={()=>setBulkVeh(null)} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.gray200,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Cancelar</button>
+        </div>
+      </div>
+    </div>}
     {pick&&<MLAssignModal item={pick} vehicles={openVeh} clients={clients} tasks={tasks} stock={stock} onClose={()=>setPick(null)} onAssign={async(it,d)=>{ await onAssign(it,d); await loadItems(); }}/>}
   </div>);
 }
@@ -12633,7 +12689,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.98";
+const APP_VERSION = "2026.11.13.99";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

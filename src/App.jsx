@@ -1031,7 +1031,8 @@ function ImpField({value,onSave,placeholder,text,style={}}){
   const commit=()=>{if(v!==value) onSave(v);};
   return <input value={v} onChange={e=>setV(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter") e.currentTarget.blur();}}
     placeholder={placeholder} inputMode={text?"text":"decimal"}
-    style={{width:"100%",boxSizing:"border-box",padding:"5px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",...style}}/>;
+    onFocus={e=>e.currentTarget.style.borderBottomColor="#60a5fa"} onBlurCapture={e=>e.currentTarget.style.borderBottomColor=B.gray700}
+    style={{width:"100%",boxSizing:"border-box",minWidth:0,padding:"3px 0",borderRadius:0,border:"none",borderBottom:`1px solid ${B.gray700}`,background:"transparent",color:B.white,fontSize:12,outline:"none",fontFamily:"inherit",...style}}/>;
 }
 const IMPORT_CURS=["USD","EUR","GBP","JPY","CNY","CAD","AUD","CHF"];
 const importFinal=p=>{const base=Number(p.amount||0)*Number(p.rate||0);return Math.max(0,base*(1+Number(p.taxPct||0)/100)+Number(p.extra||0)-Number(p.discount||0));};
@@ -5602,16 +5603,16 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               const num=v=>parseFloat(String(v).replace(",","."))||0;
               const conv=Number(ip.amount||0)*Number(ip.rate||0);
               const fin=importFinal(ip);
-              const selSt={width:"100%",boxSizing:"border-box",padding:"5px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"};
+              const selSt={width:"100%",boxSizing:"border-box",minWidth:0,padding:"3px 0",borderRadius:0,border:"none",borderBottom:`1px solid ${B.gray700}`,background:"transparent",color:B.white,fontSize:12,outline:"none",fontFamily:"inherit"};
               return(
-              <div key={ii} style={{display:"flex",flexDirection:"column",gap:8,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"10px 12px",marginBottom:6}}>
+              <div key={ii} style={{display:"flex",flexDirection:"column",gap:10,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"10px 12px",marginBottom:6,overflow:"hidden"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <ImpField value={ip.name||""} onSave={v=>upd({name:v})} placeholder="Nome da peça" text style={{flex:1,fontWeight:600,fontSize:13}}/>
+                  <ImpField value={ip.name||""} onSave={v=>upd({name:v})} placeholder="Nome da peça" text style={{flex:1,fontWeight:600,fontSize:13,borderBottom:"none"}}/>
                   <button onClick={()=>{const importParts=(vehicle.importParts||[]).filter((_,i)=>i!==ii);onUpdateVehicle(vehicle.id,{importParts});}}
                     style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
                     onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={12}/></button>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:"8px 14px"}}>
                   <div><div style={{fontSize:9,color:B.gray500,marginBottom:2,letterSpacing:.4}}>MOEDA</div>
                     <select value={ip.cur||"USD"} onChange={e=>upd({cur:e.target.value,rate:0})} style={selSt}>
                       {IMPORT_CURS.map(c=><option key={c} value={c}>{c}</option>)}
@@ -5631,9 +5632,9 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                   <div><div style={{fontSize:9,color:B.gray500,marginBottom:2,letterSpacing:.4}}>DESCONTO R$</div>
                     <ImpField value={ip.discount?fmtR2(ip.discount):""} onSave={v=>upd({discount:num(v)})} placeholder="0,00"/></div>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"flex-end",gap:10,minWidth:0}}>
                   <select value={ip.taskRef||""} onChange={e=>upd({taskRef:e.target.value})}
-                    style={{...selSt,flex:"1 1 140px",width:"auto",fontSize:11,color:ip.taskRef?B.white:B.gray500}}>
+                    style={{...selSt,flex:1,fontSize:11,color:ip.taskRef?B.white:B.gray500}}>
                     <option value="">Sem serviço vinculado</option>
                     {tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty).map(t=>(
                       <option key={t.id} value={t.label}>{t.label}{t.done?" ✓":""}</option>
@@ -12846,7 +12847,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.115";
+const APP_VERSION = "2026.11.13.116";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

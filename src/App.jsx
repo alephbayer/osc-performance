@@ -1699,6 +1699,56 @@ const CHECKLIST_ITEMS = [
 ];
 
 
+async function generateImportPartsPDF(vehicle, client, company) {
+  const jsPDFCtor = await loadJsPDF();
+  const doc = new jsPDFCtor({ unit:"mm", format:"a4" });
+  const pageW=210, mx=14, cw=pageW-mx*2;
+  const black=[20,20,20], gray=[110,110,110], white=[255,255,255], orange=[234,88,12];
+  const parts=(vehicle.importParts||[]).filter(p=>importFinal(p)>0);
+  const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  doc.setFillColor(...orange); doc.rect(0,0,pageW,28,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.setTextColor(...white);
+  doc.text("PECAS IMPORTADAS",mx,12);
+  doc.setFontSize(8); doc.setFont("helvetica","normal");
+  doc.text(company?.name||"OSC Group",mx,19);
+  doc.text(new Date().toLocaleDateString("pt-BR"),pageW-mx,19,{align:"right"});
+  let y=37;
+  doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(...black);
+  doc.text(vehicle.model||"Veiculo",mx,y); y+=6;
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...gray);
+  if(vehicle.plate){ doc.text(`Placa: ${vehicle.plate}`,mx,y); y+=5; }
+  if(client?.name){ doc.text(`Cliente: ${client.name}`,mx,y); y+=5; }
+  y+=4;
+  let total=0;
+  parts.forEach((ip,i)=>{
+    const base=Number(ip.amount||0)*Number(ip.rate||0);
+    const tax=base*Number(ip.taxPct||0)/100;
+    const fin=importFinal(ip); total+=fin;
+    if(y>235){ doc.addPage(); y=16; }
+    doc.setFillColor(248,248,248); doc.setDrawColor(230,230,230); doc.rect(mx,y,cw,9,"FD");
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...black);
+    doc.text(`${i+1}. ${ip.name||"Peca"}`,mx+3,y+6);
+    doc.text(`R$ ${nf(fin)}`,pageW-mx-3,y+6,{align:"right"}); y+=9;
+    const rows=[
+      [`Valor original (${ip.cur||"USD"})`,`${nf(ip.amount)} ${ip.cur||"USD"}`],
+      [`Cotacao`,`R$ ${Number(ip.rate||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})}`],
+      [`Valor convertido`,`R$ ${nf(base)}`],
+      [`Imposto de importacao (${String(ip.taxPct||0).replace(".",",")}%)`,`R$ ${nf(tax)}`],
+      [`Frete / taxas`,`R$ ${nf(ip.extra)}`],
+    ];
+    if(ip.taskRef) rows.push([`Servico vinculado`,ip.taskRef]);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
+    rows.forEach(([a,b])=>{ doc.setTextColor(...gray); doc.text(a,mx+5,y+5); doc.setTextColor(...black); doc.text(String(b),pageW-mx-3,y+5,{align:"right"}); y+=6; });
+    y+=5;
+  });
+  if(y>262){ doc.addPage(); y=16; }
+  doc.setDrawColor(...orange); doc.setLineWidth(0.5); doc.line(mx,y,pageW-mx,y); y+=7;
+  doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(...black);
+  doc.text("TOTAL",mx,y); doc.text(`R$ ${nf(total)}`,pageW-mx,y,{align:"right"}); y+=8;
+  doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...gray);
+  doc.text("Valores convertidos pela cotacao informada na data da emissao. Impostos e taxas conforme a importacao.",mx,y);
+  doc.save(`pecas-importadas-${(vehicle.plate||vehicle.model||"veiculo").toString().replace(/[^a-z0-9]+/gi,"-")}.pdf`);
+}
 async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride, payments=[]) {
   const jsPDFCtor = await loadJsPDF();
   const doc = new jsPDFCtor({ unit: "mm", format: "a4" });
@@ -5529,6 +5579,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:B.gray400}}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
               <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Peças importadas</span>
               {importTot>0&&<span style={{fontSize:11,color:B.blue||"#60a5fa",fontWeight:700}}>{fmtBRL(importTot)}</span>}
+              {importTot>0&&<button onClick={()=>generateImportPartsPDF(vehicle,cli,company).catch(e=>notify("Erro ao gerar PDF: "+errMsg(e)))}
+                style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></svg>PDF
+              </button>}
               <button onClick={()=>{const importParts=[...(vehicle.importParts||[]),{name:"",cur:"USD",amount:0,rate:0,taxPct:60,extra:0,taskRef:""}];onUpdateVehicle(vehicle.id,{importParts});}}
                 style={{marginLeft:"auto",background:"#60a5fa22",border:"1px solid #60a5fa44",borderRadius:6,padding:"2px 8px",cursor:"pointer",color:"#60a5fa",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
                 <IPlus s={11} c="#60a5fa"/>Adicionar peça
@@ -11963,7 +12017,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
 
           {/* Tasks grouped by category */}
           {/* Fuel and tows */}
-          {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0||(v.freights||[]).filter(f=>Number(f.value||0)>0).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
+          {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0||(v.freights||[]).filter(f=>Number(f.value||0)>0).length>0||importTotal(v)>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
             {(v.fuels||[]).filter(f=>Number(f.value||0)>0).map((f,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
                 <span style={{fontSize:16}}>⛽</span>
@@ -11984,6 +12038,25 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 <span style={{fontSize:13,fontWeight:700,color:"#60a5fa",flexShrink:0}}>{fmtBRL(t.value)}</span>
               </div>
             ))}
+            {(v.importParts||[]).filter(p=>importFinal(p)>0).map((p,i)=>{
+              const base=Number(p.amount||0)*Number(p.rate||0);
+              const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+              return(
+              <div key={"ip"+i} style={{display:"flex",flexDirection:"column",gap:4,background:"#60a5fa08",border:"1px solid #60a5fa33",borderRadius:8,padding:"10px 12px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,color:B.white,fontWeight:700}}>{p.name||"Peça importada"}</div>
+                    <div style={{fontSize:10,color:"#60a5fa",marginTop:1}}>Peça importada{p.taskRef?` · ${p.taskRef}`:""}</div>
+                  </div>
+                  <span style={{fontSize:13,fontWeight:800,color:"#60a5fa",flexShrink:0}}>{fmtBRL(importFinal(p))}</span>
+                </div>
+                <div style={{fontSize:11,color:B.gray400,lineHeight:1.5}}>
+                  {nf(p.amount)} {p.cur||"USD"} × R$ {Number(p.rate||0).toLocaleString("pt-BR",{maximumFractionDigits:4})} = {fmtBRL(base)}
+                  {Number(p.taxPct||0)>0&&<> · imposto {String(p.taxPct).replace(".",",")}% ({fmtBRL(base*Number(p.taxPct)/100)})</>}
+                  {Number(p.extra||0)>0&&<> · frete/taxas {fmtBRL(p.extra)}</>}
+                </div>
+              </div>);
+            })}
             {(v.freights||[]).filter(f=>Number(f.value||0)>0).map((f,i)=>(
               <div key={i} style={{display:"flex",flexDirection:"column",gap:6,background:`${B.purple}08`,border:`1px solid ${B.purple}33`,borderRadius:8,padding:"10px 12px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -12769,7 +12842,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.110";
+const APP_VERSION = "2026.11.13.111";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

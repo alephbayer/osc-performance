@@ -801,59 +801,50 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </>}
 
       {tab==="appts"&&<>
-        <div style={{fontSize:13,fontWeight:800,color:B.white,marginBottom:14}}>Agendamentos</div>
-        {cliAppts.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:B.gray400}}>Nenhum agendamento em aberto.</div>}
+        <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"0 2px 12px"}}>Agendamentos · {cliAppts.length}</div>
+        {cliAppts.length===0&&<div style={{textAlign:"center",padding:"48px 0",color:B.gray500,fontSize:13}}>Nenhum agendamento em aberto.</div>}
         {cliAppts.map(a=>{
           const v=vehicles.find(x=>x.id===a.vehicleId);
           const totalSvc=a.services.reduce((s,sv)=>s+sv.estimatedValue,0);
           const totalEst=totalSvc||a.estimatedValue;
           const totalPaid=a.payments.reduce((s,p)=>s+p.amount,0);
           const balance=Math.max(0,totalEst-totalPaid);
-          return(<div key={a.id} style={{background:B.gray900,borderRadius:14,marginBottom:12,border:`1px solid ${B.blue}22`,overflow:"hidden"}}>
-            <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
-              {v?.photo&&<img src={v.photo} alt="" style={{width:36,height:36,borderRadius:8,objectFit:"cover",flexShrink:0}}/>}
-              <div style={{flex:1}}>
-                <div style={{fontWeight:800,fontSize:14,color:B.white}}>{v?`${v.model}${v.plate?` · ${v.plate}`:""}`:a.title}</div>
+          const sec={fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",marginBottom:8};
+          return(<div key={a.id} style={{background:B.gray800,borderRadius:16,marginBottom:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
+            <div style={{padding:"16px 18px",display:"flex",alignItems:"center",gap:12}}>
+              {v?.photo&&<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:800,fontSize:15,color:B.white}}>{v?`${v.model}${v.plate?` · ${v.plate}`:""}`:a.title}</div>
                 <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{a.title}</div>
-                {a.scheduledDate&&<div style={{fontSize:11,color:B.purple,fontWeight:700,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  Agendado para {new Date(a.scheduledDate+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}
+                {a.scheduledDate&&<div style={{fontSize:11,color:B.blue,fontWeight:700,marginTop:5,display:"flex",alignItems:"center",gap:5}}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  {new Date(a.scheduledDate+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}
                 </div>}
               </div>
-              {totalEst>0&&<div style={{textAlign:"right"}}>
-                <div style={{fontSize:10,color:B.gray500}}>Estimado</div>
-                <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(totalEst)}</div>
-              </div>}
             </div>
-            {a.services.length>0&&<div style={{padding:"10px 16px",display:"flex",flexDirection:"column",gap:5}}>
+            {a.services.length>0&&<div style={{padding:"14px 18px",borderTop:`1px solid ${B.gray700}`}}>
+              <div style={sec}>Serviços · {a.services.length}</div>
               {a.services.map((sv,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                  <div style={{width:6,height:6,borderRadius:99,background:sv.division==="finishing"?FD.primary:B.orange,flexShrink:0,marginTop:4}}/>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:12,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:3}}>
-                      {sv.category&&<span style={{fontSize:9,fontWeight:700,color:CAT_MAP[sv.category]||B.gray400,background:`${CAT_MAP[sv.category]||B.gray600}18`,borderRadius:4,padding:"1px 5px"}}>{sv.category}</span>}
-                      {(sv.materials||[]).map((m,mi)=>(
-                        <span key={mi} style={{fontSize:10,color:B.purple,background:`${B.purple}12`,border:`1px solid ${B.purple}33`,borderRadius:4,padding:"1px 5px"}}>{m.name} ×{m.qty}</span>
-                      ))}
-                    </div>
+                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderTop:i?`1px solid ${B.gray700}`:"none"}}>
+                  <div style={{width:6,height:6,borderRadius:99,background:sv.division==="finishing"?FD.primary:B.orange,flexShrink:0,marginTop:6}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:sv.done?B.gray500:B.white,textDecoration:sv.done?"line-through":"none"}}>{sv.label}</div>
+                    {(sv.category||(sv.materials||[]).length>0)&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>{[sv.category,...(sv.materials||[]).map(m=>`${m.name}${Number(m.qty||1)!==1?` ×${m.qty}`:""}`)].filter(Boolean).join(" · ")}</div>}
                   </div>
-                  {sv.estimatedValue>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700,flexShrink:0}}>{fmtBRL(sv.estimatedValue)}</span>}
+                  {sv.estimatedValue>0&&<span style={{fontSize:13,color:B.white,fontWeight:700,flexShrink:0}}>{fmtBRL(sv.estimatedValue)}</span>}
                 </div>
               ))}
             </div>}
-            <div style={{padding:"10px 16px",borderTop:`1px solid ${B.gray700}`,display:"flex",flexDirection:"column",gap:4}}>
-              {totalPaid>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
-                <span style={{color:B.green}}>Sinal pago</span>
-                <span style={{color:B.green,fontWeight:700}}>{fmtBRL(totalPaid)}</span>
+            {(totalEst>0||totalPaid>0)&&<div style={{padding:"14px 18px",borderTop:`1px solid ${B.gray700}`,display:"flex",flexDirection:"column",gap:6}}>
+              {totalEst>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:B.gray300}}><span>Estimado</span><span style={{fontWeight:700,color:B.white}}>{fmtBRL(totalEst)}</span></div>}
+              {totalPaid>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:B.green}}><span>Sinal pago</span><span style={{fontWeight:700}}>{fmtBRL(totalPaid)}</span></div>}
+              {balance>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:4}}>
+                <span style={{fontSize:10,letterSpacing:1,color:B.gray400,fontWeight:700,textTransform:"uppercase"}}>Saldo estimado</span>
+                <span style={{fontSize:18,fontWeight:800,color:B.orange}}>{fmtBRL(balance)}</span>
               </div>}
-              {balance>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:800}}>
-                <span style={{color:B.amber}}>Saldo estimado</span>
-                <span style={{color:B.amber}}>{fmtBRL(balance)}</span>
-              </div>}
-              {balance===0&&totalPaid>0&&<div style={{fontSize:12,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:4}}><ICheck s={11} c={B.green}/>Pré-pagamento quitado</div>}
-            </div>
-            {a.notes&&<div style={{padding:"8px 16px",borderTop:`1px solid ${B.gray700}`,fontSize:11,color:B.gray400,whiteSpace:"pre-wrap"}}>{a.notes}</div>}
+              {balance===0&&totalPaid>0&&<div style={{fontSize:12,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:5}}><ICheck s={11} c={B.green}/>Pré-pagamento quitado</div>}
+            </div>}
+            {a.notes&&<div style={{padding:"12px 18px",borderTop:`1px solid ${B.gray700}`,fontSize:12,color:B.gray400,whiteSpace:"pre-wrap",lineHeight:1.55}}>{a.notes}</div>}
           </div>);
         })}
       </>}
@@ -862,39 +853,32 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       {tab==="notes"&&<ClientNotesTab client={client} vehicles={cliVehicles}/>}
 
       {tab==="parts"&&<div>
-        <div style={{fontSize:13,fontWeight:700,color:B.gray400,marginBottom:14}}>
+        <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"0 2px 12px"}}>
           {cliParts.length} peça{cliParts.length!==1?"s":""} reservada{cliParts.length!==1?"s":""}
         </div>
         {cliVehicles.map(v=>{
           const vParts=[...(v.partsList||[]),...(v.partsListFinishing||[])].filter(p=>p.name);
           if(!vParts.length) return null;
-          const allMats=tasks.filter(t=>t.vehicleId===v.id).flatMap(t=>t.materials||[]);
           const isUsed=(p)=>partIsUsed(p,v.id,tasks);
-          return(<div key={v.id} style={{background:B.gray900,borderRadius:14,marginBottom:14,overflow:"hidden",border:`1px solid ${B.gray700}`}}>
-            <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray800}`,display:"flex",alignItems:"center",gap:8}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          return(<div key={v.id} style={{marginBottom:18}}>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,margin:"0 2px 8px"}}>
               <span style={{fontWeight:800,fontSize:14,color:B.white}}>{v.model}</span>
               {v.plate&&<span style={{fontSize:11,color:B.gray500}}>{v.plate}</span>}
             </div>
-            <div style={{padding:"10px 16px",display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
               {vParts.map((p,i)=>{
                 const used=isUsed(p);
-                return(<div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:used?`${B.green}12`:B.gray800,borderRadius:9,border:`1px solid ${used?B.green+"33":B.gray700}`}}>
+                return(<div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderTop:i?`1px solid ${B.gray700}`:"none"}}>
                   {p.photos?.[0]
-                    ?<img src={p.photos[0]} alt={p.name} style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>
-                    :<div style={{width:44,height:44,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                    ?<img src={p.photos[0]} alt={p.name} style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>
+                    :<div style={{width:44,height:44,borderRadius:10,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.7l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.7l7 4a2 2 0 002 0l7-4a2 2 0 001-1.7z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg>
                     </div>}
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:700,fontSize:13,color:used?B.green:B.white}}>{p.name}</div>
-                    {p.brand&&<div style={{fontSize:11,color:B.gray400}}>{p.brand}</div>}
-                    {p.qty>1&&<div style={{fontSize:11,color:B.gray500}}>Qty: {p.qty}</div>}
+                    <div style={{fontWeight:700,fontSize:13,color:B.white}}>{p.name}</div>
+                    <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{[p.brand,p.qty>1?`${p.qty} unidades`:""].filter(Boolean).join(" · ")}</div>
                   </div>
-                  <div style={{flexShrink:0}}>
-                    {used
-                      ?<span style={{fontSize:11,fontWeight:700,color:B.green,background:`${B.green}18`,borderRadius:6,padding:"3px 8px"}}>✓ Utilizada</span>
-                      :<span style={{fontSize:11,fontWeight:700,color:B.amber,background:`${B.amber}18`,borderRadius:6,padding:"3px 8px"}}>Aguardando</span>}
-                  </div>
+                  <span style={{fontSize:10,fontWeight:800,letterSpacing:.5,textTransform:"uppercase",flexShrink:0,color:used?B.green:B.amber}}>{used?"Utilizada":"Aguardando"}</span>
                 </div>);
               })}
             </div>
@@ -903,75 +887,67 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </div>}
 
       {tab==="quotes"&&<div>
-        <div style={{fontSize:13,fontWeight:700,color:B.gray400,marginBottom:14}}>
-          {cliQuotes.length} orçamento{cliQuotes.length!==1?"s":""}
-          {pendingQuotes.length>0&&<span style={{marginLeft:8,background:`${B.amber}22`,color:B.amber,borderRadius:99,padding:"2px 8px",fontSize:11}}>
-            {pendingQuotes.length} aguardando aprovação
-          </span>}
+        <div style={{display:"flex",alignItems:"center",gap:10,margin:"0 2px 12px"}}>
+          <span style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase"}}>Orçamentos · {cliQuotes.length}</span>
+          {pendingQuotes.length>0&&<span style={{fontSize:10,fontWeight:700,color:B.amber,border:`1px solid ${B.amber}55`,borderRadius:99,padding:"2px 9px"}}>{pendingQuotes.length} aguardando aprovação</span>}
         </div>
-        {cliQuotes.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray500,fontSize:13}}>Nenhum orçamento encontrado.</div>}
+        {cliQuotes.length===0&&<div style={{textAlign:"center",padding:"48px 0",color:B.gray500,fontSize:13}}>Nenhum orçamento encontrado.</div>}
         {[...cliQuotes].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).map(q=>{
           const items=q.items||[];
           const total=quoteTotal(items);
           const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
           const isPending=q.status==="draft"||q.status==="sent";
-          const statusCfg={draft:{label:"Pendente",color:B.amber},sent:{label:"Aguardando aprovação",color:B.blue},approved:{label:"Aprovado",color:B.green},rejected:{label:"Recusado",color:B.red}};
+          const statusCfg={draft:{label:"Pendente",color:B.amber},sent:{label:"Aguardando aprovação",color:B.amber},approved:{label:"Aprovado",color:B.green},rejected:{label:"Recusado",color:B.red}};
           const cfg=statusCfg[q.status]||statusCfg.draft;
-          return(<div key={q.id} style={{background:B.gray900,borderRadius:14,marginBottom:12,overflow:"hidden",border:`1px solid ${isPending?B.amber+"44":B.gray700}`}}>
-            {/* Header */}
-            <div style={{padding:"14px 16px",borderBottom:`1px solid ${B.gray800}`}}>
-              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:6}}>
-                <div style={{fontWeight:800,fontSize:15,color:B.white}}>{vModel||"Veículo"}</div>
-                <span style={{fontSize:11,fontWeight:700,color:cfg.color,background:`${cfg.color}18`,borderRadius:99,padding:"3px 10px",flexShrink:0}}>{cfg.label}</span>
+          const sec={fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",marginBottom:8};
+          return(<div key={q.id} style={{background:B.gray800,borderRadius:16,marginBottom:14,overflow:"hidden",border:`1px solid ${isPending?B.amber+"55":B.gray700}`}}>
+            <div style={{padding:"16px 18px 14px"}}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10}}>
+                <div style={{minWidth:0}}>
+                  <div style={{fontWeight:800,fontSize:16,color:B.white}}>{vModel||"Veículo"}</div>
+                  <div style={{fontSize:11,color:B.gray500,marginTop:3}}>{new Date(q.createdAt).toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"})}</div>
+                </div>
+                <span style={{fontSize:10,fontWeight:800,letterSpacing:.5,textTransform:"uppercase",color:cfg.color,border:`1px solid ${cfg.color}55`,borderRadius:99,padding:"3px 10px",flexShrink:0,whiteSpace:"nowrap"}}>{cfg.label}</span>
               </div>
-              {q.description&&<div style={{fontSize:13,color:B.gray300,lineHeight:1.5,marginBottom:6}}>{q.description}</div>}
-              <div style={{fontSize:11,color:B.gray500}}>{new Date(q.createdAt).toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"})}</div>
+              {q.description&&<div style={{fontSize:13,color:B.gray300,lineHeight:1.55,marginTop:10}}>{q.description}</div>}
             </div>
-            {/* Items */}
-            {items.length>0&&<div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray800}`}}>
+            {items.length>0&&<div style={{padding:"14px 18px",borderTop:`1px solid ${B.gray700}`}}>
+              <div style={sec}>Serviços · {items.length}</div>
               {items.map((it,i)=>{
-                const matTotal=(it.materials||[]).reduce((s,m)=>s+Number(m.cost||0)*Number(m.qty||1),0);
-                return(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:i<items.length-1?10:0}}>
-                  <div>
-                    <div style={{fontWeight:600,fontSize:13,color:B.white}}>{it.label}</div>
-                    {it.description&&<div style={{fontSize:11,color:B.gray400,marginTop:1}}>{it.description}</div>}
-                    {it.hours>0&&<div style={{fontSize:11,color:B.gray500,marginTop:1}}>{it.hours}h estimadas</div>}
-                    {(it.materials||[]).length>0&&<div style={{fontSize:11,color:B.purple,marginTop:2}}>
-                      + {(it.materials||[]).map(m=>`${m.name} ×${m.qty}`).join(", ")}
-                    </div>}
+                const matTotal=(it.materials||[]).reduce((sm,m)=>sm+Number(m.cost||0)*Number(m.qty||1),0);
+                return(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,padding:"9px 0",borderTop:i?`1px solid ${B.gray700}`:"none"}}>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13,color:B.white}}>{it.label}</div>
+                    {it.description&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>{it.description}</div>}
+                    {it.hours>0&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>{it.hours}h estimadas</div>}
+                    {(it.materials||[]).length>0&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>Peças: {(it.materials||[]).map(m=>`${m.name}${Number(m.qty||1)!==1?` ×${m.qty}`:""}`).join(", ")}</div>}
                   </div>
-                  <div style={{fontWeight:700,fontSize:13,color:B.orange,flexShrink:0}}>
-                    {fmtBRL(Number(it.price||0)+matTotal)}
-                  </div>
+                  <div style={{fontWeight:700,fontSize:13,color:B.white,flexShrink:0}}>{fmtBRL(Number(it.price||0)+matTotal)}</div>
                 </div>);
               })}
-              <div style={{borderTop:`1px solid ${B.gray700}`,marginTop:10,paddingTop:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:12,color:B.gray400,fontWeight:600}}>Total estimado</span>
-                <span style={{fontSize:16,fontWeight:900,color:B.orange}}>{fmtBRL(total)}</span>
+              <div style={{borderTop:`1px solid ${B.gray600}`,marginTop:6,paddingTop:12,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                <span style={{fontSize:10,letterSpacing:1,color:B.gray400,fontWeight:700,textTransform:"uppercase"}}>Total estimado</span>
+                <span style={{fontSize:22,fontWeight:800,color:B.orange,letterSpacing:-.4}}>{fmtBRL(total)}</span>
               </div>
             </div>}
-            {/* Notes */}
-            {q.notes&&<div style={{padding:"10px 16px",background:`${B.amber}08`,borderBottom:`1px solid ${B.gray800}`}}>
-              <div style={{fontSize:11,color:B.gray500,marginBottom:2}}>Observações</div>
-              <div style={{fontSize:12,color:B.gray300,whiteSpace:"pre-wrap"}}>{q.notes}</div>
+            {q.notes&&<div style={{padding:"12px 18px",borderTop:`1px solid ${B.gray700}`}}>
+              <div style={sec}>Observações</div>
+              <div style={{fontSize:12,color:B.gray300,whiteSpace:"pre-wrap",lineHeight:1.55}}>{q.notes}</div>
             </div>}
-            {/* Actions */}
-            {isPending&&<div style={{padding:"12px 16px",display:"flex",gap:8}}>
+            {isPending&&<div style={{padding:"14px 18px 18px",display:"flex",gap:10,borderTop:`1px solid ${B.gray700}`}}>
               <button onClick={async()=>{await onApproveQuote(q.id,items);}}
-                style={{flex:1,padding:"11px 0",borderRadius:10,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                ✅ Aprovar orçamento
+                style={{flex:1,minHeight:46,borderRadius:12,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7,fontFamily:"inherit"}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Aprovar orçamento
               </button>
               <button onClick={async()=>{await onRejectQuote(q.id);}}
-                style={{padding:"11px 14px",borderRadius:10,background:"none",border:`2px solid ${B.red}`,color:B.red,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                style={{minHeight:46,padding:"0 18px",borderRadius:12,background:"none",border:`1px solid ${B.gray600}`,color:B.gray300,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                 Recusar
               </button>
             </div>}
-            {q.status==="approved"&&<div style={{padding:"12px 16px",textAlign:"center",fontSize:13,color:B.green,fontWeight:700}}>
-              ✅ Orçamento aprovado — entraremos em contato para confirmar o agendamento.
+            {q.status==="approved"&&<div style={{padding:"14px 18px",borderTop:`1px solid ${B.gray700}`,fontSize:12,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M20 6L9 17l-5-5"/></svg>Aprovado. Entraremos em contato para confirmar o agendamento.
             </div>}
-            {q.status==="rejected"&&<div style={{padding:"12px 16px",textAlign:"center",fontSize:13,color:B.red}}>
-              Orçamento recusado.
-            </div>}
+            {q.status==="rejected"&&<div style={{padding:"14px 18px",borderTop:`1px solid ${B.gray700}`,fontSize:12,color:B.gray400}}>Orçamento recusado.</div>}
           </div>);
         })}
       </div>}
@@ -13131,7 +13107,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.131";
+const APP_VERSION = "2026.11.13.133";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

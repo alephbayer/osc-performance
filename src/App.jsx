@@ -12583,7 +12583,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.92";
+const APP_VERSION = "2026.11.13.93";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14431,6 +14431,131 @@ function DashAlert({color,label,sub,icon,onClick}){
 }
 
 // ─── Dashboard: peças do Mercado Livre chegando (saiu para entrega / chega hoje) ─
+// ─── Página Calendário: lembretes, tarefas, dias importantes, férias, manutenções e entregas ML ───
+const CAL_KINDS=[
+  {k:"reminder",label:"Lembrete",color:"#f59e0b",check:true},
+  {k:"task",label:"Tarefa",color:"#3b82f6",check:true},
+  {k:"important",label:"Dia importante",color:"#ef4444"},
+  {k:"vacation",label:"Férias",color:"#14b8a6",emp:true,range:true},
+  {k:"maintenance",label:"Manutenção",color:"#f97316",range:true},
+  {k:"visit",label:"Visita",color:"#06b6d4",veh:true},
+  {k:"delivery",label:"Entrega",color:"#22c55e",veh:true},
+  {k:"manual",label:"Evento",color:"#6366f1"},
+];
+const CAL_AUTO=[
+  {k:"appointment",label:"Agendamento",color:"#8b5cf6"},
+  {k:"ml",label:"Entrega ML",color:"#eab308"},
+  {k:"remdue",label:"Prazo de lembrete",color:"#ec4899"},
+];
+function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],clients=[],employees=[],isOwner=false,onAdd,onUpdate,onDelete}){
+  const lc=d=>d.toLocaleDateString("sv-SE");
+  const todayS=lc(new Date());
+  const [cur,setCur]=useState(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1);});
+  const [sel,setSel]=useState(todayS);
+  const [off,setOff]=useState({});
+  const [form,setForm]=useState(null);
+  const [ml,setMl]=useState([]);
+  useEffect(()=>{let a=true;db.getMLArriving().then(r=>{if(a)setMl(r);}).catch(()=>{});return()=>{a=false;};},[]);
+  const kindOf=k=>CAL_KINDS.find(x=>x.k===k)||CAL_AUTO.find(x=>x.k===k)||{k,label:CAL_TYPES[k]?.label||"Evento",color:CAL_TYPES[k]?.color||"#6366f1"};
+  const all=useMemo(()=>{
+    const out=events.map(e=>({...e,kind:e.type==="note"?"reminder":e.type,end:e.endDate&&e.endDate>e.date?e.endDate:e.date}));
+    appointments.filter(a=>a.scheduledDate&&a.status==="open").forEach(a=>{
+      const v=vehicles.find(x=>x.id===a.vehicleId),c=clients.find(x=>x.id===a.clientId);
+      out.push({id:"appt_"+a.id,auto:true,kind:"appointment",title:(v?v.model:a.title)+(c?` · ${c.name}`:""),date:a.scheduledDate,end:a.scheduledDate,notes:a.title});
+    });
+    reminders.filter(r=>r.dueDate&&!r.done).forEach(r=>out.push({id:"rem_"+r.id,auto:true,kind:"remdue",title:r.title,date:r.dueDate,end:r.dueDate,notes:r.body}));
+    ml.filter(r=>r.eta_at).forEach(r=>{const d=new Date(r.eta_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});out.push({id:"ml_"+r.id,auto:true,kind:"ml",title:String(r.title||"").slice(0,60),date:d,end:d,notes:[r.vehicle_label,r.seller].filter(Boolean).join(" · ")});});
+    return out;
+  },[events,appointments,reminders,ml,vehicles,clients]);
+  const vis=all.filter(e=>!off[e.kind]);
+  const onDay=ds=>vis.filter(e=>e.date<=ds&&e.end>=ds).sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
+  const y=cur.getFullYear(),m=cur.getMonth();
+  const days=[];for(let i=0;i<new Date(y,m,1).getDay();i++)days.push(null);
+  for(let d=1;d<=new Date(y,m+1,0).getDate();d++)days.push(`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`);
+  while(days.length%7)days.push(null);
+  const monthName=cur.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+  const fdate=s=>new Date(s+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
+  const fshort=s=>new Date(s+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
+  const upcoming=vis.filter(e=>e.end>=todayS&&!e.done).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
+  const newEv=ds=>setForm({type:"reminder",title:"",date:ds||sel,endDate:"",time:"",employeeId:"",vehicleId:"",notes:"",color:kindOf("reminder").color});
+  const inp={padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",colorScheme:"dark",fontFamily:"inherit",boxSizing:"border-box"};
+  const ico=(d,s=15)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html:d}}/>;
+  const kd=form?kindOf(form.type):null;
+  const save=async()=>{
+    if(!form.title.trim()||!form.date) return;
+    const p={title:form.title.trim(),date:form.date,endDate:kd.range&&form.endDate>form.date?form.endDate:null,time:form.time||null,type:form.type,color:kd.color,
+      employeeId:kd.emp?form.employeeId||null:null,vehicleId:kd.veh?form.vehicleId||null:null,notes:form.notes||""};
+    if(form.id) await onUpdate(form.id,p); else await onAdd(p);
+    setSel(p.date); setForm(null);
+  };
+  const toggleDone=e=>onUpdate(e.id,{done:!e.done});
+  const Row=({e})=>{const k=kindOf(e.kind),chk=!e.auto&&k.check;return(
+    <div onClick={()=>!e.auto&&setForm({...e,type:e.kind==="reminder"?"reminder":e.type,endDate:e.endDate||"",time:e.time||"",employeeId:e.employeeId||"",vehicleId:e.vehicleId||""})}
+      style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:B.gray800,borderRadius:10,border:`1px solid ${B.gray700}`,borderLeft:`3px solid ${k.color}`,cursor:e.auto?"default":"pointer",opacity:e.done?.5:1}}>
+      {chk&&<div onClick={ev=>{ev.stopPropagation();toggleDone(e);}} style={{width:18,height:18,borderRadius:5,border:`1.5px solid ${e.done?k.color:B.gray500}`,background:e.done?k.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:"#fff"}}>{e.done&&ico('<polyline points="20 6 9 17 4 12"/>',12)}</div>}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:600,color:B.white,textDecoration:e.done?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis"}}>{e.title}</div>
+        <div style={{fontSize:10.5,color:B.gray400,marginTop:2}}><span style={{color:k.color,fontWeight:700}}>{k.label}</span>{e.time?` · ${e.time}`:""}{e.end>e.date?` · ${fshort(e.date)} a ${fshort(e.end)}`:""}{e.employeeId?` · ${employees.find(x=>x.id===e.employeeId)?.name||""}`:""}{e.notes?` · ${e.notes}`:""}</div>
+      </div>
+    </div>);};
+  return(<div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+      <div style={{fontSize:22,fontWeight:900,color:B.white,letterSpacing:-.5}}>Calendário</div>
+      <button onClick={()=>newEv()} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:10,border:"none",background:B.orange,color:B.white,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{ico('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',13)}Novo</button>
+    </div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+      {[...CAL_KINDS,...CAL_AUTO].map(k=>{const on=!off[k.k];return(<button key={k.k} onClick={()=>setOff(o=>({...o,[k.k]:on}))} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 9px",borderRadius:20,border:`1px solid ${on?k.color+"66":B.gray700}`,background:on?`${k.color}18`:"transparent",color:on?k.color:B.gray600,fontSize:10.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}><span style={{width:6,height:6,borderRadius:3,background:on?k.color:B.gray600}}/>{k.label}</button>);})}
+    </div>
+    <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:14,padding:10,marginBottom:14}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"2px 4px 8px"}}>
+        <button onClick={()=>setCur(new Date(y,m-1,1))} style={{background:"none",border:"none",color:B.gray300,cursor:"pointer",padding:4}}>{ico('<polyline points="15 18 9 12 15 6"/>')}</button>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:13,fontWeight:800,color:B.white,textTransform:"capitalize"}}>{monthName}</span>
+          <button onClick={()=>{const d=new Date();setCur(new Date(d.getFullYear(),d.getMonth(),1));setSel(todayS);}} style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:6,color:B.gray400,fontSize:10,padding:"2px 7px",cursor:"pointer",fontFamily:"inherit"}}>Hoje</button>
+        </div>
+        <button onClick={()=>setCur(new Date(y,m+1,1))} style={{background:"none",border:"none",color:B.gray300,cursor:"pointer",padding:4}}>{ico('<polyline points="9 18 15 12 9 6"/>')}</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
+        {["D","S","T","Q","Q","S","S"].map((d,i)=><div key={i} style={{textAlign:"center",fontSize:9.5,fontWeight:700,color:B.gray500,padding:"2px 0"}}>{d}</div>)}
+        {days.map((ds,i)=>{if(!ds)return<div key={i}/>;const ev=onDay(ds),isT=ds===todayS,isS=ds===sel;return(
+          <div key={i} onClick={()=>setSel(ds)} onDoubleClick={()=>newEv(ds)} style={{minHeight:54,borderRadius:8,padding:"3px 3px 2px",cursor:"pointer",background:isS?`${B.orange}1c`:B.gray800,border:`1px solid ${isS?B.orange:isT?B.orange+"77":B.gray700}`,overflow:"hidden"}}>
+            <div style={{fontSize:10.5,fontWeight:isT?800:600,color:isT?B.orange:B.gray300,marginBottom:2}}>{+ds.slice(8)}</div>
+            {ev.slice(0,2).map(e=>{const c=kindOf(e.kind).color;return<div key={e.id} style={{fontSize:8.5,lineHeight:"11px",padding:"0 3px",marginBottom:1,borderRadius:3,background:`${c}30`,color:c,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textDecoration:e.done?"line-through":"none"}}>{e.title}</div>;})}
+            {ev.length>2&&<div style={{fontSize:8.5,color:B.gray500,paddingLeft:2}}>+{ev.length-2}</div>}
+          </div>);})}
+      </div>
+    </div>
+    <div style={{fontSize:11,fontWeight:800,color:B.gray500,textTransform:"capitalize",letterSpacing:.5,marginBottom:8}}>{fdate(sel)}</div>
+    <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:18}}>
+      {onDay(sel).length?onDay(sel).map(e=><Row key={e.id} e={e}/>):<div style={{fontSize:12,color:B.gray500,padding:"6px 2px"}}>Nada marcado neste dia.</div>}
+    </div>
+    {upcoming.length>0&&<><div style={{fontSize:10,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Próximos</div>
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>{upcoming.map(e=><div key={e.id} onClick={()=>{setSel(e.date<todayS?todayS:e.date);setCur(new Date(+(e.date<todayS?todayS:e.date).slice(0,4),+(e.date<todayS?todayS:e.date).slice(5,7)-1,1));}} style={{cursor:"pointer"}}><Row e={e}/></div>)}</div></>}
+    {form&&createPortal(<div onClick={()=>setForm(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:16,padding:16,width:"100%",maxWidth:380,maxHeight:"92vh",overflowY:"auto",display:"flex",flexDirection:"column",gap:9}}>
+        <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",color:B.amber}}>{form.id?"Editar":"Novo"} item</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+          {CAL_KINDS.map(k=>{const on=form.type===k.k;return<button key={k.k} onClick={()=>setForm(f=>({...f,type:k.k,color:k.color}))} style={{padding:"5px 10px",borderRadius:20,border:`1.5px solid ${on?k.color:B.gray700}`,background:on?`${k.color}22`:"transparent",color:on?k.color:B.gray400,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{k.label}</button>;})}
+        </div>
+        <input value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} autoFocus placeholder={kd.k==="vacation"?"Ex.: Férias do João":kd.k==="maintenance"?"Ex.: Manutenção do elevador":"Título"} style={{...inp,fontSize:13,fontWeight:600}}/>
+        {kd.emp&&<select value={form.employeeId} onChange={e=>{const emp=employees.find(x=>x.id===e.target.value);setForm(f=>({...f,employeeId:e.target.value,title:emp&&(!f.title||/^Férias/.test(f.title))?`Férias · ${emp.name}`:f.title}));}} style={inp}><option value="">Funcionário…</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>}
+        {kd.veh&&<CalVehicleSearch value={form.vehicleId||""} onChange={v=>setForm(f=>({...f,vehicleId:v}))} vehicles={vehicles} clients={clients}/>}
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} style={{...inp,flex:1,minWidth:0}}/>
+          {kd.range&&<><span style={{fontSize:11,color:B.gray500}}>até</span><input type="date" value={form.endDate} min={form.date} onChange={e=>setForm(f=>({...f,endDate:e.target.value}))} style={{...inp,flex:1,minWidth:0}}/></>}
+          {!kd.range&&<input type="time" value={form.time} onChange={e=>setForm(f=>({...f,time:e.target.value}))} style={{...inp,width:92}}/>}
+        </div>
+        <textarea value={form.notes||""} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={2} placeholder="Notas…" style={{...inp,resize:"none"}}/>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={save} disabled={!form.title.trim()} style={{flex:1,padding:"9px 0",borderRadius:10,border:"none",background:form.title.trim()?kd.color:B.gray700,color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+          <button onClick={()=>setForm(null)} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.gray200,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Cancelar</button>
+          {form.id&&<button onClick={async()=>{await onDelete(form.id);setForm(null);}} style={{padding:"9px 12px",borderRadius:10,border:`1px solid ${B.red}44`,background:`${B.red}14`,color:B.red,cursor:"pointer"}}><ITrash s={13}/></button>}
+        </div>
+      </div>
+    </div>,document.body)}
+  </div>);
+}
+
 function MLArrivalsAlert({show,onOpen}) {
   const [rows,setRows]=useState([]);
   const [rets,setRets]=useState([]);
@@ -16943,8 +17068,8 @@ export default function App() {
       const pendingMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="pending").length;
       const approvedMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="approved").length;
       const boughtMateriais=investments.filter(i=>i.category==="materiais"&&i.status==="bought").length;
-      const todayStr=new Date().toISOString().slice(0,10);
-      const todayCalEvents=(calendarEvents||[]).filter(e=>e.date===todayStr);
+      const todayStr=new Date().toLocaleDateString("sv-SE");
+      const todayCalEvents=(calendarEvents||[]).filter(e=>!e.done&&((e.date<=todayStr&&(e.endDate||e.date)>=todayStr)||((e.type==="task"||e.type==="reminder")&&e.date<todayStr))).map(e=>({...e,_late:e.date<todayStr&&(e.endDate||e.date)<todayStr}));
 
       // Clientes com veículo entregue e conta em aberto
       // Agrupar OSs com saldo em aberto por cliente, ordem alfabética
@@ -17025,9 +17150,9 @@ export default function App() {
         {(hasPurchases||hasInvest||hasNotes||lowStock>0||pendingMateriais>0||approvedMateriais>0||boughtMateriais>0||todayCalEvents.length>0)&&
         <div style={{background:B.gray800,borderRadius:14,padding:"4px 16px",border:`1px solid ${B.gray700}`}}>
           {todayCalEvents.map(e=>{
-            const calColor=CAL_TYPES[e.type]?.color||B.purple;
+            const calColor=e._late?B.red:(CAL_KINDS.find(k=>k.k===e.type)?.color||CAL_TYPES[e.type]?.color||B.purple);
             const calIcon=<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-            return(<DashAlert key={e.id} color={calColor} icon={calIcon} label={e.title} sub={`${CAL_TYPES[e.type]?.label||"Evento"}${e.time?` · ${e.time}`:""}`} onClick={()=>setShowCalendar(true)}/>);
+            return(<DashAlert key={e.id} color={calColor} icon={calIcon} label={e.title} sub={`${e._late?"Atrasado · ":""}${CAL_KINDS.find(k=>k.k===e.type)?.label||CAL_TYPES[e.type]?.label||"Evento"}${e.time?` · ${e.time}`:""}${e.endDate&&e.endDate>e.date?` · até ${e.endDate.split("-").reverse().slice(0,2).join("/")}`:""}`} onClick={()=>goSection("calendario")}/>);
           })}
           {hasPurchases&&<DashAlert color={B.amber} icon={iconCart} label={`${pendingPurchaseCount} pedido${pendingPurchaseCount!==1?"s":""} de peça aguardando compra`} sub="Pedidos de Compras" onClick={()=>goSection("gestao","purchases")}/>}
           {pendingMateriais>0&&<DashAlert color={B.blue} icon={iconBox} label={`${pendingMateriais} ${pendingMateriais!==1?"materiais sortidos":"material sortido"} para aprovar`} sub="Pedidos de Compras" onClick={()=>goSection("compras","materiais")}/>}
@@ -17294,6 +17419,7 @@ export default function App() {
     );
     return(<div>
       <div style={{fontSize:22,fontWeight:900,color:B.white,letterSpacing:-.5,marginBottom:20}}>Mais</div>
+      {(adminRole==="owner"||adminRole==="admin")&&<Item icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>} label="Calendário" sub="Lembretes, tarefas, férias, manutenções e entregas" color={B.blue} onClick={()=>goSection("calendario")}/>}
       {/* Theme — available to all */}
       <Item icon={themeLabel.split(" ")[0]} label="Tema do app" sub={themeLabel} color={B.gray400} onClick={toggleTheme} right={<span style={{fontSize:12,color:B.gray400,fontWeight:700}}>{themeLabel}</span>}/>
       {/* Owner-only items */}
@@ -17334,6 +17460,7 @@ export default function App() {
     ...(navItems.find(n=>n.id==="cadastros")?[{id:"cadastros", label:"Cadastros", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>}]:[]),
     ...(navItems.find(n=>n.id==="compras")  ?[{id:"compras",   label:"Compras",   icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>}]:[]),
     ...(navItems.find(n=>n.id==="gestao")   ?[{id:"gestao",    label:"Gestão",    icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>}]:[]),
+    ...((adminRole==="owner"||adminRole==="admin")?[{id:"calendario",label:"Calendário",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}]:[]),
     ...(navItems.find(n=>n.id==="mais")     ?[{id:"mais",      label:"Mais",      icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>}]:[]),
   ];
 
@@ -17391,6 +17518,10 @@ export default function App() {
 
       {/* ══ MAIS ══ */}
       {navSection==="mais"&&<MaisPage/>}
+      {navSection==="calendario"&&<CalendarPage events={calendarEvents} appointments={appointments} reminders={reminders.filter(r=>adminRole==="owner"||r.visibility!=="owner")} vehicles={vehicles} clients={clients} employees={employees}
+        onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Adicionado ✓");}catch(err){errToast(err);}}}
+        onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));}catch(err){errToast(err);}}}
+        onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Removido ✓");}catch(err){errToast(err);}}}/>}
 
       {(navSection==="oficina"||navSection==="cadastros"||navSection==="gestao"||navSection==="compras")&&<>
         <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>

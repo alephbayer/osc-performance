@@ -11233,6 +11233,46 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   doc.save(`financeiro-${finDiv}-${from||"inicio"}-${to||"fim"}.pdf`);
 }
 
+// ─── Card: entradas de dinheiro discriminadas, mais recentes primeiro, com busca ───
+function FinanceEntriesCard({payments=[],vehicles=[],clients=[]}){
+  const [q,setQ]=useState("");
+  const [lim,setLim]=useState(15);
+  const norm=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const rows=useMemo(()=>payments.map(p=>{
+    const v=vehicles.find(x=>x.id===p.vehicleId);
+    const c=v?clients.find(x=>x.id===v.clientId):null;
+    const title=v?`${v.model||"Veículo"}${v.plate?` · ${v.plate}`:""}`:(p.note||"Venda avulsa");
+    return {p,v,c,title,sub:[c?.name,v&&p.note?p.note:null].filter(Boolean).join(" · "),
+      hay:norm([title,c?.name,p.method,p.note,String(p.amount).replace(".",","),Number(p.amount).toLocaleString("pt-BR",{minimumFractionDigits:2})].join(" "))};
+  }).sort((a,b)=>String(b.p.paidAt||"").localeCompare(String(a.p.paidAt||""))),[payments,vehicles,clients]);
+  const nq=norm(q.trim());
+  const list=nq?rows.filter(r=>r.hay.includes(nq)):rows;
+  const total=list.reduce((s,r)=>s+Number(r.p.amount||0),0);
+  const fd=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
+  return(<div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:14,padding:14,marginBottom:24}}>
+    <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:8,marginBottom:10}}>
+      <div style={{fontSize:11,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:1}}>Entradas</div>
+      <div style={{fontSize:11,color:B.gray500}}>{list.length} {list.length===1?"entrada":"entradas"} · <span style={{color:B.green,fontWeight:800}}>{fmtBRL(total)}</span></div>
+    </div>
+    <div style={{position:"relative",marginBottom:10}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)"}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input value={q} onChange={e=>{setQ(e.target.value);setLim(15);}} placeholder="Buscar por carro, cliente, forma, valor…" style={{width:"100%",boxSizing:"border-box",padding:"8px 10px 8px 30px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
+    </div>
+    {list.length===0?<div style={{textAlign:"center",padding:"18px 0",color:B.gray500,fontSize:12}}>{q?"Nenhuma entrada encontrada.":"Nenhuma entrada no período."}</div>
+    :<div style={{display:"flex",flexDirection:"column"}}>
+      {list.slice(0,lim).map((r,i)=>(<div key={r.p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderTop:i?`1px solid ${B.gray800}`:"none"}}>
+        <div style={{width:44,flexShrink:0,fontSize:10.5,color:B.gray500,fontWeight:600}}>{fd(r.p.paidAt)}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12.5,fontWeight:600,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.title}</div>
+          <div style={{fontSize:10.5,color:B.gray400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.p.method||"—"}{r.sub?` · ${r.sub}`:""}</div>
+        </div>
+        <div style={{fontSize:13,fontWeight:800,color:B.green,flexShrink:0}}>{fmtBRL(r.p.amount)}</div>
+      </div>))}
+      {list.length>lim&&<button onClick={()=>setLim(l=>l+20)} style={{marginTop:6,padding:"8px 0",borderRadius:8,border:`1px solid ${B.gray700}`,background:"none",color:B.gray400,fontSize:11.5,cursor:"pointer",fontFamily:"inherit"}}>Ver mais ({list.length-lim})</button>}
+    </div>}
+  </div>);
+}
+
 function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expenses=[],onAddExpense,onUpdateExpense,onDeleteExpense,osHistory=[],internalTransfers=[],onAddTransfer,onDeleteTransfer,adminRole="",sales=[]}) {
   const [finDiv,setFinDiv]=useState("performance"); // "performance" | "finishing"
   const [from,setFrom]=useState("");
@@ -11334,6 +11374,8 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
         <div style={{fontSize:19,fontWeight:900,color:c.color}}>{fmtBRL(c.value)}</div>
       </div>))}
     </div>
+
+    <FinanceEntriesCard payments={allDivPayments} vehicles={vehicles} clients={clients}/>
 
     {/* Per-vehicle table */}
     <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>Detalhamento por veículo</div>
@@ -12583,7 +12625,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.95";
+const APP_VERSION = "2026.11.13.96";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

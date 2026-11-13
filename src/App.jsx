@@ -276,6 +276,54 @@ function CollapsibleVehicleGroup({vehicle,count,children}) {
   </div>);
 }
 
+function PortalHistoryCard({h,v,payments}) {
+  const [open,setOpen]=useState(false);
+  const div=h.division||"performance";
+  const divColor=div==="finishing"?FD.primary:B.orange;
+  const osNum=h.os_number||h.osNumber;
+  const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
+  const deliveredAt=h.delivered_at||h.deliveredAt;
+  const totalValue=Number(h.total_value||h.totalValue||0);
+  const snap=h.tasks_snapshot||h.tasksSnapshot||[];
+  const hPays=payments.filter(p=>p.osHistoryId===h.id);
+  const paid=Math.round(hPays.reduce((a,p)=>a+Number(p.amount),0)*100)/100;
+  const balance=Math.round((totalValue-paid)*100)/100;
+  const isOpen=balance>=0.01;
+  return (<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,marginBottom:10,overflow:"hidden"}}>
+    <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left",fontFamily:"inherit",color:B.white}}>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4,flexWrap:"wrap"}}>
+          <span style={{fontSize:10,fontWeight:800,color:divColor,border:`1px solid ${divColor}44`,borderRadius:99,padding:"1px 8px"}}>{osLabel}</span>
+          <span style={{fontSize:11,color:B.gray500}}>{deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
+        </div>
+      </div>
+      <div style={{textAlign:"right",flexShrink:0}}>
+        <div style={{fontSize:14,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</div>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:.5,marginTop:3,color:isOpen?B.red:B.green}}>{isOpen?`EM ABERTO ${fmtBRL(balance)}`:"QUITADO"}</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,transform:open?"rotate(90deg)":"none",transition:"transform .2s"}}><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+    {open&&<div style={{borderTop:`1px solid ${B.gray700}`,padding:"12px 16px 14px"}}>
+      {snap.length>0&&<>
+        <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Serviços · {snap.length}</div>
+        {snap.map((t,i)=><div key={i} style={{display:"flex",gap:8,padding:"5px 0",fontSize:12,color:B.gray200}}>
+          <span style={{flex:1}}>{t.label||t.name}</span>
+          {(t.value||t.total)&&<span style={{color:B.gray400}}>{fmtBRL(t.value||t.total)}</span>}
+        </div>)}
+      </>}
+      {hPays.length>0&&<>
+        <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"12px 0 6px"}}>Pagamentos</div>
+        {hPays.map(p=><div key={p.id} style={{display:"flex",gap:8,padding:"4px 0",fontSize:12}}>
+          <span style={{flex:1,color:B.gray200}}>{p.method}{p.note?` · ${p.note}`:""}</span>
+          <span style={{color:B.gray500}}>{p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):""}</span>
+          <span style={{fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
+        </div>)}
+      </>}
+    </div>}
+  </div>);
+}
+
 function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen}) {
   const vts=tasks.filter(t=>t.vehicleId===v.id&&!t.warranty);
   const done=vts.filter(t=>t.done).length;
@@ -607,59 +655,13 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       {tab==="history"&&<>
         {cliHistory.length===0
           ?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
-            <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
             <div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhuma OS finalizada ainda</div>
+            <div style={{fontSize:13,marginTop:4}}>Os serviços entregues aparecem aqui.</div>
           </div>
-          :cliVehicles.map(v=>{
-            const vHist=cliHistory.filter(h=>(h.vehicle_id||h.vehicleId)===v.id);
-            if(vHist.length===0) return null;
-            return (<CollapsibleVehicleGroup key={v.id} vehicle={v} count={`${vHist.length} OS${vHist.length!==1?"s":""}`}>
-              {vHist.map(h=>{
-                const div=h.division||"performance";
-                const divColor=div==="finishing"?FD.primary:B.orange;
-                const divLabel=div==="finishing"?"Finishing":"Performance";
-                const osNum=h.os_number||h.osNumber;
-                const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
-                const deliveredAt=h.delivered_at||h.deliveredAt;
-                const totalValue=h.total_value||h.totalValue||0;
-                const snap=h.tasks_snapshot||h.tasksSnapshot||[];
-                const hPayments=payments.filter(p=>p.osHistoryId===h.id);
-                const histLink=`${window.location.href.split("?")[0]}?vh=${v.id}`;
-                return (<div key={h.id} style={{background:B.gray800,borderRadius:14,marginBottom:10,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
-                  <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:13,color:B.white,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                        {osLabel}
-                        <span style={{fontSize:10,fontWeight:700,color:divColor,background:`${divColor}18`,border:`1px solid ${divColor}33`,borderRadius:5,padding:"1px 6px"}}>{divLabel}</span>
-                      </div>
-                      <div style={{fontSize:11,color:B.gray500,marginTop:2}}>
-                        Entregue em {deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}
-                      </div>
-                    </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:13,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</div>
-                      <div style={{fontSize:10,color:B.gray500}}>{snap.length} serviço{snap.length!==1?"s":""}</div>
-                    </div>
-                  </div>
-                  {snap.length>0&&<div style={{padding:"10px 16px",borderBottom:hPayments.length>0?`1px solid ${B.gray700}`:"none"}}>
-                    {snap.map((t,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:i<snap.length-1?`1px solid ${B.gray700}`:"none"}}>
-                      <span style={{color:B.green,flexShrink:0,display:"flex"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
-                      <span style={{fontSize:12,color:B.gray200,flex:1}}>{t.label||t.name}</span>
-                      {(t.value||t.total)&&<span style={{fontSize:12,color:B.gray400}}>{fmtBRL(t.value||t.total)}</span>}
-                    </div>)}
-                  </div>}
-                  {hPayments.length>0&&<div style={{padding:"10px 16px",background:`${B.green}08`}}>
-                    <div style={{fontSize:10,color:B.green,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos</div>
-                    {hPayments.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0"}}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                      <span style={{fontSize:12,color:B.gray200,flex:1}}>{p.method}{p.note?` · ${p.note}`:""}</span>
-                      <span style={{fontSize:12,fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
-                    </div>)}
-                  </div>}
-                </div>);
-              })}
-            </CollapsibleVehicleGroup>);
-          })}
+          :<>
+            <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"0 2px 10px"}}>Serviços entregues · {cliHistory.length}</div>
+            {cliHistory.map(h=>{const v=cliVehicles.find(x=>x.id===(h.vehicle_id||h.vehicleId))||{model:"Veículo"};return <PortalHistoryCard key={h.id} h={h} v={v} payments={payments}/>;})}
+          </>}
       </>}
 
       {/* ── Account ── */}
@@ -676,6 +678,24 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
               <div style={{fontWeight:800,fontSize:15,color:B.blue}}>{fmtBRL(totalCredit)}</div>
               <div style={{fontSize:11,color:B.gray400,marginTop:1}}>Crédito disponível · será aplicado na próxima OS</div>
             </div>
+          </div>);
+        })()}
+        {(()=>{
+          let due=debtTotal;
+          cliVehicles.forEach(v=>{
+            if(!(v.enteredAt||v.enteredAtFinishing)) return;
+            const pT=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
+            const fT=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
+            const fL=fT.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0);
+            const tot=(v.enteredAt?vehicleTotal(v.id,pT,defaultRate,v):0)+(v.enteredAtFinishing?fL+fT.reduce((a,t)=>a+taskCost(t,defaultRate).mat,0)-fL*Number(v.osDiscountPctFinishing||0)/100:0);
+            const pd=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((a,p)=>a+Number(p.amount),0);
+            due+=Math.max(0,tot-pd);
+          });
+          return (<div style={{textAlign:"center",padding:"22px 16px 24px",marginBottom:16,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16}}>
+            <div style={{fontSize:10,letterSpacing:1.2,color:B.gray500,fontWeight:700,textTransform:"uppercase"}}>Saldo total em aberto</div>
+            {due>=0.5
+              ?<div style={{fontSize:30,fontWeight:800,color:B.white,marginTop:8,letterSpacing:-.5}}>{fmtBRL(due)}</div>
+              :<div style={{fontSize:20,fontWeight:800,color:B.green,marginTop:8}}>Tudo em dia</div>}
           </div>);
         })()}
         <PixPaymentBox/>
@@ -695,91 +715,64 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           const totalPaid=vPayments.reduce((s,p)=>s+Number(p.amount),0);
           const balance=totalDue-totalPaid;
           const hasActiveOS=!!(v.enteredAt||v.enteredAtFinishing);
-          const totalPaidAll=[...vPayments,...payments.filter(p=>p.vehicleId===v.id&&p.osHistoryId)].reduce((s,p)=>s+Number(p.amount),0);
-          const countLabel=hasActiveOS?`Em serviço · ${fmtBRL(totalPaidAll)} pago`:`${vHistory.length} OS${vHistory.length!==1?"s":""}`;
-          return (<CollapsibleVehicleGroup key={v.id} vehicle={v} count={countLabel}>
-            <div style={{background:B.gray800}}>
-            {hasActiveOS&&<div style={{display:"flex",gap:1,borderBottom:`1px solid ${B.gray700}`}}>
-              <div style={{flex:1,padding:"12px 16px",textAlign:"center"}}>
-                <div style={{fontSize:10,color:B.gray400,marginBottom:2}}>Total</div>
-                <div style={{fontSize:15,fontWeight:800,color:B.white}}>{fmtBRL(totalDue)}</div>
+          const lbl={fontSize:9,letterSpacing:1,fontWeight:700,textTransform:"uppercase",marginBottom:4};
+          return (<div key={v.id} style={{marginBottom:18}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,margin:"0 2px 10px"}}>
+              {v.photo?<img src={v.photo} alt="" style={{width:30,height:30,borderRadius:8,objectFit:"cover"}}/>:<div style={{width:30,height:30,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={15} c={B.gray400}/></div>}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
+                <div style={{fontSize:11,color:B.gray500}}>{v.plate}</div>
               </div>
-              <div style={{flex:1,padding:"12px 16px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}>
-                <div style={{fontSize:10,color:B.green,marginBottom:2}}>Pago</div>
-                <div style={{fontSize:15,fontWeight:800,color:B.green}}>{fmtBRL(totalPaid)}</div>
-              </div>
-              <div style={{flex:1,padding:"12px 16px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}>
-                <div style={{fontSize:10,color:balance>0?B.red:B.green,marginBottom:2}}>{balance>0?"Saldo":"Quitado"}</div>
-                <div style={{fontSize:15,fontWeight:800,color:balance>0?B.red:B.green}}>{balance>0?fmtBRL(balance):"✓"}</div>
-              </div>
-            </div>}
-            {hasActiveOS&&(()=>{
-              const doneTasksAll=[...(v.enteredAt?perfTasks:[]),...(v.enteredAtFinishing?finTasks:[])];
-              const executedAll=(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),true):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,true):0);
-              return <ExecutedStrip style={{margin:"10px 16px",borderRadius:10}} executed={executedAll} total={totalDue}
-                done={doneTasksAll.filter(t=>t.done).length} count={doneTasksAll.length}
-                boughtValue={boughtPendingValue(doneTasksAll,defaultRate)} outsourcedValue={outsourcedOpenValue(doneTasksAll,defaultRate)} advance paid={totalPaid}/>;
-            })()}
-            {hasActiveOS&&vPayments.length>0&&<div style={{padding:"10px 16px",borderBottom:vHistory.length>0?`1px solid ${B.gray700}`:"none"}}>
-              <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Pagamentos — OS atual</div>
-              {groupPaymentsForClient(vPayments).map((p,i,arr)=>(
-                <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i<arr.length-1?`1px solid ${B.gray700}`:"none"}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:700,color:B.green,display:"flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>{fmtBRL(p.amount)}</div>
-                    <div style={{fontSize:11,color:B.gray400}}>{p.method} · {p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"—"}{p.note?` · ${p.note}`:""}</div>
-                  </div>
+            </div>
+            <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,overflow:"hidden"}}>
+              {hasActiveOS&&<>
+                <div style={{display:"flex"}}>
+                  <div style={{flex:1,padding:"14px 12px",textAlign:"center"}}><div style={{...lbl,color:B.gray500}}>Total</div><div style={{fontSize:15,fontWeight:800,color:B.white}}>{fmtBRL(totalDue)}</div></div>
+                  <div style={{flex:1,padding:"14px 12px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}><div style={{...lbl,color:B.gray500}}>Pago</div><div style={{fontSize:15,fontWeight:800,color:B.green}}>{fmtBRL(totalPaid)}</div></div>
+                  <div style={{flex:1,padding:"14px 12px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}><div style={{...lbl,color:B.gray500}}>{balance>0.005?"Saldo":"Situação"}</div><div style={{fontSize:15,fontWeight:800,color:balance>0.005?B.white:B.green}}>{balance>0.005?fmtBRL(balance):"Quitado"}</div></div>
                 </div>
-              ))}
-            </div>}
-            {vHistory.length>0&&<div style={{padding:"10px 16px"}}>
-              <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>OSs anteriores</div>
-              {vHistory.map(h=>{
-                const div=h.division||"performance";
-                const osNum=h.os_number||h.osNumber;
-                const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
-                const divColor=div==="finishing"?FD.primary:B.orange;
-                const deliveredAt=h.delivered_at||h.deliveredAt;
-                const totalValue=Number(h.total_value||h.totalValue||0);
-                const hPays=payments.filter(p=>p.osHistoryId===h.id);
-                const paid=Math.round(hPays.reduce((s,p)=>s+Number(p.amount),0)*100)/100;
-                const balance=Math.round((totalValue-paid)*100)/100;
-                const isOpen=balance>=0.01;
-                return (<div key={h.id} style={{background:isOpen?`${B.red}08`:B.gray900,borderRadius:10,padding:"10px 14px",marginBottom:8,border:`1px solid ${isOpen?B.red+"44":B.gray700}`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <span style={{fontSize:11,fontWeight:800,color:divColor}}>{osLabel}</span>
-                    <span style={{fontSize:10,color:B.gray500}}>· {deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
-                    {isOpen&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",whiteSpace:"nowrap"}}>Em aberto</span>}
-                    {!isOpen&&paid>0&&<span style={{marginLeft:"auto",fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"2px 8px"}}>Quitado</span>}
+                {(()=>{
+                  const doneTasksAll=[...(v.enteredAt?perfTasks:[]),...(v.enteredAtFinishing?finTasks:[])];
+                  const executedAll=(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),true):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,true):0);
+                  return <ExecutedStrip style={{margin:"0 14px 12px",borderRadius:10}} executed={executedAll} total={totalDue}
+                    done={doneTasksAll.filter(t=>t.done).length} count={doneTasksAll.length}
+                    boughtValue={boughtPendingValue(doneTasksAll,defaultRate)} outsourcedValue={outsourcedOpenValue(doneTasksAll,defaultRate)} advance paid={totalPaid}/>;
+                })()}
+              </>}
+              {hasActiveOS&&vPayments.length>0&&<div style={{padding:"12px 16px",borderTop:`1px solid ${B.gray700}`}}>
+                <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Pagamentos</div>
+                {groupPaymentsForClient(vPayments).map(p=>(
+                  <div key={p.id} style={{display:"flex",alignItems:"baseline",gap:8,padding:"5px 0",fontSize:12}}>
+                    <span style={{flex:1,color:B.gray200}}>{p.method}{p.note?` · ${p.note}`:""}</span>
+                    <span style={{color:B.gray500}}>{p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"—"}</span>
                   </div>
-                  <div style={{display:"flex",gap:1,background:B.gray800,borderRadius:8,overflow:"hidden",marginBottom:hPays.length>0?8:0}}>
-                    <div style={{flex:1,padding:"8px 10px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Total</div>
-                      <div style={{fontSize:13,fontWeight:800,color:B.white}}>{fmtBRL(totalValue)}</div>
+                ))}
+              </div>}
+              {vHistory.length>0&&<div style={{padding:"12px 16px",borderTop:hasActiveOS?`1px solid ${B.gray700}`:"none"}}>
+                <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>OSs anteriores</div>
+                {vHistory.map(h=>{
+                  const div=h.division||"performance";
+                  const osNum=h.os_number||h.osNumber;
+                  const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
+                  const divColor=div==="finishing"?FD.primary:B.orange;
+                  const deliveredAt=h.delivered_at||h.deliveredAt;
+                  const tv=Number(h.total_value||h.totalValue||0);
+                  const pd=Math.round(payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0)*100)/100;
+                  const bal=Math.round((tv-pd)*100)/100;
+                  return (<div key={h.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:`1px solid ${B.gray700}`}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <span style={{fontSize:11,fontWeight:800,color:divColor}}>{osLabel}</span>
+                      <span style={{fontSize:11,color:B.gray500}}> · {deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
                     </div>
-                    <div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}>
-                      <div style={{fontSize:9,color:B.green,marginBottom:1}}>Pago</div>
-                      <div style={{fontSize:13,fontWeight:800,color:B.green}}>{fmtBRL(paid)}</div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:B.white}}>{fmtBRL(tv)}</div>
+                      <div style={{fontSize:9,fontWeight:700,letterSpacing:.5,color:bal>=0.01?B.red:B.green}}>{bal>=0.01?`EM ABERTO ${fmtBRL(bal)}`:"QUITADO"}</div>
                     </div>
-                    {isOpen&&<div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`,background:`${B.red}12`}}>
-                      <div style={{fontSize:9,color:B.red,marginBottom:1}}>Em aberto</div>
-                      <div style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(balance)}</div>
-                    </div>}
-                    {!isOpen&&<div style={{flex:1,padding:"8px 10px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`,background:B.greenBg}}>
-                      <div style={{fontSize:9,color:B.green,marginBottom:1}}>Situação</div>
-                      <div style={{fontSize:13,fontWeight:900,color:B.green}}>Quitado</div>
-                    </div>}
-                  </div>
-                  {hPays.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 0",borderTop:`1px solid ${B.gray700}`}}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                    <span style={{fontSize:11,color:B.gray300,flex:1}}>{p.method}{p.note?` · ${p.note}`:""}</span>
-                    <span style={{fontSize:10,color:B.gray500}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
-                  </div>)}
-                </div>);
-              })}
-            </div>}
-          </div>
-          </CollapsibleVehicleGroup>);
+                  </div>);
+                })}
+              </div>}
+            </div>
+          </div>);
         })}
         {cliVehicles.every(v=>!v.enteredAt&&!v.enteredAtFinishing&&!payments.some(p=>p.vehicleId===v.id)&&!cliHistory.some(h=>(h.vehicle_id||h.vehicleId)===v.id))&&
           <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
@@ -13119,7 +13112,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.129";
+const APP_VERSION = "2026.11.13.130";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -59,6 +59,7 @@ const B = {
 const qtyNum=v=>{const n=parseFloat(String(v).replace(",","."));return n>0?n:1;};
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtBRLReal=n=>fmtBRL(n);
+let _oscToast=null; const notify=m=>{try{_oscToast&&_oscToast(m);}catch{}};
 const fmtR2= n  => Number(n||0).toFixed(2).replace(".",",");
 const partUsedQty=(part,vehicleId,tasks)=>Number(part.usedQty||0)+(tasks||[]).filter(t=>t.vehicleId===vehicleId).flatMap(t=>t.materials||[]).filter(m=>(part.id&&m.reservedPartId===part.id)||(part.purchaseOrderId&&m.purchaseOrderId===part.purchaseOrderId)).reduce((a,m)=>a+Number(m.qty||1),0);
 const partsRemaining=(part,vehicleId,tasks)=>Math.max(0,Number(part.qty||1)-partUsedQty(part,vehicleId,tasks));
@@ -6993,11 +6994,11 @@ function ToolsTab({showValues=true}) {
   const fmtS=d=>d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const add=async()=>{
     if(!form.name.trim()){ setErr("Informe o nome"); return; }
-    try{ await db.addTool({name:form.name.trim(),value:Number(String(form.value).replace(",","."))||0,qty:Number(form.qty)||1,location:form.location.trim(),purchased_at:new Date().toLocaleDateString("sv-SE")}); setForm({name:"",value:"",qty:"1",location:""}); setAdding(false); setErr(""); load(); }
+    try{ await db.addTool({name:form.name.trim(),value:Number(String(form.value).replace(",","."))||0,qty:Number(form.qty)||1,location:form.location.trim(),purchased_at:new Date().toLocaleDateString("sv-SE")}); setForm({name:"",value:"",qty:"1",location:""}); setAdding(false); setErr(""); load(); notify("Ferramenta adicionada ✓"); }
     catch(e){ setErr(e.message||"Erro ao salvar"); }
   };
-  const save=async(t,patch)=>{ try{ await db.updateTool(t.id,patch); setEdit(null); load(); }catch(e){ setErr(e.message||"Erro ao salvar"); } };
-  const del=async t=>{ if(!window.confirm(`Remover “${t.name}” da lista de ferramentas?`)) return; try{ await db.deleteTool(t.id); load(); }catch(e){ setErr(e.message); } };
+  const save=async(t,patch)=>{ try{ await db.updateTool(t.id,patch); setEdit(null); load(); notify("Ferramenta atualizada ✓"); }catch(e){ setErr(e.message||"Erro ao salvar"); } };
+  const del=async t=>{ if(!window.confirm(`Remover “${t.name}” da lista de ferramentas?`)) return; try{ await db.deleteTool(t.id); load(); notify("Ferramenta removida ✓"); }catch(e){ setErr(e.message); } };
   return (<div>
     <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
       {showValues&&<div style={{flex:1,minWidth:150,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px"}}>
@@ -7082,7 +7083,7 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
     catch(e){ setErr(e.message||"Erro ao anexar PDF"); }
     setUpBusy(false);
   };
-  const delDoc=async id=>{ try{ await db.deleteSupplierDoc(id); await loadDocs(); }catch(e){ setErr(e.message||"Erro ao remover"); } };
+  const delDoc=async id=>{ try{ await db.deleteSupplierDoc(id); await loadDocs(); notify("Documento removido ✓"); }catch(e){ setErr(e.message||"Erro ao remover"); } };
   const load=()=>{ loadDocs(); return db.getSuppliers().then(r=>{setList(r);setLoading(false);}).catch(e=>{setErr(e.message||"Erro ao carregar");setLoading(false);}); };
   useEffect(()=>{load();},[]);
   const stats=name=>{const k=norm(name);const ps=purchases.filter(p=>norm(p.supplier)===k);return {n:ps.length,total:ps.reduce((s,p)=>s+Number(p.totalCost||0),0),last:ps.map(p=>p.purchaseDate).sort().pop()||null};};
@@ -7097,11 +7098,11 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
       const row={name,cnpj:form.cnpj.trim()||null,phone:form.phone.trim()||null,email:form.email.trim()||null,contact:form.contact.trim()||null,address:form.address.trim()||null,notes:form.notes.trim()||null};
       if(editId==="new") await db.addSupplier(row);
       else await db.updateSupplier(editId,row,list.find(x=>x.id===editId)?.name);
-      setEditId(null); await load();
+      setEditId(null); await load(); notify(editId==="new"?"Fornecedor adicionado ✓":"Fornecedor atualizado ✓");
     }catch(e){setErr(e.message||"Erro ao salvar");}
     setBusy(false);
   };
-  const del=async id=>{try{await db.deleteSupplier(id);setConfirmDel(null);await load();}catch(e){setErr(e.message||"Erro ao remover");}};
+  const del=async id=>{try{await db.deleteSupplier(id);setConfirmDel(null);await load();notify("Fornecedor removido ✓");}catch(e){setErr(e.message||"Erro ao remover");}};
   const inp={padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const shown=list.filter(x=>!q||norm([x.name,x.cnpj,x.phone,x.contact,x.email].join(" ")).includes(norm(q)));
   const formBox=(<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.green}55`,padding:14,marginBottom:14}}>
@@ -12688,7 +12689,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.101";
+const APP_VERSION = "2026.11.13.102";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14864,7 +14865,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
         if(!canSeeValues){ row.items=items.map(i=>({name:i.name,value:0})); row.total=0; }
         row.created_by=actor||""; const r=await db.addPartnerJob(row); setJobs(p=>[r,...p]);
       }
-      setForm(emptyForm); setFormOpen(false);
+      setForm(emptyForm); setFormOpen(false); notify("Trabalho salvo ✓");
     }catch(e){fail(e);}
     setBusy(false);
   };
@@ -14878,7 +14879,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
     catch(e){fail(e);} setBusy(false);
   };
   const reopen=async j=>{ try{ const r=await db.updatePartnerJob(j.id,{status:"doing",delivered_at:null}); setJobs(p=>p.map(x=>x.id===j.id?r:x)); }catch(e){fail(e);} };
-  const delJob=async j=>{ if(!window.confirm(`Remover o trabalho ${j.plate||j.model}?`)) return; try{ await db.deletePartnerJob(j.id); setJobs(p=>p.filter(x=>x.id!==j.id)); }catch(e){fail(e);} };
+  const delJob=async j=>{ if(!window.confirm(`Remover o trabalho ${j.plate||j.model}?`)) return; try{ await db.deletePartnerJob(j.id); setJobs(p=>p.filter(x=>x.id!==j.id)); notify("Trabalho removido ✓"); }catch(e){fail(e);} };
   const setPaid=async(ids,paid)=>{
     try{ await db.setPartnerJobsPaid(ids,paid); const at=paid?new Date().toISOString():null; setJobs(p=>p.map(j=>ids.includes(j.id)?{...j,paid,paid_at:at}:j)); }catch(e){fail(e);}
   };
@@ -15885,6 +15886,7 @@ export default function App() {
 
   const toast_=useCallback(m=>{setTst(null);setTimeout(()=>setTst(m),10);},[]);
   const errToast=useCallback(e=>{console.error(e);toast_("⚠ Erro: "+(e.message||"falha de conexão"));},[toast_]);
+  _oscToast=toast_;
 
   // ── Admin push registration — offer when admin logs in ──
   const [adminPushStatus,setAdminPushStatus]=useState(null);
@@ -16109,7 +16111,7 @@ export default function App() {
     setTsk(p=>p.filter(t=>!vs.includes(t.vehicleId)));
     setVeh(p=>p.filter(v=>v.employeeId!==id));
     setEmp(p=>p.filter(e=>e.id!==id));
-    try{ await db.deleteEmployee(id); }catch(e){errToast(e);}
+    try{ await db.deleteEmployee(id); toast_("Mecânico removido ✓"); }catch(e){errToast(e);}
   };
   const updEmpP=async(id,ph)=>{
     setEmp(p=>p.map(e=>e.id===id?{...e,phone:ph}:e));
@@ -16117,7 +16119,7 @@ export default function App() {
   };
   const updEmpN=async(id,n)=>{
     setEmp(p=>p.map(e=>e.id===id?{...e,name:n}:e));
-    try{ await db.updateEmployee(id,{name:n}); }catch(e){errToast(e);}
+    try{ await db.updateEmployee(id,{name:n}); toast_("Nome salvo ✓"); }catch(e){errToast(e);}
   };
   const updEmpDiv=async(id,division)=>{
     setEmp(p=>p.map(e=>e.id===id?{...e,division}:e));
@@ -16138,7 +16140,7 @@ export default function App() {
   const delCli=async id=>{
     setVeh(p=>p.map(v=>v.clientId===id?{...v,clientId:null}:v));
     setCli(p=>p.filter(c=>c.id!==id));
-    try{ await db.deleteClient(id); }catch(e){errToast(e);}
+    try{ await db.deleteClient(id); toast_("Cliente removido ✓"); }catch(e){errToast(e);}
   };
   const updCliP=async(id,ph)=>{
     setCli(p=>p.map(c=>c.id===id?{...c,phone:ph}:c));
@@ -16146,7 +16148,7 @@ export default function App() {
   };
   const updCliN=async(id,n)=>{
     setCli(p=>p.map(c=>c.id===id?{...c,name:n}:c));
-    try{ await db.updateClient(id,{name:n}); }catch(e){errToast(e);}
+    try{ await db.updateClient(id,{name:n}); toast_("Nome salvo ✓"); }catch(e){errToast(e);}
   };
   const updCliE=async(id,email)=>{
     setCli(p=>p.map(c=>c.id===id?{...c,email}:c));
@@ -16182,7 +16184,7 @@ export default function App() {
   const delVeh=async id=>{
     setTsk(p=>p.filter(t=>t.vehicleId!==id));
     setVeh(p=>p.filter(v=>v.id!==id));
-    try{ await db.deleteVehicle(id); }catch(e){errToast(e);}
+    try{ await db.deleteVehicle(id); toast_("Veículo removido ✓"); }catch(e){errToast(e);}
   };
   const updVeh=async(id,patch)=>{
     setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));
@@ -16203,6 +16205,7 @@ export default function App() {
           db.sendPushToEmployee(eid,`⚡ Prioridade — ${vModel}`,"Este veículo foi marcado como urgente.","/?portal=mecanico").catch(()=>{});
         });
       }
+      toast_(("photos" in patch||"photosFinishing" in patch)?"Foto salva ✓":"Salvo ✓");
     }catch(e){errToast(e);}
   };
   // Add a mechanic to a vehicle (multi-mechanic)
@@ -16734,6 +16737,7 @@ export default function App() {
       const markup=patch.markup!==undefined?Number(patch.markup):Number(current?.markup||0);
       const salePrice=costPrice*(1+markup/100);
       await db.updateStock(id,{...patch,salePrice});
+      toast_("Item atualizado ✓");
     }catch(e){errToast(e);}
   };
   const delStock=async id=>{
@@ -17623,7 +17627,7 @@ export default function App() {
       {navSection==="mais"&&<MaisPage/>}
       {navSection==="calendario"&&<CalendarPage events={calendarEvents} appointments={appointments} reminders={reminders.filter(r=>adminRole==="owner"||r.visibility!=="owner")} vehicles={vehicles} clients={clients} employees={employees}
         onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Adicionado ✓");}catch(err){errToast(err);}}}
-        onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));}catch(err){errToast(err);}}}
+        onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Atualizado ✓");}catch(err){errToast(err);}}}
         onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Removido ✓");}catch(err){errToast(err);}}}/>}
 
       {(navSection==="oficina"||navSection==="cadastros"||navSection==="gestao"||navSection==="compras")&&<>
@@ -17965,14 +17969,14 @@ export default function App() {
           appointments={appointments} vehicles={vehicles} clients={clients}
           employees={employees} adminRole={adminRole}
           stock={stock} clientNotes={allClientNotes} company={company} defaultRate={defaultRate}
-          onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);}catch(e){errToast(e);}}}
-          onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));}catch(e){errToast(e);}}}
+          onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);toast_("Agendamento criado ✓");}catch(e){errToast(e);}}}
+          onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));toast_("Salvo ✓");}catch(e){errToast(e);}}}
           onDelete={async id=>{try{await db.deleteAppointment(id);setAppts(p=>p.filter(a=>a.id!==id));toast_("Agendamento removido ✓");}catch(e){errToast(e);}}}
-          onAddService={async s=>{try{const r=await db.addAppointmentService(s);setAppts(p=>p.map(a=>a.id===s.appointmentId?{...a,services:[...a.services,r]}:a));}catch(e){errToast(e);}}}
-          onUpdateService={async(id,patch)=>{try{await db.updateAppointmentService(id,patch);setAppts(p=>p.map(a=>({...a,services:a.services.map(s=>s.id===id?{...s,...patch}:s)})));}catch(e){errToast(e);}}}
-          onDeleteService={async id=>{try{await db.deleteAppointmentService(id);setAppts(p=>p.map(a=>({...a,services:a.services.filter(s=>s.id!==id)})));}catch(e){errToast(e);}}}
+          onAddService={async s=>{try{const r=await db.addAppointmentService(s);setAppts(p=>p.map(a=>a.id===s.appointmentId?{...a,services:[...a.services,r]}:a));toast_("Serviço adicionado ✓");}catch(e){errToast(e);}}}
+          onUpdateService={async(id,patch)=>{try{await db.updateAppointmentService(id,patch);setAppts(p=>p.map(a=>({...a,services:a.services.map(s=>s.id===id?{...s,...patch}:s)})));toast_("Salvo ✓");}catch(e){errToast(e);}}}
+          onDeleteService={async id=>{try{await db.deleteAppointmentService(id);setAppts(p=>p.map(a=>({...a,services:a.services.filter(s=>s.id!==id)})));toast_("Serviço removido ✓");}catch(e){errToast(e);}}}
           onAddPayment={async p=>{try{const r=await db.addAppointmentPayment(p);setAppts(prev=>prev.map(a=>a.id===p.appointmentId?{...a,payments:[...a.payments,r]}:a));toast_(`${fmtBRL(p.amount)} registrado ✓`);}catch(e){errToast(e);}}}
-          onDeletePayment={async id=>{try{await db.deleteAppointmentPayment(id);setAppts(p=>p.map(a=>({...a,payments:a.payments.filter(pay=>pay.id!==id)})));}catch(e){errToast(e);}}}
+          onDeletePayment={async id=>{try{await db.deleteAppointmentPayment(id);setAppts(p=>p.map(a=>({...a,payments:a.payments.filter(pay=>pay.id!==id)})));toast_("Pagamento removido ✓");}catch(e){errToast(e);}}}
           onConvertToOS={async(a,mechanicId)=>{
             try{
               const v=vehicles.find(x=>x.id===a.vehicleId);
@@ -18066,16 +18070,16 @@ export default function App() {
           onUpdateOsHistory={async(id,patch)=>{try{await db.updateOsHistory(id,patch);setOsHistory(p=>p.map(h=>h.id===id?{...h,...patch}:h));toast_("Desconto aplicado ✓");}catch(e){errToast(e);}}}
           clientCredits={clientCredits}
           onAddClientCredit={async(clientId,amount,note)=>{try{const id=await db.addClientCredit(clientId,amount,note,adminRole);setClientCredits(p=>[...p,{id,clientId,amount,note,createdAt:new Date().toISOString()}]);toast_("Crédito salvo ✓");}catch(e){errToast(e);}}}
-          onDeleteClientCredit={async(id)=>{try{await db.deleteClientCredit(id);setClientCredits(p=>p.filter(c=>c.id!==id));}catch(e){errToast(e);}}}
+          onDeleteClientCredit={async(id)=>{try{await db.deleteClientCredit(id);setClientCredits(p=>p.filter(c=>c.id!==id));toast_("Crédito removido ✓");}catch(e){errToast(e);}}}
         />      </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
         <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory} internalTransfers={internalTransfers} adminRole={adminRole} sales={sales}
-          onAddTransfer={async t=>{try{const r=await db.addInternalTransfer(t);setInternalTransfers(p=>[r,...p]);}catch(e){errToast(e);}}}
-          onDeleteTransfer={async id=>{try{await db.deleteInternalTransfer(id);setInternalTransfers(p=>p.filter(t=>t.id!==id));}catch(e){errToast(e);}}}
-          onAddExpense={async e=>{try{const r=await db.addExpense(e);setExpenses(p=>[...p,r]);}catch(err){errToast(err);}}}
-          onUpdateExpense={async(id,patch)=>{try{await db.updateExpense(id,patch);setExpenses(p=>p.map(e=>e.id===id?{...e,...patch}:e));}catch(err){errToast(err);}}}
-          onDeleteExpense={async id=>{try{await db.deleteExpense(id);setExpenses(p=>p.filter(e=>e.id!==id));}catch(err){errToast(err);}}}
+          onAddTransfer={async t=>{try{const r=await db.addInternalTransfer(t);setInternalTransfers(p=>[r,...p]);toast_("Acerto registrado ✓");}catch(e){errToast(e);}}}
+          onDeleteTransfer={async id=>{try{await db.deleteInternalTransfer(id);setInternalTransfers(p=>p.filter(t=>t.id!==id));toast_("Acerto removido ✓");}catch(e){errToast(e);}}}
+          onAddExpense={async e=>{try{const r=await db.addExpense(e);setExpenses(p=>[...p,r]);toast_("Despesa adicionada ✓");}catch(err){errToast(err);}}}
+          onUpdateExpense={async(id,patch)=>{try{await db.updateExpense(id,patch);setExpenses(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Despesa atualizada ✓");}catch(err){errToast(err);}}}
+          onDeleteExpense={async id=>{try{await db.deleteExpense(id);setExpenses(p=>p.filter(e=>e.id!==id));toast_("Despesa removida ✓");}catch(err){errToast(err);}}}
         />
       </>}
       {tab==="purchases"&&allowedTabs.includes("purchases")&&<>
@@ -18087,7 +18091,7 @@ export default function App() {
       {tab==="investments"&&allowedTabs.includes("investments")&&<>
         <TabHeader color={B.green} title="Investimentos" subtitle="Compras para a empresa · Por porte e prioridade"/>
         <InvestmentsTab investments={investments.filter(i=>i.category!=="materiais")} adminRole={adminRole}
-          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,createdBy:adminRole});setInvestments(p=>[...p,r]);}catch(e){errToast(e);}}}
+          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,createdBy:adminRole});setInvestments(p=>[...p,r]);toast_("Pedido adicionado ✓");}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
             const r=await db.updateInvestment(id,patch);
             setInvestments(p=>p.map(i=>i.id===id?r:i));
@@ -18108,7 +18112,7 @@ export default function App() {
               }
             }
           }catch(e){errToast(e);}}}
-          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));}catch(e){errToast(e);}}}
+          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));toast_("Removido ✓");}catch(e){errToast(e);}}}
           onAddToStock={async item=>{try{const r=await db.addStock(item);setStk(p=>[...p,r]);toast_(`"${item.name}" adicionado ao estoque ✓`);}catch(e){errToast(e);}}}
         />
       </>}
@@ -18117,7 +18121,7 @@ export default function App() {
         <TabHeader color={B.orange} title="Pedidos de Compras" subtitle="Peças e materiais avulsos para estoque da oficina"/>
         <InvestmentsTab investments={investments.filter(i=>i.category==="materiais")} adminRole={adminRole} defaultCategory="materiais"
           mirror={{orders:purchaseOrders,vehicles,employees,tasks,onUpdate:poUpdate,onDelete:poDelete,onReserve:poReserve}}
-          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);pushNewPurchaseItem(r);}catch(e){errToast(e);}}}
+          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);pushNewPurchaseItem(r);toast_("Material adicionado ✓");}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
             const r=await db.updateInvestment(id,patch);
             setInvestments(p=>p.map(i=>i.id===id?r:i));
@@ -18142,7 +18146,7 @@ export default function App() {
               }
             }
           }catch(e){errToast(e);}}}
-          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));}catch(e){errToast(e);}}}
+          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));toast_("Removido ✓");}catch(e){errToast(e);}}}
           onAddToStock={async item=>{try{const r=await db.addStock(item);setStk(p=>[...p,r]);toast_(`"${item.name}" adicionado ao estoque ✓`);}catch(e){errToast(e);}}}
         />
       </>}
@@ -18522,7 +18526,7 @@ export default function App() {
         clients={clients}
         adminRole={adminRole}
         onAdd={async r=>{try{const ev=await db.addReminder(r);setReminders(p=>[ev,...p]);toast_("Lembrete criado ✓");}catch(e){errToast(e);}}}
-        onUpdate={async(id,patch)=>{try{await db.updateReminder(id,patch);setReminders(p=>p.map(r=>r.id===id?{...r,...patch}:r));}catch(e){errToast(e);}}}
+        onUpdate={async(id,patch)=>{try{await db.updateReminder(id,patch);setReminders(p=>p.map(r=>r.id===id?{...r,...patch}:r));toast_("Lembrete atualizado ✓");}catch(e){errToast(e);}}}
         onDelete={async id=>{try{await db.deleteReminder(id);setReminders(p=>p.filter(r=>r.id!==id));toast_("Removido ✓");}catch(e){errToast(e);}}}
       />}
       {showCalendar&&<CalendarPanel

@@ -1062,6 +1062,12 @@ export const db = {
       .in("ship_status", ["pending", "handling", "ready_to_ship", "shipped"]).neq("order_status", "cancelled").limit(300);
     if (error) throw error; return data || [];
   },
+  async getMLDeliveredToday() {
+    const d = new Date(Date.now() - 86400000).toISOString();
+    const { data, error } = await supabase.from("ml_purchase_items").select("id,title,qty,seller,vehicle_label,task_label,ship_status,delivered_at,status_at,order_status,destination,ml_key")
+      .eq("ship_status", "delivered").neq("order_status", "cancelled").gte("delivered_at", d).limit(100);
+    if (error) throw error; return data || [];
+  },
   async getMLToReceive() {
     const { data, error } = await supabase.from("ml_purchase_items").select("*").not("link_type", "is", null).eq("ship_status", "delivered").is("link_done_at", null);
     if (error) throw error; return data || [];

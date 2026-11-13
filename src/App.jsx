@@ -12690,7 +12690,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.105";
+const APP_VERSION = "2026.11.13.106";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14666,15 +14666,16 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
 function MLArrivalsAlert({show,onOpen}) {
   const [rows,setRows]=useState([]);
   const [rets,setRets]=useState([]);
+  const [dlv,setDlv]=useState([]);
   const [open,setOpen]=useState({});
   useEffect(()=>{
     if(!show) return;
     let alive=true;
-    const load=()=>{ db.getMLArriving().then(r=>{if(alive)setRows(r);}).catch(()=>{}); db.getMLReturns().then(r=>{if(alive)setRets(r);}).catch(()=>{}); };
+    const load=()=>{ db.getMLArriving().then(r=>{if(alive)setRows(r);}).catch(()=>{}); db.getMLReturns().then(r=>{if(alive)setRets(r);}).catch(()=>{}); db.getMLDeliveredToday().then(r=>{if(alive)setDlv(r);}).catch(()=>{}); };
     load(); const t=setInterval(load,5*60000);
     return()=>{alive=false;clearInterval(t);};
   },[show]);
-  if(!show||(!rows.length&&!rets.length)) return null;
+  if(!show||(!rows.length&&!rets.length&&!dlv.length)) return null;
   const day=d=>new Date(d).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});
   const today=day(new Date());
   const route=rows.filter(r=>r.ship_status==="shipped"&&r.ship_substatus==="out_for_delivery");
@@ -14682,11 +14683,13 @@ function MLArrivalsAlert({show,onOpen}) {
   const dueToday=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)===today);
   const late=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)<today);
   const retDue=rets.filter(r=>r.return_deadline&&Math.ceil((new Date(r.return_deadline+"T23:59:59-03:00")-Date.now())/86400000)<=3).map(r=>({...r,destination:"return",_ret:true})).sort((a,b)=>String(a.return_deadline).localeCompare(String(b.return_deadline)));
-  if(!route.length&&!dueToday.length&&!late.length&&!retDue.length) return null;
+  const doneToday=dlv.filter(r=>day(r.delivered_at||r.status_at)===today);
+  if(!route.length&&!dueToday.length&&!late.length&&!retDue.length&&!doneToday.length) return null;
   const Ic=({ch})=><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{ch}</svg>;
   const groups=[
     {k:"route",color:B.green,rows:route,label:`${route.length} ${route.length!==1?"peças saíram":"peça saiu"} para entrega`,icon:<Ic ch={<><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>}/>},
     {k:"today",color:B.amber,rows:dueToday,label:`${dueToday.length} ${dueToday.length!==1?"peças chegam":"peça chega"} hoje`,icon:<Ic ch={<><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.5L12 12.5l8.7-5"/><path d="M12 22V12.5"/></>}/>},
+    {k:"done",color:B.green,rows:doneToday,label:`${doneToday.length} ${doneToday.length!==1?"peças entregues":"peça entregue"} hoje`,icon:<Ic ch={<><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}/>},
     {k:"late",color:B.red,rows:late,label:`${late.length} ${late.length!==1?"peças com entrega atrasada":"peça com entrega atrasada"}`,icon:<Ic ch={<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>}/>},
     {k:"ret",color:B.red,rows:retDue,label:`${retDue.length} ${retDue.length!==1?"devoluções com prazo vencendo":"devolução com prazo vencendo"}`,icon:<Ic ch={<><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></>}/>},
   ].filter(g=>g.rows.length);

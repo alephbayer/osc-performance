@@ -16,7 +16,7 @@ export function initPullToRefresh() {
       '</svg>' +
       '<img src="/osc-mark-dark.png" alt="" style="position:absolute;left:50%;top:50%;width:26px;transform:translate(-50%,-50%);opacity:.95"/>' +
     '</div>' +
-    '<div id="ptr-txt" style="font:600 8px/1 Inter,\'Segoe UI\',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#DD8B34;text-shadow:0 1px 6px rgba(0,0,0,.6);white-space:nowrap;padding-left:.28em">Puxe para atualizar</div>';
+    '<div id="ptr-txt" style="font:600 8px/1 Inter,\'Segoe UI\',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#DD8B34;white-space:nowrap;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:99px;padding:6px 10px 6px calc(10px + .28em);box-shadow:0 4px 14px rgba(0,0,0,.4)">Puxe para atualizar</div>';
   const ring = el.querySelector("#ptr-ring"), arc = el.querySelector("#ptr-arc"), txt = el.querySelector("#ptr-txt");
   document.body.appendChild(el);
   const style = document.createElement("style");

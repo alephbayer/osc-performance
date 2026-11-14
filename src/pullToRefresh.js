@@ -3,11 +3,11 @@ export function initPullToRefresh() {
   const standalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
   if (!standalone || window.__ptr) return;
   window.__ptr = true;
-  const TH = 78, MAX = 120;
+  const TH = 60, MAX = 110;
   const R = 22, C = 2 * Math.PI * R;
   const el = document.createElement("div");
   el.setAttribute("aria-hidden", "true");
-  el.style.cssText = "position:fixed;left:50%;top:0;width:140px;margin-left:-70px;display:flex;flex-direction:column;align-items:center;gap:7px;z-index:99999;pointer-events:none;opacity:0;transform:translateY(-70px)";
+  el.style.cssText = "position:fixed;left:50%;top:0;width:140px;margin-left:-70px;display:flex;flex-direction:column;align-items:center;gap:7px;z-index:99999;pointer-events:none;opacity:0;transform:translateY(-60px)";
   el.innerHTML =
     '<div style="position:relative;width:52px;height:52px;border-radius:50%;background:#0a0a0a;box-shadow:0 6px 20px rgba(0,0,0,.45),0 0 0 1px #2a2a2a">' +
       '<svg id="ptr-ring" width="52" height="52" viewBox="0 0 52 52" style="position:absolute;inset:0;transform:rotate(-90deg)">' +
@@ -24,7 +24,7 @@ export function initPullToRefresh() {
   document.head.appendChild(style);
 
   let sx = 0, sy = 0, dy = 0, on = false, busy = false;
-  el.style.top = "env(safe-area-inset-top)";
+  el.style.top = "calc(env(safe-area-inset-top) + 30px)";
 
   function canStart(t) {
     for (let n = t; n && n !== document.documentElement; n = n.parentElement) {
@@ -38,15 +38,15 @@ export function initPullToRefresh() {
   }
   function show(d) {
     const p = Math.min(1, d / TH);
-    el.style.opacity = String(Math.min(1, p * 1.5));
-    el.style.transform = `translateY(${Math.min(d, MAX) * 0.6 - 56}px)`;
+    el.style.opacity = String(Math.min(1, p * 2.5));
+    el.style.transform = `translateY(${Math.min(d, MAX) * 0.7 - 30}px)`;
     arc.style.strokeDashoffset = String(C * (1 - p));
     txt.textContent = p >= 1 ? "Solte para atualizar" : "Puxe para atualizar";
   }
   function reset() {
     el.style.transition = "transform .2s, opacity .2s";
     el.style.opacity = "0";
-    el.style.transform = "translateY(-70px)";
+    el.style.transform = "translateY(-60px)";
     setTimeout(() => { el.style.transition = ""; }, 220);
   }
   document.addEventListener("touchstart", e => {
@@ -70,7 +70,7 @@ export function initPullToRefresh() {
       busy = true;
       el.style.transition = "transform .15s";
       el.style.opacity = "1";
-      el.style.transform = "translateY(32px)";
+      el.style.transform = "translateY(30px)";
       txt.textContent = "Atualizando";
       arc.style.strokeDashoffset = String(C * 0.72);
       ring.style.animation = "ptrspin .8s linear infinite";

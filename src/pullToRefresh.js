@@ -4,19 +4,27 @@ export function initPullToRefresh() {
   if (!standalone || window.__ptr) return;
   window.__ptr = true;
   const TH = 78, MAX = 120;
+  const R = 22, C = 2 * Math.PI * R;
   const el = document.createElement("div");
   el.setAttribute("aria-hidden", "true");
-  el.style.cssText = "position:fixed;left:50%;top:0;width:36px;height:36px;margin-left:-18px;border-radius:50%;background:#1a1a1a;border:1px solid #DD8B3455;box-shadow:0 4px 14px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:99999;pointer-events:none;opacity:0;transform:translateY(-50px)";
-  el.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DD8B34" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>';
-  const svg = el.firstChild;
+  el.style.cssText = "position:fixed;left:50%;top:0;width:140px;margin-left:-70px;display:flex;flex-direction:column;align-items:center;gap:7px;z-index:99999;pointer-events:none;opacity:0;transform:translateY(-70px)";
+  el.innerHTML =
+    '<div style="position:relative;width:52px;height:52px;border-radius:50%;background:#0a0a0a;box-shadow:0 6px 20px rgba(0,0,0,.45),0 0 0 1px #2a2a2a">' +
+      '<svg id="ptr-ring" width="52" height="52" viewBox="0 0 52 52" style="position:absolute;inset:0;transform:rotate(-90deg)">' +
+        '<circle cx="26" cy="26" r="' + R + '" fill="none" stroke="#2a2a2a" stroke-width="2"/>' +
+        '<circle id="ptr-arc" cx="26" cy="26" r="' + R + '" fill="none" stroke="#DD8B34" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="' + C + '" stroke-dashoffset="' + C + '"/>' +
+      '</svg>' +
+      '<img src="/osc-mark-dark.png" alt="" style="position:absolute;left:50%;top:50%;width:26px;transform:translate(-50%,-50%);opacity:.95"/>' +
+    '</div>' +
+    '<div id="ptr-txt" style="font:600 8px/1 Inter,\'Segoe UI\',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#DD8B34;text-shadow:0 1px 6px rgba(0,0,0,.6);white-space:nowrap;padding-left:.28em">Puxe para atualizar</div>';
+  const ring = el.querySelector("#ptr-ring"), arc = el.querySelector("#ptr-arc"), txt = el.querySelector("#ptr-txt");
   document.body.appendChild(el);
   const style = document.createElement("style");
-  style.textContent = "@keyframes ptrspin{to{transform:rotate(360deg)}}";
+  style.textContent = "@keyframes ptrspin{from{transform:rotate(-90deg)}to{transform:rotate(270deg)}}";
   document.head.appendChild(style);
 
   let sx = 0, sy = 0, dy = 0, on = false, busy = false;
-  const top = () => "calc(env(safe-area-inset-top) + 8px)";
-  el.style.top = top();
+  el.style.top = "env(safe-area-inset-top)";
 
   function canStart(t) {
     for (let n = t; n && n !== document.documentElement; n = n.parentElement) {
@@ -30,15 +38,15 @@ export function initPullToRefresh() {
   }
   function show(d) {
     const p = Math.min(1, d / TH);
-    el.style.opacity = String(Math.min(1, p * 1.4));
-    el.style.transform = `translateY(${Math.min(d, MAX) * 0.55 - 40}px)`;
-    svg.style.transform = `rotate(${p * 270}deg)`;
-    el.style.borderColor = p >= 1 ? "#DD8B34" : "#DD8B3455";
+    el.style.opacity = String(Math.min(1, p * 1.5));
+    el.style.transform = `translateY(${Math.min(d, MAX) * 0.6 - 56}px)`;
+    arc.style.strokeDashoffset = String(C * (1 - p));
+    txt.textContent = p >= 1 ? "Solte para atualizar" : "Puxe para atualizar";
   }
   function reset() {
     el.style.transition = "transform .2s, opacity .2s";
     el.style.opacity = "0";
-    el.style.transform = "translateY(-50px)";
+    el.style.transform = "translateY(-70px)";
     setTimeout(() => { el.style.transition = ""; }, 220);
   }
   document.addEventListener("touchstart", e => {
@@ -62,9 +70,10 @@ export function initPullToRefresh() {
       busy = true;
       el.style.transition = "transform .15s";
       el.style.opacity = "1";
-      el.style.transform = "translateY(26px)";
-      svg.style.transform = "";
-      svg.style.animation = "ptrspin .7s linear infinite";
+      el.style.transform = "translateY(32px)";
+      txt.textContent = "Atualizando";
+      arc.style.strokeDashoffset = String(C * 0.72);
+      ring.style.animation = "ptrspin .8s linear infinite";
       setTimeout(() => window.location.reload(), 250);
     } else reset();
   };

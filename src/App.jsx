@@ -12152,13 +12152,13 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     {/* Header */}
     <div className="pv-head" style={{background:B.black}}>
       {/* Top row: logos + name */}
-      <div style={{padding:"12px max(16px, calc((100% - 620px)/2 + 16px))",paddingTop:"calc(40px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"0 max(18px, calc((100% - 680px)/2 + 18px)) 10px",paddingTop:"calc(40px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:8}}>
         <div style={{flex:1,minWidth:0}}>
-          <OscLockup h={40}/>
-          <div style={{height:1,background:B.gray700,margin:"6px 0 5px"}}/>
-          <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.6}}>Acompanhamento de serviço</div>
+          <OscLockup h={34}/>
+          <div style={{height:1,background:B.gray700,margin:"10px 0 8px"}}/>
+          <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Acompanhamento de serviço</div>
         </div>
-        {onBack&&<button onClick={onBack} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:`1px solid ${B.gray600}`,borderRadius:99,padding:"6px 12px 6px 8px",color:B.gray200,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Meus veículos</button>}
+        {onBack&&<button onClick={onBack} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:`1px solid ${B.gray700}`,borderRadius:99,height:34,padding:"0 12px 0 8px",color:B.gray400,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,alignSelf:"flex-start"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Meus veículos</button>}
       </div>
     </div>
     {/* Barra de abas */}
@@ -13133,7 +13133,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.13.138";
+const APP_VERSION = "2026.11.13.139";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

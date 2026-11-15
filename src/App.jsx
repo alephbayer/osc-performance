@@ -313,7 +313,7 @@ function PortalHistoryCard({h,v,payments}) {
   const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
   const deliveredAt=h.delivered_at||h.deliveredAt;
   const totalValue=Number(h.total_value||h.totalValue||0);
-  const snap=h.tasks_snapshot||h.tasksSnapshot||[];
+  const snap=(h.tasks_snapshot||h.tasksSnapshot||[]).filter(t=>!isInternalTask(t));
   const hPays=payments.filter(p=>p.osHistoryId===h.id);
   const paid=Math.round(hPays.reduce((a,p)=>a+Number(p.amount),0)*100)/100;
   const balance=Math.round((totalValue-paid)*100)/100;
@@ -1382,6 +1382,18 @@ function productivityByEmployee(employees, vehicles, tasks, defaultRate, monthKe
 }
 
 // ─── Cost helpers ─────────────────────────────────────────────────────────────
+// Tarefa "interna": pendência da oficina, fora do PDF e do acompanhamento do cliente.
+// internal: true = forçada interna; false = forçada visível; null/ausente = automático (sem valor = interna).
+const taskHasValue=t=>{
+  const mats=Array.isArray(t.materials)?t.materials:[];
+  return Number(t.hours||0)>0||mats.some(m=>!m.noCharge&&Number(m.cost||0)>0)||mats.some(m=>Number(m.freight||0)>0);
+};
+const isInternalTask=t=>{
+  if(!t||t.warranty) return false;
+  if(t.internal===true) return true;
+  if(t.internal===false) return false;
+  return !taskHasValue(t);
+};
 const taskCost=(t,defaultRate)=>{
   const rateType = t.rateType || "hour";
   const rate  = t.ratePerHour!=null ? Number(t.ratePerHour) : Number(defaultRate||0);
@@ -1994,7 +2006,7 @@ async function renderElegantQuote(o) {
   doc.save(fileName);
 }
 async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride, payments=[]) {
-  const allTs = tasksOverride || tasks.filter(t => t.vehicleId === vehicle.id);
+  const allTs = (tasksOverride || tasks.filter(t => t.vehicleId === vehicle.id)).filter(t => !isInternalTask(t));
   return renderElegantQuote({
     vehicle, ts: allTs.filter(t=>!t.warranty), warrantyTs: allTs.filter(t=>t.warranty), client, employee, company, defaultRate,
     accent:[221,139,52], accentText:[190,105,25], divisionName: company?.name||"OSC Group", osLabel: vehicle.osNumber?fmtOS(vehicle.osNumber):"",
@@ -2005,7 +2017,7 @@ async function generateQuotePDF(vehicle, tasks, client, employee, company, defau
   });
 }
 async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRate, payments=[], company={}) {
-  const all = tasks.filter(t => t.vehicleId === vehicle.id && t.division === "finishing");
+  const all = tasks.filter(t => t.vehicleId === vehicle.id && t.division === "finishing" && !isInternalTask(t));
   return renderElegantQuote({
     vehicle, ts: all.filter(t=>!t.warranty), warrantyTs: all.filter(t=>t.warranty), client, employee, company, defaultRate,
     accent:[168,85,247], accentText:[130,60,200], divisionName:"OSC Finishing Division", osLabel: vehicle.osNumberFinishing?fmtOSFD(vehicle.osNumberFinishing):"",
@@ -4254,13 +4266,17 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               style={{background:task.warranty?`${B.red}22`:"none",border:`1px solid ${task.warranty?B.red+"44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.warranty?B.red:B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
               {task.warranty?"✓ Gar.":"Gar."}
             </button>
+            {!task.warranty&&(()=>{const eff=isInternalTask(task);return <button onClick={()=>{const next=!eff;const auto=!taskHasValue(task);onUpdate(task.id,{internal:next===auto?null:next});}} title={eff?"Interno: não aparece no PDF nem no acompanhamento do cliente. Toque para exibir.":"Visível no PDF e para o cliente. Toque para marcar como interno."}
+              style={{background:eff?`${B.gray500}26`:"none",border:`1px solid ${eff?B.gray500:B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:eff?B.gray300:B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
+              {eff?"✓ Int.":"Int."}
+            </button>;})()}
             {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
               {task.warranty&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Garantia</span>}
           </div>
           {/* Line 1: task label — alone */}
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <TaskLabel task={task} onUpdate={onUpdate}/>
-            {!task.done&&!task.warranty&&!task.outsourced&&!task.hours&&!mats.some(m=>m.cost>0)&&<span title="Nenhum valor ou hora definido para esta tarefa" style={{fontSize:9,fontWeight:700,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:4,padding:"1px 5px",flexShrink:0,cursor:"default"}}>
+            {!task.done&&!task.warranty&&!task.outsourced&&!task.hours&&!mats.some(m=>m.cost>0)&&<span title="Sem valor: fica interna (fora do PDF e do acompanhamento do cliente) até receber mão de obra ou material" style={{fontSize:9,fontWeight:700,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:4,padding:"1px 5px",flexShrink:0,cursor:"default"}}>
               ⚠ sem valor
             </span>}
           </div>
@@ -13133,7 +13149,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.14.143";
+const APP_VERSION = "2026.11.15.144";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13491,7 +13507,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       </div>}
 
       {sortedHistory.map((h,hi)=>{
-        const hTasks=Array.isArray(h.tasks_snapshot)?h.tasks_snapshot:(h.tasksSnapshot||[]);
+        const hTasks=(Array.isArray(h.tasks_snapshot)?h.tasks_snapshot:(h.tasksSnapshot||[])).filter(t=>!isInternalTask(t));
         const entryDate=h.entered_at?new Date(h.entered_at).toLocaleDateString("pt-BR"):null;
         const delivDate=h.delivered_at?new Date(h.delivered_at).toLocaleDateString("pt-BR"):null;
         const mechs=(h.mechanic_ids||h.mechanicIds||[]).map(id=>employees.find(e=>e.id===id)?.name).filter(Boolean);
@@ -16518,7 +16534,7 @@ export default function App() {
   }
   if(publicVehicleId){
     if(loading) return <LoadingScreen/>;
-    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock}/></ErrorBoundary></>;
+    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks.filter(t=>!isInternalTask(t))} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock}/></ErrorBoundary></>;
   }
   if(publicHistoryId){
     if(loading) return <LoadingScreen/>;
@@ -16556,7 +16572,7 @@ export default function App() {
           : clients.find(c=>c.id===clientSession.id)||clientSession)
       : null;
     if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={clientCredits} clients={clients} purchaseOrders={purchaseOrders} stock={stock} onVehiclePhoto={async(vid,url)=>{const vv=vehicles.find(x=>x.id===vid);if(!vv||vv.clientId!==liveCli.id) return; setVeh(p=>p.map(x=>x.id===vid?{...x,photo:url}:x)); await db.updateVehicle(vid,{photo:url}); db.sendPushToAdmins(`📷 Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${liveCli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
+    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks.filter(t=>!isInternalTask(t))} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={clientCredits} clients={clients} purchaseOrders={purchaseOrders} stock={stock} onVehiclePhoto={async(vid,url)=>{const vv=vehicles.find(x=>x.id===vid);if(!vv||vv.clientId!==liveCli.id) return; setVeh(p=>p.map(x=>x.id===vid?{...x,photo:url}:x)); await db.updateVehicle(vid,{photo:url}); db.sendPushToAdmins(`📷 Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${liveCli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──

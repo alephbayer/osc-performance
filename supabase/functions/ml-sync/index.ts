@@ -235,7 +235,8 @@ async function sync(days: number) {
       const at = first(status) || s.last_updated || null;
       if (!hist.length && status && at) hist = [{ status, date: at }];
       const lt = s.lead_time || {}, so = s.shipping_option || {};
-      const eta = lt.estimated_delivery_final?.date || lt.estimated_delivery_time?.date || so.estimated_delivery_final?.date || so.estimated_delivery_time?.date || null;
+      // previsão mais recente: a "estendida" (quando o ML reagenda/atrasa) vale mais que a original
+      const eta = lt.estimated_delivery_extended?.date || so.estimated_delivery_extended?.date || lt.estimated_delivery_final?.date || lt.estimated_delivery_time?.date || so.estimated_delivery_final?.date || so.estimated_delivery_time?.date || null;
       // palavra-chave de entrega: varre o envio atrás de campos de código/senha (guarda só o que bate)
       const found: Record<string, string> = {};
       const walk = (v: any, path: string, depth: number) => {
@@ -246,8 +247,8 @@ async function sync(days: number) {
       };
       walk(s, "", 0);
       const strict = Object.entries(found).find(([k, v]) => /(password|passcode|keyword|security_code|delivery_code|palavra|handshake)/i.test(k) && !/status/i.test(k) && /^[\w-]{3,20}$/.test(v));
-      const probe = { keys: Object.keys(s).slice(0, 60), tags: s.tags || null, found };
-      ship[String(o.id)] = { status, at, shipped: first("shipped"), delivered: first("delivered") || (status === "delivered" ? at : null), hist, sub: s.substatus || null, eta, key: strict ? strict[1] : (ship[String(o.id)]?.key ?? null), probe };
+      const probe = { keys: Object.keys(s).slice(0, 60), tags: s.tags || null, found, lead: s.lead_time || null };
+      ship[String(o.id)] = { status, at, shipped: first("shipped"), delivered: first("delivered") || (status === "delivered" ? at : null), hist, sub: s.substatus || null, eta: eta || ship[String(o.id)]?.eta || null, key: strict ? strict[1] : (ship[String(o.id)]?.key ?? null), probe };
     } catch { /* opcional */ }
   };
   for (let i = 0; i < todo.length; i += 8) await Promise.all(todo.slice(i, i + 8).map(fetchShip));

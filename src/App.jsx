@@ -3970,6 +3970,8 @@ function useMLCard(id) {
 }
 const _spDay = d => new Date(d).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
 const _spShort = d => { const [y, m, dd] = _spDay(d).split("-"); return `${dd}/${m}`; };
+const ML_PROBLEM = { bad_address: "problema no endereço", rescheduled_by_meli: "reagendada pelo ML", delayed: "atrasada no transporte", receiver_absent: "destinatário ausente", returning_to_sender: "voltando ao remetente", returned: "devolvida", claimed_me: "reclamada", retained: "retida", delivery_failed: "falha na entrega", delivery_attempt: "tentativa de entrega", lost: "extraviada", stolen: "extraviada", destroyed: "destruída", refused_delivery: "entrega recusada", not_localized: "não localizada" };
+const mlSubLabel = sub => ML_PROBLEM[sub] || "";
 function mlDelivery(i) {
   if (!i) return null;
   if (i.ship_status === "delivered") return { text: `Entregue${i.delivered_at ? " em " + _spShort(i.delivered_at) : ""}`, tone: "ok" };
@@ -3977,7 +3979,8 @@ function mlDelivery(i) {
   if (i.eta_at) {
     const late = _spDay(i.eta_at) < today;
     const moved = i.eta_first_at && _spDay(i.eta_first_at) !== _spDay(i.eta_at);
-    return { text: `${late ? "Atrasada · previsão era" : "Previsão"} ${_spShort(i.eta_at)}${moved ? ` (antes ${_spShort(i.eta_first_at)})` : ""}`, tone: late ? "late" : moved ? "moved" : "eta" };
+    const why = mlSubLabel(i.ship_substatus);
+    return { text: `${late ? "Atrasada · previsão era" : "Previsão"} ${_spShort(i.eta_at)}${moved ? ` (antes ${_spShort(i.eta_first_at)})` : ""}${why ? " · " + why : ""}`, tone: late || ["bad_address","returning_to_sender","returned","delivery_failed","lost","stolen","destroyed","refused_delivery","not_localized"].includes(i.ship_substatus) ? "late" : moved ? "moved" : "eta" };
   }
   if (i.ship_status === "shipped") return { text: "A caminho · sem previsão", tone: "eta" };
   return { text: "Aguardando envio", tone: "wait" };
@@ -13240,7 +13243,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.16.147";
+const APP_VERSION = "2026.11.16.148";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15122,7 +15125,7 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
       out.push({id:"appt_"+a.id,auto:true,kind:"appointment",title:(v?v.model:a.title)+(c?` · ${c.name}`:""),date:a.scheduledDate,end:a.scheduledDate,notes:a.title});
     });
     reminders.filter(r=>r.dueDate&&!r.done).forEach(r=>out.push({id:"rem_"+r.id,auto:true,kind:"remdue",title:r.title,date:r.dueDate,end:r.dueDate,notes:r.body}));
-    ml.filter(r=>r.eta_at).forEach(r=>{const d=new Date(r.eta_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});const was=r.eta_first_at&&new Date(r.eta_first_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});out.push({id:"ml_"+r.id,auto:true,kind:"ml",title:String(r.title||"").slice(0,60),date:d,end:d,notes:[r.vehicle_label,r.seller,was&&was!==d?`adiada (era ${was.slice(8)}/${was.slice(5,7)})`:""].filter(Boolean).join(" · ")});});
+    ml.filter(r=>r.eta_at).forEach(r=>{const d=new Date(r.eta_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});const was=r.eta_first_at&&new Date(r.eta_first_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});const late=d<todayS;const dd=late?todayS:d;const why=mlSubLabel(r.ship_substatus);out.push({id:"ml_"+r.id,auto:true,kind:"ml",title:String(r.title||"").slice(0,60),date:dd,end:dd,notes:[r.vehicle_label,r.seller,late?`atrasada (previsão era ${d.slice(8)}/${d.slice(5,7)})`:was&&was!==d?`adiada (era ${was.slice(8)}/${was.slice(5,7)})`:"",why].filter(Boolean).join(" · ")});});
     return out;
   },[events,appointments,reminders,ml,vehicles,clients]);
   const vis=all.filter(e=>!off[e.kind]);
@@ -15261,7 +15264,7 @@ function MLArrivalsAlert({show,onOpen}) {
           <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"3px 10px",marginTop:4,fontSize:10.5,color:B.gray400}}>
             {Number(r.qty)>1&&<span>{r.qty}×</span>}
             <span style={{color:r.destination?B.gray300:B.amber}}>{dest(r)}</span>
-            {r._ret?<span style={{color:B.red,fontWeight:700}}>devolver até {fdt(r.return_deadline+"T12:00:00-03:00")}{r.return_reason?` · ${r.return_reason}`:""}</span>:r.eta_at&&<span>previsão {fdt(r.eta_at)}</span>}
+            {r._ret?<span style={{color:B.red,fontWeight:700}}>devolver até {fdt(r.return_deadline+"T12:00:00-03:00")}{r.return_reason?` · ${r.return_reason}`:""}</span>:r.eta_at&&<span>previsão {fdt(r.eta_at)}{mlSubLabel(r.ship_substatus)?` · ${mlSubLabel(r.ship_substatus)}`:""}</span>}
             {k&&<span style={{color:B.amber,fontWeight:700}}>palavra-chave: {k}</span>}
           </div>
         </div>); })}

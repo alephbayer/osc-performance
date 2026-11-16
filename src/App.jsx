@@ -13249,7 +13249,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.16.150";
+const APP_VERSION = "2026.11.16.151";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15269,14 +15269,19 @@ function MLArrivalsAlert({show,onOpen}) {
         <span style={{fontSize:11,color:B.gray500,display:"inline-block",transition:"transform .2s",transform:o?"rotate(90deg)":"none"}}>▸</span>
       </div>
       {o&&<div style={{paddingBottom:10,display:"flex",flexDirection:"column",gap:6}}>
-        {g.rows.map(r=>{ const k=r.delivery_key||r.ml_key; return (<div key={r.id} style={{background:B.gray900,borderRadius:10,padding:"8px 10px"}}>
-          <div style={{fontSize:12,color:B.white,lineHeight:1.35,wordBreak:"break-word"}}>{r.title}</div>
-          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"3px 10px",marginTop:4,fontSize:10.5,color:B.gray400}}>
-            {Number(r.qty)>1&&<span>{r.qty}×</span>}
-            <span style={{color:r.destination?B.gray300:B.amber}}>{dest(r)}</span>
-            {r._ret?<span style={{color:B.red,fontWeight:700}}>devolver até {fdt(r.return_deadline+"T12:00:00-03:00")}{r.return_reason?` · ${r.return_reason}`:""}</span>:r.eta_at&&<span>previsão {fdt(r.eta_at)}{mlSubLabel(r.ship_substatus)?` · ${mlSubLabel(r.ship_substatus)}`:""}</span>}
-            {k&&<span style={{color:B.amber,fontWeight:700}}>palavra-chave: {k}</span>}
+        {g.rows.map(r=>{ const k=r.delivery_key||r.ml_key; const dc=r.destination==="vehicle"?"#2aa5b5":r.destination?B.gray300:B.amber; const dd=r._ret?fdt(r.return_deadline+"T12:00:00-03:00"):r.eta_at?fdt(r.eta_at):""; const dl=g.k==="done"?"entregue":r._ret?"devolver até":g.k==="late"?"previsão era":g.k==="route"?"em rota":"previsão"; const sub=!r._ret&&mlSubLabel(r.ship_substatus); return (<div key={r.id} style={{background:B.gray900,borderRadius:10,padding:"10px 12px",display:"flex",gap:12,alignItems:"stretch",borderLeft:`3px solid ${g.color}`}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:12.5,fontWeight:600,color:B.white,lineHeight:1.3,wordBreak:"break-word"}}>{Number(r.qty)>1&&<span style={{color:B.gray400,fontWeight:500}}>{r.qty}× </span>}{r.title}</div>
+            <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:6,marginTop:7}}>
+              <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9.5,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:dc,background:`${dc}1c`,border:`1px solid ${dc}44`,borderRadius:6,padding:"3px 7px"}}>{r.destination==="vehicle"&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17h14M3 13l2-6h14l2 6v4H3z"/></svg>}{dest(r)}</span>
+              {k&&<span style={{fontSize:9.5,fontWeight:700,letterSpacing:".06em",color:B.amber,background:`${B.amber}1c`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"3px 7px"}}>CHAVE {k}</span>}
+            </div>
+            {(sub||(r._ret&&r.return_reason))&&<div style={{fontSize:10,color:B.gray500,marginTop:5}}>{r._ret?r.return_reason:sub}</div>}
           </div>
+          {dd&&<div style={{flexShrink:0,textAlign:"right",display:"flex",flexDirection:"column",justifyContent:"center",gap:2,paddingLeft:12,borderLeft:`1px solid ${B.gray700}`,minWidth:58}}>
+            <span style={{fontSize:8,fontWeight:600,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500}}>{dl}</span>
+            <span style={{fontSize:17,fontWeight:300,letterSpacing:".04em",color:g.color,fontVariantNumeric:"tabular-nums"}}>{dd}</span>
+          </div>}
         </div>); })}
         <button onClick={onOpen} style={{alignSelf:"flex-start",background:"none",border:"none",padding:"2px 0",color:g.color,fontSize:11.5,fontWeight:700,cursor:"pointer"}}>Abrir compras do ML →</button>
       </div>}

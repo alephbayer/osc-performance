@@ -3965,9 +3965,12 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
   const importBg = "#f59e0b18";
   const estimatedColor = "#eab308";
   const estimatedBg = "#eab30815";
+  // Peça destinada a partir do Mercado Livre: card em azul-petróleo (como o de estoque é roxo)
+  const isML = !mat.fromStock && !!(mat.mlItem||mat.mlLink);
+  const mlColor = "#2aa5b5";
 
-  const bg = isEstimated ? estimatedBg : mat.fromStock ? B.purpleBg : isImported ? importBg : B.gray700;
-  const border = isEstimated ? `2px solid ${estimatedColor}66` : mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : `1px solid ${B.gray600}`;
+  const bg = isEstimated ? estimatedBg : mat.fromStock ? B.purpleBg : isImported ? importBg : isML ? `${mlColor}16` : B.gray700;
+  const border = isEstimated ? `2px solid ${estimatedColor}66` : mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : isML ? `1px solid ${mlColor}55` : `1px solid ${B.gray600}`;
 
   return (<div style={{background:bg,border,borderRadius:8,padding:"7px 10px",width:"100%",boxSizing:"border-box"}}>
     {/* Estimated banner */}
@@ -3977,7 +3980,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
     </div>}
     {/* Line 1: icon + name + remove */}
     <div style={{display:"flex",alignItems:"center",gap:6}}>
-      {mat.fromStock?<IWarehouse s={13} c={isEstimated?estimatedColor:B.purple}/>:isImported?<span style={{fontSize:13}}>✈️</span>:<IBox s={13} c={isEstimated?estimatedColor:B.gray400}/>}
+      {mat.fromStock?<IWarehouse s={13} c={isEstimated?estimatedColor:B.purple}/>:isImported?<span style={{fontSize:13}}>✈️</span>:<IBox s={13} c={isEstimated?estimatedColor:isML?mlColor:B.gray400}/>}
       <div style={{flex:1,minWidth:0}}>
         {readOnlyName||mat.fromStock
           ?<div style={{flex:1,minWidth:0}}>
@@ -4025,7 +4028,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
     </div>}
 
     {/* Line 2: qty + cost options */}
-    {(showCost||editableQty)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":isImported?importColor+"22":B.gray600}`}}>
+    {(showCost||editableQty)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6,paddingTop:6,borderTop:`1px solid ${mat.fromStock?B.purple+"22":isImported?importColor+"22":isML?mlColor+"33":B.gray600}`}}>
       {/* Row A: Quantity + unit price */}
       <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 8px"}}>
@@ -13149,7 +13152,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.15.144";
+const APP_VERSION = "2026.11.16.145";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

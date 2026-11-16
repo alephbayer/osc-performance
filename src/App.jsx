@@ -1950,7 +1950,10 @@ async function renderElegantQuote(o) {
   const perfLab=labOf(ts)-finLab;
   const osDiscountAmt=perfLab*Number(osDiscountPct||0)/100+finLab*Number(o.osDiscountPctFin||0)/100;
   const discLabel=(Number(osDiscountPct||0)>0&&!(finLab>0&&Number(o.osDiscountPctFin||0)>0))?`Desconto sobre mão de obra (${osDiscountPct}%)`:(finLab>0&&Number(o.osDiscountPctFin||0)>0&&!(Number(osDiscountPct||0)>0)?`Desconto sobre mão de obra (${o.osDiscountPctFin}%)`:"Desconto sobre mão de obra");
-  const grandTotal=partsTotal+freightTotal+laborTotal+fuelTotal+towTotal+freightTotal2+importTot-osDiscountAmt;
+  const grandPre=partsTotal+freightTotal+laborTotal+fuelTotal+towTotal+freightTotal2+importTot-osDiscountAmt;
+  // desconto dado depois que a OS foi fechada (histórico): diferença entre o total calculado e o total gravado
+  const closingDisc=(o.closingNote&&o.closingTotal!=null&&isFinite(Number(o.closingTotal)))?Math.max(0,Math.round((grandPre-Number(o.closingTotal))*100)/100):0;
+  const grandTotal=grandPre-closingDisc;
   const bx=W-mx-80;
   const tl=(l,v,neg)=>{ txt(l,bx,y,{s:9,c:neg?red:body}); txt((neg?"– ":"")+R(v),cT,y,{s:9,c:neg?red:body,al:"right"}); y+=6; };
   need(70); y+=10; hair(y,line,0.2,bx,W-mx); y+=7;
@@ -1961,8 +1964,10 @@ async function renderElegantQuote(o) {
   if(freightTotal2>0) tl("Frete",freightTotal2);
   if(importTot>0) tl("Peças importadas",importTot);
   if(osDiscountAmt>0) tl(discLabel,osDiscountAmt,true);
+  if(closingDisc>=0.01) tl("Desconto após o fechamento",closingDisc,true);
   y+=1; hair(y,ink,0.35,bx,W-mx); y+=9;
   cap("Total geral",bx,y,7.5,ink); serif(R(grandTotal),cT,y+1,22,{align:"right"}); y+=12;
+  if(closingDisc>=0.01){ const nl=doc.splitTextToSize(`Desconto concedido após o fechamento da OS: ${o.closingNote}`,80); need(nl.length*3.6+4); doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...gray); nl.forEach(l=>{ doc.text(l,W-mx,y-3,{align:"right"}); y+=3.6; }); y+=2; }
 
   // Pagamentos
   const paid=(payments||[]).filter(p=>Number(p.amount)>0);
@@ -2005,13 +2010,14 @@ async function renderElegantQuote(o) {
   for(let pg=1;pg<=total;pg++){ doc.setPage(pg); hair(H-16); cap(divisionName,mx,H-10,6.5,gray); cap(`Página ${pg} / ${total}`,W-mx,H-10,6.5,gray,{align:"right"}); }
   doc.save(fileName);
 }
-async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride, payments=[]) {
+async function generateQuotePDF(vehicle, tasks, client, employee, company, defaultRate, tasksOverride, payments=[], closing={}) {
   const allTs = (tasksOverride || tasks.filter(t => t.vehicleId === vehicle.id)).filter(t => !isInternalTask(t));
   return renderElegantQuote({
     vehicle, ts: allTs.filter(t=>!t.warranty), warrantyTs: allTs.filter(t=>t.warranty), client, employee, company, defaultRate,
     accent:[221,139,52], accentText:[190,105,25], divisionName: company?.name||"OSC Group", osLabel: vehicle.osNumber?fmtOS(vehicle.osNumber):"",
     notes: vehicle.notes, checklist: Array.isArray(vehicle.checklist)?vehicle.checklist:[], perf:true,
     payments:(payments||[]), osDiscountPct:vehicle.osDiscountPct, osDiscountPctFin:vehicle.osDiscountPctFinishing,
+    closingTotal:closing?.total, closingNote:closing?.note,
     tagline:`${company?.name || "OSC Group"} — Excelência em cada revisão`,
     fileName:`orcamento-${(vehicle.plate||"").replace(/\s/g,"")}-${new Date().toISOString().slice(0,10)}.pdf`,
   });
@@ -10441,7 +10447,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                     const rawTows=Array.isArray(h.tows)?h.tows:(h.tows?JSON.parse(JSON.stringify(h.tows)):[]);
                     const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model,fuelCost:Number(h.fuel_cost||0),fuels:rawFuels,tows:rawTows,osDiscountPct:Number(h.os_discount_pct||0)};
                     const hEmployee=employees.find(e=>(h.mechanic_ids||[]).includes(e.id))||null;
-                    await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks,payments.filter(p=>p.osHistoryId===h.id));
+                    await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks,payments.filter(p=>p.osHistoryId===h.id),{total:h.total_value!=null?Number(h.total_value):undefined,note:h.discount_note||""});
                   }catch(err){alert("Erro ao gerar PDF: "+err.message);}
                   setPdfLoading(null);
                 }} style={{background:pdfLoading===h.id?B.gray600:`${B.amber}22`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"3px 9px",cursor:pdfLoading===h.id?"wait":"pointer",color:pdfLoading===h.id?B.gray400:B.amber,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
@@ -13243,7 +13249,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.16.149";
+const APP_VERSION = "2026.11.16.150";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

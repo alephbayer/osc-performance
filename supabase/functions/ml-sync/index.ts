@@ -236,7 +236,10 @@ async function sync(days: number) {
       if (!hist.length && status && at) hist = [{ status, date: at }];
       const lt = s.lead_time || {}, so = s.shipping_option || {};
       // previsão mais recente: a "estendida" (quando o ML reagenda/atrasa) vale mais que a original
-      const eta = lt.estimated_delivery_extended?.date || so.estimated_delivery_extended?.date || lt.estimated_delivery_final?.date || lt.estimated_delivery_time?.date || so.estimated_delivery_final?.date || so.estimated_delivery_time?.date || null;
+      const etaBase = lt.estimated_delivery_extended?.date || so.estimated_delivery_extended?.date || lt.estimated_delivery_final?.date || lt.estimated_delivery_time?.date || so.estimated_delivery_final?.date || so.estimated_delivery_time?.date || null;
+      // data original já passou e o ML ainda promete uma janela: vale o limite da janela (último dia prometido)
+      const win = lt.estimated_delivery_time?.offset?.date || null;
+      const eta = (etaBase && win && brDay(etaBase) < brDay(new Date()) && brDay(win) >= brDay(new Date())) ? win : etaBase;
       // palavra-chave de entrega: varre o envio atrás de campos de código/senha (guarda só o que bate)
       const found: Record<string, string> = {};
       const walk = (v: any, path: string, depth: number) => {

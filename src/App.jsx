@@ -4770,26 +4770,70 @@ function extractDocNumber(text) {
   for (const r of pats) { const m = String(text).match(r); if (m) return m[1]; }
   return "";
 }
+// Foto da nota → PDF de 1 página (leitura por IA e anexo no fornecedor trabalham sempre com PDF)
+async function imageToPdfFile(f) {
+  const url = URL.createObjectURL(f);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("Não consegui abrir a imagem")); i.src = url; });
+    const MAX = 2400, k = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+    const jpg = c.toDataURL("image/jpeg", 0.85);
+    const Ctor = await loadJsPDF();
+    const land = w > h, PW = land ? 297 : 210, PH = land ? 210 : 297, m = 5;
+    const doc = new Ctor({ unit: "mm", format: "a4", orientation: land ? "l" : "p" });
+    const s = Math.min((PW - m * 2) / w, (PH - m * 2) / h);
+    doc.addImage(jpg, "JPEG", (PW - w * s) / 2, (PH - h * s) / 2, w * s, h * s);
+    return new File([doc.output("blob")], (f.name || "nota").replace(/\.[^.]+$/, "") + ".pdf", { type: "application/pdf" });
+  } finally { URL.revokeObjectURL(url); }
+}
+const _b64 = buf => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+// Nota escaneada/foto: a IA lê a imagem e devolve os itens (linhas com conta que não fecha ficam "para revisar")
+async function readNoteByVision(file) {
+  const buf = await file.arrayBuffer();
+  if (buf.byteLength > 8 * 1024 * 1024) throw new Error("Arquivo muito grande para leitura por imagem (máx. 8 MB)");
+  const d = await db.readInvoice(_b64(buf));
+  const num = v => { const n = Number(String(v ?? "").replace(",", ".")); return isFinite(n) ? n : 0; };
+  const raw = [];
+  (Array.isArray(d.items) ? d.items : []).forEach(it => {
+    const name = String(it.name || "").trim(), qty = num(it.qty) || 1, cost = num(it.unit_cost), lt = num(it.line_total);
+    if (!name || !(cost > 0)) return;
+    const sure = lt > 0 && Math.abs(qty * cost - lt) <= Math.max(0.05, lt * 0.01);
+    raw.push({ name, qty, cost, kind: "item", sure, data: true, y: -raw.length * 12, p: 1 });
+  });
+  if (num(d.freight) > 0) raw.push({ name: "Frete", qty: 1, cost: num(d.freight), kind: "freight", sure: true, y: -raw.length * 12, p: 1 });
+  const text = [d.supplier_name, d.supplier_cnpj, d.doc_number, ...raw.map(r => r.name)].filter(Boolean).join(" ");
+  return { raw, text, docNumber: String(d.doc_number || "").trim() };
+}
 // Lê o PDF e descobre quais itens dessa nota já foram importados (veículo ou estoque)
 async function analyzeNote(file) {
-  const lines = await pdfToLines(file);
-  const text = lines.map(l => (typeof l === "string" ? l : l.t)).join(" ");
+  let lines = [];
+  try { lines = await pdfToLines(file); } catch {}
+  let text = lines.map(l => (typeof l === "string" ? l : l.t)).join(" ");
+  let parsed = parsePurchaseLines(lines);
+  let viaVision = false, visionDoc = "";
+  if (parsed.length === 0 || text.replace(/\s/g, "").length < 40) {
+    // sem texto no PDF (escaneado/foto) ou nada reconhecido: tenta a leitura por imagem
+    try { const v = await readNoteByVision(file); if (v.raw.length) { parsed = v.raw; text = v.text; viaVision = true; visionDoc = v.docNumber; } }
+    catch (e) { if (text.replace(/\s/g, "").length < 40) throw e; }
+  }
   const cnt = {};
-  const rows = parsePurchaseLines(lines).map((r, i) => {
+  const rows = parsed.map((r, i) => {
     const base = `${_normName(r.name)}|${r.qty}|${r.cost}`;
     const occ = (cnt[base] = (cnt[base] || 0) + 1);
     return { ...r, id: i, key: `${base}|${occ}`, origName: r.name };
   });
-  const docNumber = extractDocNumber(text);
+  const docNumber = viaVision ? visionDoc : extractDocNumber(text);
   const fileHash = await sha256Hex(await file.arrayBuffer());
   const total = rows.reduce((s, r) => s + r.cost * r.qty, 0);
   // com nº da nota: identidade = nº + total + nº de itens (sobrevive a reimpressões do PDF); sem nº: o próprio arquivo
-  const noteId = docNumber && rows.length ? "n:" + (await sha256Hex(`${docNumber}|${total.toFixed(2)}|${rows.length}`)).slice(0, 40) : "f:" + fileHash.slice(0, 40);
+  const noteId = !viaVision && docNumber && rows.length ? "n:" + (await sha256Hex(`${docNumber}|${total.toFixed(2)}|${rows.length}`)).slice(0, 40) : "f:" + fileHash.slice(0, 40);
   let imports = [];
   try { imports = await db.getPurchaseImports(noteId); } catch {}
   const byKey = {}; imports.forEach(x => { byKey[x.item_key] = x; });
   rows.forEach(r => { r.imp = byKey[r.key] || null; });
-  return { lines, text, rows, docNumber, noteId, imports, total };
+  return { lines, text, rows, docNumber, noteId, imports, total, viaVision };
 }
 async function loadImpMap() {
   const map = {};
@@ -4884,10 +4928,12 @@ function useNoteImport() {
   const [finish, setFinish] = useState(false);
   useEffect(() => { db.getSuppliers().then(setRegSup).catch(() => {}); db.getSupplierDocs().then(setDocs).catch(() => {}); loadImpMap().then(setImpMap); }, []);
   const regMatch = regSup.find(x => _normName(x.name) === _normName(supplier)) || null;
-  const analyze = async (f, decorate, doc = null) => {
-    if (!f) return;
-    setFile(f); setErr(""); setBusy(true); setRows(null); setNote(null); setFromDoc(null);
+  const analyze = async (f0, decorate, doc = null) => {
+    if (!f0) return;
+    setErr(""); setBusy(true); setRows(null); setNote(null); setFromDoc(null);
     try {
+      const f = /^image\//.test(f0.type) ? await imageToPdfFile(f0) : f0;
+      setFile(f);
       const n = await analyzeNote(f);
       try {
         const regs = regSup.length ? regSup : await db.getSuppliers();
@@ -4900,8 +4946,8 @@ function useNoteImport() {
       setNote(n); setRows(rs);
       const left = rs.filter(r => !r.imp && !r.on);
       setFinish(left.length > 0 && left.every(r => r.kind === "freight" || !r.sure || r.dup || r.bad));
-      if (!rs.length) setErr("Não encontrei itens nesse PDF. Se for escaneado/foto, ainda não consigo ler (só PDF com texto).");
-    } catch (e) { setErr(e.message || "Erro ao ler o PDF"); }
+      if (!rs.length) setErr("Não encontrei itens nessa nota. Se for foto ou escaneada, tente uma imagem mais nítida e inteira, sem sombras.");
+    } catch (e) { setErr(e.message || "Erro ao ler a nota"); }
     setBusy(false);
   };
   const pickDoc = async (d, decorate) => {
@@ -4952,19 +4998,20 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
     <div style={importBoxS(B.orange)} onClick={e => e.stopPropagation()}>
       <div style={{ background: B.gray900, borderBottom: `2px solid ${B.orange}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF)</div>
+          <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF ou foto)</div>
           <div style={{ fontSize: 11, color: B.gray400 }}>{vehicle.model} · {vehicle.plate}</div>
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
       </div>
       <div style={importBodyS}>
         <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", color: B.gray200, fontSize: 12 }}>
-          {busy ? "Lendo PDF…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF da compra"}
-          <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { N.analyze(e.target.files?.[0], decorate); e.target.value = ""; }} />
+          {busy ? "Lendo nota…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF ou foto da compra"}
+          <input type="file" accept="application/pdf,image/*" style={{ display: "none" }} onChange={e => { N.analyze(e.target.files?.[0], decorate); e.target.value = ""; }} />
         </label>
         <button type="button" onClick={() => N.setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📚 Usar nota já guardada de um fornecedor {N.showDocs ? "▲" : "▼"}</button>
         {N.showDocs && <NoteDocPicker docs={N.docs} regSup={regSup} impMap={N.impMap} fieldS={importFieldS} onPick={d => N.pickDoc(d, decorate)} />}
         {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
+        {note?.viaVision && <div style={{ fontSize: 11.5, color: B.amber, background: `${B.amber}14`, border: `1px solid ${B.amber}33`, borderRadius: 8, padding: "8px 10px", lineHeight: 1.45 }}>Nota lida por imagem (IA). Confira nomes, quantidades e valores antes de lançar — as linhas em que a conta não fechou ficam marcadas para revisar.</div>}
         <NoteStatusBanner note={note} rows={rows || []} onRelease={() => N.release(decorate)} />
         {rows && rows.length > 0 && <>
           {!complete && <>
@@ -5275,12 +5322,13 @@ function StockImportModal({ stock, onClose, onImport }) {
       </div>
       <div style={importBodyS}>
         <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", color: B.gray200, fontSize: 12 }}>
-          {busy ? "Lendo PDF…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF da nota"}
-          <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => { N.analyze(e.target.files?.[0], decorate); e.target.value = ""; }} />
+          {busy ? "Lendo nota…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF ou foto da nota"}
+          <input type="file" accept="application/pdf,image/*" style={{ display: "none" }} onChange={e => { N.analyze(e.target.files?.[0], decorate); e.target.value = ""; }} />
         </label>
         <button type="button" onClick={() => N.setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📚 Usar nota já guardada de um fornecedor {N.showDocs ? "▲" : "▼"}</button>
         {N.showDocs && <NoteDocPicker docs={N.docs} regSup={regSup} impMap={N.impMap} fieldS={importFieldS} onPick={d => N.pickDoc(d, decorate)} />}
         {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
+        {note?.viaVision && <div style={{ fontSize: 11.5, color: B.amber, background: `${B.amber}14`, border: `1px solid ${B.amber}33`, borderRadius: 8, padding: "8px 10px", lineHeight: 1.45 }}>Nota lida por imagem (IA). Confira nomes, quantidades e valores antes de lançar — as linhas em que a conta não fechou ficam marcadas para revisar.</div>}
         <NoteStatusBanner note={note} rows={rows || []} onRelease={() => N.release(decorate)} />
         {rows && rows.length > 0 && <>
           {!complete && <>
@@ -13152,7 +13200,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.16.145";
+const APP_VERSION = "2026.11.16.146";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

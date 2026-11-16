@@ -1051,6 +1051,17 @@ export const db = {
     if (error) throw error;
     return supabase.storage.from("photos").getPublicUrl(path).data.publicUrl;
   },
+  // ── Leitura de nota escaneada (IA com visão) ──
+  async readInvoice(pdfBase64) {
+    const { data, error } = await supabase.functions.invoke("read-invoice", { body: { pdf_base64: pdfBase64 } });
+    if (error) {
+      let m = error.message;
+      try { const j = await error.context?.json?.(); if (j?.error) m = j.error; } catch {}
+      throw new Error(m);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  },
   // ── Mercado Livre (compras da conta) ──
   async mlCall(action, body = {}) {
     const { data, error } = await supabase.functions.invoke("ml-sync", { body: { action, ...body } });

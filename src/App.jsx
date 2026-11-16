@@ -3949,6 +3949,40 @@ function StockPickerModal({stock,onPick,onClose}) {
   </div>);
 }
 
+// ─── Mercado Livre: andamento/previsão das peças destinadas (para o card do material) ───
+const _mlCard = { map: {}, at: 0, busy: false, subs: new Set() };
+async function refreshMLCard(force) {
+  if (_mlCard.busy || (!force && Date.now() - _mlCard.at < 60000)) return;
+  _mlCard.busy = true;
+  try { const rows = await db.getMLCardInfo(); const m = {}; rows.forEach(r => { m[r.id] = r; }); _mlCard.map = m; _mlCard.at = Date.now(); _mlCard.subs.forEach(f => f(x => x + 1)); }
+  catch {} finally { _mlCard.busy = false; }
+}
+function useMLCard(id) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!id) return;
+    _mlCard.subs.add(force); refreshMLCard();
+    const onVis = () => { if (document.visibilityState === "visible") refreshMLCard(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { _mlCard.subs.delete(force); document.removeEventListener("visibilitychange", onVis); };
+  }, [id]);
+  return id ? _mlCard.map[id] || null : null;
+}
+const _spDay = d => new Date(d).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+const _spShort = d => { const [y, m, dd] = _spDay(d).split("-"); return `${dd}/${m}`; };
+function mlDelivery(i) {
+  if (!i) return null;
+  if (i.ship_status === "delivered") return { text: `Entregue${i.delivered_at ? " em " + _spShort(i.delivered_at) : ""}`, tone: "ok" };
+  const today = _spDay(new Date());
+  if (i.eta_at) {
+    const late = _spDay(i.eta_at) < today;
+    const moved = i.eta_first_at && _spDay(i.eta_first_at) !== _spDay(i.eta_at);
+    return { text: `${late ? "Atrasada · previsão era" : "Previsão"} ${_spShort(i.eta_at)}${moved ? ` (antes ${_spShort(i.eta_first_at)})` : ""}`, tone: late ? "late" : moved ? "moved" : "eta" };
+  }
+  if (i.ship_status === "shipped") return { text: "A caminho · sem previsão", tone: "eta" };
+  return { text: "Aguardando envio", tone: "wait" };
+}
+
 // ─── TaskItem — Mechanic ──────────────────────────────────────────────────────
 // ─── Material chip (one material entry in a task) ─────────────────────────────
 function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,readOnlyName=false,editableQty=false}) {
@@ -3968,6 +4002,8 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
   // Peça destinada a partir do Mercado Livre: card em azul-petróleo (como o de estoque é roxo)
   const isML = !mat.fromStock && !!(mat.mlItem||mat.mlLink);
   const mlColor = "#2aa5b5";
+  const mlDel = mlDelivery(useMLCard(isML?mat.mlItem:null));
+  const mlTone = mlDel?({ok:B.green,late:B.red,moved:B.amber,eta:mlColor,wait:B.gray400}[mlDel.tone]):null;
 
   const bg = isEstimated ? estimatedBg : mat.fromStock ? B.purpleBg : isImported ? importBg : isML ? `${mlColor}16` : B.gray700;
   const border = isEstimated ? `2px solid ${estimatedColor}66` : mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : isML ? `1px solid ${mlColor}55` : `1px solid ${B.gray600}`;
@@ -3998,6 +4034,10 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
         onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={13}/></button>
     </div>
 
+    {mlDel&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4,fontSize:10.5,fontWeight:700,color:mlTone,letterSpacing:.2}}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      {mlDel.text}
+    </div>}
     {/* Toggle buttons — second row below name */}
     {onUpdate&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:4}}>
       <button onClick={()=>onUpdate(idx,{...mat,estimated:!isEstimated})}
@@ -13200,7 +13240,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.16.146";
+const APP_VERSION = "2026.11.16.147";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15082,7 +15122,7 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
       out.push({id:"appt_"+a.id,auto:true,kind:"appointment",title:(v?v.model:a.title)+(c?` · ${c.name}`:""),date:a.scheduledDate,end:a.scheduledDate,notes:a.title});
     });
     reminders.filter(r=>r.dueDate&&!r.done).forEach(r=>out.push({id:"rem_"+r.id,auto:true,kind:"remdue",title:r.title,date:r.dueDate,end:r.dueDate,notes:r.body}));
-    ml.filter(r=>r.eta_at).forEach(r=>{const d=new Date(r.eta_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});out.push({id:"ml_"+r.id,auto:true,kind:"ml",title:String(r.title||"").slice(0,60),date:d,end:d,notes:[r.vehicle_label,r.seller].filter(Boolean).join(" · ")});});
+    ml.filter(r=>r.eta_at).forEach(r=>{const d=new Date(r.eta_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});const was=r.eta_first_at&&new Date(r.eta_first_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});out.push({id:"ml_"+r.id,auto:true,kind:"ml",title:String(r.title||"").slice(0,60),date:d,end:d,notes:[r.vehicle_label,r.seller,was&&was!==d?`adiada (era ${was.slice(8)}/${was.slice(5,7)})`:""].filter(Boolean).join(" · ")});});
     return out;
   },[events,appointments,reminders,ml,vehicles,clients]);
   const vis=all.filter(e=>!off[e.kind]);

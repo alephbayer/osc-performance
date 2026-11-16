@@ -1073,8 +1073,14 @@ export const db = {
     return data;
   },
   async getMLArriving() {
-    const { data, error } = await supabase.from("ml_purchase_items").select("id,title,qty,seller,vehicle_label,task_label,ship_status,ship_substatus,eta_at,order_status,destination,delivery_key,ml_key")
+    const { data, error } = await supabase.from("ml_purchase_items").select("id,title,qty,seller,vehicle_label,task_label,ship_status,ship_substatus,eta_at,eta_first_at,order_status,destination,delivery_key,ml_key")
       .in("ship_status", ["pending", "handling", "ready_to_ship", "shipped"]).neq("order_status", "cancelled").limit(300);
+    if (error) throw error; return data || [];
+  },
+  // previsão/andamento das peças do ML já destinadas a carros (para o card do material)
+  async getMLCardInfo() {
+    const { data, error } = await supabase.from("ml_purchase_items").select("id,ship_status,ship_substatus,eta_at,eta_first_at,delivered_at,order_status")
+      .eq("destination", "vehicle").neq("order_status", "cancelled").order("ordered_at", { ascending: false }).limit(600);
     if (error) throw error; return data || [];
   },
   async getMLDeliveredToday() {

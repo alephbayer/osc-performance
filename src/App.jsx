@@ -7149,7 +7149,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
     </div>
   </div>);
 }
-function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUndoSupplies}) {
+function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUndoSupplies,onConfirmReceive}) {
   const [st,setSt]=useState(null);
   const [items,setItems]=useState([]);
   const [busy,setBusy]=useState("");
@@ -7202,7 +7202,8 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   },[]);
   const live=items.filter(i=>i.order_status!=="cancelled"&&i.ship_status!=="cancelled");
   const SORT_ORD={delivered:0,shipped:1,ready_to_ship:2,handling:3,pending:4,not_delivered:5};
-  const isDone=i=>i.destination==="ignored"||(i.destination==="return"?i.return_status==="done":(!!i.destination&&i.ship_status==="delivered"));
+  const needsConfirm=i=>i.ship_status==="delivered"&&!!i.destination&&i.destination!=="return"&&i.destination!=="ignored"&&((i.destination==="stock"&&!!i.stock_plan)||(!!i.link_type&&!i.link_done_at));
+  const isDone=i=>i.destination==="ignored"||(i.destination==="return"?i.return_status==="done":(!!i.destination&&i.ship_status==="delivered"&&!needsConfirm(i)));
   const nqs=_normName(qs);
   const bySearch=i=>!nqs||_normName([i.title,i.seller,i.vehicle_label,i.task_label].join(" ")).includes(nqs);
   const byFil=i=>bySearch(i)&&(fil==="all"?i.destination!=="return":fil==="return"?i.destination==="return":(fil==="none"?!i.ship_status:i.ship_status===fil));
@@ -7299,6 +7300,11 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
           {live&&(i.delivery_key||i.ml_key)&&<span style={{fontSize:11,color:B.black,background:B.amber,borderRadius:6,padding:"1px 7px",fontWeight:800}}>🔑 {i.delivery_key||i.ml_key}</span>}
         </div>);
       })()}
+      {needsConfirm(i)&&onConfirmReceive&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:9,background:`${B.amber}14`,border:`1px solid ${B.amber}44`}}>
+        <div style={{fontSize:8.5,fontWeight:700,letterSpacing:".2em",textTransform:"uppercase",color:B.amber}}>Entregue · aguardando conferência</div>
+        <div style={{fontSize:11,color:B.gray300,marginTop:4,lineHeight:1.4}}>Confira se o material veio correto antes de confirmar{i.destination==="stock"?" a entrada no estoque":""}.</div>
+        <button disabled={busy==="rc"+i.id} onClick={async e=>{ e.stopPropagation(); setBusy("rc"+i.id); try{ await onConfirmReceive(i.id); await loadItems(); }catch(er){ setErr(errMsg(er)||"Erro ao confirmar"); } setBusy(""); }} style={{marginTop:8,background:B.amber,color:B.black,border:"none",borderRadius:8,padding:"7px 12px",fontSize:11.5,fontWeight:800,cursor:"pointer",opacity:busy==="rc"+i.id?.6:1}}>{busy==="rc"+i.id?"Confirmando…":"Veio correto · confirmar recebimento"}</button>
+      </div>}
       {isPending&&(()=>{ const sg=stockHints[i.id]; return sg?<div style={{fontSize:11,color:B.purple,marginTop:6,wordBreak:"break-word"}}>💡 Parece estoque: {sg.name}{sg.brand?` · ${sg.brand}`:""}</div>:null; })()}
       {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:6,wordBreak:"break-word"}}>{destLbl(i)}</div>}
       {i.destination==="return"&&(()=>{ const dd=retDays(i.return_deadline); const done=i.return_status==="done"; const col=done?B.green:dd==null?B.gray400:dd<0||dd<=2?B.red:dd<=4?B.amber:B.gray300; return (<div style={{display:"flex",gap:"4px 8px",flexWrap:"wrap",alignItems:"center",marginTop:6}}>
@@ -7585,7 +7591,7 @@ function ToolsTab({showValues=true}) {
     </div>
   </div>);
 }
-function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],stock=[],onAssignML,onUndoMLSupplies}) {
+function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],stock=[],onAssignML,onUndoMLSupplies,onConfirmMLReceive}) {
   const [list,setList]=useState([]);
   const [loading,setLoading]=useState(true);
   const [q,setQ]=useState("");
@@ -7647,7 +7653,7 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
     </div>
   </div>);
   return (<div>
-    {onAssignML&&<MLPurchasesCard vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssign={onAssignML} onUndoSupplies={onUndoMLSupplies}/>}
+    {onAssignML&&<MLPurchasesCard vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssign={onAssignML} onUndoSupplies={onUndoMLSupplies} onConfirmReceive={onConfirmMLReceive}/>}
     <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar fornecedor…" style={{...inp,flex:"1 1 220px",maxWidth:340}}/>
       {editId!=="new"&&<button onClick={()=>startEdit(null)} style={{padding:"8px 16px",borderRadius:8,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>＋ Novo fornecedor</button>}
@@ -13249,7 +13255,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.16.152";
+const APP_VERSION = "2026.11.16.153";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15229,16 +15235,16 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
 function MLArrivalsAlert({show,onOpen}) {
   const [rows,setRows]=useState([]);
   const [rets,setRets]=useState([]);
-  const [dlv,setDlv]=useState([]);
+  const [dlv,setDlv]=useState([]); const [conf,setConf]=useState([]);
   const [open,setOpen]=useState({});
   useEffect(()=>{
     if(!show) return;
     let alive=true;
-    const load=()=>{ db.getMLArriving().then(r=>{if(alive)setRows(r);}).catch(()=>{}); db.getMLReturns().then(r=>{if(alive)setRets(r);}).catch(()=>{}); db.getMLDeliveredToday().then(r=>{if(alive)setDlv(r);}).catch(()=>{}); };
+    const load=()=>{ db.getMLArriving().then(r=>{if(alive)setRows(r);}).catch(()=>{}); db.getMLReturns().then(r=>{if(alive)setRets(r);}).catch(()=>{}); db.getMLDeliveredToday().then(r=>{if(alive)setDlv(r);}).catch(()=>{}); db.getMLToConfirm().then(r=>{if(alive)setConf(r);}).catch(()=>{}); };
     load(); const t=setInterval(load,5*60000);
     return()=>{alive=false;clearInterval(t);};
   },[show]);
-  if(!show||(!rows.length&&!rets.length&&!dlv.length)) return null;
+  if(!show||(!rows.length&&!rets.length&&!dlv.length&&!conf.length)) return null;
   const day=d=>new Date(d).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});
   const today=day(new Date());
   const route=rows.filter(r=>r.ship_status==="shipped"&&r.ship_substatus==="out_for_delivery");
@@ -15247,9 +15253,10 @@ function MLArrivalsAlert({show,onOpen}) {
   const late=rows.filter(r=>!rid.has(r.id)&&r.eta_at&&day(r.eta_at)<today);
   const retDue=rets.filter(r=>r.return_deadline&&Math.ceil((new Date(r.return_deadline+"T23:59:59-03:00")-Date.now())/86400000)<=3).map(r=>({...r,destination:"return",_ret:true})).sort((a,b)=>String(a.return_deadline).localeCompare(String(b.return_deadline)));
   const doneToday=dlv.filter(r=>day(r.delivered_at||r.status_at)===today);
-  if(!route.length&&!dueToday.length&&!late.length&&!retDue.length&&!doneToday.length) return null;
+  if(!route.length&&!dueToday.length&&!late.length&&!retDue.length&&!doneToday.length&&!conf.length) return null;
   const Ic=({ch})=><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{ch}</svg>;
   const groups=[
+    {k:"conf",color:B.amber,rows:conf,label:`${conf.length} ${conf.length!==1?"peças entregues aguardando conferência":"peça entregue aguardando conferência"}`,icon:<Ic ch={<><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></>}/>},
     {k:"route",color:B.green,rows:route,label:`${route.length} ${route.length!==1?"peças saíram":"peça saiu"} para entrega`,icon:<Ic ch={<><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>}/>},
     {k:"today",color:B.amber,rows:dueToday,label:`${dueToday.length} ${dueToday.length!==1?"peças chegam":"peça chega"} hoje`,icon:<Ic ch={<><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.5L12 12.5l8.7-5"/><path d="M12 22V12.5"/></>}/>},
     {k:"done",color:B.green,rows:doneToday,label:`${doneToday.length} ${doneToday.length!==1?"peças entregues":"peça entregue"} hoje`,icon:<Ic ch={<><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}/>},
@@ -15269,7 +15276,7 @@ function MLArrivalsAlert({show,onOpen}) {
         <span style={{fontSize:11,color:B.gray500,display:"inline-block",transition:"transform .2s",transform:o?"rotate(90deg)":"none"}}>▸</span>
       </div>
       {o&&<div style={{paddingBottom:10,display:"flex",flexDirection:"column",gap:6}}>
-        {g.rows.map(r=>{ const k=r.delivery_key||r.ml_key; const dc=r.destination==="vehicle"?"#2aa5b5":r.destination?B.gray300:B.amber; const dd=r._ret?fdt(r.return_deadline+"T12:00:00-03:00"):r.eta_at?fdt(r.eta_at):""; const dl=g.k==="done"?"entregue":r._ret?"devolver até":g.k==="late"?"previsão era":g.k==="route"?"em rota":"previsão"; const sub=!r._ret&&mlSubLabel(r.ship_substatus); return (<div key={r.id} style={{background:B.gray900,borderRadius:10,padding:"10px 12px",display:"flex",gap:12,alignItems:"stretch",borderLeft:`3px solid ${g.color}`}}>
+        {g.rows.map(r=>{ const k=r.delivery_key||r.ml_key; const dc=r.destination==="vehicle"?"#2aa5b5":r.destination?B.gray300:B.amber; const dd=r._ret?fdt(r.return_deadline+"T12:00:00-03:00"):g.k==="conf"?((r.delivered_at||r.status_at)?fdt(r.delivered_at||r.status_at):""):r.eta_at?fdt(r.eta_at):""; const dl=g.k==="conf"?"entregue":g.k==="done"?"entregue":r._ret?"devolver até":g.k==="late"?"previsão era":g.k==="route"?"em rota":"previsão"; const sub=!r._ret&&mlSubLabel(r.ship_substatus); return (<div key={r.id} style={{background:B.gray900,borderRadius:10,padding:"10px 12px",display:"flex",gap:12,alignItems:"stretch",borderLeft:`3px solid ${g.color}`}}>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:12.5,fontWeight:600,color:B.white,lineHeight:1.3,wordBreak:"break-word"}}>{r.title}</div>
             <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:6,marginTop:7}}>
@@ -17578,23 +17585,25 @@ export default function App() {
             try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}
             try{ await db.syncMLByLink("po",o.id,{destination:"vehicle",vehicle_id:v.id,vehicle_label:`${v.model||""} · ${v.plate||""}`.trim(),assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }catch(e){ console.warn("ml sync reserve",e); }
           };
-  mlRecvFn.current=async()=>{
+  // Recebimento do ML NÃO é mais automático: só roda quando admin/gestor confirma o item (onlyId) após conferir o material
+  mlRecvFn.current=async(onlyId)=>{
+    if(!onlyId) return;
     if(adminRole!=="owner"&&adminRole!=="admin") return;
     if(mlRecvBusy.current) return; mlRecvBusy.current=true;
     try{
       // estoque: entra quando o ML marca "entregue"
       try{
-        const sp=await db.getMLStockPending();
+        const sp=(await db.getMLStockPending()).filter(x=>x.id===onlyId);
         for(const x of sp){
           const plan=x.stock_plan; if(!plan) continue;
           if(!(await db.claimMLStockPlan(x.id))) continue; // outro aparelho já cuidou
           try{
             const sid=await importStockNote({items:[{pid:plan.pid||"",brand:plan.brand,name:plan.name,qty:plan.qty,cost:plan.cost}],supplierName:"Mercado Livre",date:String(x.delivered_at||x.status_at||x.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:plan.invoice||("ML "+x.ml_order_id),markup:plan.markup});
-            if(sid) await db.setMLItem(x.id,{stock_id:sid});
-          }catch(e){ try{ await db.setMLItem(x.id,{stock_plan:plan}); }catch{} console.warn("ml stock entry",e); }
+            if(sid){ await db.setMLItem(x.id,{stock_id:sid}); toast_("📦 Recebimento confirmado — entrou no estoque ✓"); }
+          }catch(e){ try{ await db.setMLItem(x.id,{stock_plan:plan}); }catch{} console.warn("ml stock entry",e); throw e; }
         }
       }catch(e){ console.warn("ml stock pending",e); }
-      const rows=await db.getMLToReceive();
+      const rows=(await db.getMLToReceive()).filter(x=>x.id===onlyId);
       for(const m of rows){
         const mlTotal=(Number(m.qty)||1)*(Number(m.unit_price)||0)+(Number(m.freight)||0);
         try{
@@ -18760,7 +18769,7 @@ export default function App() {
 
       {tab==="suppliers"&&allowedTabs.includes("suppliers")&&<>
         <TabHeader color={B.green} title="Fornecedores" subtitle="Cadastro de quem vende para a oficina — usado no autocompletar das compras de estoque"/>
-        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssignML={assignMLItem} onUndoMLSupplies={undoMLSupplies}/>
+        <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssignML={assignMLItem} onUndoMLSupplies={undoMLSupplies} onConfirmMLReceive={id=>mlRecvFn.current&&mlRecvFn.current(id)}/>
       </>}
 
       {tab==="insumos"&&allowedTabs.includes("insumos")&&<>

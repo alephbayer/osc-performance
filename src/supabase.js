@@ -1100,6 +1100,13 @@ export const db = {
     const { data, error } = await supabase.from("ml_purchase_items").select("*").not("link_type", "is", null).eq("ship_status", "delivered").is("link_done_at", null);
     if (error) throw error; return data || [];
   },
+  // entregues pelo ML mas ainda sem conferência/confirmação do admin (entrada no estoque ou pedido de compra pendente)
+  async getMLToConfirm() {
+    const { data, error } = await supabase.from("ml_purchase_items").select("id,title,qty,destination,vehicle_label,ship_status,delivered_at,status_at,stock_plan,link_type,link_done_at")
+      .eq("ship_status", "delivered").neq("order_status", "cancelled").not("destination", "is", null).limit(100);
+    if (error) throw error;
+    return (data || []).filter(i => i.destination !== "return" && i.destination !== "ignored" && ((i.destination === "stock" && i.stock_plan) || (i.link_type && !i.link_done_at)));
+  },
   async getMLItems() {
     const { data, error } = await supabase.from("ml_purchase_items").select("*").order("ordered_at", { ascending: false }).limit(600);
     if (error) throw error; return data || [];

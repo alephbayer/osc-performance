@@ -13243,7 +13243,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.16.148";
+const APP_VERSION = "2026.11.16.149";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15106,6 +15106,7 @@ const CAL_KINDS=[
 const CAL_AUTO=[
   {k:"appointment",label:"Agendamento",color:"#8b5cf6"},
   {k:"ml",label:"Entrega ML",color:"#eab308"},
+  {k:"mldone",label:"Entregue ML",color:"#22c55e"},
   {k:"remdue",label:"Prazo de lembrete",color:"#ec4899"},
 ];
 function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],clients=[],employees=[],isOwner=false,onAdd,onUpdate,onDelete}){
@@ -15116,7 +15117,8 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
   const [off,setOff]=useState({});
   const [form,setForm]=useState(null);
   const [ml,setMl]=useState([]);
-  useEffect(()=>{let a=true;db.getMLArriving().then(r=>{if(a)setMl(r);}).catch(()=>{});return()=>{a=false;};},[]);
+  const [mlDone,setMlDone]=useState([]);
+  useEffect(()=>{let a=true;db.getMLArriving().then(r=>{if(a)setMl(r);}).catch(()=>{});db.getMLDeliveredHistory().then(r=>{if(a)setMlDone(r);}).catch(()=>{});return()=>{a=false;};},[]);
   const kindOf=k=>CAL_KINDS.find(x=>x.k===k)||CAL_AUTO.find(x=>x.k===k)||{k,label:CAL_TYPES[k]?.label||"Evento",color:CAL_TYPES[k]?.color||"#6366f1"};
   const all=useMemo(()=>{
     const out=events.map(e=>({...e,kind:e.type==="note"?"reminder":e.type,end:e.endDate&&e.endDate>e.date?e.endDate:e.date}));
@@ -15126,8 +15128,10 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
     });
     reminders.filter(r=>r.dueDate&&!r.done).forEach(r=>out.push({id:"rem_"+r.id,auto:true,kind:"remdue",title:r.title,date:r.dueDate,end:r.dueDate,notes:r.body}));
     ml.filter(r=>r.eta_at).forEach(r=>{const d=new Date(r.eta_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});const was=r.eta_first_at&&new Date(r.eta_first_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});const late=d<todayS;const dd=late?todayS:d;const why=mlSubLabel(r.ship_substatus);out.push({id:"ml_"+r.id,auto:true,kind:"ml",title:String(r.title||"").slice(0,60),date:dd,end:dd,notes:[r.vehicle_label,r.seller,late?`atrasada (previsão era ${d.slice(8)}/${d.slice(5,7)})`:was&&was!==d?`adiada (era ${was.slice(8)}/${was.slice(5,7)})`:"",why].filter(Boolean).join(" · ")});});
+    // histórico: peça entregue fica marcada no dia em que chegou
+    mlDone.filter(r=>r.delivered_at).forEach(r=>{const d=new Date(r.delivered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"});out.push({id:"mld_"+r.id,auto:true,kind:"mldone",title:String(r.title||"").slice(0,60),date:d,end:d,notes:[r.vehicle_label,r.seller].filter(Boolean).join(" · ")});});
     return out;
-  },[events,appointments,reminders,ml,vehicles,clients]);
+  },[events,appointments,reminders,ml,mlDone,vehicles,clients]);
   const vis=all.filter(e=>!off[e.kind]);
   const onDay=ds=>vis.filter(e=>e.date<=ds&&e.end>=ds).sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
   const y=cur.getFullYear(),m=cur.getMonth();
@@ -15137,7 +15141,7 @@ function CalendarPage({events=[],appointments=[],reminders=[],vehicles=[],client
   const monthName=cur.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
   const fdate=s=>new Date(s+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
   const fshort=s=>new Date(s+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
-  const upcoming=vis.filter(e=>e.end>=todayS&&!e.done).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
+  const upcoming=vis.filter(e=>e.end>=todayS&&!e.done&&e.kind!=="mldone").sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
   const newEv=ds=>setForm({type:"reminder",title:"",date:ds||sel,endDate:"",time:"",employeeId:"",vehicleId:"",notes:"",color:kindOf("reminder").color});
   const inp={padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",colorScheme:"dark",fontFamily:"inherit",boxSizing:"border-box"};
   const ico=(d,s=15)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html:d}}/>;

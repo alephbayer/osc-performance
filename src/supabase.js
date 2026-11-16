@@ -1083,6 +1083,13 @@ export const db = {
       .eq("destination", "vehicle").neq("order_status", "cancelled").order("ordered_at", { ascending: false }).limit(600);
     if (error) throw error; return data || [];
   },
+  // histórico de entregas (calendário): peças já entregues, no dia em que chegaram
+  async getMLDeliveredHistory() {
+    const d = new Date(Date.now() - 120 * 86400000).toISOString();
+    const { data, error } = await supabase.from("ml_purchase_items").select("id,title,seller,vehicle_label,destination,delivered_at,order_status")
+      .eq("ship_status", "delivered").neq("order_status", "cancelled").gte("delivered_at", d).order("delivered_at", { ascending: false }).limit(600);
+    if (error) throw error; return data || [];
+  },
   async getMLDeliveredToday() {
     const d = new Date(Date.now() - 86400000).toISOString();
     const { data, error } = await supabase.from("ml_purchase_items").select("id,title,qty,seller,vehicle_label,task_label,ship_status,delivered_at,status_at,order_status,destination,ml_key")

@@ -768,7 +768,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,overflow:"hidden"}}>
               {hasActiveOS&&<>
                 <div style={{display:"flex"}}>
-                  <div style={{flex:1,padding:"14px 12px",textAlign:"center"}}><div style={{...lbl,color:B.gray500}}>Total</div><div style={{fontSize:15,fontWeight:800,color:B.white}}>{fmtBRL(totalDue)}</div></div>
+                  <div style={{flex:1,padding:"14px 12px",textAlign:"center"}}><div style={{...lbl,color:B.gray500}}>Total</div>{(()=>{ const od=(v.enteredAt?taskDiscSum(perfTasks,defaultRate)+perfTasks.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0)*Number(v.osDiscountPct||0)/100:0)+(v.enteredAtFinishing?taskDiscSum(finTasks,defaultRate)+finDisc:0); return od>=0.5?<div style={{fontSize:11,color:B.gray500,textDecoration:"line-through",marginBottom:1}}>{fmtBRL(totalDue+od)}</div>:null; })()}<div style={{fontSize:15,fontWeight:800,color:B.white}}>{fmtBRL(totalDue)}</div></div>
                   <div style={{flex:1,padding:"14px 12px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}><div style={{...lbl,color:B.gray500}}>Pago</div><div style={{fontSize:15,fontWeight:800,color:B.green}}>{fmtBRL(totalPaid)}</div></div>
                   <div style={{flex:1,padding:"14px 12px",textAlign:"center",borderLeft:`1px solid ${B.gray700}`}}><div style={{...lbl,color:B.gray500}}>{balance>0.005?"Saldo":"Situação"}</div><div style={{fontSize:15,fontWeight:800,color:balance>0.005?B.white:B.green}}>{balance>0.005?fmtBRL(balance):"Quitado"}</div></div>
                 </div>
@@ -1417,6 +1417,8 @@ const taskCost=(t,defaultRate)=>{
   const freight = mats.reduce((s,m)=>s+Number(m.freight||0),0);
   return {laborGross,discount,labor,mat,freight,total:labor+mat+freight,rateType};
 };
+
+const taskDiscSum=(ts,r)=>(ts||[]).reduce((s,t)=>s+(t.warranty?0:taskCost(t,r).discount),0);
 
 // ─── Image upload (Supabase Storage) ─────────────────────────────────────────
 async function uploadImg(file, folder) {
@@ -4411,7 +4413,8 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
           {task.rateType==="qty"?"📦 Qtd":"⏱ H"}
         </button>
-        {c.total>0&&<div style={{marginLeft:"auto",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 10px",flexShrink:0}}>
+        {c.total>0&&<div style={{marginLeft:"auto",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 10px",flexShrink:0,textAlign:"right"}}>
+          {!task.warranty&&c.discount>0&&<div style={{fontSize:10,color:B.gray500,textDecoration:"line-through",lineHeight:1.2}}>{fmtBRL(c.total+c.discount)}</div>}
           <span style={{fontSize:13,fontWeight:800,color:B.amber}}>{fmtBRL(c.total)}</span>
         </div>}
       </div>}
@@ -12826,6 +12829,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         const finDiscount=finLaborTotal*Number(v.osDiscountPctFinishing||0)/100;
         const finTotal=finLaborTotal+finPartsTotal+finFreightTotal-finDiscount;
         const activeTotal=perfTotal+finTotal;
+        const origTotal=activeTotal+(v.enteredAt?taskDiscSum(perfTasks,defaultRate)+perfDiscount:0)+(v.enteredAtFinishing?taskDiscSum(finTasks,defaultRate)+finDiscount:0);
         const activeBalance=Math.max(0,activeTotal-activePaid);
         const hasActive=ts.length>0||activePaid>0;
         const hasHistory=pastOSs.some(h=>Number(h.total_value||0)>0);
@@ -12846,7 +12850,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               return(<div key={ti} style={{marginBottom:4,paddingLeft:8,borderLeft:`2px solid ${catColor}33`}}>
                 <div style={{fontSize:12,color:B.gray200,fontWeight:600,marginBottom:2}}>{t.label}</div>
                 <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                  {tc.labor>0&&<span style={{fontSize:11,color:B.gray500}}>M.O. <b style={{color:B.gray300}}>{fmtBRL(tc.labor)}</b></span>}
+                  {tc.labor>0&&<span style={{fontSize:11,color:B.gray500}}>M.O. {!t.warranty&&tc.discount>0&&<s style={{color:B.gray600,marginRight:4}}>{fmtBRL(tc.laborGross)}</s>}<b style={{color:B.gray300}}>{fmtBRL(tc.labor)}</b>{!t.warranty&&tc.discount>0&&<span style={{color:B.green,marginLeft:4}}>(–{fmtBRL(tc.discount)})</span>}</span>}
                   {tc.mat>0&&<span style={{fontSize:11,color:B.gray500}}>Peças <b style={{color:B.gray300}}>{fmtBRL(tc.mat)}</b></span>}
                   {tc.freight>0&&<span style={{fontSize:11,color:B.gray500}}>Frete <b style={{color:B.gray300}}>{fmtBRL(tc.freight)}</b></span>}
                 </div>
@@ -12860,6 +12864,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             {hasActive&&<div style={{marginBottom:totalOwedPast>0?16:0}}>
               {/* Grand total */}
               {activeTotal>0&&<div style={{background:B.gray900,border:`1px solid ${B.gray600}`,borderRadius:10,padding:"12px 14px",marginBottom:10}}>
+                {origTotal-activeTotal>=0.5&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
+                  <span style={{fontSize:10,letterSpacing:".16em",textTransform:"uppercase",color:B.gray500}}>Valor original</span>
+                  <span style={{fontSize:12,color:B.gray500,textDecoration:"line-through"}}>{fmtBRL(origTotal)}</span>
+                </div>}
                 <div style={{display:"flex",justifyContent:"space-between"}}>
                   <span style={{fontSize:14,fontWeight:800,color:B.white}}>Total geral</span>
                   <span style={{fontSize:18,fontWeight:900,color:B.amber}}>{fmtBRL(activeTotal)}</span>
@@ -13255,7 +13263,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.16.153";
+const APP_VERSION = "2026.11.17.154";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

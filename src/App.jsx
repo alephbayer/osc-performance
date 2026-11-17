@@ -6165,6 +6165,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           const freightTotal=(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
           const fuelTotal=(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0);
           const osDiscountAmt=osDiscount; // already computed correctly above with right division field
+          const origAmt=total+osDiscountAmt+taskDiscSum(vts,defaultRate);
           if(!managerMode||total<=0) return null;
           const breakdown=[];
           if(tasksTotal>0) breakdown.push(`Serviços: ${fmtBRL(tasksTotal)}`);
@@ -6176,7 +6177,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           return (<div style={{marginTop:8,padding:"8px 12px",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:8}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:12,color:B.gray400}}>Total deste veículo</span>
-              <span style={{fontSize:15,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</span>
+              <span style={{textAlign:"right"}}>
+                {origAmt-total>=0.5&&<div style={{fontSize:11,color:B.gray500,textDecoration:"line-through",lineHeight:1.2}}>{fmtBRL(origAmt)}</div>}
+                <span style={{fontSize:15,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</span>
+              </span>
             </div>
             {breakdown.length>1&&<div style={{fontSize:11,color:B.gray500,marginTop:2}}>{breakdown.join(" · ")}</div>}
           </div>);
@@ -13263,7 +13267,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.154";
+const APP_VERSION = "2026.11.17.155";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

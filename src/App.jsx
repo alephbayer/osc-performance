@@ -12833,7 +12833,9 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         const finDiscount=finLaborTotal*Number(v.osDiscountPctFinishing||0)/100;
         const finTotal=finLaborTotal+finPartsTotal+finFreightTotal-finDiscount;
         const activeTotal=perfTotal+finTotal;
-        const origTotal=activeTotal+(v.enteredAt?taskDiscSum(perfTasks,defaultRate)+perfDiscount:0)+(v.enteredAtFinishing?taskDiscSum(finTasks,defaultRate)+finDiscount:0);
+        const perfOrig=perfTotal>0?perfTotal+taskDiscSum(perfTasks,defaultRate)+perfDiscount:perfTotal;
+        const finOrig=finTotal>0?finTotal+taskDiscSum(finTasks,defaultRate)+finDiscount:finTotal;
+        const origTotal=perfOrig+finOrig;
         const activeBalance=Math.max(0,activeTotal-activePaid);
         const hasActive=ts.length>0||activePaid>0;
         const hasHistory=pastOSs.some(h=>Number(h.total_value||0)>0);
@@ -12923,7 +12925,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     {perfDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(perfDiscount)}</span></div>}
                     <div style={{borderTop:`1px solid ${B.gray600}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
                       <span style={{fontSize:13,fontWeight:800,color:B.white}}>Subtotal</span>
-                      <span style={{fontSize:14,fontWeight:900,color:B.orange}}>{fmtBRL(perfTotal)}</span>
+                      <span style={{textAlign:"right"}}>{perfOrig-perfTotal>=0.5&&<div style={{fontSize:11,color:B.gray500,textDecoration:"line-through",lineHeight:1.2}}>{fmtBRL(perfOrig)}</div>}<span style={{fontSize:14,fontWeight:900,color:B.orange}}>{fmtBRL(perfTotal)}</span></span>
                     </div>
                   </div>
                 </div>
@@ -12937,7 +12939,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     {finDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(finDiscount)}</span></div>}
                     <div style={{borderTop:`1px solid ${FD.border}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
                       <span style={{fontSize:13,fontWeight:800,color:B.white}}>Subtotal</span>
-                      <span style={{fontSize:14,fontWeight:900,color:FD.primary}}>{fmtBRL(finTotal)}</span>
+                      <span style={{textAlign:"right"}}>{finOrig-finTotal>=0.5&&<div style={{fontSize:11,color:B.gray500,textDecoration:"line-through",lineHeight:1.2}}>{fmtBRL(finOrig)}</div>}<span style={{fontSize:14,fontWeight:900,color:FD.primary}}>{fmtBRL(finTotal)}</span></span>
                     </div>
                   </div>
                 </div>
@@ -13267,7 +13269,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.155";
+const APP_VERSION = "2026.11.17.156";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

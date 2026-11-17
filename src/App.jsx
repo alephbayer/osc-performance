@@ -4253,6 +4253,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 
 // ─── TaskItem — Manager ───────────────────────────────────────────────────────
 function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,onOrderPart=null,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
+  const [showMLPick,setShowMLPick]=useState(false);
   const [showSP,setSP]=useState(false);
   const [showPOP,setShowPOP]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
@@ -4391,6 +4392,10 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           <button onClick={()=>setSP(true)} style={{padding:"4px 8px",borderRadius:6,background:B.purpleBg,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
             <IWarehouse s={11} c={B.purple}/>Do estoque
           </button>
+          {task.vehicleId&&<button onClick={()=>setShowMLPick(true)} title="Vincular uma compra do Mercado Livre a este serviço" style={{padding:"4px 8px",borderRadius:6,background:"#2aa5b516",border:"1px solid #2aa5b555",color:"#2aa5b5",cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 3h13v12H1zM14 8h4l3 3v4h-7z"/><circle cx="5.5" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/></svg>Do Mercado Livre
+          </button>}
+          {showMLPick&&<MLPickForTaskModal task={task} onClose={()=>setShowMLPick(false)}/>}
           {onOrderPart&&<button onClick={()=>onOrderPart(task,-1,{name:newMat.trim(),brand:newBrand.trim(),qty:1,cost:0})} title="Pedir peça por link: o pedido já nasce ligado a este veículo e a este serviço" style={{padding:"4px 8px",borderRadius:6,background:`${B.amber}10`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"/></svg>Pedir por link
           </button>}
@@ -13366,7 +13371,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.159";
+const APP_VERSION = "2026.11.17.160";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14001,6 +14006,65 @@ function InstalledPOs({orders}) {
 }
 
 // Janela "Pedir material": cria um pedido de compra (aguardando compra) já com nome e quantidade do material da OS
+const _mlBridge={assign:null};
+// Escolhe, entre as compras do Mercado Livre ainda sem destino, uma peça para lançar neste serviço
+function MLPickForTaskModal({task,onClose}) {
+  const [items,setItems]=useState(null); const [q,setQ]=useState(""); const [sel,setSel]=useState(null);
+  const [units,setUnits]=useState("1"); const [mk,setMk]=useState("50"); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
+  useEffect(()=>{ db.getMLItems().then(r=>setItems((r||[]).filter(i=>!i.destination&&i.order_status!=="cancelled"))).catch(e=>{setErr(errMsg(e));setItems([]);}); },[]);
+  const norm=x=>String(x||"").toLowerCase();
+  const list=(items||[]).filter(i=>!q.trim()||q.toLowerCase().split(/\s+/).every(w=>norm(i.title+" "+(i.seller||"")).includes(w)));
+  const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"};
+  const ML="#2aa5b5";
+  const stLabel=i=>i.ship_status==="delivered"?"Entregue":i.ship_status==="shipped"?"A caminho":"Aguardando envio";
+  const go=async()=>{
+    if(!sel||busy||!_mlBridge.assign) return; setBusy(true); setErr("");
+    try{
+      const tot=Number(sel.qty)||1; const u=Math.min(tot,Math.max(1,Math.round(Number(units)||tot)));
+      await _mlBridge.assign(sel,{type:"vehicle",vehicleId:task.vehicleId,tid:task.id,units:u<tot?u:0,qty:u,markup:Number(mk)||0,name:sel.title,brand:"",category:null,freight:0});
+      onClose();
+    }catch(e){ setErr(errMsg(e)||"Erro ao vincular"); setBusy(false); }
+  };
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${ML}66`,borderRadius:16,width:"100%",maxWidth:480,maxHeight:"90vh",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:4}}>
+        <div style={{fontSize:16,fontWeight:900,flex:1}}>Peça do Mercado Livre</div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+      </div>
+      <div style={{fontSize:11,color:B.gray400,marginBottom:10}}>Serviço: {task.label}. Só aparecem compras ainda sem destino.</div>
+      {!sel&&<>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar pelo nome da peça ou vendedor…" autoFocus style={{...inp,width:"100%",marginBottom:8}}/>
+        <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:6,minHeight:80}}>
+          {items===null&&<div style={{fontSize:12,color:B.gray500}}>Carregando…</div>}
+          {items&&!list.length&&<div style={{fontSize:12,color:B.gray500}}>Nenhuma compra sem destino{q?" para essa busca":""}.</div>}
+          {list.map(i=><button key={i.id} onClick={()=>{setSel(i);setUnits(String(Number(i.qty)||1));}} style={{textAlign:"left",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"9px 11px",cursor:"pointer",color:B.white}}>
+            <div style={{fontSize:12.5,fontWeight:600,lineHeight:1.3,wordBreak:"break-word"}}>{i.title}</div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:4,fontSize:10.5,color:B.gray400}}>
+              <span>{Number(i.qty)||1} un · {fmtBRL(Number(i.unit_price)||0)}</span>
+              <span style={{color:ML,fontWeight:700}}>{stLabel(i)}</span>
+              {i.ordered_at&&<span>comprado {new Date(i.ordered_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}</span>}
+            </div>
+          </button>)}
+        </div>
+      </>}
+      {sel&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{background:B.gray900,border:`1px solid ${ML}55`,borderRadius:10,padding:"9px 11px"}}>
+          <div style={{fontSize:12.5,fontWeight:600,lineHeight:1.3}}>{sel.title}</div>
+          <div style={{fontSize:10.5,color:B.gray400,marginTop:4}}>{Number(sel.qty)||1} un · {fmtBRL(Number(sel.unit_price)||0)} cada · {stLabel(sel)}</div>
+        </div>
+        {(Number(sel.qty)||1)>1&&<div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Unidades para este serviço <input type="number" min="1" max={Number(sel.qty)} value={units} onChange={e=>setUnits(e.target.value)} style={{...inp,width:70}}/> <span style={{color:B.gray500}}>de {Number(sel.qty)}</span></div>}
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300}}>Margem sobre o custo <input value={mk} onChange={e=>setMk(e.target.value.replace(/[^\d.]/g,""))} inputMode="decimal" style={{...inp,width:64}}/> %</div>
+        {err&&<div style={{fontSize:11,color:B.red}}>{err}</div>}
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setSel(null)} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${B.gray600}`,background:"none",color:B.gray300,fontWeight:700,cursor:"pointer"}}>Voltar</button>
+          <button onClick={go} disabled={busy} style={{flex:2,padding:"10px",borderRadius:9,border:"none",background:ML,color:B.black,fontWeight:800,cursor:"pointer",opacity:busy?.6:1}}>{busy?"Vinculando…":"Vincular ao serviço"}</button>
+        </div>
+      </div>}
+      {!sel&&err&&<div style={{fontSize:11,color:B.red,marginTop:8}}>{err}</div>}
+    </div>
+  </div>,document.body);
+}
+
 function OrderPartModal({target,vehicleId,onSubmit,onClose}) {
   const {task,mat}=target;
   const [name,setName]=useState(mat.name||"");
@@ -17582,6 +17646,7 @@ export default function App() {
       throw e;
     }
   };
+  _mlBridge.assign=assignMLItem;
   const undoMLSupplies=async item=>{
     if(item.expense_id){ await db.deleteExpense(item.expense_id); setExpenses(p=>p.filter(e=>e.id!==item.expense_id)); }
     if(item.tool_id){ await db.deleteTool(item.tool_id); }

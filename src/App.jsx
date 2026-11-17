@@ -6609,7 +6609,8 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   </div>,document.body);
 }
 
-function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder,onImportNote,onSellItem,onUseItem}) {
+function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder,onImportNote,onSellItem,onUseItem,employees=[]}) {
+  const [stkView,setStkView]=useState("list");
   const [showImport,setShowImport]=useState(false);
   const [regSuppliers,setRegSuppliers]=useState([]);
   useEffect(()=>{db.getSuppliers().then(setRegSuppliers).catch(()=>{});},[]);
@@ -6648,6 +6649,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
     setShowAdd(false);
   };
 
+  if(stkView==="usage") return <StockUsageView employees={employees} onBack={()=>setStkView("list")}/>;
   return (<div>
     {/* Filters */}
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
@@ -6662,6 +6664,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       </select>
       {(search||filterType)&&<button onClick={()=>{setSearch("");setFT("");}} style={{padding:"7px 12px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontSize:13}}>Limpar filtros</button>}
       <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
+        {onUseItem&&<button onClick={()=>setStkView("usage")} style={{padding:"8px 14px",borderRadius:8,background:`${B.blue}18`,border:`1px solid ${B.blue}66`,color:B.blue,cursor:"pointer",fontWeight:700,fontSize:13}}>Consumo interno</button>}
         {onImportNote&&<button onClick={()=>setShowImport(true)} style={{padding:"8px 14px",borderRadius:8,background:`${B.purple}18`,border:`1px solid ${B.purple}66`,color:B.purple,cursor:"pointer",fontWeight:700,fontSize:13}}>📥 Importar nota</button>}
         <button onClick={()=>setShowAdd(p=>!p)} style={{padding:"8px 16px",borderRadius:8,background:B.purple,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>
           <IPlus s={14} c={B.white}/>Novo produto
@@ -6723,7 +6726,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       onUpdatePurchase={onUpdatePurchase}
       onDeletePurchase={onDeletePurchase}
       onGenerateOrder={onGenerateOrder}
-      onSellItem={onSellItem} onUseItem={onUseItem}
+      onSellItem={onSellItem} onUseItem={onUseItem} employees={employees}
       onClose={()=>setOpenItem(null)}/>}
   </div>);
 }
@@ -6732,6 +6735,54 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
 const isStockLow=s=>{const m=s.minQty??2;return m>0&&(Number(s.qty)||0)<m;};
 
 // ─── Stock row (list view) ────────────────────────────────────────────────────
+function StockUsageView({employees=[],onBack}) {
+  const [rows,setRows]=useState(null); const [per,setPer]=useState("month"); const [open,setOpen]=useState({}); const [err,setErr]=useState("");
+  useEffect(()=>{ db.getStockUsage().then(setRows).catch(e=>{setErr(errMsg(e)||"Erro ao carregar");setRows([]);}); },[]);
+  const now=new Date(); const mStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+  const from=per==="month"?mStart:per==="30"?Date.now()-30*86400000:0;
+  const list=(rows||[]).filter(r=>new Date(r.used_at).getTime()>=from);
+  const by={}; list.forEach(r=>{ const k=r.employee_name||"Sem funcionário"; (by[k]=by[k]||{name:k,qty:0,cost:0,items:[]}); by[k].qty+=Number(r.qty)||0; by[k].cost+=(Number(r.qty)||0)*(Number(r.unit_cost)||0); by[k].items.push(r); });
+  const groups=Object.values(by).sort((a,b)=>b.cost-a.cost);
+  const total=groups.reduce((s,g)=>s+g.cost,0);
+  const fd=d=>new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
+  const nf=n=>Number(n).toLocaleString("pt-BR",{maximumFractionDigits:2});
+  const Chip=({id,l})=><button onClick={()=>setPer(id)} style={{padding:"6px 12px",borderRadius:99,border:`1px solid ${per===id?B.blue:B.gray600}`,background:per===id?`${B.blue}22`:"transparent",color:per===id?B.blue:B.gray400,fontSize:11.5,fontWeight:600,cursor:"pointer"}}>{l}</button>;
+  return (<div>
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+      <button onClick={onBack} style={{padding:"7px 12px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontSize:12}}>← Estoque</button>
+      <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500}}>Consumo interno por funcionário</div>
+      <div style={{marginLeft:"auto",display:"flex",gap:6}}><Chip id="month" l="Este mês"/><Chip id="30" l="30 dias"/><Chip id="all" l="Tudo"/></div>
+    </div>
+    {err&&<div style={{color:B.red,fontSize:12,marginBottom:10}}>{err}</div>}
+    {rows===null&&<div style={{color:B.gray500,fontSize:13}}>Carregando…</div>}
+    {rows&&!groups.length&&<div style={{color:B.gray500,fontSize:13}}>Nenhum consumo registrado no período. Use "Uso interno / insumo" no produto do estoque.</div>}
+    {groups.length>0&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+      <span style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500}}>Custo total consumido</span>
+      <span style={{fontSize:18,fontWeight:300,letterSpacing:".04em",color:B.white}}>{fmtBRL(total)}</span>
+    </div>}
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {groups.map(g=>{ const o=!!open[g.name]; return (<div key={g.name} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,overflow:"hidden"}}>
+        <div onClick={()=>setOpen(v=>({...v,[g.name]:!v[g.name]}))} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer"}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:700,color:B.white}}>{g.name}</div>
+            <div style={{fontSize:10.5,color:B.gray500,marginTop:2}}>{g.items.length} {g.items.length!==1?"retiradas":"retirada"} · {nf(g.qty)} un.</div>
+          </div>
+          <span style={{fontSize:15,fontWeight:300,letterSpacing:".04em",color:B.blue}}>{fmtBRL(g.cost)}</span>
+          <span style={{fontSize:11,color:B.gray500,display:"inline-block",transition:"transform .2s",transform:o?"rotate(90deg)":"none"}}>▸</span>
+        </div>
+        {o&&<div style={{padding:"0 14px 12px",display:"flex",flexDirection:"column",gap:6}}>
+          {g.items.map(r=><div key={r.id} style={{display:"flex",gap:10,alignItems:"baseline",background:B.gray900,borderRadius:8,padding:"7px 10px"}}>
+            <span style={{fontSize:10,color:B.gray500,flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{fd(r.used_at)}</span>
+            <span style={{flex:1,minWidth:0,fontSize:12,color:B.white,wordBreak:"break-word"}}>{r.stock_name}{r.note&&<span style={{color:B.gray500}}> · {r.note}</span>}</span>
+            <span style={{fontSize:11,color:B.gray300,flexShrink:0}}>{nf(r.qty)} un.</span>
+            <span style={{fontSize:11,color:B.gray500,flexShrink:0,minWidth:60,textAlign:"right"}}>{fmtBRL((Number(r.qty)||0)*(Number(r.unit_cost)||0))}</span>
+          </div>)}
+        </div>}
+      </div>); })}
+    </div>
+  </div>);
+}
+
 function StockRow({item,salePrice,onLightbox,onOpen}) {
   const low=isStockLow(item);
   return (<div style={{background:B.gray800,borderRadius:10,border:`1px solid ${low?B.red+"55":B.gray700}`,padding:"10px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} onClick={onOpen}>
@@ -6778,7 +6829,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
 }
 
 // ─── Stock product panel: product data + purchase history ─────────────────────
-function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder,onSellItem,onUseItem}) {
+function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder,onSellItem,onUseItem,employees=[]}) {
   const [form,setForm]=useState({
     name:item.name, brand:item.brand, type:item.type, location:item.location||"", notes:item.notes||"",
     minQty:String(item.minQty??2), costPrice:String(item.costPrice), markup:String(item.markup), photo:item.photo||"",
@@ -6789,7 +6840,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
   const [orderQty,setOrderQty]=useState(String(item.minQty||1));
   const [showAdjust,setShowAdjust]=useState(false);
   const [dirMode,setDirMode]=useState(null); // "sell" | "use"
-  const [dirQty,setDirQty]=useState("1"); const [dirPrice,setDirPrice]=useState(""); const [dirMethod,setDirMethod]=useState("pix"); const [dirWho,setDirWho]=useState(""); const [dirBusy,setDirBusy]=useState(false);
+  const [dirQty,setDirQty]=useState("1"); const [dirPrice,setDirPrice]=useState(""); const [dirMethod,setDirMethod]=useState("pix"); const [dirWho,setDirWho]=useState(""); const [dirBusy,setDirBusy]=useState(false); const [dirEmp,setDirEmp]=useState("");
   const [adjustQty,setAdjustQty]=useState(String(item.qty||0));
   const salePrice=Number(item.costPrice||form.costPrice||0)*(1+Number(form.markup||0)/100);
 
@@ -6899,16 +6950,22 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
               {dirMode==="sell"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {["pix","dinheiro","crédito","débito","transferência"].map(m=><button key={m} onClick={()=>setDirMethod(m)} style={{padding:"5px 10px",borderRadius:99,border:`1px solid ${dirMethod===m?B.green:B.gray600}`,background:dirMethod===m?`${B.green}22`:"transparent",color:dirMethod===m?B.green:B.gray400,fontSize:11,fontWeight:600,cursor:"pointer"}}>{m}</button>)}
               </div>}
-              <input value={dirWho} onChange={e=>setDirWho(e.target.value)} placeholder={dirMode==="sell"?"Cliente (opcional)":"Motivo / quem usou (opcional)"} style={{padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+              {dirMode==="use"&&<select value={dirEmp} onChange={e=>setDirEmp(e.target.value)} style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${dirEmp?B.blue:B.gray600}`,background:B.gray800,color:dirEmp?B.white:B.gray400,fontSize:12,outline:"none"}}>
+                <option value="">Quem usou? (obrigatório)</option>
+                {employees.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+                <option value="__shop">Oficina (geral)</option>
+              </select>}
+              <input value={dirWho} onChange={e=>setDirWho(e.target.value)} placeholder={dirMode==="sell"?"Cliente (opcional)":"Motivo / OS (opcional)"} style={{padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
               {dirMode==="sell"&&<div style={{fontSize:11,color:B.gray400}}>Total: <b style={{color:B.white}}>{fmtBRL((parseFloat(dirQty)||0)*(parseFloat(dirPrice)||0))}</b> · entra no financeiro e baixa o estoque</div>}
-              {dirMode==="use"&&<div style={{fontSize:11,color:B.gray400}}>Só baixa o estoque (o custo já foi lançado na compra).</div>}
+              {dirMode==="use"&&<div style={{fontSize:11,color:B.gray400}}>Baixa o estoque e registra no controle de consumo (o custo já foi lançado na compra).</div>}
               <button disabled={dirBusy} onClick={async()=>{
                 const q=parseFloat(dirQty)||0; if(q<=0) return;
+                if(dirMode==="use"&&!dirEmp) return;
                 setDirBusy(true);
                 try{
                   if(dirMode==="sell") await onSellItem(item,{qty:q,price:parseFloat(dirPrice)||0,method:dirMethod,client:dirWho.trim()});
-                  else await onUseItem(item,{qty:q,note:dirWho.trim()});
-                  setDirMode(null);setDirWho("");setDirQty("1");
+                  else await onUseItem(item,{qty:q,note:dirWho.trim(),employeeId:dirEmp==="__shop"?null:dirEmp,employeeName:dirEmp==="__shop"?"Oficina (geral)":(employees.find(e=>e.id===dirEmp)?.name||"")});
+                  setDirMode(null);setDirWho("");setDirQty("1");setDirEmp("");
                 }catch{}
                 setDirBusy(false);
               }} style={{padding:"9px 14px",borderRadius:9,background:dirMode==="sell"?B.green:B.blue,border:"none",color:B.black,fontWeight:800,fontSize:12,cursor:"pointer",opacity:dirBusy?.6:1}}>{dirBusy?"Salvando…":dirMode==="sell"?"Registrar venda":"Dar baixa"}</button>
@@ -13304,7 +13361,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.157";
+const APP_VERSION = "2026.11.17.158";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17712,12 +17769,13 @@ export default function App() {
     }catch(e){errToast(e);throw e;}
   };
   // Estoque → uso interno/insumo: só dá baixa no saldo
-  const useStockItem=async(it,{qty,note})=>{
+  const useStockItem=async(it,{qty,note,employeeId,employeeName})=>{
     try{
       const q=Number(qty)||0; const newQty=Math.max(0,(Number(it.qty)||0)-q);
+      await db.addStockUsage({stock_id:String(it.id),stock_name:it.name,qty:q,unit_cost:Number(it.costPrice)||0,employee_id:employeeId?String(employeeId):null,employee_name:employeeName||null,note:note||null,used_at:new Date().toISOString()});
       await db.updateStock(it.id,{qty:newQty});
       setStk(p=>p.map(s=>s.id===it.id?{...s,qty:newQty}:s));
-      toast_(`Baixa de ${q} un. (uso interno${note?` · ${note}`:""}) · estoque ${newQty} un. ✓`);
+      toast_(`Baixa de ${q} un.${employeeName?` · ${employeeName}`:""} · estoque ${newQty} un. ✓`);
     }catch(e){errToast(e);throw e;}
   };
 
@@ -18630,7 +18688,7 @@ export default function App() {
       {/* ══ STOCK ══ */}
       {tab==="stock"&&allowedTabs.includes("stock")&&<>
         <TabHeader color={B.purple} title="Estoque" subtitle="Produtos, preços e quantidades · Vinculados às OSs"/>
-        <StockTab onSellItem={sellStockItem} onUseItem={useStockItem} stock={stock} purchases={stockPurchases} onImportNote={importStockNote} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
+        <StockTab employees={employees} onSellItem={sellStockItem} onUseItem={useStockItem} stock={stock} purchases={stockPurchases} onImportNote={importStockNote} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
           onGenerateOrder={async inv=>{
             try{
               const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});

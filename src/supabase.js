@@ -587,6 +587,19 @@ export const db = {
     if (error) throw error;
     return mapStockIn(data);
   },
+  // ── Consumo interno de estoque (por funcionário) ──
+  async getStockUsage() {
+    const { data, error } = await supabase.from("stock_usage").select("*").order("used_at", { ascending: false }).limit(2000);
+    if (error) throw error; return data || [];
+  },
+  async addStockUsage(u) {
+    const { data, error } = await supabase.from("stock_usage").insert([u]).select().single();
+    if (error) throw error; return data;
+  },
+  async deleteStockUsage(id) {
+    const { error } = await supabase.from("stock_usage").delete().eq("id", id);
+    if (error) throw error;
+  },
   async updateStock(id, patch) {
     const dbPatch = {};
     const map = { name:"name", brand:"brand", type:"type", qty:"qty", costPrice:"cost_price", markup:"markup", salePrice:"sale_price", photo:"photo", location:"location", minQty:"min_qty", orderLink:"order_link", notes:"notes" };

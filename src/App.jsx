@@ -6397,6 +6397,57 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
 }
 
 // ─── ClientCard ───────────────────────────────────────────────────────────────
+// Histórico de pagamentos (aportes) do cliente: por carro e por OS, com datas
+function ClientPaymentsHistory({cliV,payments}) {
+  const [open,setOpen]=useState(false); const [openV,setOpenV]=useState({});
+  const ids=new Set(cliV.map(v=>v.id));
+  const mine=(payments||[]).filter(p=>ids.has(p.vehicleId));
+  if(!mine.length) return null;
+  const fd=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
+  const total=mine.reduce((s,p)=>s+(Number(p.amount)||0),0);
+  const FDc=(typeof FD!=="undefined"&&FD.primary)||B.purple;
+  const osOf=(v,p)=>p.osHistoryId?{k:"h"+p.osHistoryId,label:"OS anterior (fechada)",color:B.gray400}:(p.division==="finishing"?{k:"f",label:v.osNumberFinishing!=null?fmtOSFD(v.osNumberFinishing):"OS Finishing",color:FDc}:{k:"p",label:v.osNumber!=null?fmtOS(v.osNumber):"OS Performance",color:B.orange});
+  const lbl={fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500};
+  return (<div style={{marginTop:10,border:`1px solid ${B.gray700}`,borderRadius:10,overflow:"hidden"}}>
+    <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:B.gray900,border:"none",cursor:"pointer",textAlign:"left"}}>
+      <span style={{...lbl,flex:1}}>Pagamentos do cliente</span>
+      <span style={{fontSize:11,color:B.gray500}}>{mine.length} {mine.length!==1?"aportes":"aporte"}</span>
+      <span style={{fontSize:15,fontWeight:300,letterSpacing:".04em",color:B.green}}>{fmtBRL(total)}</span>
+      <span style={{fontSize:11,color:B.gray500,display:"inline-block",transform:open?"rotate(90deg)":"none",transition:"transform .2s"}}>▸</span>
+    </button>
+    {open&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:10}}>
+      {cliV.map(v=>{ const ps=mine.filter(p=>p.vehicleId===v.id); if(!ps.length) return null;
+        const vt=ps.reduce((s,p)=>s+(Number(p.amount)||0),0); const o=!!openV[v.id];
+        const groups={}; ps.forEach(p=>{ const g=osOf(v,p); (groups[g.k]=groups[g.k]||{...g,items:[]}).items.push(p); });
+        return (<div key={v.id} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10}}>
+          <div onClick={()=>setOpenV(x=>({...x,[v.id]:!x[v.id]}))} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",cursor:"pointer"}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:700,color:B.white}}>{v.model}</div>
+              <div style={{fontSize:10.5,color:B.gray500,fontFamily:"monospace"}}>{v.plate}</div>
+            </div>
+            <span style={{fontSize:14,fontWeight:300,letterSpacing:".04em",color:B.green}}>{fmtBRL(vt)}</span>
+            <span style={{fontSize:11,color:B.gray500,display:"inline-block",transform:o?"rotate(90deg)":"none",transition:"transform .2s"}}>▸</span>
+          </div>
+          {o&&<div style={{padding:"0 12px 10px",display:"flex",flexDirection:"column",gap:8}}>
+            {Object.values(groups).map(g=>{ const gt=g.items.reduce((s,p)=>s+(Number(p.amount)||0),0); return (<div key={g.k}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <span style={{fontSize:9.5,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:g.color,background:`${g.color}1c`,border:`1px solid ${g.color}44`,borderRadius:6,padding:"2px 7px"}}>{g.label}</span>
+                <span style={{fontSize:11,color:B.gray400}}>{fmtBRL(gt)}</span>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {[...g.items].sort((a,b)=>new Date(b.paidAt)-new Date(a.paidAt)).map(p=><div key={p.id} style={{display:"flex",gap:10,alignItems:"baseline",background:B.gray900,borderRadius:8,padding:"6px 10px"}}>
+                  <span style={{fontSize:10.5,color:B.gray400,flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{fd(p.paidAt)}</span>
+                  <span style={{flex:1,minWidth:0,fontSize:11,color:B.gray300,wordBreak:"break-word"}}>{p.method||"—"}{p.note&&<span style={{color:B.gray500}}> · {p.note}</span>}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:B.white,flexShrink:0}}>{fmtBRL(Number(p.amount)||0)}</span>
+                </div>)}
+              </div>
+            </div>); })}
+          </div>}
+        </div>); })}
+    </div>}
+  </div>);
+}
+
 function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,onUpdatePhone,onUpdateName,onUpdateEmail,onDelete,onSendWA,onTransferMechanic,onTransferOwner,onToggleTask,onDeleteTask,onAddTask,onUpdateTask,onUpdateVehicle,onDeleteVehicle,onConsumeStock,onReturnStock,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,isOwner=false}) {
   const [open,setOpen]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
@@ -6450,6 +6501,7 @@ function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,o
           onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
           payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} company={company}
           onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}/>)}
+      <ClientPaymentsHistory cliV={cliV} payments={payments}/>
       {grand>0&&(()=>{const grandPaid=cliV.reduce((s,v)=>s+vehiclePaid(v.id,payments),0); const grandBal=grand-grandPaid; return (
         <div style={{marginTop:4,padding:"11px 16px",background:B.amberBg,border:`1px solid ${B.amber}55`,borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
           <span style={{fontWeight:700,color:B.amber}}>💰 Total do cliente</span>
@@ -13371,7 +13423,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.161";
+const APP_VERSION = "2026.11.17.162";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

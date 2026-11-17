@@ -4253,6 +4253,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 
 // ─── TaskItem — Manager ───────────────────────────────────────────────────────
 function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,onOrderPart=null,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
+  const [showTaskPOs,setShowTaskPOs]=useState(false);
   const [showMLPick,setShowMLPick]=useState(false);
   const [showSP,setSP]=useState(false);
   const [showPOP,setShowPOP]=useState(false);
@@ -4376,8 +4377,21 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       {/* ── Row 2: Materials ── */}
       <div style={{marginLeft:30,marginTop:7}}>
         <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:mats.length?6:0}}>
-          {mats.map((m,idx)=><MaterialChip key={idx} mat={m} idx={idx} onUpdate={updMat} onRemove={rmMat} onOrder={onOrderPart?(i,mt)=>onOrderPart(task,i,mt):null} showCost editableQty/>)}
+          {mats.map((m,idx)=><MaterialChip key={idx} mat={m} idx={idx} onUpdate={updMat} onRemove={rmMat} showCost editableQty/>)}
         </div>
+        {(()=>{ const tos=(purchaseOrders||[]).filter(o=>o.taskId===task.id); if(!tos.length) return null; const stC=o=>(PO_STATUS[o.status]||PO_STATUS.pending);
+          return (<div style={{marginBottom:6}}>
+            <button onClick={()=>setShowTaskPOs(v=>!v)} style={{background:`${B.blue}14`,border:`1px solid ${B.blue}55`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.blue,fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",gap:6}}>
+              ✓ Pedido feito · {tos.length} {tos.length!==1?"itens":"item"} <span style={{display:"inline-block",transform:showTaskPOs?"rotate(90deg)":"none",transition:"transform .2s"}}>▸</span>
+            </button>
+            {showTaskPOs&&<div style={{display:"flex",flexDirection:"column",gap:4,marginTop:6}}>
+              {tos.map(o=>{ const c=stC(o); return <div key={o.id} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"6px 10px"}}>
+                <span style={{flex:1,minWidth:0,fontSize:12,color:B.white,wordBreak:"break-word"}}>{o.partName}{(o.quantity||1)>1&&<span style={{color:B.gray500}}> · {o.quantity}x</span>}</span>
+                {o.link&&<a href={o.link} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} title="Abrir link do produto" style={{color:B.gray400,display:"flex",flexShrink:0}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"/></svg></a>}
+                <span style={{fontSize:9,fontWeight:800,letterSpacing:".06em",textTransform:"uppercase",color:c.color,background:`${c.color}1c`,border:`1px solid ${c.color}44`,borderRadius:6,padding:"2px 7px",flexShrink:0}}>{c.label}</span>
+              </div>; })}
+            </div>}
+          </div>); })()}
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
         <div style={{display:"flex",flexDirection:"column",gap:4,flex:"1 1 160px"}}>
           <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px"}}>
@@ -5550,13 +5564,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   return (<>
     {orderTarget&&<OrderPartModal target={orderTarget} vehicleId={vehicle.id}
       onClose={()=>setOrderTarget(null)}
-      onSubmit={async(po)=>{
-        await onAddPurchaseOrder(po);
-        const {task,idx}=orderTarget; const cur=(tasks.find(t=>t.id===task.id)?.materials)||task.materials||[];
-        const now=new Date().toISOString();
-        if(idx<0) onUpdateTask(task.id,{materials:[...cur,{name:po.partName,brand:po.brand||"",cost:Number(po.costPrice)||0,qty:po.quantity||1,fromStock:false,stockItemId:null,ordered:true,orderedAt:now}]});
-        else onUpdateTask(task.id,{materials:cur.map((m,i)=>i===idx?{...m,ordered:true,orderedAt:now}:m)});
-      }}/>}
+      onSubmit={async(po)=>{ await onAddPurchaseOrder(po); }}/>}
     {showDelivCheck&&<DeliveryCheckModal vehicle={vehicle} tasks={vts} isFD={isFD} managerMode={managerMode} actor={managerMode?(isOwner?"Gestor":"Admin"):(currentMechanic?.name||"Mecânico")} onUpdateVehicle={onUpdateVehicle} onClose={()=>setShowDelivCheck(false)}
       onPdf={()=>generateDeliveryCheckPDF(buildDeliveryInfo({vehicle,tasks:vts.filter(x=>!x.warranty),deliveryCheck:vehicle.deliveryCheck||{},client:clients.find(c=>c.id===vehicle.clientId),employees,company,isFD}),{save:true})}/>}
     {showPage&&createPortal(<VehicleStagesPage vehicle={vehicle} tasks={tasks} defaultRate={defaultRate} isFD={isFD} managerMode={managerMode}
@@ -13424,7 +13432,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.163";
+const APP_VERSION = "2026.11.17.164";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -4391,6 +4391,9 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           <button onClick={()=>setSP(true)} style={{padding:"4px 8px",borderRadius:6,background:B.purpleBg,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
             <IWarehouse s={11} c={B.purple}/>Do estoque
           </button>
+          {onOrderPart&&<button onClick={()=>onOrderPart(task,-1,{name:newMat.trim(),brand:newBrand.trim(),qty:1,cost:0})} title="Pedir peça por link: o pedido já nasce ligado a este veículo e a este serviço" style={{padding:"4px 8px",borderRadius:6,background:`${B.amber}10`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"/></svg>Pedir por link
+          </button>}
           {hasPickable&&<button onClick={()=>setShowPOP(p=>!p)} style={{padding:"4px 8px",borderRadius:6,background:showPOP?`${B.amber}22`:`${B.amber}10`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Peças ({receivedOrders.length+availableReserved.length})
           </button>}
@@ -5545,7 +5548,9 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       onSubmit={async(po)=>{
         await onAddPurchaseOrder(po);
         const {task,idx}=orderTarget; const cur=(tasks.find(t=>t.id===task.id)?.materials)||task.materials||[];
-        onUpdateTask(task.id,{materials:cur.map((m,i)=>i===idx?{...m,ordered:true,orderedAt:new Date().toISOString()}:m)});
+        const now=new Date().toISOString();
+        if(idx<0) onUpdateTask(task.id,{materials:[...cur,{name:po.partName,brand:po.brand||"",cost:Number(po.costPrice)||0,qty:po.quantity||1,fromStock:false,stockItemId:null,ordered:true,orderedAt:now}]});
+        else onUpdateTask(task.id,{materials:cur.map((m,i)=>i===idx?{...m,ordered:true,orderedAt:now}:m)});
       }}/>}
     {showDelivCheck&&<DeliveryCheckModal vehicle={vehicle} tasks={vts} isFD={isFD} managerMode={managerMode} actor={managerMode?(isOwner?"Gestor":"Admin"):(currentMechanic?.name||"Mecânico")} onUpdateVehicle={onUpdateVehicle} onClose={()=>setShowDelivCheck(false)}
       onPdf={()=>generateDeliveryCheckPDF(buildDeliveryInfo({vehicle,tasks:vts.filter(x=>!x.warranty),deliveryCheck:vehicle.deliveryCheck||{},client:clients.find(c=>c.id===vehicle.clientId),employees,company,isFD}),{save:true})}/>}
@@ -13361,7 +13366,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.158";
+const APP_VERSION = "2026.11.17.159";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

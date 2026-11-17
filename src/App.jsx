@@ -6609,7 +6609,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   </div>,document.body);
 }
 
-function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder,onImportNote}) {
+function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder,onImportNote,onSellItem,onUseItem}) {
   const [showImport,setShowImport]=useState(false);
   const [regSuppliers,setRegSuppliers]=useState([]);
   useEffect(()=>{db.getSuppliers().then(setRegSuppliers).catch(()=>{});},[]);
@@ -6723,6 +6723,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       onUpdatePurchase={onUpdatePurchase}
       onDeletePurchase={onDeletePurchase}
       onGenerateOrder={onGenerateOrder}
+      onSellItem={onSellItem} onUseItem={onUseItem}
       onClose={()=>setOpenItem(null)}/>}
   </div>);
 }
@@ -6777,7 +6778,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
 }
 
 // ─── Stock product panel: product data + purchase history ─────────────────────
-function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder}) {
+function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder,onSellItem,onUseItem}) {
   const [form,setForm]=useState({
     name:item.name, brand:item.brand, type:item.type, location:item.location||"", notes:item.notes||"",
     minQty:String(item.minQty??2), costPrice:String(item.costPrice), markup:String(item.markup), photo:item.photo||"",
@@ -6787,6 +6788,8 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
   const [confirmDeleteProduct,setCDP]=useState(false);
   const [orderQty,setOrderQty]=useState(String(item.minQty||1));
   const [showAdjust,setShowAdjust]=useState(false);
+  const [dirMode,setDirMode]=useState(null); // "sell" | "use"
+  const [dirQty,setDirQty]=useState("1"); const [dirPrice,setDirPrice]=useState(""); const [dirMethod,setDirMethod]=useState("pix"); const [dirWho,setDirWho]=useState(""); const [dirBusy,setDirBusy]=useState(false);
   const [adjustQty,setAdjustQty]=useState(String(item.qty||0));
   const salePrice=Number(item.costPrice||form.costPrice||0)*(1+Number(form.markup||0)/100);
 
@@ -6879,6 +6882,38 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
               <ITrash s={13} c={B.red}/>Remover
             </button>
           </div>
+
+          {/* ── Direcionar o produto (venda de balcão / uso interno) ── */}
+          {(onSellItem||onUseItem)&&<div style={{marginTop:10,borderRadius:9,border:`1px solid ${B.gray700}`,padding:"10px 12px"}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500,marginBottom:8}}>Direcionar produto</div>
+            <div style={{display:"flex",gap:8}}>
+              {onSellItem&&<button onClick={()=>{setDirMode(dirMode==="sell"?null:"sell");setDirPrice(String(Math.round(salePrice*100)/100));}} style={{flex:1,padding:"9px 10px",borderRadius:9,background:dirMode==="sell"?`${B.green}22`:"transparent",border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:12,cursor:"pointer"}}>Vender no balcão</button>}
+              {onUseItem&&<button onClick={()=>setDirMode(dirMode==="use"?null:"use")} style={{flex:1,padding:"9px 10px",borderRadius:9,background:dirMode==="use"?`${B.blue}22`:"transparent",border:`1px solid ${B.blue}55`,color:B.blue,fontWeight:700,fontSize:12,cursor:"pointer"}}>Uso interno / insumo</button>}
+            </div>
+            {dirMode&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input type="number" min="0" step="0.01" value={dirQty} onChange={e=>setDirQty(e.target.value)} placeholder="Qtd" style={{width:70,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,fontWeight:700,outline:"none"}}/>
+                <span style={{fontSize:11,color:B.gray400}}>un. (saldo {item.qty})</span>
+                {dirMode==="sell"&&<><span style={{fontSize:11,color:B.gray400,marginLeft:"auto"}}>R$/un</span><input type="number" min="0" step="0.01" value={dirPrice} onChange={e=>setDirPrice(e.target.value)} style={{width:90,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,fontWeight:700,outline:"none"}}/></>}
+              </div>
+              {dirMode==="sell"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {["pix","dinheiro","crédito","débito","transferência"].map(m=><button key={m} onClick={()=>setDirMethod(m)} style={{padding:"5px 10px",borderRadius:99,border:`1px solid ${dirMethod===m?B.green:B.gray600}`,background:dirMethod===m?`${B.green}22`:"transparent",color:dirMethod===m?B.green:B.gray400,fontSize:11,fontWeight:600,cursor:"pointer"}}>{m}</button>)}
+              </div>}
+              <input value={dirWho} onChange={e=>setDirWho(e.target.value)} placeholder={dirMode==="sell"?"Cliente (opcional)":"Motivo / quem usou (opcional)"} style={{padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+              {dirMode==="sell"&&<div style={{fontSize:11,color:B.gray400}}>Total: <b style={{color:B.white}}>{fmtBRL((parseFloat(dirQty)||0)*(parseFloat(dirPrice)||0))}</b> · entra no financeiro e baixa o estoque</div>}
+              {dirMode==="use"&&<div style={{fontSize:11,color:B.gray400}}>Só baixa o estoque (o custo já foi lançado na compra).</div>}
+              <button disabled={dirBusy} onClick={async()=>{
+                const q=parseFloat(dirQty)||0; if(q<=0) return;
+                setDirBusy(true);
+                try{
+                  if(dirMode==="sell") await onSellItem(item,{qty:q,price:parseFloat(dirPrice)||0,method:dirMethod,client:dirWho.trim()});
+                  else await onUseItem(item,{qty:q,note:dirWho.trim()});
+                  setDirMode(null);setDirWho("");setDirQty("1");
+                }catch{}
+                setDirBusy(false);
+              }} style={{padding:"9px 14px",borderRadius:9,background:dirMode==="sell"?B.green:B.blue,border:"none",color:B.black,fontWeight:800,fontSize:12,cursor:"pointer",opacity:dirBusy?.6:1}}>{dirBusy?"Salvando…":dirMode==="sell"?"Registrar venda":"Dar baixa"}</button>
+            </div>}
+          </div>}
 
           {/* ── Ajuste de saldo (temporário) ── */}
           <div style={{marginTop:10,borderRadius:9,border:`1px solid ${B.amber}44`,overflow:"hidden"}}>
@@ -13269,7 +13304,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.156";
+const APP_VERSION = "2026.11.17.157";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17661,6 +17696,31 @@ export default function App() {
     finally{ mlRecvBusy.current=false; }
   };
 
+  // Estoque → venda de balcão direta pelo produto (financeiro + baixa de saldo)
+  const sellStockItem=async(it,{qty,price,method,client})=>{
+    try{
+      const q=Number(qty)||0, pr=Number(price)||0, total=Math.round(q*pr*100)/100;
+      const sale={total,method,note:`Venda direta do estoque${client?` · ${client}`:""}`,client_name:client||null,description:it.name,division:"performance",sold_at:new Date().toISOString()};
+      const r=await db.addSale(sale,[{shelf_item_id:null,name:it.name,price:pr,qty:q,from_stock:true}]);
+      setSales(p=>[r,...p]);
+      const pay=await db.addPayment({vehicleId:null,amount:total,method,note:`Venda: ${it.name}`,paidAt:new Date().toISOString(),division:"performance"});
+      setPay(p=>[...p,pay]);
+      const newQty=Math.max(0,(Number(it.qty)||0)-q);
+      await db.updateStock(it.id,{qty:newQty});
+      setStk(p=>p.map(s=>s.id===it.id?{...s,qty:newQty}:s));
+      toast_(`Venda de ${fmtBRL(total)} registrada · estoque ${newQty} un. ✓`);
+    }catch(e){errToast(e);throw e;}
+  };
+  // Estoque → uso interno/insumo: só dá baixa no saldo
+  const useStockItem=async(it,{qty,note})=>{
+    try{
+      const q=Number(qty)||0; const newQty=Math.max(0,(Number(it.qty)||0)-q);
+      await db.updateStock(it.id,{qty:newQty});
+      setStk(p=>p.map(s=>s.id===it.id?{...s,qty:newQty}:s));
+      toast_(`Baixa de ${q} un. (uso interno${note?` · ${note}`:""}) · estoque ${newQty} un. ✓`);
+    }catch(e){errToast(e);throw e;}
+  };
+
   // Insere o pagamento; com p.parts (Performance + Finishing) cria 2 lançamentos ligados por group_id
   const insertPayment=async(p)=>{
     const parts=(Array.isArray(p.parts)?p.parts:[]).filter(x=>Number(x.amount)>0);
@@ -18570,7 +18630,7 @@ export default function App() {
       {/* ══ STOCK ══ */}
       {tab==="stock"&&allowedTabs.includes("stock")&&<>
         <TabHeader color={B.purple} title="Estoque" subtitle="Produtos, preços e quantidades · Vinculados às OSs"/>
-        <StockTab stock={stock} purchases={stockPurchases} onImportNote={importStockNote} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
+        <StockTab onSellItem={sellStockItem} onUseItem={useStockItem} stock={stock} purchases={stockPurchases} onImportNote={importStockNote} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
           onGenerateOrder={async inv=>{
             try{
               const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});

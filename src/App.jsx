@@ -10898,11 +10898,11 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     </button>);
   };
 
-  // Espelho: pedidos de veículos comprados/recebidos aparecem junto dos pedidos de compra do mesmo status
+  // Espelho: pedidos de veículos prontos p/ compra (em "Aprovado"), comprados e recebidos aparecem junto dos pedidos de compra do mesmo status
   const mirrorFor=(key)=>{
-    if(!mirror||(key!=="bought"&&key!=="received")) return [];
+    if(!mirror||(key!=="bought"&&key!=="received"&&key!=="approved")) return [];
     const q=search.trim().toLowerCase();
-    return (mirror.orders||[]).filter(o=>o.status===key).filter(o=>{
+    return (mirror.orders||[]).filter(o=>key==="approved"?o.status==="ready_to_buy":o.status===key).filter(o=>{
       if(!q) return true;
       const v=(mirror.vehicles||[]).find(x=>x.id===o.vehicleId);
       return (o.partName||"").toLowerCase().includes(q)||(o.description||"").toLowerCase().includes(q)||(v?.model||"").toLowerCase().includes(q)||(v?.plate||"").toLowerCase().includes(q);
@@ -13371,7 +13371,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.160";
+const APP_VERSION = "2026.11.17.161";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -16849,7 +16849,7 @@ export default function App() {
       onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);if("photos" in patch||"photosFinishing" in patch){const v=vehicles.find(x=>x.id===id);const vModel=v?.model||v?.plate||"Veículo";const div="photosFinishing" in patch?"Finishing":"Performance";db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
       onLogout={doLogout}
       purchaseOrders={purchaseOrders}
-      onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(e){errToast(e);}}}
+      onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(e){errToast(e);}}}
       /></ErrorBoundary><GlobalErrorDisplay/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>
   }
 
@@ -18500,7 +18500,7 @@ export default function App() {
                 onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}
                 onDelete={delEmp} onSendWA={sendMechWA} onUpdatePhone={updEmpP} onUpdateName={updEmpN} onUpdateDivision={updEmpDiv}
                 onUpdateSpecialty={async(id,specialty)=>{try{await db.updateEmployee(id,{specialty});setEmp(p=>p.map(e=>e.id===id?{...e,specialty}:e));toast_("Especialidade atualizada ✓");}catch(err){errToast(err);}}}
-                purchaseOrders={purchaseOrders} onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}}/>)}
+                purchaseOrders={purchaseOrders} onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}/>)}
           </>}
       </>}
 
@@ -18698,7 +18698,7 @@ export default function App() {
             setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} deliverVehicleFinishing={deliverVehicleFinishing} adminRole={adminRole}
             searching={!!osSearch} purchaseOrders={purchaseOrders} onOpenOS={openNewOS}
             onPostTimeline={postTimeline}
-            onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}}
+            onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}
             />}</>;
         })()}
       </>}
@@ -18750,7 +18750,7 @@ export default function App() {
               onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
               onDeliver={deliverVehicleFinishing} onDeliverFinishing={deliverVehicleFinishing}
               isOwner={adminRole==="owner"} division="finishing"
-              onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 Pedido — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,p.partName,"/?").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders} onPostTimeline={postTimeline}/>)}
+              onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders} onPostTimeline={postTimeline}/>)}
           </div>;
         })()}
       </>}

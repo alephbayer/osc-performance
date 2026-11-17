@@ -751,8 +751,8 @@ export const db = {
 
   setAdminSession(active) { db._adminSession = !!active; },
 
-  async sendPushToAdmins(title, body, url) {
-    if (db._adminSession) return;
+  async sendPushToAdmins(title, body, url, force = false) {
+    if (db._adminSession && !force) return;
     const { error } = await supabase.functions.invoke("send-push", {
       body: { adminAll: true, title, body, url },
     });

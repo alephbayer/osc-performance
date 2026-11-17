@@ -6398,7 +6398,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
 
 // ─── ClientCard ───────────────────────────────────────────────────────────────
 // Histórico de pagamentos (aportes) do cliente: por carro e por OS, com datas
-function ClientPaymentsHistory({cliV,payments}) {
+function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
   const [open,setOpen]=useState(false); const [openV,setOpenV]=useState({});
   const ids=new Set(cliV.map(v=>v.id));
   const mine=(payments||[]).filter(p=>ids.has(p.vehicleId));
@@ -6406,7 +6406,7 @@ function ClientPaymentsHistory({cliV,payments}) {
   const fd=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const total=mine.reduce((s,p)=>s+(Number(p.amount)||0),0);
   const FDc=(typeof FD!=="undefined"&&FD.primary)||B.purple;
-  const osOf=(v,p)=>p.osHistoryId?{k:"h"+p.osHistoryId,label:"OS anterior (fechada)",color:B.gray400}:(p.division==="finishing"?{k:"f",label:v.osNumberFinishing!=null?fmtOSFD(v.osNumberFinishing):"OS Finishing",color:FDc}:{k:"p",label:v.osNumber!=null?fmtOS(v.osNumber):"OS Performance",color:B.orange});
+  const osOf=(v,p)=>p.osHistoryId?(()=>{ const h=(osHistory||[]).find(x=>x.id===p.osHistoryId); const n=h?(h.os_number??h.osNumber):null; const fin=h&&(h.division==="finishing"||h.os_division==="finishing"); return {k:"h"+p.osHistoryId,label:n!=null?`${fin?fmtOSFD(n):fmtOS(n)} · fechada`:"OS anterior (fechada)",color:B.gray400}; })():(p.division==="finishing"?{k:"f",label:v.osNumberFinishing!=null?fmtOSFD(v.osNumberFinishing):"OS Finishing",color:FDc}:{k:"p",label:v.osNumber!=null?fmtOS(v.osNumber):"OS Performance",color:B.orange});
   const lbl={fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500};
   return (<div style={{marginTop:10,border:`1px solid ${B.gray700}`,borderRadius:10,overflow:"hidden"}}>
     <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:B.gray900,border:"none",cursor:"pointer",textAlign:"left"}}>
@@ -8219,6 +8219,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
               })}
             </div>}
 
+            <ClientPaymentsHistory cliV={cliVs} payments={payments} osHistory={osHistory}/>
             {/* Action buttons */}
             <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
               {cli.phone&&<button onClick={()=>{}} style={{padding:"7px 14px",borderRadius:8,background:B.wa,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
@@ -13423,7 +13424,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.162";
+const APP_VERSION = "2026.11.17.163";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

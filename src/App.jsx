@@ -4321,7 +4321,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 
 // ─── TaskItem — Manager ───────────────────────────────────────────────────────
 function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,onOrderPart=null,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
-  const [showSpec,setShowSpec]=useState(false);
+  const [showSpec,setShowSpec]=useState(()=>{ try{ return localStorage.getItem("osc_spec_open")===task.id; }catch{ return false; } });
   const [showTaskPOs,setShowTaskPOs]=useState(false);
   const [showMLPick,setShowMLPick]=useState(false);
   const [showSP,setSP]=useState(false);
@@ -13506,7 +13506,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.166";
+const APP_VERSION = "2026.11.17.167";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14142,20 +14142,27 @@ function InstalledPOs({orders}) {
 
 // Janela "Pedir material": cria um pedido de compra (aguardando compra) já com nome e quantidade do material da OS
 function TaskSpecModal({task,onSave,onClose}) {
-  const init=task.spec||{};
+  // Rascunho automático: se o app recarregar ao trocar de app, nada se perde
+  const DK="osc_spec_draft_"+task.id, OK="osc_spec_open";
+  const draft=(()=>{ try{ return JSON.parse(localStorage.getItem(DK)||"null"); }catch{ return null; } })();
+  const init=draft?.vals||task.spec||{};
   const [vals,setVals]=useState(()=>Object.fromEntries(SPEC_SECTIONS.map(x=>[x.k,init[x.k]||""])));
-  const [photos,setPhotos]=useState(Array.isArray(task.specPhotos)?task.specPhotos:[]);
-  const [on,setOn]=useState(task.featured||!specHasContent(task));
+  const [photos,setPhotos]=useState(draft?.photos||(Array.isArray(task.specPhotos)?task.specPhotos:[]));
+  const [on,setOn]=useState(draft?(draft.on!==false):(task.featured||!specHasContent(task)));
+  useEffect(()=>{ try{ localStorage.setItem(OK,task.id); }catch{} },[]);
+  useEffect(()=>{ try{ localStorage.setItem(DK,JSON.stringify({vals,photos,on})); }catch{} },[vals,photos,on]);
+  const closeKeep=()=>{ try{ localStorage.removeItem(OK); }catch{} onClose(); };
+  const closeDrop=()=>{ try{ localStorage.removeItem(OK); localStorage.removeItem(DK); }catch{} onClose(); };
   const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
   const up=async e=>{ const fs=[...(e.target.files||[])]; e.target.value=""; if(!fs.length) return; setBusy(true); setErr("");
     try{ const urls=[]; for(const f of fs.slice(0,8-photos.length)) urls.push(await uploadImg(f,"specs")); setPhotos(p=>[...p,...urls]); }catch(er){ setErr(errMsg(er)||"Erro no upload"); } setBusy(false); };
   const AC="#a855f7";
   const ta={width:"100%",boxSizing:"border-box",minHeight:62,padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,lineHeight:1.45,outline:"none",resize:"vertical",fontFamily:"inherit"};
-  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:"calc(env(safe-area-inset-top) + 56px) 16px calc(env(safe-area-inset-bottom) + 24px)",boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:"calc(env(safe-area-inset-top) + 56px) 16px calc(env(safe-area-inset-bottom) + 24px)",boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={closeKeep}>
     <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${AC}66`,borderRadius:16,width:"100%",maxWidth:560,maxHeight:"100%",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:2}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Ficha do serviço</div>
-        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+        <button onClick={closeKeep} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
       </div>
       <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>{task.label}. Vira uma página dedicada no PDF do orçamento.</div>
       <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingRight:2}}>
@@ -14179,8 +14186,8 @@ function TaskSpecModal({task,onSave,onClose}) {
         {err&&<div style={{fontSize:11,color:B.red}}>{err}</div>}
       </div>
       <div style={{display:"flex",gap:8,marginTop:14}}>
-        <button onClick={onClose} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${B.gray600}`,background:"none",color:B.gray300,fontWeight:700,cursor:"pointer"}}>Cancelar</button>
-        <button disabled={busy} onClick={()=>{ const spec=Object.fromEntries(SPEC_SECTIONS.map(x=>[x.k,vals[x.k].trim()])); onSave({featured:on&&SPEC_SECTIONS.some(x=>spec[x.k]),spec,specPhotos:photos}); onClose(); }} style={{flex:2,padding:"10px",borderRadius:9,border:"none",background:AC,color:"#fff",fontWeight:800,cursor:"pointer",opacity:busy?.6:1}}>Salvar ficha</button>
+        <button onClick={closeDrop} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${B.gray600}`,background:"none",color:B.gray300,fontWeight:700,cursor:"pointer"}}>Cancelar</button>
+        <button disabled={busy} onClick={()=>{ const spec=Object.fromEntries(SPEC_SECTIONS.map(x=>[x.k,vals[x.k].trim()])); onSave({featured:on&&SPEC_SECTIONS.some(x=>spec[x.k]),spec,specPhotos:photos}); closeDrop(); }} style={{flex:2,padding:"10px",borderRadius:9,border:"none",background:AC,color:"#fff",fontWeight:800,cursor:"pointer",opacity:busy?.6:1}}>Salvar ficha</button>
       </div>
     </div>
   </div>,document.body);

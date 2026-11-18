@@ -2174,9 +2174,9 @@ async function renderElegantQuote(o) {
   }
 
   // Nota final
-  need(featList.length?36:18); y+=6;
+  need(featList.length?36:24); y+=6;
   doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray);
-  const fl=doc.splitTextToSize(featList.length?"Escopo conforme detalhamento das páginas anteriores. Alterações de escopo serão previamente acordadas com o cliente.":"Este orçamento é uma estimativa e pode sofrer alterações conforme a necessidade do serviço executado.",cw);
+  const fl=doc.splitTextToSize(featList.length?"Escopo conforme detalhamento das páginas anteriores. Prazos e valores são estimativas e podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo; qualquer alteração será previamente comunicada e acordada com o cliente.":"Este orçamento é uma estimativa: prazos e valores podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo; qualquer alteração será previamente comunicada e acordada com o cliente.",cw);
   doc.text(fl,mx,y); y+=fl.length*4+2; if(!featList.length) doc.text(tagline,mx,y);
   if(featList.length){
     need(30); y=Math.max(y+28,H-24-30);
@@ -13629,7 +13629,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.180";
+const APP_VERSION = "2026.11.17.181";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

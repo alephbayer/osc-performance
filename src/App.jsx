@@ -1998,14 +1998,15 @@ async function renderElegantQuote(o) {
     { const fts=allSv.filter(t=>t.featured&&specHasContent(t)); const one=fts.length===1?fts[0]:null;
       const pz=one?String((one.spec&&one.spec.prazo)||"").split(/\n+/)[0].trim():""; const gr0=one?String((one.spec&&one.spec.garantia)||"").trim().split(/\n+/)[0]:""; const gr=gr0?(gr0.split(/(?<=[.;])\s/)[0]||gr0):"";
       const cols=[{k:fts.length>1?"Serviços incluídos":"Serviço",v:String(allSv.length).padStart(2,"0")}]; if(pz) cols.push({k:"Prazo estimado",v:pz}); if(gr) cols.push({k:"Garantia",v:gr,small:true});
-      const sy=y+18; const wts=cols.map(c=>c.small?2:1); const tw=wts.reduce((a,b)=>a+b,0); let cx0=mx;
+      const sy=y+18; const wts=cols.map(c=>c.small?2.4:(c.k==="Prazo estimado"?1.3:0.7)); const tw=wts.reduce((a,b)=>a+b,0); let cx0=mx;
+      doc.setFont("helvetica","normal"); doc.setFontSize(9); const nG=cols.some(c=>c.small)?Math.min(3,doc.splitTextToSize((cols.find(c=>c.small)||{v:""}).v,cw*2.4/tw-8).length):1; const bot=sy+Math.max(27,17+(nG-1)*4.6+10);
       hair(sy,ink,0.35);
-      cols.forEach((c,ci)=>{ const w=cw*wts[ci]/tw; if(ci>0){ doc.setDrawColor(...line); doc.setLineWidth(0.2); doc.line(cx0-4,sy+6,cx0-4,sy+30); }
+      cols.forEach((c,ci)=>{ const w=cw*wts[ci]/tw; if(ci>0){ doc.setDrawColor(...line); doc.setLineWidth(0.2); doc.line(cx0-4,sy+6,cx0-4,bot-3); }
         cap(c.k,cx0,sy+9,6.5,gray);
-        if(c.small){ doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.splitTextToSize(c.v,w-8).slice(0,4).forEach((l,li)=>txt(l,cx0,sy+19+li*4.4,{s:8.5,c:body})); }
-        else { doc.setFont("times","normal"); doc.setFontSize(20); serif(doc.splitTextToSize(c.v,w-8)[0],cx0,sy+21,20); }
+        if(c.small){ doc.setFont("helvetica","normal"); doc.setFontSize(9); const ls=doc.splitTextToSize(c.v,w-8).slice(0,3); ls.forEach((l,li)=>txt(l,cx0,sy+17+li*4.6,{s:9,c:body})); }
+        else { serif(doc.splitTextToSize(c.v,w-8)[0],cx0,sy+19,20); }
         cx0+=w; });
-      hair(sy+34,line,0.2);
+      hair(bot,line,0.2);
     }
     await renderDetails();
     // Página final: investimento e condições
@@ -13620,7 +13621,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.177";
+const APP_VERSION = "2026.11.17.178";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

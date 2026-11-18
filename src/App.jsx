@@ -2001,8 +2001,8 @@ async function renderElegantQuote(o) {
       const pz=one?String((one.spec&&one.spec.prazo)||"").split(/\n+/)[0].trim():""; const gr0=one?String((one.spec&&one.spec.garantia)||"").trim().split(/\n+/)[0]:""; const gr=gr0?(gr0.split(/(?<=[.;])\s/)[0]||gr0):"";
       const cols=[{k:fts.length>1?"Serviços incluídos":"Serviço",v:String(allSv.length).padStart(2,"0")}]; if(pz) cols.push({k:"Prazo estimado",v:pz}); if(gr) cols.push({k:"Garantia",v:gr,small:true});
       const wts=cols.map(c=>c.small?2.4:(c.k==="Prazo estimado"?1.3:0.7)); const tw=wts.reduce((a,b)=>a+b,0); let cx0=mx;
-      doc.setFont("helvetica","normal"); doc.setFontSize(9); const nG=cols.some(c=>c.small)?Math.min(3,doc.splitTextToSize((cols.find(c=>c.small)||{v:""}).v,cw*2.4/tw-8).length):1; const sh=Math.max(27,17+(nG-1)*4.6+10); const sy=Math.min(y+16,H-23-sh); const bot=sy+sh;
-      if(sy>=y+5){
+      doc.setFont("helvetica","normal"); doc.setFontSize(9); const nG=cols.some(c=>c.small)?Math.min(3,doc.splitTextToSize((cols.find(c=>c.small)||{v:""}).v,cw*2.4/tw-8).length):1; const sh=Math.max(27,17+(nG-1)*4.6+10); const sy=Math.min(y+16,H-30-sh); const bot=sy+sh;
+      if(sy>=y+12){
       hair(sy,ink,0.35);
       cols.forEach((c,ci)=>{ const w=cw*wts[ci]/tw; if(ci>0){ doc.setDrawColor(...line); doc.setLineWidth(0.2); doc.line(cx0-4,sy+6,cx0-4,bot-3); }
         cap(c.k,cx0,sy+9,6.5,gray);
@@ -13633,7 +13633,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.18.183";
+const APP_VERSION = "2026.11.18.184";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

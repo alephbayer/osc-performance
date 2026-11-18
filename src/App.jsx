@@ -11015,7 +11015,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
   const prColor=PRIORITY_COLORS[inv.priority]||B.gray500;
   const divLabel=inv.division==="finishing"?"🎨":inv.division==="ambos"?"⚙️🎨":"⚙️";
   const total=inv.value*(inv.quantity||1);
-  const canEdit=adminRole==="owner"||adminRole==="admin"||adminRole==="supervisor";
+  const canEdit=adminRole==="owner"||adminRole==="admin"||isChief(adminRole);
   const canApprove=adminRole==="owner"||adminRole==="admin";
   const canBuy=adminRole==="owner"||adminRole==="admin";
   const canDelete=adminRole==="owner"||adminRole==="admin";
@@ -11228,7 +11228,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     </div>
 
     {/* Add button */}
-    {!adding&&(adminRole==="owner"||adminRole==="admin"||adminRole==="supervisor")&&<button onClick={()=>{setAdding(defaultCategory||"pesado");resetForm();if(defaultCategory) setForm(p=>({...p,category:defaultCategory}));setEditId(null);}}
+    {!adding&&(adminRole==="owner"||adminRole==="admin"||isChief(adminRole))&&<button onClick={()=>{setAdding(defaultCategory||"pesado");resetForm();if(defaultCategory) setForm(p=>({...p,category:defaultCategory}));setEditId(null);}}
       style={{width:"100%",padding:"11px 0",borderRadius:10,background:`${B.orange}18`,border:`1px dashed ${B.orange}66`,color:B.orange,fontWeight:800,fontSize:13,cursor:"pointer",marginBottom:16}}>
       {defaultCategory==="materiais"?"+ Novo material sortido":"+ Novo investimento"}
     </button>}
@@ -13571,7 +13571,10 @@ const ROLE_CONFIG = {
   owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners","suppliers","tools","insumos"], envVar:"VITE_OWNER_PASSWORD" },
   admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners","suppliers","tools","insumos"],           envVar:"VITE_ADMIN_PASSWORD" },
   supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca","partners","tools"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
+  painter:    { label:"Chefe de Pintura",  tabs:["finishing","stock","investments","materiais","presenca","partners","tools"], envVar:"VITE_PAINTER_PASSWORD" },
 };
+// Perfis sem acesso a valores (chefes de setor)
+const isChief = r => r==="supervisor"||r==="painter";
 // Hash a string with SHA-256 — used to avoid storing plain passwords in memory
 async function sha256(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -13643,7 +13646,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.18.190";
+const APP_VERSION = "2026.11.18.191";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -18256,6 +18259,14 @@ export default function App() {
       {id:"gestao",    label:"Gestão",    svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
       {id:"mais",      label:"Mais",      svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
     ],
+    painter:[
+      {id:"home",      label:"Início",    svgIcon:mkSvg("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z")},
+      {id:"oficina",   label:"Oficina",   svgIcon:mkSvg("M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z")},
+      {id:"cadastros", label:"Cadastros", svgIcon:mkSvg(["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2","M9 3a4 4 0 010 8","M23 21v-2a4 4 0 00-3-3.87","M16 3.13a4 4 0 010 7.75"])},
+      {id:"compras",   label:"Compras",   svgIcon:mkSvg(["M6 2L3 6v14a2 2 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z","M3 6h18","M16 10a4 4 0 0 1-8 0"])},
+      {id:"gestao",    label:"Gestão",    svgIcon:mkSvg("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6")},
+      {id:"mais",      label:"Mais",      svgIcon:mkSvg(["M3 3h7v7H3z","M14 3h7v7h-7z","M14 14h7v7h-7z","M3 14h7v7H3z"])},
+    ],
   };
   const navItems=NAV_ITEMS_BY_ROLE[adminRole]||NAV_ITEMS_BY_ROLE.owner;
 
@@ -18430,6 +18441,40 @@ export default function App() {
           <DashCard color={FD.primary} icon={iconWrench} label="OSs ativas" value={finishingVehicleCount} sub="Finishing Div." onClick={()=>goSection("oficina","finishing")}/>
           <DashCard color={B.blue} icon={iconChart} label="Tarefas abertas" value={tasks.filter(t=>!t.done).length}/>
           <DashCard color={B.green} icon={iconChart} label="Concluídas hoje" value={tasks.filter(t=>t.done&&t.completedAt&&new Date(t.completedAt).toDateString()===new Date().toDateString()).length}/>
+        </div>
+        {mechProgress.length>0&&<>
+          <SL2 label="Progresso da equipe"/>
+          {mechProgress.map(({emp,tDone,tTotal})=>{
+            const pct=tTotal>0?Math.round(tDone/tTotal*100):0;
+            const c=pct===100?B.green:pct>50?B.orange:B.blue;
+            return(<div key={emp.id} style={{background:B.gray800,borderRadius:12,padding:"12px 14px",border:`1px solid ${B.gray700}`,marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <div style={{fontWeight:700,fontSize:13,color:B.white}}>{emp.name}</div>
+                <div style={{fontSize:11,color:B.gray400}}>{tDone}/{tTotal} tarefas</div>
+              </div>
+              <div style={{height:4,borderRadius:99,background:B.gray700}}><div style={{height:4,borderRadius:99,background:c,width:`${pct}%`,transition:"width .4s"}}/></div>
+            </div>);
+          })}
+        </>}
+      </div>);
+    }
+
+    if(adminRole==="painter"){
+      const finVehIds=new Set(vehicles.filter(v=>v.enteredAtFinishing&&v.status!=="delivered").map(v=>v.id));
+      const mechProgress=employees.filter(e=>e.division==="finishing").map(emp=>{
+        const vts=vehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id)&&v.enteredAtFinishing&&v.status!=="delivered");
+        const tTotal=tasks.filter(t=>vts.some(v=>v.id===t.vehicleId)).length;
+        const tDone=tasks.filter(t=>vts.some(v=>v.id===t.vehicleId)&&t.done).length;
+        return {emp,vts:vts.length,tDone,tTotal};
+      }).filter(m=>m.vts>0||m.tTotal>0);
+      return(<div>
+        <DashHeader role={adminRole}/>
+        <MLArrivalsAlert show onOpen={null}/>
+        <SL2 label="Operação atual"/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+          <DashCard color={FD.primary} icon={iconWrench} label="OSs ativas" value={finishingVehicleCount} sub="Finishing Div." onClick={()=>goSection("oficina","finishing")}/>
+          <DashCard color={B.blue} icon={iconChart} label="Tarefas abertas" value={tasks.filter(t=>!t.done&&finVehIds.has(t.vehicleId)).length}/>
+          <DashCard color={B.green} icon={iconChart} label="Concluídas hoje" value={tasks.filter(t=>finVehIds.has(t.vehicleId)&&t.done&&t.completedAt&&new Date(t.completedAt).toDateString()===new Date().toDateString()).length}/>
         </div>
         {mechProgress.length>0&&<>
           <SL2 label="Progresso da equipe"/>
@@ -18727,7 +18772,7 @@ export default function App() {
         <button key={item.id} onClick={()=>{
           setNavSectionPersist(item.id);
           if(item.id==="oficina"&&!OFICINA_TABS.includes(tab)) setTab(allowedTabs.includes("clients")?"clients":"finishing");
-          if(item.id==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("vehicles")?"vehicles":allowedTabs.includes("clientsMonitor")?"clientsMonitor":"mechanics");
+          if(item.id==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("vehicles")?"vehicles":allowedTabs.includes("clientsMonitor")?"clientsMonitor":allowedTabs.includes("mechanics")?"mechanics":"tools");
           if(item.id==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
           if(item.id==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");
           mainScrollRef.current?.scrollTo({top:0});
@@ -19315,12 +19360,12 @@ export default function App() {
 
       {tab==="tools"&&allowedTabs.includes("tools")&&<>
         <TabHeader color={B.amber} title="Patrimônio" subtitle="Ferramentas e bens da oficina — não entram como despesa nem reduzem o lucro"/>
-        <ToolsTab showValues={adminRole!=="supervisor"}/>
+        <ToolsTab showValues={!isChief(adminRole)}/>
       </>}
 
       {tab==="partners"&&allowedTabs.includes("partners")&&<>
         <TabHeader color={B.blue} title="Parceiros" subtitle="Trabalhos terceirizados por empresas parceiras"/>
-        <PartnersTab employees={employees} canSeeValues={adminRole!=="supervisor"} actor={ROLE_CONFIG[adminRole]?.label||""}/>
+        <PartnersTab employees={employees} canSeeValues={!isChief(adminRole)} actor={ROLE_CONFIG[adminRole]?.label||""}/>
       </>}
 
       {tab==="sales"&&allowedTabs.includes("sales")&&<>
@@ -19638,7 +19683,7 @@ export default function App() {
     <LiquidNav active={navSection} scrollY={scrollY} navItems={navItems} theme={theme} setActive={(s)=>{
       setNavSectionPersist(s);
       if(s==="oficina"&&!OFICINA_TABS.includes(tab)) setTab(allowedTabs.includes("clients")?"clients":"finishing");
-      if(s==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("vehicles")?"vehicles":allowedTabs.includes("clientsMonitor")?"clientsMonitor":"mechanics");
+      if(s==="cadastros"&&!CADASTROS_TABS.includes(tab)) setTab(allowedTabs.includes("vehicles")?"vehicles":allowedTabs.includes("clientsMonitor")?"clientsMonitor":allowedTabs.includes("mechanics")?"mechanics":"tools");
       if(s==="gestao"&&!GESTAO_TABS.includes(tab)) setTab(allowedTabs.includes("finance")?"finance":allowedTabs.includes("investments")?"investments":"sales");
       if(s==="compras"&&!COMPRAS_TABS.includes(tab)) setTab(allowedTabs.includes("stock")?"stock":"materiais");
       mainScrollRef.current?.scrollTo({top:0,behavior:"smooth"});

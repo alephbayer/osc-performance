@@ -2010,9 +2010,6 @@ async function renderElegantQuote(o) {
         else { serif(doc.splitTextToSize(c.v,w-8)[0],cx0,sy+19,20); }
         cx0+=w; });
       hair(bot,line,0.2);
-      } else if(gr){
-        const gy=y+12; hair(gy,line,0.2); cap("Garantia",mx,gy+8,6.5,gray);
-        doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.splitTextToSize(gr,cw-34).slice(0,3).forEach((l,li)=>txt(l,mx+34,gy+8+li*4.4,{s:8.5,c:body}));
       }
     }
     await renderDetails();
@@ -4194,7 +4191,7 @@ function mlDelivery(i) {
 
 // ─── TaskItem — Mechanic ──────────────────────────────────────────────────────
 // ─── Material chip (one material entry in a task) ─────────────────────────────
-function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,readOnlyName=false,editableQty=false}) {
+function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,showCost=false,readOnlyName=false,editableQty=false}) {
   const qty = mat.qty || 1;
   const cost = Number(mat.cost||0);
   const markup = mat.markup!=null ? Number(mat.markup) : (mat.quoteOnly ? 0 : 50);
@@ -4214,8 +4211,9 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
   const mlDel = mlDelivery(useMLCard(isML?mat.mlItem:null));
   const mlTone = mlDel?({ok:B.green,late:B.red,moved:B.amber,eta:mlColor,wait:B.gray400}[mlDel.tone]):null;
 
-  const bg = isEstimated ? estimatedBg : mat.fromStock ? B.purpleBg : isImported ? importBg : isML ? `${mlColor}16` : B.gray700;
-  const border = isEstimated ? `2px solid ${estimatedColor}66` : mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : isML ? `1px solid ${mlColor}55` : `1px solid ${B.gray600}`;
+  const isQuote = !!mat.quoteOnly && !mat.fromStock; // lançado só no orçamento (não saiu do estoque)
+  const bg = isEstimated ? estimatedBg : isQuote ? `${B.amber}12` : mat.fromStock ? B.purpleBg : isImported ? importBg : isML ? `${mlColor}16` : B.gray700;
+  const border = isEstimated ? `2px solid ${estimatedColor}66` : isQuote ? `1px dashed ${B.amber}66` : mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : isML ? `1px solid ${mlColor}55` : `1px solid ${B.gray600}`;
 
   return (<div style={{background:bg,border,borderRadius:8,padding:"7px 10px",width:"100%",boxSizing:"border-box"}}>
     {/* Estimated banner */}
@@ -4231,6 +4229,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
           ?<div style={{flex:1,minWidth:0}}>
               <span style={{fontSize:13,color:isEstimated?estimatedColor:mat.fromStock?B.purple:isImported?importColor:B.gray200,fontWeight:mat.fromStock||isImported||isEstimated?700:500}}>{mat.name}</span>
               {mat.brand&&<span style={{fontSize:10,color:mat.fromStock?B.purple+"99":B.gray500,marginLeft:6}}>{mat.brand}</span>}
+              {isQuote&&<span style={{fontSize:8.5,fontWeight:800,letterSpacing:".12em",textTransform:"uppercase",color:B.amber,border:`1px solid ${B.amber}66`,borderRadius:4,padding:"0 5px",marginLeft:7}}>Orçamento</span>}
             </div>
           :<div style={{flex:1,minWidth:0}}>
               <InlineEdit value={mat.name} onSave={v=>onUpdate(idx,{...mat,name:v})} placeholder="Nome do material"/>
@@ -4254,22 +4253,26 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,showCost=false,rea
         style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
         ⚠ {isEstimated?"Estimado":"Estimado?"}
       </button>
+      {isQuote&&onCommit&&<button onClick={()=>onCommit(idx)} title="Dar baixa deste produto no estoque (passa a ser material lançado na OS)"
+        style={{background:`${B.amber}22`,border:`1px solid ${B.amber}88`,borderRadius:5,padding:"2px 8px",cursor:"pointer",color:B.amber,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        Descontar do estoque
+      </button>}
       <button onClick={()=>onUpdate(idx,{...mat,noCharge:!mat.noCharge})}
         title={mat.noCharge?"Cobrar do cliente":"Não cobrar do cliente"}
         style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
         {mat.noCharge?"✓ Grátis":"Grátis?"}
       </button>
-      {onOrder&&!mat.fromStock&&<button onClick={()=>onOrder(idx,mat)}
+      {onOrder&&!mat.fromStock&&!isQuote&&<button onClick={()=>onOrder(idx,mat)}
         title={mat.ordered?"Já existe um pedido de compra para este material. Toque para fazer outro":"Criar pedido de compra deste material"}
         style={{background:mat.ordered?`${B.blue}22`:`${B.amber}14`,border:`1px solid ${mat.ordered?B.blue+"66":B.amber+"55"}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.ordered?B.blue:B.amber,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
         {mat.ordered?"✓ Pedido feito":"🛒 Pedir"}
       </button>}
-      {showCost&&!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,bought:!isBought})}
+      {showCost&&!mat.fromStock&&!isQuote&&<button onClick={()=>onUpdate(idx,{...mat,bought:!isBought})}
         title={isBought?"Peça conta como comprada (entra no investido). Toque para tirar da conta":"Peça fora da conta do investido. Toque para incluir"}
         style={{background:isBought?`${B.green}22`:"none",border:`1px solid ${isBought?B.green+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isBought?B.green:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
         🛒 {isBought?"Comprado":"Fora da conta"}
       </button>}
-      {!mat.fromStock&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
+      {!mat.fromStock&&!isQuote&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
         title={isImported?"Remover marcação de importado":"Marcar como importado"}
         style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
         ✈ {isImported?"Importado":"Import."}
@@ -4487,6 +4490,9 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
     if(m?.fromStock&&m?.stockItemId&&onReturnStock) onReturnStock(task.id,idx,m.stockItemId);
     else onUpdate(task.id,{materials:mats.filter((_,i)=>i!==idx)});
   };
+  const commitQuote=(idx)=>{ const m=mats[idx]; if(!m) return; const nm=String(m.name||"").trim().toLowerCase(), br=String(m.brand||"").trim().toLowerCase();
+    const item=(m.quoteStockId&&(stock||[]).find(x=>x.id===m.quoteStockId))||(stock||[]).find(x=>String(x.name||"").trim().toLowerCase()===nm&&String(x.brand||"").trim().toLowerCase()===br)||(stock||[]).find(x=>String(x.name||"").trim().toLowerCase()===nm)||null;
+    onConsumeStock(task.id,item,mats,false,m.qty||1,{commitIdx:idx}); };
   const pickStock=(item,quoteOnly=false)=>{ onConsumeStock(task.id,item,mats,quoteOnly); setSP(false); };
 
   const addFromPurchaseOrder=(o)=>{
@@ -4581,7 +4587,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       {/* ── Row 2: Materials ── */}
       <div style={{marginLeft:30,marginTop:7}}>
         <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:mats.length?6:0}}>
-          {mats.map((m,idx)=><MaterialChip key={idx} mat={m} idx={idx} onUpdate={updMat} onRemove={rmMat} showCost editableQty/>)}
+          {mats.map((m,idx)=><MaterialChip key={idx} mat={m} idx={idx} onUpdate={updMat} onRemove={rmMat} onCommit={commitQuote} showCost editableQty/>)}
         </div>
         {(()=>{ const tos=(purchaseOrders||[]).filter(o=>o.taskId===task.id); if(!tos.length) return null; const stC=o=>(PO_STATUS[o.status]||PO_STATUS.pending);
           return (<div style={{marginBottom:6}}>
@@ -13636,7 +13642,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.18.185";
+const APP_VERSION = "2026.11.18.186";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17768,11 +17774,18 @@ export default function App() {
     }catch(e){errToast(e);}
   };
   // Adds a stock item as a new material entry (list grows, no limit)
-  const consumeStock=async(taskId,item,currentMats,quoteOnly=false,qtyArg=1)=>{
-    const matQty=Math.max(1,Number(qtyArg)||1);
+  const consumeStock=async(taskId,item,currentMats,quoteOnly=false,qtyArg=1,opts=null)=>{
+    const commitIdx=opts&&opts.commitIdx!=null?opts.commitIdx:null; // converte material "só orçamento" em material do estoque
+    const matQty=commitIdx!=null?(Number(qtyArg)>0?Number(qtyArg):1):Math.max(1,Number(qtyArg)||1);
     const mats = currentMats || tasks.find(t=>t.id===taskId)?.materials || [];
+    if(commitIdx!=null){
+      if(!item){ toast_("Produto não encontrado no estoque. Confira o nome do item"); return; }
+      if(Number(item.qty||0)<matQty){ toast_(`Estoque insuficiente: ${item.name} tem ${item.qty||0} un. e o orçamento pede ${matQty}`); return; }
+    }
     // quoteOnly: add value but don't deduct from stock, and don't link to stockItemId
-    const newMats = [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:!quoteOnly,stockItemId:quoteOnly?null:item.id,quoteOnly:quoteOnly||undefined,...(quoteOnly?{markup:0}:{})}];
+    const newMats = commitIdx!=null
+      ? mats.map((m,i)=>i===commitIdx?{...m,fromStock:true,stockItemId:item.id,quoteOnly:undefined,quoteStockId:undefined,markup:undefined}:m)
+      : [...mats,{name:item.name,brand:item.brand||"",cost:item.salePrice,qty:matQty,fromStock:!quoteOnly,stockItemId:quoteOnly?null:item.id,quoteOnly:quoteOnly||undefined,...(quoteOnly?{markup:0,quoteStockId:item.id}:{})}];
     if(!quoteOnly){
       const newQty=Math.max(0,Number((item.qty-matQty).toFixed(4)));
       setStk(p=>p.map(s=>s.id===item.id?{...s,qty:newQty}:s));
@@ -17788,7 +17801,7 @@ export default function App() {
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
     try{
       await db.updateTask(taskId,{materials:newMats});
-      toast_(quoteOnly
+      toast_(commitIdx!=null?`${item.name} descontado do estoque · Saldo restante: ${Math.max(0,item.qty-matQty)} un. ✓`:quoteOnly
         ?`${item.name} adicionado ao orçamento (sem descontar estoque) ✓`
         :`${item.name} lançado na OS e descontado do estoque · Saldo restante: ${Math.max(0,item.qty-matQty)} un. ✓`);
     }catch(e){errToast(e);}

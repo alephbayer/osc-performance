@@ -5364,7 +5364,7 @@ function StockItemPickModal({stock,suggested=[],onPick,onClose}){
   const sugIds=new Set(suggested.map(x=>x.id));
   const base=stock.filter(s=>stockSearchMatch(q,s.name+" "+(s.brand||"")+" "+(s.type||"")));
   const list=q?base.slice(0,80):[...stock.filter(s=>sugIds.has(s.id)),...stock.filter(s=>!sugIds.has(s.id))].slice(0,80);
-  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:16,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}} onClick={onClose}>
+  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1100,padding:16,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",overflow:"hidden",border:`1px solid ${B.gray600}`}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.purple}`}}>
         <div style={{fontWeight:700,fontSize:14,color:B.white}}>Adicionar compra a um item existente</div>
@@ -13643,7 +13643,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.18.189";
+const APP_VERSION = "2026.11.18.190";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

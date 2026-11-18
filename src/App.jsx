@@ -1835,7 +1835,7 @@ async function renderElegantQuote(o) {
 
   const featList=(ts||[]).filter(t=>t.featured&&specHasContent(t));
   // Cabeçalho
-  const lockM=featList.length?/^OSC\s+(.+)$/i.exec(String(divisionName||"").trim()):null; // capa tipográfica: OSC GROUP + nome da divisão em destaque
+  const lockM=featList.length?(perf?[null,"OSC Performance"]:/^OSC\s+(.+)$/i.exec(String(divisionName||"").trim())):null; // capa tipográfica: OSC GROUP + nome da divisão em destaque
   const fmtPh=v=>{ const d=String(v||"").replace(/\D/g,""); const n=(d.length>=12&&d.startsWith("55"))?d.slice(2):d; return n.length===11?`(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`:n.length===10?`(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`:String(v||""); };
   const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,company?.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ·   ");
   const colR=mx+cw/2+4;
@@ -13629,7 +13629,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.179";
+const APP_VERSION = "2026.11.17.180";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -1823,7 +1823,7 @@ async function renderElegantQuote(o) {
   const ink=[28,28,30], body=[70,70,75], gray=[130,130,135], line=[224,224,226], red=[190,40,40], green=[22,140,70];
   const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
   const R=n=>"R$ "+nf(n);
-  const cap=(t,x,yy,size,color,op={})=>{doc.setFont("helvetica","normal");doc.setFontSize(size);doc.setTextColor(...color);const tx=String(t).toUpperCase();let px=x;if(op.align==="right")px=x-doc.getTextWidth(tx)-0.8*tx.length;doc.text(tx,px,yy,{charSpace:0.8});};
+  const cap=(t,x,yy,size,color,op={})=>{doc.setFont("helvetica","normal");doc.setFontSize(size);doc.setTextColor(...color);const tx=String(t).toUpperCase();let px=x;if(op.align==="right")px=x-doc.getTextWidth(tx)-(op.cs||0.8)*tx.length;doc.text(tx,px,yy,{charSpace:op.cs||0.8});};
   const hair=(yy,c=line,w=0.2,x1=mx,x2=W-mx)=>{doc.setDrawColor(...c);doc.setLineWidth(w);doc.line(x1,yy,x2,yy);};
   const serif=(t,x,yy,s,op={},color=ink)=>{doc.setFont("times","normal");doc.setFontSize(s);doc.setTextColor(...color);doc.text(t,x,yy,op);};
   const txt=(t,x,yy,{b=false,i=false,s=9,c=body,al}={})=>{doc.setFont("helvetica",b?"bold":i?"italic":"normal");doc.setFontSize(s);doc.setTextColor(...c);doc.text(t,x,yy,al?{align:al}:undefined);};
@@ -1835,23 +1835,34 @@ async function renderElegantQuote(o) {
 
   const featList=(ts||[]).filter(t=>t.featured&&specHasContent(t));
   // Cabeçalho
-  doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
-  const lockM=featList.length?/^OSC\s+(.+)$/i.exec(String(divisionName||"").trim()):null; // capa em destaque: "FINISHING DIVISION / by OSC GROUP"
-  const hy=lockM?12:0;
-  if(lockM){
-    doc.setFont("helvetica","normal"); doc.setFontSize(15); doc.setTextColor(...ink); doc.text(lockM[1].toUpperCase(),mx,33,{charSpace:2.6});
-    doc.setFont("times","italic"); doc.setFontSize(10.5); doc.setTextColor(...gray); doc.text("by",mx,40);
-    cap("OSC Group",mx+doc.getTextWidth("by")+2.6,40,7.5,ink);
-  } else cap(divisionName,mx,30,7.5,ink);
-  cap(`Emitido em ${fmtD()}`,W-mx,30,7,gray,{align:"right"});
+  const lockM=featList.length?/^OSC\s+(.+)$/i.exec(String(divisionName||"").trim()):null; // capa tipográfica: OSC GROUP + nome da divisão em destaque
   const fmtPh=v=>{ const d=String(v||"").replace(/\D/g,""); const n=(d.length>=12&&d.startsWith("55"))?d.slice(2):d; return n.length===11?`(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`:n.length===10?`(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`:String(v||""); };
   const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,company?.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ·   ");
-  if(contact) txt(contact,mx,35+hy,{s:7,c:gray});
-  serif(featList.length?"Proposta de serviços":"Orçamento de serviços",mx,54+hy,28);
-  if(osLabel) cap(osLabel,W-mx,54+hy,8,gray,{align:"right"});
-  y=62+hy;
-  // Cliente / veículo
   const colR=mx+cw/2+4;
+  if(lockM){
+    cap("OSC Group",mx,24,7.5,ink,{cs:2.6});
+    cap(`Emitido em ${fmtD()}`,W-mx,24,6.5,gray,{align:"right"});
+    hair(29,line,0.2);
+    if(contact) txt(contact,mx,35,{s:7,c:gray});
+    doc.setFillColor(...accent); doc.rect(mx,50,10,0.9,"F");
+    const parts=lockM[1].trim().split(/\s+/); const w1=parts.slice(0,1).join(" "), w2=parts.slice(1).join(" ");
+    serif(w1,mx,72,40);
+    if(w2){ doc.setFont("times","italic"); doc.setFontSize(40); doc.setTextColor(...ink); doc.text(w2,mx,86); }
+    if(/finishing/i.test(lockM[1])) cap("Funilaria  ·  Pintura  ·  Bodykits",mx,96,6.5,gray,{cs:1.6});
+    hair(106,line,0.2);
+    cap(featList.length?"Proposta de serviços":"Orçamento de serviços",mx,118,6.5,accentText||accent,{cs:1.6});
+    if(osLabel) cap(osLabel,W-mx,118,8,gray,{align:"right"});
+    y=124;
+  } else {
+  doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
+  cap(divisionName,mx,30,7.5,ink);
+  cap(`Emitido em ${fmtD()}`,W-mx,30,7,gray,{align:"right"});
+  if(contact) txt(contact,mx,35,{s:7,c:gray});
+  serif(featList.length?"Proposta de serviços":"Orçamento de serviços",mx,54,28);
+  if(osLabel) cap(osLabel,W-mx,54,8,gray,{align:"right"});
+  y=62;
+  }
+  // Cliente / veículo
   cap("Cliente",mx,y+6,6.5,gray); cap("Veículo",colR,y+6,6.5,gray);
   txt(doc.splitTextToSize(client?.name||"Não informado",cw/2-6)[0],mx,y+12,{b:true,s:10.5,c:ink});
   txt(doc.splitTextToSize(vehicle.model||"",cw/2-6)[0],colR,y+12,{b:true,s:10.5,c:ink});
@@ -13570,7 +13581,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.172";
+const APP_VERSION = "2026.11.17.173";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

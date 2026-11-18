@@ -1836,14 +1836,20 @@ async function renderElegantQuote(o) {
   const featList=(ts||[]).filter(t=>t.featured&&specHasContent(t));
   // Cabeçalho
   doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
-  cap(divisionName,mx,30,7.5,ink);
+  const lockM=featList.length?/^OSC\s+(.+)$/i.exec(String(divisionName||"").trim()):null; // capa em destaque: "FINISHING DIVISION / by OSC GROUP"
+  const hy=lockM?12:0;
+  if(lockM){
+    doc.setFont("helvetica","normal"); doc.setFontSize(15); doc.setTextColor(...ink); doc.text(lockM[1].toUpperCase(),mx,33,{charSpace:2.6});
+    doc.setFont("times","italic"); doc.setFontSize(10.5); doc.setTextColor(...gray); doc.text("by",mx,40);
+    cap("OSC Group",mx+doc.getTextWidth("by")+2.6,40,7.5,ink);
+  } else cap(divisionName,mx,30,7.5,ink);
   cap(`Emitido em ${fmtD()}`,W-mx,30,7,gray,{align:"right"});
   const fmtPh=v=>{ const d=String(v||"").replace(/\D/g,""); const n=(d.length>=12&&d.startsWith("55"))?d.slice(2):d; return n.length===11?`(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`:n.length===10?`(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`:String(v||""); };
   const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,company?.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ·   ");
-  if(contact) txt(contact,mx,35,{s:7,c:gray});
-  serif(featList.length?"Proposta de serviços":"Orçamento de serviços",mx,54,28);
-  if(osLabel) cap(osLabel,W-mx,54,8,gray,{align:"right"});
-  y=62;
+  if(contact) txt(contact,mx,35+hy,{s:7,c:gray});
+  serif(featList.length?"Proposta de serviços":"Orçamento de serviços",mx,54+hy,28);
+  if(osLabel) cap(osLabel,W-mx,54+hy,8,gray,{align:"right"});
+  y=62+hy;
   // Cliente / veículo
   const colR=mx+cw/2+4;
   cap("Cliente",mx,y+6,6.5,gray); cap("Veículo",colR,y+6,6.5,gray);
@@ -13564,7 +13570,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.171";
+const APP_VERSION = "2026.11.17.172";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

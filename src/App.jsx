@@ -13642,7 +13642,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.18.187";
+const APP_VERSION = "2026.11.18.188";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15791,7 +15791,7 @@ function MLArrivalsAlert({show,onOpen}) {
             <span style={{fontSize:17,fontWeight:300,letterSpacing:".04em",color:g.color,fontVariantNumeric:"tabular-nums"}}>{dd}</span>
           </div>}
         </div>); })}
-        <button onClick={onOpen} style={{alignSelf:"flex-start",background:"none",border:"none",padding:"2px 0",color:g.color,fontSize:11.5,fontWeight:700,cursor:"pointer"}}>Abrir compras do ML →</button>
+        {onOpen&&<button onClick={onOpen} style={{alignSelf:"flex-start",background:"none",border:"none",padding:"2px 0",color:g.color,fontSize:11.5,fontWeight:700,cursor:"pointer"}}>Abrir compras do ML →</button>}
       </div>}
     </div>); })}
   </div>);
@@ -18422,6 +18422,7 @@ export default function App() {
       }).filter(m=>m.vts>0||m.tTotal>0);
       return(<div>
         <DashHeader role={adminRole}/>
+        <MLArrivalsAlert show onOpen={null}/>
         <SL2 label="Operação atual"/>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
           <DashCard color={B.orange} icon={iconWrench} label="OSs ativas" value={activeVehicleCount} sub="Performance" onClick={()=>goSection("oficina","clients")}/>

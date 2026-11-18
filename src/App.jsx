@@ -1681,6 +1681,7 @@ const CATEGORIES=[
   {id:"Motor",          color:"#ef4444"},
   {id:"Pintura",        color:"#ec4899"},
   {id:"Powertrain",     color:"#f59e0b"},
+  {id:"Projeto",         color:"#cbd5e1"},
   {id:"Retífica",       color:"#b45309"},
   {id:"Suspensão",      color:"#d97706"},
 ];
@@ -1691,6 +1692,7 @@ const CATEGORIES_FINISHING = [
   {id:"Acabamento / Finalização", color:"#14b8a6"},
   {id:"Funilaria / Lanternagem",  color:"#f97316"},
   {id:"Pintura",                  color:"#a855f7"},
+  {id:"Projeto",                  color:"#cbd5e1"},
 ];
 const CAT_MAP_FINISHING = Object.fromEntries(CATEGORIES_FINISHING.map(c=>[c.id,c.color]));
 
@@ -13629,7 +13631,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.181";
+const APP_VERSION = "2026.11.17.182";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14272,6 +14274,7 @@ function TaskSpecModal({task,onSave,onClose}) {
   const [vals,setVals]=useState(()=>Object.fromEntries(SPEC_SECTIONS.map(x=>[x.k,init[x.k]||""])));
   const [photos,setPhotos]=useState(draft?.photos||(Array.isArray(task.specPhotos)?task.specPhotos:[]));
   const [on,setOn]=useState(draft?(draft.on!==false):(task.featured||!specHasContent(task)));
+  const [asProj,setAsProj]=useState(!task.category||task.category==="Projeto");
   useEffect(()=>{ try{ localStorage.setItem(OK,task.id); }catch{} },[]);
   useEffect(()=>{ try{ localStorage.setItem(DK,JSON.stringify({vals,photos,on})); }catch{} },[vals,photos,on]);
   const closeKeep=()=>{ try{ localStorage.removeItem(OK); }catch{} onClose(); };
@@ -14290,6 +14293,7 @@ function TaskSpecModal({task,onSave,onClose}) {
       <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>{task.label}. Vira uma página dedicada no PDF do orçamento.</div>
       <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingRight:2}}>
         <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12.5,color:B.gray200,cursor:"pointer"}}><input type="checkbox" checked={on} onChange={e=>setOn(e.target.checked)}/> Exibir como página de detalhamento no orçamento</label>
+        {on&&<label style={{display:"flex",alignItems:"center",gap:8,fontSize:12.5,color:B.gray200,cursor:"pointer"}}><input type="checkbox" checked={asProj} onChange={e=>setAsProj(e.target.checked)}/> Categoria “Projeto” (engloba várias áreas)</label>}
         {SPEC_SECTIONS.map(x=><div key={x.k}>
           <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:AC,marginBottom:5}}>{x.label}</div>
           <textarea value={vals[x.k]} onChange={e=>setVals(v=>({...v,[x.k]:e.target.value}))} placeholder={x.hint} style={{...ta,minHeight:(x.k==="prazo"||x.k==="garantia")?40:(x.k==="escopo"?150:78)}}/>
@@ -14310,7 +14314,7 @@ function TaskSpecModal({task,onSave,onClose}) {
       </div>
       <div style={{display:"flex",gap:8,marginTop:14}}>
         <button onClick={closeDrop} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${B.gray600}`,background:"none",color:B.gray300,fontWeight:700,cursor:"pointer"}}>Cancelar</button>
-        <button disabled={busy} onClick={()=>{ const spec=Object.fromEntries(SPEC_SECTIONS.map(x=>[x.k,vals[x.k].trim()])); onSave({featured:on&&SPEC_SECTIONS.some(x=>spec[x.k]),spec,specPhotos:photos}); closeDrop(); }} style={{flex:2,padding:"10px",borderRadius:9,border:"none",background:AC,color:"#fff",fontWeight:800,cursor:"pointer",opacity:busy?.6:1}}>Salvar ficha</button>
+        <button disabled={busy} onClick={()=>{ const spec=Object.fromEntries(SPEC_SECTIONS.map(x=>[x.k,vals[x.k].trim()])); const feat=on&&SPEC_SECTIONS.some(x=>spec[x.k]); onSave({featured:feat,spec,specPhotos:photos,...(feat&&asProj&&task.category!=="Projeto"?{category:"Projeto"}:{})}); closeDrop(); }} style={{flex:2,padding:"10px",borderRadius:9,border:"none",background:AC,color:"#fff",fontWeight:800,cursor:"pointer",opacity:busy?.6:1}}>Salvar ficha</button>
       </div>
     </div>
   </div>,document.body);

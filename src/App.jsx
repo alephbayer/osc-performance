@@ -1833,6 +1833,7 @@ async function renderElegantQuote(o) {
   let inTable=false;
   const need=h=>{ if(y+h>H-24){ doc.addPage(); y=22; if(inTable) tableHeader(); } };
 
+  const featList=(ts||[]).filter(t=>t.featured&&specHasContent(t));
   // Cabeçalho
   doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
   cap(divisionName,mx,30,7.5,ink);
@@ -1840,7 +1841,7 @@ async function renderElegantQuote(o) {
   const fmtPh=v=>{ const d=String(v||"").replace(/\D/g,""); const n=(d.length>=12&&d.startsWith("55"))?d.slice(2):d; return n.length===11?`(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`:n.length===10?`(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`:String(v||""); };
   const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,company?.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ·   ");
   if(contact) txt(contact,mx,35,{s:7,c:gray});
-  serif("Orçamento de serviços",mx,54,28);
+  serif(featList.length?"Proposta de serviços":"Orçamento de serviços",mx,54,28);
   if(osLabel) cap(osLabel,W-mx,54,8,gray,{align:"right"});
   y=62;
   // Cliente / veículo
@@ -1876,6 +1877,110 @@ async function renderElegantQuote(o) {
       txt(st.status==="ok"?"Bom":"Ruim",x+colW,y,{b:true,s:8,c:st.status==="ok"?green:red,al:"right"});
     });
     y+=9; hair(y); y+=8;
+  }
+
+  const renderDetails=async()=>{
+  for(let fi=0;fi<featList.length;fi++){
+    const t=featList[fi]; const c=taskCost(t,defaultRate); const sp=t.spec||{};
+    const disc=!t.warranty&&c.discount>0;
+    doc.addPage(); inTable=false;
+    doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
+    cap(divisionName,mx,30,7.5,ink);
+    cap(featList.length>1?`Detalhamento do serviço  ·  ${String(fi+1).padStart(2,"0")} / ${String(featList.length).padStart(2,"0")}`:"Detalhamento do serviço",W-mx,30,7,gray,{align:"right"});
+    cap([vehicle.model,vehicle.plate].filter(Boolean).join("  ·  "),mx,37,7,gray);
+    if(osLabel) cap(osLabel,W-mx,37,7,gray,{align:"right"});
+    y=54; doc.setFont("times","normal"); doc.setFontSize(23);
+    doc.splitTextToSize(String(t.label||""),cw).slice(0,4).forEach(l=>{ serif(l,mx,y,23); y+=10; });
+    y+=1; doc.setFillColor(...accent); doc.rect(mx,y,10,0.9,"F"); y+=10;
+    // Faixa de resumo: investimento · prazo · garantia
+    const prazoTxt=String(sp.prazo||"").trim().split(/\n+/)[0];
+    const garTxt=String(sp.garantia||"").trim().split(/\n+/)[0];
+    const garShort=garTxt?(garTxt.split(/(?<=[.;])\s/)[0]||garTxt):"";
+    const cols=[]; if(prazoTxt) cols.push({k:"Prazo estimado",w:cw*0.30}); if(garShort) cols.push({k:"Garantia",w:cw*0.70});
+    const sum=cols.reduce((a,x)=>a+x.w,0)||1; cols.forEach(x=>x.w=x.w*cw/sum);
+    let cx=mx, ytop=y, ymax=y;
+    cols.forEach((col,ci)=>{
+      cap(col.k,cx,ytop,6.5,gray); let yy=ytop+8;
+      if(col.k==="Investimento"){ serif(R(c.total),cx,yy,20,{},accentText); yy+=disc?6:0; if(disc) txt(`Valor original ${R(c.total+c.discount)}  ·  desconto ${R(c.discount)}`,cx,yy,{s:7,c:gray}); }
+      else if(col.k==="Prazo estimado"){ doc.setFont("times","normal"); doc.setFontSize(13); doc.splitTextToSize(prazoTxt,col.w-6).slice(0,3).forEach(l=>{ serif(l,cx,yy,13); yy+=5.6; }); yy-=5.6; }
+      else { doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.splitTextToSize(garShort,col.w-4).slice(0,4).forEach(l=>{ txt(l,cx,yy-1,{s:8.5,c:body}); yy+=4.4; }); yy-=5; }
+      if(ci>0){ doc.setDrawColor(...line); doc.setLineWidth(0.2); doc.line(cx-4,ytop-3,cx-4,Math.max(ytop+14,yy+3)); }
+      ymax=Math.max(ymax,yy); cx+=col.w;
+    });
+    y=ymax+9; hair(y,line,0.2); y+=9;
+    const contHead=()=>{ doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F"); cap(divisionName,mx,30,7.5,ink); cap(`${String(t.label||"").slice(0,70)}  ·  continuação`,W-mx,30,7,gray,{align:"right"}); y=44; };
+    const needF=h=>{ if(y+h>H-24){ doc.addPage(); contHead(); } };
+    const para=(txtv,gap=2.6)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.splitTextToSize(txtv,cw).forEach(l=>{ needF(6); txt(l,mx,y,{s:10,c:body}); y+=5.4; }); y+=gap; };
+    const bullet=(txtv,mark,gap=1.4)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); const lines=doc.splitTextToSize(txtv,cw-10); needF(lines.length*5.2+2);
+      if(mark==="–") txt("–",mx+1,y,{s:10,c:accentText}); else txt(mark,mx,y,{b:true,s:8.5,c:accentText});
+      lines.forEach(l=>{ txt(l,mx+10,y,{s:10,c:body}); y+=5.2; }); y+=gap; };
+    for(const sec of SPEC_SECTIONS){
+      if(sec.k==="prazo") continue; // já está na faixa de resumo
+      const raw=String(sp[sec.k]||"").trim(); if(!raw) continue;
+      const items=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+      needF(30); cap(sec.k==="garantia"?"Garantia — condições":sec.label,mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
+      if(sec.k==="escopo"){
+        let prevB=false, afterColon=false;
+        items.forEach((it,ix)=>{ const explicit=/^[-–•*]\s+/.test(it); const auto=!explicit&&afterColon&&it.length<=90&&!/[.!?]$/.test(it); const isB=explicit||auto; if(!isB) afterColon=/:$/.test(it);
+          if(isB){ if(!prevB&&ix>0) y+=0.5; bullet(it.replace(/^[-–•*]\s+/,""),"–",1.2); } else { if(prevB) y+=2; para(it,ix<items.length-1?2.6:0); }
+          prevB=isB; });
+      } else if(sec.k==="etapas"){ items.forEach((it,ix)=>bullet(it,String(ix+1).padStart(2,"0"),1.6)); }
+      else if(sec.k==="materiais"){ items.forEach(it=>bullet(it,"–",1.6)); }
+      else { items.forEach((it,ix)=>para(it,ix<items.length-1?2.6:0)); }
+      y+=5;
+    }
+    const phs=(Array.isArray(t.specPhotos)?t.specPhotos:[]).slice(0,8);
+    if(phs.length){
+      needF(30); cap("Referências",mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
+      const cwid=(cw-6)/2, ch=58;
+      for(let k=0;k<phs.length;k+=2){
+        needF(ch+6);
+        for(let j=0;j<2&&k+j<phs.length;j++){
+          try{
+            const im=await pdfImg(phs[k+j]); const sc=Math.min(cwid/im.w,ch/im.h); const w=im.w*sc,h=im.h*sc;
+            const x0=mx+j*(cwid+6);
+            doc.setFillColor(246,246,247); doc.rect(x0,y,cwid,ch,"F");
+            doc.addImage(im.d,im.fmt,x0+(cwid-w)/2,y+(ch-h)/2,w,h);
+          }catch{}
+        }
+        y+=ch+6;
+      }
+    }
+  }
+  };
+
+  if(featList.length){
+    // Capa: serviços incluídos (sem valores) e, em seguida, as páginas de detalhamento
+    need(30); cap("Serviços incluídos",mx,y,6.5,gray); y+=3; hair(y,ink,0.35); y+=8;
+    const allSv=[...(ts||[]).filter(t=>t.featured&&specHasContent(t)),...(ts||[]).filter(t=>!(t.featured&&specHasContent(t)))];
+    allSv.forEach((t,ix)=>{
+      const isF=t.featured&&specHasContent(t);
+      const lns=isF?String((t.spec&&t.spec.escopo)||"").split(/\n+/).map(x=>x.trim()).filter(Boolean):[];
+      const first=isF?((lns.find(x=>!/^[-–•*]\s+/.test(x)&&x.length>40&&/[.!?]$/.test(x)))||(lns[0]||"").replace(/:$/,"")):"";
+      const prazoC=isF?String((t.spec&&t.spec.prazo)||"").split(/\n+/)[0].trim():"";
+      doc.setFont("helvetica","bold"); doc.setFontSize(10.5);
+      const tl=doc.splitTextToSize(t.label,cw-14);
+      doc.setFont("helvetica","normal"); doc.setFontSize(9);
+      const fl=first?doc.splitTextToSize(first,cw-14).slice(0,3):[];
+      need(tl.length*5.4+fl.length*4.8+(prazoC?9:0)+10);
+      txt(String(ix+1).padStart(2,"0"),mx,y,{b:true,s:8.5,c:accentText});
+      tl.forEach(l=>{ txt(l,mx+14,y,{b:true,s:10.5,c:ink}); y+=5.4; });
+      fl.forEach(l=>{ txt(l,mx+14,y,{s:9,c:body}); y+=4.8; });
+      if(prazoC){ y+=1.5; cap("Prazo estimado",mx+14,y,6,gray); txt(prazoC,mx+14+38,y,{s:9,c:ink}); y+=4; }
+      y+=5;
+    });
+    y+=2; need(16);
+    doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray);
+    doc.splitTextToSize("Cada serviço é detalhado nas páginas seguintes. O investimento total e as condições de pagamento estão na última página.",cw).forEach(l=>{ doc.text(l,mx,y); y+=4; });
+    await renderDetails();
+    // Página final: investimento e condições
+    doc.addPage(); inTable=false;
+    doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
+    cap(divisionName,mx,30,7.5,ink);
+    cap([vehicle.model,vehicle.plate].filter(Boolean).join("  ·  "),W-mx,30,7,gray,{align:"right"});
+    serif("Investimento e condições",mx,54,26);
+    if(osLabel) cap(osLabel,W-mx,54,8,gray,{align:"right"});
+    y=66;
   }
 
   // Tabela
@@ -2018,87 +2123,17 @@ async function renderElegantQuote(o) {
   }
 
   // Nota final
-  const featList=(ts||[]).filter(t=>t.featured&&specHasContent(t));
-  need(18); y+=6;
+  need(featList.length?36:18); y+=6;
   doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray);
-  const fl=doc.splitTextToSize(featList.length?"O detalhamento completo de cada serviço em destaque segue nas páginas seguintes. Alterações de escopo serão previamente acordadas com o cliente.":"Este orçamento é uma estimativa e pode sofrer alterações conforme a necessidade do serviço executado.",cw);
+  const fl=doc.splitTextToSize(featList.length?"Escopo conforme detalhamento das páginas anteriores. Alterações de escopo serão previamente acordadas com o cliente.":"Este orçamento é uma estimativa e pode sofrer alterações conforme a necessidade do serviço executado.",cw);
   doc.text(fl,mx,y); y+=fl.length*4+2; doc.text(tagline,mx,y);
+  if(featList.length){
+    need(22); y+=16;
+    doc.setDrawColor(...ink); doc.setLineWidth(0.25); doc.line(mx,y,mx+78,y); doc.line(W-mx-50,y,W-mx,y);
+    cap("De acordo — cliente",mx,y+4.5,6.5,gray); cap("Data",W-mx-50,y+4.5,6.5,gray);
+  }
 
   // Rodapé de cada página
-  // Páginas de detalhamento (serviços em destaque)
-  for(let fi=0;fi<featList.length;fi++){
-    const t=featList[fi]; const c=taskCost(t,defaultRate); const sp=t.spec||{};
-    const disc=!t.warranty&&c.discount>0;
-    doc.addPage(); inTable=false;
-    doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
-    cap(divisionName,mx,30,7.5,ink);
-    cap(featList.length>1?`Detalhamento do serviço  ·  ${String(fi+1).padStart(2,"0")} / ${String(featList.length).padStart(2,"0")}`:"Detalhamento do serviço",W-mx,30,7,gray,{align:"right"});
-    cap([vehicle.model,vehicle.plate].filter(Boolean).join("  ·  "),mx,37,7,gray);
-    if(osLabel) cap(osLabel,W-mx,37,7,gray,{align:"right"});
-    y=54; doc.setFont("times","normal"); doc.setFontSize(23);
-    doc.splitTextToSize(String(t.label||""),cw).slice(0,4).forEach(l=>{ serif(l,mx,y,23); y+=10; });
-    y+=1; doc.setFillColor(...accent); doc.rect(mx,y,10,0.9,"F"); y+=10;
-    // Faixa de resumo: investimento · prazo · garantia
-    const prazoTxt=String(sp.prazo||"").trim().split(/\n+/)[0];
-    const garTxt=String(sp.garantia||"").trim().split(/\n+/)[0];
-    const garShort=garTxt?(garTxt.split(/(?<=[.;])\s/)[0]||garTxt):"";
-    const cols=[{k:"Investimento",w:cw*0.36}]; if(prazoTxt) cols.push({k:"Prazo estimado",w:cw*0.24}); if(garShort) cols.push({k:"Garantia",w:cw*0.40});
-    if(cols.length===2&&!prazoTxt) cols[0].w=cw*0.4; 
-    const sum=cols.reduce((a,x)=>a+x.w,0); cols.forEach(x=>x.w=x.w*cw/sum);
-    let cx=mx, ytop=y, ymax=y;
-    cols.forEach((col,ci)=>{
-      cap(col.k,cx,ytop,6.5,gray); let yy=ytop+8;
-      if(col.k==="Investimento"){ serif(R(c.total),cx,yy,20,{},accentText); yy+=disc?6:0; if(disc) txt(`Valor original ${R(c.total+c.discount)}  ·  desconto ${R(c.discount)}`,cx,yy,{s:7,c:gray}); }
-      else if(col.k==="Prazo estimado"){ doc.setFont("times","normal"); doc.setFontSize(13); doc.splitTextToSize(prazoTxt,col.w-6).slice(0,3).forEach(l=>{ serif(l,cx,yy,13); yy+=5.6; }); yy-=5.6; }
-      else { doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.splitTextToSize(garShort,col.w-4).slice(0,4).forEach(l=>{ txt(l,cx,yy-1,{s:8.5,c:body}); yy+=4.4; }); yy-=5; }
-      if(ci>0){ doc.setDrawColor(...line); doc.setLineWidth(0.2); doc.line(cx-4,ytop-3,cx-4,Math.max(ytop+14,yy+3)); }
-      ymax=Math.max(ymax,yy); cx+=col.w;
-    });
-    y=ymax+9; hair(y,line,0.2); y+=9;
-    const contHead=()=>{ doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F"); cap(divisionName,mx,30,7.5,ink); cap(`${String(t.label||"").slice(0,70)}  ·  continuação`,W-mx,30,7,gray,{align:"right"}); y=44; };
-    const needF=h=>{ if(y+h>H-24){ doc.addPage(); contHead(); } };
-    const para=(txtv,gap=2.6)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.splitTextToSize(txtv,cw).forEach(l=>{ needF(6); txt(l,mx,y,{s:10,c:body}); y+=5.4; }); y+=gap; };
-    const bullet=(txtv,mark,gap=1.4)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); const lines=doc.splitTextToSize(txtv,cw-10); needF(lines.length*5.2+2);
-      if(mark==="–") txt("–",mx+1,y,{s:10,c:accentText}); else txt(mark,mx,y,{b:true,s:8.5,c:accentText});
-      lines.forEach(l=>{ txt(l,mx+10,y,{s:10,c:body}); y+=5.2; }); y+=gap; };
-    for(const sec of SPEC_SECTIONS){
-      if(sec.k==="prazo") continue; // já está na faixa de resumo
-      const raw=String(sp[sec.k]||"").trim(); if(!raw) continue;
-      const items=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean);
-      needF(30); cap(sec.k==="garantia"?"Garantia — condições":sec.label,mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
-      if(sec.k==="escopo"){
-        let prevB=false;
-        items.forEach((it,ix)=>{ const isB=/^[-–•*]\s+/.test(it);
-          if(isB){ if(!prevB&&ix>0) y+=0.5; bullet(it.replace(/^[-–•*]\s+/,""),"–",1.2); } else { if(prevB) y+=2; para(it,ix<items.length-1?2.6:0); }
-          prevB=isB; });
-      } else if(sec.k==="etapas"){ items.forEach((it,ix)=>bullet(it,String(ix+1).padStart(2,"0"),1.6)); }
-      else if(sec.k==="materiais"){ items.forEach(it=>bullet(it,"–",1.6)); }
-      else { items.forEach((it,ix)=>para(it,ix<items.length-1?2.6:0)); }
-      y+=5;
-    }
-    const phs=(Array.isArray(t.specPhotos)?t.specPhotos:[]).slice(0,8);
-    if(phs.length){
-      needF(30); cap("Referências",mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
-      const cwid=(cw-6)/2, ch=58;
-      for(let k=0;k<phs.length;k+=2){
-        needF(ch+6);
-        for(let j=0;j<2&&k+j<phs.length;j++){
-          try{
-            const im=await pdfImg(phs[k+j]); const sc=Math.min(cwid/im.w,ch/im.h); const w=im.w*sc,h=im.h*sc;
-            const x0=mx+j*(cwid+6);
-            doc.setFillColor(246,246,247); doc.rect(x0,y,cwid,ch,"F");
-            doc.addImage(im.d,im.fmt,x0+(cwid-w)/2,y+(ch-h)/2,w,h);
-          }catch{}
-        }
-        y+=ch+6;
-      }
-    }
-    if(fi===featList.length-1){
-      needF(28); y+=12;
-      doc.setDrawColor(...ink); doc.setLineWidth(0.25); doc.line(mx,y,mx+78,y); doc.line(W-mx-50,y,W-mx,y);
-      cap("De acordo — cliente",mx,y+4.5,6.5,gray); cap("Data",W-mx-50,y+4.5,6.5,gray);
-    }
-  }
   const total=doc.getNumberOfPages();
   for(let pg=1;pg<=total;pg++){ doc.setPage(pg); hair(H-16); cap(divisionName,mx,H-10,6.5,gray); cap(`Página ${pg} / ${total}`,W-mx,H-10,6.5,gray,{align:"right"}); }
   doc.save(fileName);
@@ -13529,7 +13564,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.169";
+const APP_VERSION = "2026.11.17.171";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

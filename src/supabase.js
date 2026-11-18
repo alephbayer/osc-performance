@@ -170,6 +170,9 @@ const mapTaskIn = (t) => ({
   outsourced: t.outsourced || false,
   warranty: t.warranty || false,
   internal: typeof t.internal === 'boolean' ? t.internal : null,
+  featured: !!t.featured,
+  spec: t.spec && typeof t.spec === 'object' ? t.spec : null,
+  specPhotos: Array.isArray(t.spec_photos) ? t.spec_photos : [],
   discount: Number(t.discount || 0),
   category: t.category || null,
   description: t.description || '',
@@ -192,6 +195,9 @@ const mapTaskOut = (t) => ({
   outsourced: t.outsourced || false,
   warranty: t.warranty || false,
   internal: typeof t.internal === 'boolean' ? t.internal : null,
+  featured: !!t.featured,
+  spec: t.spec || null,
+  spec_photos: t.specPhotos || null,
   discount: Number(t.discount || 0),
 });
 const mapStockIn = (s) => ({
@@ -571,7 +577,7 @@ export const db = {
   },
   async updateTask(id, patch) {
     const dbPatch = {};
-    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced", warranty:"warranty", internal:"internal", discount:"discount", category:"category", description:"description", rateType:"rate_type", division:"division", updates:"updates" };
+    const map = { vehicleId:"vehicle_id", label:"label", done:"done", materials:"materials", hours:"hours", ratePerHour:"rate_per_hour", completedAt:"completed_at", completedByEmployeeId:"completed_by_employee_id", outsourced:"outsourced", warranty:"warranty", internal:"internal", featured:"featured", spec:"spec", specPhotos:"spec_photos", discount:"discount", category:"category", description:"description", rateType:"rate_type", division:"division", updates:"updates" };
     Object.keys(patch).forEach((k) => { if (map[k]) dbPatch[map[k]] = patch[k]; });
     const { error } = await supabase.from("tasks").update(dbPatch).eq("id", id);
     if (error) throw error;

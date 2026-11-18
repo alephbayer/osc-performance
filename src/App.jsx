@@ -1418,6 +1418,21 @@ const taskCost=(t,defaultRate)=>{
   return {laborGross,discount,labor,mat,freight,total:labor+mat+freight,rateType};
 };
 
+// Ficha detalhada do serviço (página dedicada no PDF do orçamento)
+const SPEC_SECTIONS=[
+  {k:"escopo",label:"Escopo do trabalho",hint:"O que será feito, em linhas curtas (uma por linha) ou em um parágrafo"},
+  {k:"etapas",label:"Etapas",hint:"Uma etapa por linha, na ordem em que acontecem"},
+  {k:"materiais",label:"Materiais e acabamento",hint:"Um item por linha: tintas, verniz, peças, acabamentos"},
+  {k:"prazo",label:"Prazo estimado",hint:"Ex.: 15 a 20 dias úteis"},
+  {k:"garantia",label:"Garantia",hint:"Ex.: 12 meses contra defeitos de pintura"},
+];
+const specHasContent=t=>!!(t&&t.spec&&SPEC_SECTIONS.some(x=>String(t.spec[x.k]||"").trim()));
+async function pdfImg(url){
+  const r=await fetch(url); const b=await r.blob();
+  const d=await new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(f.result);f.onerror=rej;f.readAsDataURL(b);});
+  const dim=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res({w:i.naturalWidth,h:i.naturalHeight});i.onerror=rej;i.src=d;});
+  return {d,w:dim.w,h:dim.h,fmt:/png/i.test(b.type)?"PNG":"JPEG"};
+}
 const taskDiscSum=(ts,r)=>(ts||[]).reduce((s,t)=>s+(t.warranty?0:taskCost(t,r).discount),0);
 
 // ─── Image upload (Supabase Storage) ─────────────────────────────────────────
@@ -2008,6 +2023,59 @@ async function renderElegantQuote(o) {
   doc.text(fl,mx,y); y+=fl.length*4+2; doc.text(tagline,mx,y);
 
   // Rodapé de cada página
+  // Páginas de detalhamento (serviços em destaque)
+  const feat=(ts||[]).filter(t=>t.featured&&specHasContent(t));
+  for(let fi=0;fi<feat.length;fi++){
+    const t=feat[fi]; const c=taskCost(t,defaultRate);
+    doc.addPage(); inTable=false;
+    doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
+    cap(divisionName,mx,30,7.5,ink);
+    cap(`Detalhamento do serviço  ·  ${String(fi+1).padStart(2,"0")} / ${String(feat.length).padStart(2,"0")}`,W-mx,30,7,gray,{align:"right"});
+    cap([vehicle.model,vehicle.plate].filter(Boolean).join("  ·  "),mx,37,7,gray);
+    if(osLabel) cap(osLabel,W-mx,37,7,gray,{align:"right"});
+    y=54; doc.setFont("times","normal"); doc.setFontSize(23);
+    doc.splitTextToSize(String(t.label||""),cw).slice(0,4).forEach(l=>{ serif(l,mx,y,23); y+=10; });
+    y+=1; doc.setFillColor(...accent); doc.rect(mx,y,10,0.9,"F"); y+=9;
+    cap("Investimento",mx,y,6.5,gray); y+=8;
+    serif(R(c.total),mx,y,20,{},accentText);
+    if(!t.warranty&&c.discount>0) txt(`Valor original ${R(c.total+c.discount)}   ·   desconto de ${R(c.discount)}`,mx,y+7,{s:8,c:gray});
+    y+=(!t.warranty&&c.discount>0)?15:9; hair(y,line,0.2); y+=9;
+    for(const sec of SPEC_SECTIONS){
+      const raw=String((t.spec&&t.spec[sec.k])||"").trim(); if(!raw) continue;
+      const items=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+      need(16); cap(sec.label,mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
+      doc.setFont("helvetica","normal"); doc.setFontSize(10);
+      if(items.length===1){
+        doc.splitTextToSize(items[0],cw).forEach(l=>{ need(6); txt(l,mx,y,{s:10,c:body}); y+=5.2; });
+      } else {
+        items.forEach((it,ix)=>{
+          const lines=doc.splitTextToSize(it,cw-10);
+          need(lines.length*5.2+2);
+          if(sec.k==="etapas") txt(String(ix+1).padStart(2,"0"),mx,y,{b:true,s:8.5,c:accentText}); else txt("–",mx+1,y,{s:10,c:accentText});
+          lines.forEach(l=>{ txt(l,mx+10,y,{s:10,c:body}); y+=5.2; });
+          y+=1.4;
+        });
+      }
+      y+=4.5;
+    }
+    const phs=(Array.isArray(t.specPhotos)?t.specPhotos:[]).slice(0,8);
+    if(phs.length){
+      need(30); cap("Referências",mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
+      const cwid=(cw-6)/2, ch=58;
+      for(let k=0;k<phs.length;k+=2){
+        need(ch+6);
+        for(let j=0;j<2&&k+j<phs.length;j++){
+          try{
+            const im=await pdfImg(phs[k+j]); const sc=Math.min(cwid/im.w,ch/im.h); const w=im.w*sc,h=im.h*sc;
+            const x0=mx+j*(cwid+6);
+            doc.setFillColor(246,246,247); doc.rect(x0,y,cwid,ch,"F");
+            doc.addImage(im.d,im.fmt,x0+(cwid-w)/2,y+(ch-h)/2,w,h);
+          }catch{}
+        }
+        y+=ch+6;
+      }
+    }
+  }
   const total=doc.getNumberOfPages();
   for(let pg=1;pg<=total;pg++){ doc.setPage(pg); hair(H-16); cap(divisionName,mx,H-10,6.5,gray); cap(`Página ${pg} / ${total}`,W-mx,H-10,6.5,gray,{align:"right"}); }
   doc.save(fileName);
@@ -4253,6 +4321,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 
 // ─── TaskItem — Manager ───────────────────────────────────────────────────────
 function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,onOrderPart=null,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
+  const [showSpec,setShowSpec]=useState(false);
   const [showTaskPOs,setShowTaskPOs]=useState(false);
   const [showMLPick,setShowMLPick]=useState(false);
   const [showSP,setSP]=useState(false);
@@ -4326,6 +4395,11 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               style={{background:eff?`${B.gray500}26`:"none",border:`1px solid ${eff?B.gray500:B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:eff?B.gray300:B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
               {eff?"✓ Int.":"Int."}
             </button>;})()}
+            {!task.warranty&&<button onClick={()=>setShowSpec(true)} title="Ficha detalhada: vira uma página dedicada no PDF do orçamento"
+              style={{background:task.featured?"#a855f722":"none",border:`1px solid ${task.featured?"#a855f766":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.featured?"#a855f7":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
+              {task.featured?"✓ Ficha":"Ficha"}
+            </button>}
+            {showSpec&&<TaskSpecModal task={task} onSave={patch=>onUpdate(task.id,patch)} onClose={()=>setShowSpec(false)}/>}
             {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
               {task.warranty&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Garantia</span>}
           </div>
@@ -13432,7 +13506,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.164";
+const APP_VERSION = "2026.11.17.165";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14067,6 +14141,51 @@ function InstalledPOs({orders}) {
 }
 
 // Janela "Pedir material": cria um pedido de compra (aguardando compra) já com nome e quantidade do material da OS
+function TaskSpecModal({task,onSave,onClose}) {
+  const init=task.spec||{};
+  const [vals,setVals]=useState(()=>Object.fromEntries(SPEC_SECTIONS.map(x=>[x.k,init[x.k]||""])));
+  const [photos,setPhotos]=useState(Array.isArray(task.specPhotos)?task.specPhotos:[]);
+  const [on,setOn]=useState(task.featured||!specHasContent(task));
+  const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
+  const up=async e=>{ const fs=[...(e.target.files||[])]; e.target.value=""; if(!fs.length) return; setBusy(true); setErr("");
+    try{ const urls=[]; for(const f of fs.slice(0,8-photos.length)) urls.push(await uploadImg(f,"specs")); setPhotos(p=>[...p,...urls]); }catch(er){ setErr(errMsg(er)||"Erro no upload"); } setBusy(false); };
+  const AC="#a855f7";
+  const ta={width:"100%",boxSizing:"border-box",minHeight:62,padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,lineHeight:1.45,outline:"none",resize:"vertical",fontFamily:"inherit"};
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${AC}66`,borderRadius:16,width:"100%",maxWidth:560,maxHeight:"92vh",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:2}}>
+        <div style={{fontSize:16,fontWeight:900,flex:1}}>Ficha do serviço</div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+      </div>
+      <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>{task.label}. Vira uma página dedicada no PDF do orçamento.</div>
+      <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingRight:2}}>
+        <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12.5,color:B.gray200,cursor:"pointer"}}><input type="checkbox" checked={on} onChange={e=>setOn(e.target.checked)}/> Exibir como página de detalhamento no orçamento</label>
+        {SPEC_SECTIONS.map(x=><div key={x.k}>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:AC,marginBottom:5}}>{x.label}</div>
+          <textarea value={vals[x.k]} onChange={e=>setVals(v=>({...v,[x.k]:e.target.value}))} placeholder={x.hint} style={{...ta,minHeight:(x.k==="prazo"||x.k==="garantia")?40:78}}/>
+        </div>)}
+        <div>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:AC,marginBottom:5}}>Fotos de referência (opcional)</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {photos.map((u,i)=><div key={u} style={{position:"relative",width:74,height:74,borderRadius:8,overflow:"hidden",border:`1px solid ${B.gray600}`}}>
+              <img src={u} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              <button onClick={()=>setPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:9,border:"none",background:"rgba(0,0,0,.7)",color:"#fff",fontSize:11,cursor:"pointer",lineHeight:1}}>✕</button>
+            </div>)}
+            {photos.length<8&&<label style={{width:74,height:74,borderRadius:8,border:`1px dashed ${B.gray500}`,display:"flex",alignItems:"center",justifyContent:"center",color:B.gray400,fontSize:11,textAlign:"center",cursor:"pointer"}}>
+              {busy?"Enviando…":"+ foto"}<input type="file" accept="image/*" multiple onChange={up} style={{display:"none"}}/>
+            </label>}
+          </div>
+        </div>
+        {err&&<div style={{fontSize:11,color:B.red}}>{err}</div>}
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:14}}>
+        <button onClick={onClose} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${B.gray600}`,background:"none",color:B.gray300,fontWeight:700,cursor:"pointer"}}>Cancelar</button>
+        <button disabled={busy} onClick={()=>{ const spec=Object.fromEntries(SPEC_SECTIONS.map(x=>[x.k,vals[x.k].trim()])); onSave({featured:on&&SPEC_SECTIONS.some(x=>spec[x.k]),spec,specPhotos:photos}); onClose(); }} style={{flex:2,padding:"10px",borderRadius:9,border:"none",background:AC,color:"#fff",fontWeight:800,cursor:"pointer",opacity:busy?.6:1}}>Salvar ficha</button>
+      </div>
+    </div>
+  </div>,document.body);
+}
+
 const _mlBridge={assign:null};
 // Escolhe, entre as compras do Mercado Livre ainda sem destino, uma peça para lançar neste serviço
 function MLPickForTaskModal({task,onClose}) {

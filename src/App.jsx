@@ -1927,7 +1927,7 @@ async function renderElegantQuote(o) {
       ymax=Math.max(ymax,yy); cx+=col.w;
     });
     y=ymax+9; hair(y,line,0.2); y+=9;
-    const contHead=()=>{ doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F"); cap(divisionName,mx,30,7.5,ink); cap(`${String(t.label||"").slice(0,70)}  ·  continuação`,W-mx,30,7,gray,{align:"right"}); y=44; };
+    const contHead=()=>{ doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F"); cap(divisionName,mx,30,7.5,ink); cap("Continuação",W-mx,30,7,gray,{align:"right"}); { let tl=String(t.label||"").toUpperCase(); doc.setFont("helvetica","normal"); doc.setFontSize(6.5); while(tl.length>8&&doc.getTextWidth(tl)+0.8*tl.length>cw){ tl=tl.slice(0,-2); } if(tl!==String(t.label||"").toUpperCase()) tl=tl.trimEnd()+"…"; cap(tl,mx,35,6.5,gray); } y=46; };
     const needF=h=>{ if(y+h>H-24){ doc.addPage(); contHead(); } };
     const para=(txtv,gap=2.6)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.splitTextToSize(txtv,cw).forEach(l=>{ needF(6); txt(l,mx,y,{s:10,c:body}); y+=5.4; }); y+=gap; };
     const bullet=(txtv,mark,gap=1.4)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); const lines=doc.splitTextToSize(txtv,cw-10); needF(lines.length*5.2+2);
@@ -13642,7 +13642,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.18.186";
+const APP_VERSION = "2026.11.18.187";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

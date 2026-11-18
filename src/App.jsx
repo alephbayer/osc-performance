@@ -2150,8 +2150,23 @@ async function renderElegantQuote(o) {
     cap("De acordo — cliente",mx,y+4.5,6.5,gray); cap("Data",W-mx-50,y+4.5,6.5,gray);
   }
 
+  // Página de fechamento (propostas com serviços em destaque): assinatura da marca centralizada
+  let closePg=0;
+  if(featList.length){
+    doc.addPage(); closePg=doc.getNumberOfPages();
+    const cx=W/2, cy=H/2-8;
+    try{
+      const lg=await pdfImg("/osc-group-logo-light.png"); const lw=78, lh=lw*lg.h/lg.w;
+      doc.addImage(lg.d,lg.fmt,cx-lw/2,cy-lh/2,lw,lh);
+    }catch(e){ doc.setFont("helvetica","bold"); doc.setFontSize(26); doc.setTextColor(...ink); doc.text("OSC GROUP",cx,cy,{align:"center",charSpace:3}); }
+    doc.setFillColor(...accent); doc.rect(cx-5,cy+16,10,0.9,"F");
+    const cc=(t,yy,sz,c,cs)=>{doc.setFont("helvetica","normal");doc.setFontSize(sz);doc.setTextColor(...c);const tx=String(t).toUpperCase();const wd=doc.getTextWidth(tx)+cs*(tx.length-1); doc.text(tx,cx-wd/2,yy,{charSpace:cs});};
+    cc("Performance  ·  Finishing Division",cy+27,7.5,ink,2.4);
+    if(company?.address) cc(company.address,cy+40,6.5,gray,1.2);
+    const ph=company?.phone?fmtPh(company.phone):""; if(ph) cc(ph,cy+46,6.5,gray,1.2);
+  }
   // Rodapé de cada página
-  const total=doc.getNumberOfPages();
+  const total=doc.getNumberOfPages()-(closePg?1:0);
   for(let pg=1;pg<=total;pg++){ doc.setPage(pg); hair(H-16); cap(divisionName,mx,H-10,6.5,gray); cap(`Página ${pg} / ${total}`,W-mx,H-10,6.5,gray,{align:"right"}); }
   doc.save(fileName);
 }
@@ -13581,7 +13596,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.173";
+const APP_VERSION = "2026.11.17.174";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

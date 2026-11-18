@@ -145,11 +145,11 @@ async function linkOrders() {
   const now = new Date().toISOString();
   for (const { it, c } of pairs) {
     const patch: Record<string, unknown> = { link_type: c.type, link_id: c.id, link_label: String(c.name || "").slice(0, 120) };
-    // pedido feito para um veículo: a peça já nasce destinada a ele (pedido avulso fica sem destino até a entrega)
+    // pedido feito para um veículo: o carro/serviço fica só como SUGESTÃO; o destino é confirmado pelo admin/gestor
     if (c.type === "po" && c.po?.vehicle_id && !it.destination) {
       const v = (vs || []).find((x: any) => x.id === c.po.vehicle_id);
       const tk = (ts || []).find((x: any) => x.id === c.po.task_id);
-      Object.assign(patch, { destination: "vehicle", vehicle_id: c.po.vehicle_id, vehicle_label: v ? `${v.model || ""} · ${v.plate || ""}`.trim() : null, task_id: c.po.task_id ? String(c.po.task_id) : null, task_label: tk?.label || null, assigned_by: "Pedido de compra", assigned_at: now });
+      Object.assign(patch, { suggest_vehicle_id: c.po.vehicle_id, suggest_vehicle_label: v ? `${v.model || ""} · ${v.plate || ""}`.trim() : null, suggest_task_id: c.po.task_id ? String(c.po.task_id) : null, suggest_task_label: tk?.label || null });
     }
     await sb.from("ml_purchase_items").update(patch).eq("id", it.id).is("link_type", null);
   }

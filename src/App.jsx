@@ -7390,8 +7390,8 @@ function VehiclePicker({value,onChange,vehicles,clients=[]}) {
 }
 function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) {
   const [mode,setMode]=useState("vehicle");
-  const [vid,setVid]=useState("");
-  const [tid,setTid]=useState("");
+  const [vid,setVid]=useState(()=>(vehicles||[]).some(v=>v.id===item.suggest_vehicle_id)?item.suggest_vehicle_id:"");
+  const [tid,setTid]=useState(()=>{ const t=(tasks||[]).find(x=>String(x.id)===String(item.suggest_task_id)&&x.vehicleId===item.suggest_vehicle_id); return t?t.id:""; });
   const [markup,setMarkup]=useState("50");
   const [qtyStr,setQtyStr]=useState(String(item.qty||1));
   const [unitsStr,setUnitsStr]=useState(String(item.qty||1));
@@ -7690,6 +7690,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         <span style={{fontSize:11,fontWeight:700,color:col,background:`${col}1f`,borderRadius:99,padding:"2px 9px"}}>{done?"Devolução concluída":i.return_deadline?(dd<0?`prazo venceu há ${-dd}d`:dd===0?"devolver até hoje":`devolver até ${fmtS(i.return_deadline+"T12:00:00-03:00")} · ${dd}d`):"sem prazo definido"}</span>
         <span style={{fontSize:11,color:B.gray400}}>{RET_ST[i.return_status||"todo"]}</span>
       </div>); })()}
+      {isPending&&i.suggest_vehicle_id&&<div style={{fontSize:11,color:"#2aa5b5",marginTop:4,wordBreak:"break-word"}}>Sugestão do pedido: {i.suggest_vehicle_label||"carro"}{i.suggest_task_label?` · ${i.suggest_task_label}`:""} · confirme em Destinar</div>}
       {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}>🔗 {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
@@ -13642,7 +13643,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.18.188";
+const APP_VERSION = "2026.11.18.189";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17724,7 +17725,7 @@ export default function App() {
           const addedPO=patch.materials.filter(nm=>nm&&nm.purchaseOrderId&&!oldM.some(om=>om.purchaseOrderId===nm.purchaseOrderId));
           if(addedPO.length){
             const tk=tasks.find(x=>x.id===id), vh=vehicles.find(x=>x.id===tk?.vehicleId);
-            if(vh) for(const nm of addedPO){ await db.syncMLByLink("po",nm.purchaseOrderId,{destination:"vehicle",vehicle_id:vh.id,vehicle_label:`${vh.model||""} · ${vh.plate||""}`.trim(),task_id:String(id),task_label:tk?.label||null,assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }
+            if(vh) for(const nm of addedPO){ await db.syncMLByLink("po",nm.purchaseOrderId,{suggest_vehicle_id:vh.id,suggest_vehicle_label:`${vh.model||""} · ${vh.plate||""}`.trim(),suggest_task_id:String(id),suggest_task_label:tk?.label||null}); }
           }
         }catch(e){ console.warn("ml release",e); }
       }
@@ -18091,7 +18092,7 @@ export default function App() {
             const newList=[...existing,newPart];
             setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
             try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}
-            try{ await db.syncMLByLink("po",o.id,{destination:"vehicle",vehicle_id:v.id,vehicle_label:`${v.model||""} · ${v.plate||""}`.trim(),assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }catch(e){ console.warn("ml sync reserve",e); }
+            try{ await db.syncMLByLink("po",o.id,{suggest_vehicle_id:v.id,suggest_vehicle_label:`${v.model||""} · ${v.plate||""}`.trim()}); }catch(e){ console.warn("ml sync reserve",e); }
           };
   // Recebimento do ML NÃO é mais automático: só roda quando admin/gestor confirma o item (onlyId) após conferir o material
   mlRecvFn.current=async(onlyId)=>{

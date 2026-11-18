@@ -1420,7 +1420,7 @@ const taskCost=(t,defaultRate)=>{
 
 // Ficha detalhada do serviço (página dedicada no PDF do orçamento)
 const SPEC_SECTIONS=[
-  {k:"escopo",label:"Escopo do trabalho",hint:"O que será feito, em linhas curtas (uma por linha) ou em um parágrafo"},
+  {k:"escopo",label:"Escopo do trabalho",hint:"Descreva o trabalho em texto corrido. Linha em branco separa parágrafos"},
   {k:"etapas",label:"Etapas",hint:"Uma etapa por linha, na ordem em que acontecem"},
   {k:"materiais",label:"Materiais e acabamento",hint:"Um item por linha: tintas, verniz, peças, acabamentos"},
   {k:"prazo",label:"Prazo estimado",hint:"Ex.: 15 a 20 dias úteis"},
@@ -2045,8 +2045,8 @@ async function renderElegantQuote(o) {
       const items=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean);
       need(16); cap(sec.label,mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
       doc.setFont("helvetica","normal"); doc.setFontSize(10);
-      if(items.length===1){
-        doc.splitTextToSize(items[0],cw).forEach(l=>{ need(6); txt(l,mx,y,{s:10,c:body}); y+=5.2; });
+      if(sec.k==="escopo"||items.length===1){
+        items.forEach((par,pi)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.splitTextToSize(par,cw).forEach(l=>{ need(6); txt(l,mx,y,{s:10,c:body}); y+=5.4; }); if(pi<items.length-1) y+=2.6; });
       } else {
         items.forEach((it,ix)=>{
           const lines=doc.splitTextToSize(it,cw-10);
@@ -13506,7 +13506,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.167";
+const APP_VERSION = "2026.11.17.168";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14169,7 +14169,7 @@ function TaskSpecModal({task,onSave,onClose}) {
         <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12.5,color:B.gray200,cursor:"pointer"}}><input type="checkbox" checked={on} onChange={e=>setOn(e.target.checked)}/> Exibir como página de detalhamento no orçamento</label>
         {SPEC_SECTIONS.map(x=><div key={x.k}>
           <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:AC,marginBottom:5}}>{x.label}</div>
-          <textarea value={vals[x.k]} onChange={e=>setVals(v=>({...v,[x.k]:e.target.value}))} placeholder={x.hint} style={{...ta,minHeight:(x.k==="prazo"||x.k==="garantia")?40:78}}/>
+          <textarea value={vals[x.k]} onChange={e=>setVals(v=>({...v,[x.k]:e.target.value}))} placeholder={x.hint} style={{...ta,minHeight:(x.k==="prazo"||x.k==="garantia")?40:(x.k==="escopo"?150:78)}}/>
         </div>)}
         <div>
           <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:AC,marginBottom:5}}>Fotos de referência (opcional)</div>

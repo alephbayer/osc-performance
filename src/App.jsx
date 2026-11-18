@@ -13506,7 +13506,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.165";
+const APP_VERSION = "2026.11.17.166";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14151,8 +14151,8 @@ function TaskSpecModal({task,onSave,onClose}) {
     try{ const urls=[]; for(const f of fs.slice(0,8-photos.length)) urls.push(await uploadImg(f,"specs")); setPhotos(p=>[...p,...urls]); }catch(er){ setErr(errMsg(er)||"Erro no upload"); } setBusy(false); };
   const AC="#a855f7";
   const ta={width:"100%",boxSizing:"border-box",minHeight:62,padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,lineHeight:1.45,outline:"none",resize:"vertical",fontFamily:"inherit"};
-  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${AC}66`,borderRadius:16,width:"100%",maxWidth:560,maxHeight:"92vh",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:"calc(env(safe-area-inset-top) + 56px) 16px calc(env(safe-area-inset-bottom) + 24px)",boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${AC}66`,borderRadius:16,width:"100%",maxWidth:560,maxHeight:"100%",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:2}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Ficha do serviço</div>
         <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
@@ -14205,8 +14205,8 @@ function MLPickForTaskModal({task,onClose}) {
       onClose();
     }catch(e){ setErr(errMsg(e)||"Erro ao vincular"); setBusy(false); }
   };
-  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${ML}66`,borderRadius:16,width:"100%",maxWidth:480,maxHeight:"90vh",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:"calc(env(safe-area-inset-top) + 56px) 16px calc(env(safe-area-inset-bottom) + 24px)",boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${ML}66`,borderRadius:16,width:"100%",maxWidth:480,maxHeight:"100%",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:4}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Peça do Mercado Livre</div>
         <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>

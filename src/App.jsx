@@ -2041,6 +2041,7 @@ async function renderElegantQuote(o) {
     group.forEach(t=>{
       const c=taskCost(t,defaultRate);
       laborTotal+=c.labor; partsTotal+=c.mat; freightTotal+=c.freight||0;
+      if(oneLine) return;
       const rate=t.ratePerHour!=null?Number(t.ratePerHour):Number(defaultRate||0);
       const mats=(t.materials||[]).filter(m=>m.name);
       doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
@@ -2131,8 +2132,15 @@ async function renderElegantQuote(o) {
   if(importTot>0) tl("Peças importadas",importTot);
   if(osDiscountAmt>0) tl(discLabel,osDiscountAmt,true);
   if(closingDisc>=0.01) tl("Desconto após o fechamento",closingDisc,true);
+  if(oneLine){
+    y+=2; hair(y,ink,0.35); y+=8;
+    cap("Serviço contratado",mx,y,6.5,gray); cap("Total geral",W-mx,y,6.5,gray,{align:"right"}); y+=12;
+    serif(doc.splitTextToSize(String(ts[0].label||""),cw-80)[0],mx,y,15); serif(R(grandTotal),cT,y+1,22,{align:"right"}); y+=7;
+    hair(y,line,0.2); y+=6;
+  } else {
   y+=1; hair(y,ink,0.35,bx,W-mx); y+=9;
   cap("Total geral",bx,y,7.5,ink); serif(R(grandTotal),cT,y+1,22,{align:"right"}); y+=12;
+  }
   if(closingDisc>=0.01){ const nl=doc.splitTextToSize(`Desconto concedido após o fechamento da OS: ${o.closingNote}`,80); need(nl.length*3.6+4); doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...gray); nl.forEach(l=>{ doc.text(l,W-mx,y-3,{align:"right"}); y+=3.6; }); y+=2; }
 
   // Pagamentos
@@ -2171,7 +2179,7 @@ async function renderElegantQuote(o) {
   const fl=doc.splitTextToSize(featList.length?"Escopo conforme detalhamento das páginas anteriores. Alterações de escopo serão previamente acordadas com o cliente.":"Este orçamento é uma estimativa e pode sofrer alterações conforme a necessidade do serviço executado.",cw);
   doc.text(fl,mx,y); y+=fl.length*4+2; if(!featList.length) doc.text(tagline,mx,y);
   if(featList.length){
-    need(30); y+=28;
+    need(30); y=Math.max(y+28,H-24-30);
     doc.setDrawColor(...ink); doc.setLineWidth(0.25); doc.line(mx,y,mx+78,y); doc.line(W-mx-50,y,W-mx,y);
     cap("De acordo — cliente",mx,y+4.5,6.5,gray); cap("Data",W-mx-50,y+4.5,6.5,gray);
   }
@@ -13621,7 +13629,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.17.178";
+const APP_VERSION = "2026.11.17.179";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

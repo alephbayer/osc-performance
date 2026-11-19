@@ -2,6 +2,12 @@
 
 Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize ao terminar** (marque feito, acrescente o que surgir). Assim nada depende da memória da conversa.
 
+## Em andamento: levar o desenvolvimento para o Claude Code no Mac
+- [ ] Instalar o Claude Code no Mac e abrir `~/osc-performance`
+- [ ] Conectar GitHub (poder dar push), Supabase e Vercel no Claude Code do Mac
+- [ ] Primeira tarefa de teste pequena, conferindo o fluxo do `CLAUDE.md`
+- [ ] Depois: criar a pasta de análise de orçamentos antigos, **fora** deste repositório (ele é público); sugestão `~/OSC/orcamentos` com `originais/`, `dados/`, `analises/`
+
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor
 - [ ] Subir o backup (zip de `backup-AAAA-MM-DD/`) para o local privado e confirmar

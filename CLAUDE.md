@@ -20,6 +20,7 @@ Sistema da oficina OSC Group (OSC Performance + OSC Finishing Division). A empre
 ## Fluxo de cada mudança (obrigatório)
 1. Editar o código.
 2. **Registrar no changelog** (ver abaixo) e **subir a versão** (formato `AAAA.MM.DD.N`) nos 3 lugares: `src/App.jsx` (`APP_VERSION`), `index.html`, `public/version.json`. Ex.: `sed -i "s/2026.11.19.193/2026.11.19.194/g" src/App.jsx index.html public/version.json`.
+   - **No macOS** o `sed -i` exige aspas vazias: `sed -i '' "s/ANTIGA/NOVA/g" src/App.jsx index.html public/version.json`.
 3. `npm run build` — tem que passar.
 4. `git add -A && git commit` (mensagem em português, curta e objetiva) e `git push origin HEAD:main` (com retry se falhar).
 5. Avisar o Aleph para **fechar e reabrir o app** para atualizar.
@@ -48,6 +49,7 @@ Sistema da oficina OSC Group (OSC Performance + OSC Finishing Division). A empre
 
 ## PDFs de orçamento
 - Motor: `renderElegantQuote` em `App.jsx` (jsPDF 2.5.1, A4 em mm, margem 20). Compartilhado por Performance e Finishing; modo "Ficha" (`featList`) gera capa sem valores → detalhamento por serviço → investimento e condições → aceite → página de fechamento com o logo.
+- (macOS: o `pdftoppm` vem do `poppler`: `brew install poppler`.)
 - **Teste sem abrir o app:** `npm i --no-save jspdf@2.5.1 && node scripts/pdf-test.cjs saida.pdf`, depois `pdftoppm -r 70 -png saida.pdf pag` e **olhe cada página**. Teste Performance e Finishing, prazo curto e longo.
 - Regras fixas: observação de que prazos e valores podem variar; **não alterar os nomes das contas/formas de pagamento**; peças importadas com nota explicando o cálculo (câmbio, impostos, frete, taxa do importador, garantia de recebimento); cliente não vê cotação nem percentuais, só valor na moeda original e valor final em reais; só serviços cobrados aparecem (tarefa sem valor é interna; garantia aparece como cortesia).
 

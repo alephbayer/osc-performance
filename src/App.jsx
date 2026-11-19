@@ -2124,6 +2124,7 @@ async function renderElegantQuote(o) {
         if(ph.length){ need(32); y+=3; let px=mx+4; for(const u of ph){ try{ const img=await loadImageBase64(u); doc.addImage(img,"JPEG",px,y,28,28); px+=30; }catch{} } y+=29; }
       }
       imps.forEach(p=>row(p.name||"Peça importada",`Peça importada  ·  ${nf(p.amount)} ${p.cur||"USD"}  ·  ${p.arrived?"Chegou":"A caminho"}`,importFinal(p)));
+      if(imps.length){ doc.setFont("helvetica","italic"); doc.setFontSize(7.5); const nl=doc.splitTextToSize("Peças importadas: o valor final de cada peça é calculado com base no câmbio, nos impostos, no frete, na taxa do importador e na garantia de recebimento do material.",cw-8); need(nl.length*3.8+6); y+=5; doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...gray); nl.forEach(l=>{ doc.text(l,mx+4,y); y+=3.8; }); }
     }
   }
 
@@ -13660,7 +13661,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.19.192";
+const APP_VERSION = "2026.11.19.193";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

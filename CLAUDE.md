@@ -2,6 +2,9 @@
 
 Sistema da oficina OSC Group (OSC Performance + OSC Finishing Division). A empresa inteira roda aqui: OSs, clientes, estoque, compras, financeiro, portal do cliente. **Trate cada mudança como produção.**
 
+## Antes de começar
+- **Leia `PENDENCIAS.md`** (o que ficou em aberto) e atualize-o ao terminar. Uma conversa por assunto: o contexto vem deste arquivo, não da memória do chat.
+
 ## Quem e como
 - Dono/operador e desenvolvedor: Aleph. Fala português; quer respostas **curtas e diretas**.
 - Estética: minimalista, tipografia espaçada, fontes finas, **fonte menor antes de mexer em espaçamento**, ícones de traço (stroke), **sem emojis na interface**.

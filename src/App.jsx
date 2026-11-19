@@ -1836,8 +1836,16 @@ async function renderElegantQuote(o) {
   const need=h=>{ if(y+h>H-24){ doc.addPage(); y=22; if(inTable) tableHeader(); } };
 
   const featList=(ts||[]).filter(t=>t.featured&&specHasContent(t));
+  // Prazo: resumo curto (cláusulas até ~60 caracteres) + restante, que vai para "Prazo — condições"
+  const prazoSplit=raw=>{
+    const lines=String(raw||"").trim().split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    const first=lines[0]||""; const cl=first.split(/(?<=,)\s+/); let sh="", i=0;
+    while(i<cl.length){ sh+=(sh?" ":"")+cl[i]; i++; if(sh.replace(/,$/,"").length>=60) break; }
+    let rest=cl.slice(i).join(" ").trim(); if(rest) rest=rest.charAt(0).toUpperCase()+rest.slice(1);
+    return { short:sh.replace(/[,;]\s*$/,"").replace(/\.$/,""), rest:[rest,...lines.slice(1)].filter(Boolean) };
+  };
   // Cabeçalho
-  const lockM=featList.length?(perf?[null,"OSC Performance"]:/^OSC\s+(.+)$/i.exec(String(divisionName||"").trim())):null; // capa tipográfica: OSC GROUP + nome da divisão em destaque
+  const lockM=featList.length?(perf?[null,"Performance Division"]:/^OSC\s+(.+)$/i.exec(String(divisionName||"").trim())):null; // capa tipográfica: OSC GROUP + nome da divisão em destaque
   const fmtPh=v=>{ const d=String(v||"").replace(/\D/g,""); const n=(d.length>=12&&d.startsWith("55"))?d.slice(2):d; return n.length===11?`(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`:n.length===10?`(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`:String(v||""); };
   const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,company?.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ·   ");
   const colR=mx+cw/2+4;
@@ -1912,20 +1920,21 @@ async function renderElegantQuote(o) {
     doc.splitTextToSize(String(t.label||""),cw).slice(0,4).forEach(l=>{ serif(l,mx,y,23); y+=10; });
     y+=1; doc.setFillColor(...accent); doc.rect(mx,y,10,0.9,"F"); y+=10;
     // Faixa de resumo: investimento · prazo · garantia
-    const prazoTxt=String(sp.prazo||"").trim().split(/\n+/)[0];
+    const prazoTxt=prazoSplit(sp.prazo).short; const prazoRest=prazoSplit(sp.prazo).rest;
     const garTxt=String(sp.garantia||"").trim().split(/\n+/)[0];
     const garShort=garTxt?(garTxt.split(/(?<=[.;])\s/)[0]||garTxt):"";
-    const cols=[]; if(prazoTxt) cols.push({k:"Prazo estimado",w:cw*0.30}); if(garShort) cols.push({k:"Garantia",w:cw*0.70});
+    const cols=[]; if(prazoTxt) cols.push({k:"Prazo estimado",w:cw*0.44}); if(garShort) cols.push({k:"Garantia",w:cw*0.56});
     const sum=cols.reduce((a,x)=>a+x.w,0)||1; cols.forEach(x=>x.w=x.w*cw/sum);
     let cx=mx, ytop=y, ymax=y;
     cols.forEach((col,ci)=>{
       cap(col.k,cx,ytop,6.5,gray); let yy=ytop+8;
       if(col.k==="Investimento"){ serif(R(c.total),cx,yy,20,{},accentText); yy+=disc?6:0; if(disc) txt(`Valor original ${R(c.total+c.discount)}  ·  desconto ${R(c.discount)}`,cx,yy,{s:7,c:gray}); }
-      else if(col.k==="Prazo estimado"){ doc.setFont("times","normal"); doc.setFontSize(13); doc.splitTextToSize(prazoTxt,col.w-6).slice(0,3).forEach(l=>{ serif(l,cx,yy,13); yy+=5.6; }); yy-=5.6; }
+      else if(col.k==="Prazo estimado"){ doc.setFont("times","normal"); doc.setFontSize(13); doc.splitTextToSize(prazoTxt,col.w-8).slice(0,4).forEach(l=>{ serif(l,cx,yy,13); yy+=5.6; }); yy-=5.6; }
       else { doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.splitTextToSize(garShort,col.w-4).slice(0,4).forEach(l=>{ txt(l,cx,yy-1,{s:9.5,c:body}); yy+=4.9; }); yy-=5; }
       if(ci>0){ doc.setDrawColor(...line); doc.setLineWidth(0.2); doc.line(cx-4,ytop-3,cx-4,Math.max(ytop+14,yy+3)); }
       ymax=Math.max(ymax,yy); cx+=col.w;
     });
+    if(prazoRest.length){ doc.setFont("helvetica","italic"); doc.setFontSize(8.5); doc.setTextColor(...gray); let ny=ymax+8; doc.splitTextToSize(prazoRest.join(" "),cw).forEach(l=>{ doc.text(l,mx,ny); ny+=4.2; }); ymax=ny-4.2; }
     y=ymax+9; hair(y,line,0.2); y+=9;
     const contHead=()=>{ doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F"); cap(divisionName,mx,30,7.5,ink); cap("Continuação",W-mx,30,7,gray,{align:"right"}); { let tl=String(t.label||"").toUpperCase(); doc.setFont("helvetica","normal"); doc.setFontSize(6.5); while(tl.length>8&&doc.getTextWidth(tl)+0.8*tl.length>cw){ tl=tl.slice(0,-2); } if(tl!==String(t.label||"").toUpperCase()) tl=tl.trimEnd()+"…"; cap(tl,mx,35,6.5,gray); } y=46; };
     const needF=h=>{ if(y+h>H-24){ doc.addPage(); contHead(); } };
@@ -1934,7 +1943,7 @@ async function renderElegantQuote(o) {
       if(mark==="–") txt("–",mx+1,y,{s:10,c:accentText}); else txt(mark,mx,y,{b:true,s:8.5,c:accentText});
       lines.forEach(l=>{ txt(l,mx+10,y,{s:10,c:body}); y+=5.2; }); y+=gap; };
     for(const sec of SPEC_SECTIONS){
-      if(sec.k==="prazo") continue; // já está na faixa de resumo
+      if(sec.k==="prazo") continue; // resumo na faixa; o restante vai em nota logo abaixo dela
       const raw=String(sp[sec.k]||"").trim(); if(!raw) continue;
       let items=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean);
       if(sec.k==="garantia"&&garShort&&items.length){ const rem=items[0].startsWith(garShort)?items[0].slice(garShort.length).trim():items[0]; items=rem?[rem,...items.slice(1)]:items.slice(1); if(!items.length) continue; }
@@ -1943,7 +1952,7 @@ async function renderElegantQuote(o) {
         const hs=items.map(it=>doc.splitTextToSize(it,cw-10).length*5.2+1.6); const tot=14+hs.reduce((x,z)=>x+z,0);
         if(y+tot>H-24){ let acc=14+y, k=0; while(k<items.length&&acc+hs[k]<=H-24){ acc+=hs[k]; k++; } const r=items.length-k;
           if(k<4||items.length<8){ if(tot<H-24-44){ doc.addPage(); contHead(); } } else if(r>0&&r<4) breakAt=items.length-4; } }
-      needF(30); cap(sec.k==="garantia"?"Garantia — condições":sec.label,mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
+      needF(30); cap(sec.k==="garantia"?"Garantia — condições":sec.k==="prazo"?"Prazo — condições":sec.label,mx,y,7,accentText); y+=3.5; hair(y,line,0.2); y+=6;
       if(sec.k==="escopo"){
         let prevB=false, afterColon=false;
         items.forEach((it,ix)=>{ const explicit=/^[-–•*]\s+/.test(it); const auto=!explicit&&afterColon&&it.length<=90&&!/[.!?]$/.test(it); const isB=explicit||auto; if(!isB) afterColon=/:$/.test(it);
@@ -1982,32 +1991,37 @@ async function renderElegantQuote(o) {
       const isF=t.featured&&specHasContent(t);
       const lns=isF?String((t.spec&&t.spec.escopo)||"").split(/\n+/).map(x=>x.trim()).filter(Boolean):[];
       const first=isF?String(lns.find(x=>!/^[-–•*]\s+/.test(x))||lns[0]||"").replace(/:$/,"").replace(/\s+(das|dos|nas|nos|as|os)\s+seguintes\s+\S+$/i,"").replace(/[,;]\s*$/,"")+(lns.length?".":""):"";
-      const prazoC=isF?String((t.spec&&t.spec.prazo)||"").split(/\n+/)[0].trim():"";
+      const prazoC=isF?prazoSplit(t.spec&&t.spec.prazo).short:"";
       doc.setFont("helvetica","bold"); doc.setFontSize(10.5);
       const tl=doc.splitTextToSize(t.label,cw-14);
       doc.setFont("helvetica","normal"); doc.setFontSize(9);
-      const fl=first?doc.splitTextToSize(first,cw-14).slice(0,2):[];
-      need(tl.length*5.4+fl.length*4.8+(prazoC?9:0)+10);
+      const flAll=first?doc.splitTextToSize(first,cw-14):[]; const fl=flAll.slice(0,2);
+      if(flAll.length>2){ let l2=fl[1].replace(/[\s,;.:]+$/,""); while(l2.length>8&&doc.getTextWidth(l2+"…")>cw-14) l2=l2.replace(/\s*\S+$/,""); fl[1]=l2+"…"; }
+      doc.setFont("helvetica","normal"); doc.setFontSize(9); const pzL=prazoC?doc.splitTextToSize(prazoC,cw-14-38).slice(0,2):[];
+      need(tl.length*5.4+fl.length*4.8+(pzL.length?4.4*pzL.length+3:0)+10);
       txt(String(ix+1).padStart(2,"0"),mx,y,{b:true,s:8.5,c:accentText});
       tl.forEach(l=>{ txt(l,mx+14,y,{b:true,s:10.5,c:ink}); y+=5.4; });
       fl.forEach(l=>{ txt(l,mx+14,y,{s:9,c:body}); y+=4.8; });
-      if(prazoC){ y+=1.5; cap("Prazo estimado",mx+14,y,6,gray); txt(prazoC,mx+14+38,y,{s:9,c:ink}); y+=4; }
+      if(pzL.length){ y+=1.5; cap("Prazo estimado",mx+14,y,6,gray); pzL.forEach((l,li)=>{ txt(l,mx+14+38,y,{s:9,c:ink}); if(li<pzL.length-1) y+=4.4; }); y+=4; }
       y+=5;
     });
     y+=2; need(16);
     doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray);
     doc.splitTextToSize("Cada serviço é detalhado nas páginas seguintes. O investimento total e as condições de pagamento estão na última página.",cw).forEach(l=>{ doc.text(l,mx,y); y+=4; });
     { const fts=allSv.filter(t=>t.featured&&specHasContent(t)); const one=fts.length===1?fts[0]:null;
-      const pz=one?String((one.spec&&one.spec.prazo)||"").split(/\n+/)[0].trim():""; const gr0=one?String((one.spec&&one.spec.garantia)||"").trim().split(/\n+/)[0]:""; const gr=gr0?(gr0.split(/(?<=[.;])\s/)[0]||gr0):"";
-      const cols=[{k:fts.length>1?"Serviços incluídos":"Serviço",v:String(allSv.length).padStart(2,"0")}]; if(pz) cols.push({k:"Prazo estimado",v:pz}); if(gr) cols.push({k:"Garantia",v:gr,small:true});
-      const wts=cols.map(c=>c.small?2.4:(c.k==="Prazo estimado"?1.3:0.7)); const tw=wts.reduce((a,b)=>a+b,0); let cx0=mx;
-      doc.setFont("helvetica","normal"); doc.setFontSize(9); const nG=cols.some(c=>c.small)?Math.min(3,doc.splitTextToSize((cols.find(c=>c.small)||{v:""}).v,cw*2.4/tw-8).length):1; const sh=Math.max(27,17+(nG-1)*4.6+10); const sy=Math.min(y+16,H-30-sh); const bot=sy+sh;
+      const pz=one?prazoSplit(one.spec&&one.spec.prazo).short:""; const gr0=one?String((one.spec&&one.spec.garantia)||"").trim().split(/\n+/)[0]:""; const gr=gr0?(gr0.split(/(?<=[.;])\s/)[0]||gr0):"";
+      const pzLong=pz.length>20;
+      const cols=[{k:fts.length>1?"Serviços incluídos":"Serviço",v:String(allSv.length).padStart(2,"0")}]; if(pz) cols.push({k:"Prazo estimado",v:pz,pz:true}); if(gr) cols.push({k:"Garantia",v:gr,small:true});
+      const wts=cols.map(c=>c.small?(pzLong?2.0:2.4):(c.pz?(pzLong?1.9:1.3):(pzLong?0.6:0.7))); const tw=wts.reduce((a,b)=>a+b,0); let cx0=mx;
+      cols.forEach((c,ci)=>{ const w=cw*wts[ci]/tw; if(c.small){ doc.setFont("helvetica","normal"); doc.setFontSize(9); c.ls=doc.splitTextToSize(c.v,w-8).slice(0,3); } else if(c.pz&&pzLong){ doc.setFont("times","normal"); doc.setFontSize(11.5); c.ls=doc.splitTextToSize(c.v,w-8).slice(0,3); } });
+      const nG=Math.max(1,...cols.map(c=>(c.ls||[]).length)); const sh=Math.max(27,17+(nG-1)*4.8+7); const sy=Math.min(y+16,H-24-sh); const bot=sy+sh;
       if(sy>=y+12){
       hair(sy,ink,0.35);
       cols.forEach((c,ci)=>{ const w=cw*wts[ci]/tw; if(ci>0){ doc.setDrawColor(...line); doc.setLineWidth(0.2); doc.line(cx0-4,sy+6,cx0-4,bot-3); }
         cap(c.k,cx0,sy+9,6.5,gray);
-        if(c.small){ doc.setFont("helvetica","normal"); doc.setFontSize(9); const ls=doc.splitTextToSize(c.v,w-8).slice(0,3); ls.forEach((l,li)=>txt(l,cx0,sy+17+li*4.6,{s:9,c:body})); }
-        else { serif(doc.splitTextToSize(c.v,w-8)[0],cx0,sy+19,20); }
+        if(c.small){ c.ls.forEach((l,li)=>txt(l,cx0,sy+17+li*4.6,{s:9,c:body})); }
+        else if(c.pz&&pzLong){ c.ls.forEach((l,li)=>serif(l,cx0,sy+17+li*4.8,11.5)); }
+        else { let fs=20; doc.setFont("times","normal"); while(fs>11){ doc.setFontSize(fs); if(doc.getTextWidth(c.v)<=w-8) break; fs--; } serif(doc.splitTextToSize(c.v,w-8)[0],cx0,sy+19-(20-fs)*0.25,fs); }
         cx0+=w; });
       hair(bot,line,0.2);
       }
@@ -2050,7 +2064,7 @@ async function renderElegantQuote(o) {
       const mats=(t.materials||[]).filter(m=>m.name);
       doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
       const label=(t.outsourced?"[Terceirizado] ":"")+t.label;
-      const nl=doc.splitTextToSize(label,cQ-mx-30);
+      const nl=doc.splitTextToSize(label,mats.length?cQ-mx-30:cT-mx-36);
       let dl=[]; if(t.description){doc.setFont("helvetica","italic");doc.setFontSize(8);dl=doc.splitTextToSize(t.description,cQ-mx-30);}
       const matLines=mats.map(m=>{
         const qty=Number(m.qty||1), fr=Number(m.freight||0);
@@ -2161,7 +2175,7 @@ async function renderElegantQuote(o) {
   }
 
   // Formas de pagamento
-  need(52); y+=4; cap("Formas de pagamento",mx,y,6.5,gray); y+=3; hair(y); y+=6;
+  need(featList.length?110:52); y+=4; cap("Formas de pagamento",mx,y,6.5,gray); y+=3; hair(y); y+=6;
   const pms=[["Dinheiro / à vista",""],["PIX","Chave (CNPJ): 23.783.927/0001-40  ·  OSC Old School Customs"],["TED / DOC — Itaú","Ag: 6541  ·  CC: 98991-6  ·  OSC Enterprise Custom"],["Cartão — até 2× sem juros",""],["Cartão parcelado — até 18× com juros e taxas",""]];
   pms.forEach(([l,d])=>{ need(10); txt(l,mx+4,y,{b:true,s:8.5,c:ink}); y+=4.5; if(d){ txt(d,mx+4,y,{s:8}); y+=4.2; } y+=1.5; });
 
@@ -2178,12 +2192,12 @@ async function renderElegantQuote(o) {
   }
 
   // Nota final
-  need(featList.length?36:24); y+=6;
+  const pgBefore=doc.getNumberOfPages(); need(featList.length?36:24); const freshPg=doc.getNumberOfPages()>pgBefore; y+=6;
   doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray);
   const fl=doc.splitTextToSize(featList.length?"Escopo conforme detalhamento das páginas anteriores. Prazos e valores são estimativas e podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo; qualquer alteração será previamente comunicada e acordada com o cliente.":"Este orçamento é uma estimativa: prazos e valores podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo; qualquer alteração será previamente comunicada e acordada com o cliente.",cw);
   doc.text(fl,mx,y); y+=fl.length*4+2; if(!featList.length) doc.text(tagline,mx,y);
   if(featList.length){
-    need(30); y=Math.max(y+28,H-24-30);
+    need(30); y=(freshPg||y<110)?y+30:Math.max(y+28,H-24-30);
     doc.setDrawColor(...ink); doc.setLineWidth(0.25); doc.line(mx,y,mx+78,y); doc.line(W-mx-50,y,W-mx,y);
     cap("De acordo — cliente",mx,y+4.5,6.5,gray); cap("Data",W-mx-50,y+4.5,6.5,gray);
   }
@@ -13646,7 +13660,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.18.191";
+const APP_VERSION = "2026.11.19.192";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -16,12 +16,12 @@ Sistema da oficina OSC Group (OSC Performance + OSC Finishing Division). A empre
 
 ## Fluxo de cada mudança (obrigatório)
 1. Editar o código.
-2. **Subir a versão** (formato `AAAA.MM.DD.N`) nos 3 lugares: `src/App.jsx` (`APP_VERSION`), `index.html`, `public/version.json`. Ex.: `sed -i "s/2026.11.19.193/2026.11.19.194/g" src/App.jsx index.html public/version.json`.
+2. **Registrar no changelog** (ver abaixo) e **subir a versão** (formato `AAAA.MM.DD.N`) nos 3 lugares: `src/App.jsx` (`APP_VERSION`), `index.html`, `public/version.json`. Ex.: `sed -i "s/2026.11.19.193/2026.11.19.194/g" src/App.jsx index.html public/version.json`.
 3. `npm run build` — tem que passar.
 4. `git add -A && git commit` (mensagem em português, curta e objetiva) e `git push origin HEAD:main` (com retry se falhar).
 5. Avisar o Aleph para **fechar e reabrir o app** para atualizar.
 6. Dizer com honestidade o que foi verificado: normalmente **build e PDFs de teste, não o app ao vivo**.
-- `public/changelog.json` alimenta a tela de novidades do app; a última entrada é de 2026-10-29. Pergunte ao Aleph se quer voltar a mantê-lo.
+- **A cada mudança visível ao usuário, acrescente uma linha em `public/changelog.json`** (mais recente primeiro; agrupe por data de hoje; `type`: `feat` ou `fix`; texto curto em português, sem emoji, do ponto de vista de quem usa o app). O Aleph pediu para manter isso a cada mudança. Última atualização completa: 2026-11-19.
 
 ## Banco de dados
 - Mudanças de schema: migration via Supabase (`apply_migration`) **e** arquivo `migration_NNN_nome.sql` na raiz do repositório (a última é a 057). Migrations antigas (até ~039) nem todas refletem o banco real: a fonte de verdade é o banco.

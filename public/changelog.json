@@ -1,47 +1,176 @@
 [
   {
+    "date": "2026-11-19",
+    "changes": [
+      {
+        "type": "feat",
+        "text": "Orçamento em PDF: capa da Performance agora com o título Performance Division"
+      },
+      {
+        "type": "feat",
+        "text": "Orçamento em PDF: nota explicando que o valor final das peças importadas considera câmbio, impostos, frete, taxa do importador e garantia de recebimento"
+      },
+      {
+        "type": "fix",
+        "text": "Orçamento em PDF: prazo longo não é mais cortado nem sobrepõe a garantia; condições do prazo aparecem na página do serviço"
+      },
+      {
+        "type": "fix",
+        "text": "Orçamento em PDF: formas de pagamento, observação e assinatura ficam juntas na última página"
+      }
+    ]
+  },
+  {
+    "date": "2026-11-18",
+    "changes": [
+      {
+        "type": "feat",
+        "text": "Novo acesso Chefe de Pintura: acompanha os carros da Finishing, estoque e compras, sem ver valores"
+      },
+      {
+        "type": "feat",
+        "text": "Chefes de oficina veem as entregas do Mercado Livre (sem valores)"
+      },
+      {
+        "type": "feat",
+        "text": "Compra do Mercado Livre ligada a um pedido por link agora entra como sugestão de destino; o administrador confirma"
+      },
+      {
+        "type": "feat",
+        "text": "Produto lançado só para orçamento ganhou botão para dar baixa no estoque e cor própria quando já foi baixado"
+      },
+      {
+        "type": "feat",
+        "text": "Orçamento em PDF: capa tipográfica, página de fechamento com o logo OSC Group e observação fixa de prazos e valores"
+      },
+      {
+        "type": "feat",
+        "text": "Serviço em Ficha pode usar a categoria Projeto"
+      },
+      {
+        "type": "fix",
+        "text": "Janela Adicionar compra a um item existente não fica mais atrás da tela ao destinar uma peça"
+      }
+    ]
+  },
+  {
     "date": "2026-08-19",
     "changes": [
-      { "type": "feat", "text": "Agendamentos (pré-OS): planejamento de serviços, sinais e portal do cliente" },
-      { "type": "feat", "text": "Veículos em Teste: seção visual destacada acima dos mecânicos com botão Pronto" },
-      { "type": "feat", "text": "Veículos em Serviço: separador visual entre seções" },
-      { "type": "feat", "text": "Link de acompanhamento: status 'Em teste' antes de marcar Pronto" },
-      { "type": "feat", "text": "Link de acompanhamento: Pix com botão copiar e info de pagamento" },
-      { "type": "fix", "text": "PDF: aportes filtrados por veículo (não mais misturava pagamentos de outros clientes)" },
-      { "type": "fix", "text": "PDF: fuels e tows incluídos corretamente no histórico" }
+      {
+        "type": "feat",
+        "text": "Agendamentos (pré-OS): planejamento de serviços, sinais e portal do cliente"
+      },
+      {
+        "type": "feat",
+        "text": "Veículos em Teste: seção visual destacada acima dos mecânicos com botão Pronto"
+      },
+      {
+        "type": "feat",
+        "text": "Veículos em Serviço: separador visual entre seções"
+      },
+      {
+        "type": "feat",
+        "text": "Link de acompanhamento: status 'Em teste' antes de marcar Pronto"
+      },
+      {
+        "type": "feat",
+        "text": "Link de acompanhamento: Pix com botão copiar e info de pagamento"
+      },
+      {
+        "type": "fix",
+        "text": "PDF: aportes filtrados por veículo (não mais misturava pagamentos de outros clientes)"
+      },
+      {
+        "type": "fix",
+        "text": "PDF: fuels e tows incluídos corretamente no histórico"
+      }
     ]
   },
   {
     "date": "2026-08-18",
     "changes": [
-      { "type": "feat", "text": "Urgência de veículo: badge pulsando, borda vermelha e notificação push aos mecânicos" },
-      { "type": "feat", "text": "Especialidade de mecânico: auto-atribuição e remoção automática por categoria" },
-      { "type": "feat", "text": "Pedidos de veículos: etapa de aprovação pelo gestor antes do admin colocar link" },
-      { "type": "feat", "text": "Sinalizar link inválido nos pedidos de compras e veículos" },
-      { "type": "feat", "text": "Pedido de reposição de estoque com link e quantidade" },
-      { "type": "feat", "text": "Data de recebimento em materiais sortidos e pedidos" },
-      { "type": "feat", "text": "Editar pagamento inline no Conta e no histórico de OSs" },
-      { "type": "fix", "text": "Mecânicos não são mais removidos ao abrir OS de outra divisão" }
+      {
+        "type": "feat",
+        "text": "Urgência de veículo: badge pulsando, borda vermelha e notificação push aos mecânicos"
+      },
+      {
+        "type": "feat",
+        "text": "Especialidade de mecânico: auto-atribuição e remoção automática por categoria"
+      },
+      {
+        "type": "feat",
+        "text": "Pedidos de veículos: etapa de aprovação pelo gestor antes do admin colocar link"
+      },
+      {
+        "type": "feat",
+        "text": "Sinalizar link inválido nos pedidos de compras e veículos"
+      },
+      {
+        "type": "feat",
+        "text": "Pedido de reposição de estoque com link e quantidade"
+      },
+      {
+        "type": "feat",
+        "text": "Data de recebimento em materiais sortidos e pedidos"
+      },
+      {
+        "type": "feat",
+        "text": "Editar pagamento inline no Conta e no histórico de OSs"
+      },
+      {
+        "type": "fix",
+        "text": "Mecânicos não são mais removidos ao abrir OS de outra divisão"
+      }
     ]
   },
   {
     "date": "2026-08-17",
     "changes": [
-      { "type": "feat", "text": "Acertos internos entre Performance e Finishing (visível só para o gestor)" },
-      { "type": "feat", "text": "Categoria Retífica adicionada nos serviços da Performance" },
-      { "type": "feat", "text": "Peças reservadas no link de acompanhamento com indicação de instalada/pendente" },
-      { "type": "feat", "text": "Renomear abas: Pedidos de Compras e Pedidos de Veículos" },
-      { "type": "fix", "text": "Financeiro Finishing: saldo e totais corrigidos incluindo histórico de OSs" }
+      {
+        "type": "feat",
+        "text": "Acertos internos entre Performance e Finishing (visível só para o gestor)"
+      },
+      {
+        "type": "feat",
+        "text": "Categoria Retífica adicionada nos serviços da Performance"
+      },
+      {
+        "type": "feat",
+        "text": "Peças reservadas no link de acompanhamento com indicação de instalada/pendente"
+      },
+      {
+        "type": "feat",
+        "text": "Renomear abas: Pedidos de Compras e Pedidos de Veículos"
+      },
+      {
+        "type": "fix",
+        "text": "Financeiro Finishing: saldo e totais corrigidos incluindo histórico de OSs"
+      }
     ]
   },
   {
     "date": "2026-08-11",
     "changes": [
-      { "type": "feat", "text": "Updates de tarefas no portal do mecânico sempre visíveis" },
-      { "type": "feat", "text": "Portal do mecânico: filtro por especialidade de categoria" },
-      { "type": "feat", "text": "PDF: seção de aportes realizados e saldo a pagar" },
-      { "type": "feat", "text": "Notificações push ao marcar veículo como urgente" },
-      { "type": "fix", "text": "Saldo a receber no financeiro agora é global (sem filtro de data)" }
+      {
+        "type": "feat",
+        "text": "Updates de tarefas no portal do mecânico sempre visíveis"
+      },
+      {
+        "type": "feat",
+        "text": "Portal do mecânico: filtro por especialidade de categoria"
+      },
+      {
+        "type": "feat",
+        "text": "PDF: seção de aportes realizados e saldo a pagar"
+      },
+      {
+        "type": "feat",
+        "text": "Notificações push ao marcar veículo como urgente"
+      },
+      {
+        "type": "fix",
+        "text": "Saldo a receber no financeiro agora é global (sem filtro de data)"
+      }
     ]
   }
 ]

@@ -1,0 +1,2 @@
+-- applied via MCP (osc_export_schema_fn): função usada por scripts/schema.mjs; só service_role executa.
+-- Corpo completo: ver função public.osc_export_schema() no banco (pg_get_functiondef).

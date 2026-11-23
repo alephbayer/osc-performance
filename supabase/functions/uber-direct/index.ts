@@ -14,11 +14,13 @@ const corsFor = (origin: string | null) => ({
   "Vary": "Origin",
 });
 
-let cachedToken: { token: string; exp: number } | null = null;
+// Token em memória, preso às credenciais atuais: trocar os secrets (teste <-> produção) invalida o cache
+let cachedToken: { token: string; exp: number; key: string } | null = null;
 async function uberToken(): Promise<string> {
-  if (cachedToken && cachedToken.exp - Date.now() > 60 * 60 * 1000) return cachedToken.token;
   const id = Deno.env.get("UBER_CLIENT_ID"), secret = Deno.env.get("UBER_CLIENT_SECRET");
   if (!id || !secret) throw new Error("Credenciais da Uber não configuradas no Supabase");
+  const key = `${id}:${secret}`;
+  if (cachedToken && cachedToken.key === key && cachedToken.exp - Date.now() > 60 * 60 * 1000) return cachedToken.token;
   const r = await fetch("https://auth.uber.com/oauth/v2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -26,7 +28,7 @@ async function uberToken(): Promise<string> {
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) throw new Error(`Uber recusou a autenticação (${r.status}${j.error ? ": " + j.error : ""}${j.error_description ? " - " + j.error_description : ""})`);
-  cachedToken = { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 };
+  cachedToken = { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000, key };
   return cachedToken.token;
 }
 

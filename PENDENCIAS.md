@@ -39,7 +39,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 ## Limpeza técnica
 - [x] Remover o código morto `ClientCard` em `App.jsx` (v2026.11.23.196)
 - [x] Remover do Git a cópia antiga `src/App.jsx.bak` (v2026.11.23.197)
-- [ ] `index.html`: o script que põe a classe `osc-app`/`osc-public` roda no `<head>`, antes do `body` existir, e dá erro no console (`Cannot read properties of null (reading 'classList')`); a classe pode não estar sendo aplicada
+- [x] `index.html`: removido o script do `<head>` que dava erro de `classList` desde 03/08 (e por isso nunca rodou: trava de rolagem e ajuste de altura do iPhone) e o CSS que dependia dele; nenhuma mudança no uso (v2026.11.23.202)
 - [ ] Changelog: faltam as entradas entre 2026-08-19 e 2026-11-18 (`public/changelog.json`)
 
 ## Segurança (sem urgência, discutir antes de mexer)

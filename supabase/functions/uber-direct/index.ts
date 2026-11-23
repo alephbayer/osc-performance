@@ -25,7 +25,7 @@ async function uberToken(): Promise<string> {
     body: new URLSearchParams({ client_id: id, client_secret: secret, grant_type: "client_credentials", scope: "eats.deliveries" }),
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.access_token) throw new Error(`Uber recusou a autenticação (${r.status})`);
+  if (!r.ok || !j.access_token) throw new Error(`Uber recusou a autenticação (${r.status}${j.error ? ": " + j.error : ""}${j.error_description ? " - " + j.error_description : ""})`);
   cachedToken = { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 };
   return cachedToken.token;
 }

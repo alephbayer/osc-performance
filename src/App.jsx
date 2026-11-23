@@ -13603,7 +13603,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.23.199";
+const APP_VERSION = "2026.11.23.200";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15862,6 +15862,7 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
   const [origin,setOrigin]=useState({...emptyAddr,name:"",phone:""});
   const [quote,setQuote]=useState(null);
   const [rowBusy,setRowBusy]=useState(null);
+  const [cepMsg,setCepMsg]=useState({});
   const emptyForm={id:null,provider:"99",useApi:false,delivery_date:todayISO(),direction:"envio",description:"",origin:"",destination:"",vehicle_label:"",tracking_url:"",status:"requested",driver_name:"",cost:"",notes:"",
     pickup:{...emptyAddr},pickup_name:"",pickup_phone:"",dropoff:{...emptyAddr},dropoff_name:"",dropoff_phone:"",package_size:"small"};
   const [form,setForm]=useState(emptyForm);
@@ -15997,11 +15998,23 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
   const openCount=rows.filter(r=>D99_OPEN.includes(r.status)).length;
 
   // Campos de endereço (função comum, não componente, para não perder o foco ao digitar)
+  // CEP com 8 dígitos: busca rua, bairro, cidade e UF no ViaCEP (só o CEP sai do app)
+  const lookupCep=async(key,digits)=>{
+    setCepMsg(m=>({...m,[key]:"Buscando CEP…"}));
+    try{
+      const r=await fetch(`https://viacep.com.br/ws/${digits}/json/`); const j=await r.json();
+      if(j.erro) { setCepMsg(m=>({...m,[key]:"CEP não encontrado"})); return; }
+      setForm(f=>String(f[key].zip||"").replace(/\D/g,"")!==digits?f:({...f,[key]:{...f[key],street:j.logradouro||f[key].street,district:j.bairro||f[key].district,city:j.localidade||f[key].city,state:j.uf||f[key].state,lat:null,lng:null}}));
+      setCepMsg(m=>({...m,[key]:""}));
+    }catch{ setCepMsg(m=>({...m,[key]:"Não foi possível buscar o CEP; preencha à mão"})); }
+  };
   const addrFields=(key)=>{
     const a=form[key]; const set=(k,v)=>{setQuote(null);setForm(f=>({...f,[key]:{...f[key],[k]:v}}));};
+    const onZip=v=>{ set("zip",v); const d=v.replace(/\D/g,""); if(d.length===8&&d!==String(a.zip||"").replace(/\D/g,"")) lookupCep(key,d); };
     return <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      {cepMsg[key]&&<div style={{fontSize:11,color:B.gray400}}>{cepMsg[key]}</div>}
       <div style={{display:"flex",gap:6}}>
-        <input value={a.zip} onChange={e=>set("zip",e.target.value)} placeholder="CEP" inputMode="numeric" style={{...inp,flex:"0 0 110px"}}/>
+        <input value={a.zip} onChange={e=>onZip(e.target.value)} placeholder="CEP" inputMode="numeric" style={{...inp,flex:"0 0 110px"}}/>
         <input value={a.street} onChange={e=>set("street",e.target.value)} placeholder="Rua" style={inp}/>
         <input value={a.number} onChange={e=>set("number",e.target.value)} placeholder="Nº" style={{...inp,flex:"0 0 70px"}}/>
       </div>
@@ -16054,6 +16067,19 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
 
   const editingApi=form.id&&rows.find(r=>r.id===form.id)?.source==="api";
 
+  // Agenda de destinos: quem já recebeu entrega (nome, telefone e endereço), do mais recente para o mais antigo
+  const destBook=[]; const seenDest=new Set();
+  for(const r of rows){
+    const n=(r.dropoff_name||"").trim(); if(!n||!r.dropoff_address) continue;
+    const k=n.toLowerCase(); if(seenDest.has(k)) continue; seenDest.add(k);
+    destBook.push({name:n,phone:r.dropoff_phone||"",address:r.dropoff_address});
+  }
+  const pickDest=v=>{
+    const d=destBook.find(x=>x.name.toLowerCase()===v.trim().toLowerCase());
+    if(d&&v===d.name){ setQuote(null); setForm(f=>({...f,dropoff_name:d.name,dropoff_phone:d.phone||f.dropoff_phone,dropoff:{...emptyAddr,...d.address},destination:f.destination})); }
+    else setForm(f=>({...f,dropoff_name:v}));
+  };
+
   return <div style={{maxWidth:720,margin:"0 auto"}}>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
       <button onClick={()=>setView("open")} style={pill(view==="open")}>Em andamento{openCount?` · ${openCount}`:""}</button>
@@ -16089,7 +16115,8 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
         </div>
         <div><div style={lbl}>Destino</div>
           <div style={{display:"flex",gap:6,marginBottom:6}}>
-            <input value={form.dropoff_name} onChange={e=>setForm(f=>({...f,dropoff_name:e.target.value}))} placeholder="Nome de quem recebe" style={inp}/>
+            <input list="d-dest-book" value={form.dropoff_name} onChange={e=>pickDest(e.target.value)} placeholder="Nome de quem recebe" style={inp}/>
+            <datalist id="d-dest-book">{destBook.map(d=><option key={d.name} value={d.name}>{addrLine(d.address)}</option>)}</datalist>
             <input value={form.dropoff_phone} onChange={e=>setForm(f=>({...f,dropoff_phone:e.target.value}))} placeholder="Telefone" inputMode="tel" style={inp}/>
           </div>
           {addrFields("dropoff")}

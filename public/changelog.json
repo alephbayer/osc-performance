@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Entregas Uber: digitar o CEP preenche rua, bairro, cidade e UF; o nome de quem recebe sugere destinos já usados, com telefone e endereço"
+      },
+      {
+        "type": "feat",
         "text": "Compras > Entregas: tela única para 99 e Uber, com filtro por empresa; pedir, cotar, acompanhar e cancelar entregas da Uber direto pelo app (quando a integração estiver configurada)"
       },
       {

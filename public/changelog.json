@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Compras > Entregas 99: registro de envios e coletas pela 99, com link de rastreamento, status e custo (chefes veem sem valores)"
+      },
+      {
+        "type": "feat",
         "text": "Cadastros > Veículos: botão Fotos de peças em cada veículo, para anexar fotos mesmo sem OS aberta"
       }
     ]

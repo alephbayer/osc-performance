@@ -13525,10 +13525,10 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // Each role has its own password (set as Vercel env vars) and its own access level.
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
-  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","presenca","appointments","partners","suppliers","tools","insumos"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","presenca","appointments","partners","suppliers","tools","insumos"],           envVar:"VITE_ADMIN_PASSWORD" },
-  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","presenca","partners","tools"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
-  painter:    { label:"Chefe de Pintura",  tabs:["finishing","stock","investments","materiais","presenca","partners","tools"], envVar:"VITE_PAINTER_PASSWORD" },
+  owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","entregas99","presenca","appointments","partners","suppliers","tools","insumos"], envVar:"VITE_OWNER_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","entregas99","presenca","appointments","partners","suppliers","tools","insumos"],           envVar:"VITE_ADMIN_PASSWORD" },
+  supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","entregas99","presenca","partners","tools"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
+  painter:    { label:"Chefe de Pintura",  tabs:["finishing","stock","investments","materiais","entregas99","presenca","partners","tools"], envVar:"VITE_PAINTER_PASSWORD" },
 };
 // Perfis sem acesso a valores (chefes de setor)
 const isChief = r => r==="supervisor"||r==="painter";
@@ -13603,7 +13603,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.23.197";
+const APP_VERSION = "2026.11.23.198";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15828,6 +15828,160 @@ function shiftPartnerPeriod(per,dir){
   if(dir<0) return first?partnerPeriod(new Date(y,m-2,16).toLocaleDateString("sv-SE")):partnerPeriod(`${y}-${String(m).padStart(2,"0")}-01`);
   return first?partnerPeriod(`${y}-${String(m).padStart(2,"0")}-16`):partnerPeriod(new Date(y,m,1).toLocaleDateString("sv-SE"));
 }
+// ── Entregas 99 (99Entrega / 99 Moto) ──
+// Registro manual; a integração pela API oficial vai preencher as mesmas linhas (source="api").
+const D99_STATUS=[
+  {id:"requested", label:"Solicitada",  color:"#8b5cf6"},
+  {id:"pickup",    label:"Indo buscar", color:"#f59e0b"},
+  {id:"delivering",label:"Em rota",     color:"#3b82f6"},
+  {id:"delivered", label:"Entregue",    color:"#22c55e"},
+  {id:"canceled",  label:"Cancelada",   color:"#6b7280"},
+  {id:"returned",  label:"Devolvida",   color:"#ef4444"},
+];
+const D99_OPEN=["requested","pickup","delivering"];
+const d99Status=id=>D99_STATUS.find(s=>s.id===id)||D99_STATUS[0];
+const safeHttpUrl=u=>{ try{ const x=new URL(String(u||"").trim()); return (x.protocol==="https:"||x.protocol==="http:")?x.href:""; }catch{ return ""; } };
+
+function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
+  const accent="#f59e0b";
+  const [rows,setRows]=useState([]);
+  const [loaded,setLoaded]=useState(false);
+  const [loadErr,setLoadErr]=useState("");
+  const [view,setView]=useState("open");
+  const [q,setQ]=useState("");
+  const [limit,setLimit]=useState(40);
+  const [busy,setBusy]=useState(false);
+  const emptyForm={id:null,delivery_date:todayISO(),direction:"envio",description:"",origin:"",destination:"",vehicle_label:"",tracking_url:"",status:"requested",driver_name:"",cost:"",notes:""};
+  const [form,setForm]=useState(emptyForm);
+  const [formOpen,setFormOpen]=useState(false);
+
+  useEffect(()=>{
+    db.getDeliveries99().then(r=>{setRows(r);setLoaded(true);}).catch(e=>{setLoadErr(e?.message||"Erro ao carregar");setLoaded(true);});
+  },[]);
+
+  const fail=e=>alert(errMsg(e)||"Erro");
+  const vLabel=v=>[v.plate,v.model].filter(Boolean).join(" · ");
+  const vehicleOpts=vehicles.filter(v=>v.status!=="delivered").map(vLabel).filter(Boolean);
+  const findVehicleId=label=>{ const l=String(label||"").trim(); if(!l) return null; const v=vehicles.find(x=>vLabel(x)===l)||vehicles.find(x=>x.plate&&normPlate(x.plate)===normPlate(l.split("·")[0])); return v?.id||null; };
+
+  const save=async()=>{
+    if(busy) return;
+    if(!form.description.trim()&&!form.destination.trim()) return alert("Informe o que vai na entrega ou o destino.");
+    const url=form.tracking_url.trim();
+    if(url&&!safeHttpUrl(url)) return alert("O link de rastreamento precisa começar com https://");
+    const row={
+      delivery_date:form.delivery_date||todayISO(), direction:form.direction,
+      description:form.description.trim(), origin:form.origin.trim(), destination:form.destination.trim(),
+      vehicle_label:form.vehicle_label.trim()||null, vehicle_id:findVehicleId(form.vehicle_label),
+      tracking_url:url||null, status:form.status, driver_name:form.driver_name.trim()||null, notes:form.notes.trim()||null,
+    };
+    if(form.status==="delivered"){ const old=rows.find(r=>r.id===form.id); row.delivered_at=old?.delivered_at||new Date().toISOString(); }
+    else row.delivered_at=null;
+    // Quem não vê valores não grava nem altera o custo
+    if(canSeeValues){ const c=String(form.cost).replace(",",".").trim(); row.cost=c===""?null:(Number(c)||0); }
+    setBusy(true);
+    try{
+      if(form.id){ const r=await db.updateDelivery99(form.id,row); setRows(p=>p.map(x=>x.id===form.id?r:x)); }
+      else { row.created_by=actor||""; row.source="manual"; const r=await db.addDelivery99(row); setRows(p=>[r,...p]); }
+      setForm(emptyForm); setFormOpen(false); notify("Entrega salva");
+    }catch(e){fail(e);}
+    setBusy(false);
+  };
+  const edit=r=>{
+    setForm({id:r.id,delivery_date:r.delivery_date||todayISO(),direction:r.direction||"envio",description:r.description||"",origin:r.origin||"",destination:r.destination||"",vehicle_label:r.vehicle_label||"",tracking_url:r.tracking_url||"",status:r.status||"requested",driver_name:r.driver_name||"",cost:r.cost==null?"":String(r.cost),notes:r.notes||""});
+    setFormOpen(true);
+  };
+  const setStatus=async(r,status)=>{
+    try{ const patch={status,delivered_at:status==="delivered"?(r.delivered_at||new Date().toISOString()):null}; const x=await db.updateDelivery99(r.id,patch); setRows(p=>p.map(y=>y.id===r.id?x:y)); }catch(e){fail(e);}
+  };
+  const del=async r=>{ if(!window.confirm(`Remover a entrega "${r.description||r.destination||""}"?`)) return; try{ await db.deleteDelivery99(r.id); setRows(p=>p.filter(x=>x.id!==r.id)); notify("Entrega removida"); }catch(e){fail(e);} };
+
+  const inp={padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"inherit",width:"100%"};
+  const pill=(on,ac=accent)=>({padding:"6px 14px",borderRadius:99,border:`1px solid ${on?ac:B.gray600}`,background:on?`${ac}22`:"transparent",color:on?ac:B.gray200,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"inherit"});
+  const lbl={fontSize:9,fontWeight:700,color:B.gray500,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4};
+
+  if(!loaded) return <div style={{padding:30,textAlign:"center",color:B.gray400,fontSize:13}}>Carregando…</div>;
+  if(loadErr) return <div style={{padding:20,color:B.red,fontSize:13}}>Não foi possível carregar as entregas ({loadErr}). Verifique se a migration 058 foi aplicada no banco.</div>;
+
+  const needle=q.trim().toLowerCase();
+  const filtered=rows.filter(r=>view==="open"?D99_OPEN.includes(r.status):true)
+    .filter(r=>!needle||[r.description,r.origin,r.destination,r.vehicle_label,r.driver_name,r.notes].some(s=>(s||"").toLowerCase().includes(needle)));
+  const monthKey=todayISO().slice(0,7);
+  const monthRows=rows.filter(r=>(r.delivery_date||"").startsWith(monthKey)&&r.status!=="canceled");
+  const monthCost=monthRows.reduce((s,r)=>s+Number(r.cost||0),0);
+  const openCount=rows.filter(r=>D99_OPEN.includes(r.status)).length;
+
+  const Card=({r})=>{
+    const st=d99Status(r.status); const link=safeHttpUrl(r.tracking_url); const open=D99_OPEN.includes(r.status);
+    const next=r.status==="requested"?"pickup":r.status==="pickup"?"delivering":r.status==="delivering"?"delivered":null;
+    return <div style={{background:B.gray800,border:`1px solid ${open?st.color+"55":B.gray700}`,borderRadius:14,padding:"12px 14px",marginBottom:10}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <span style={{fontSize:10,fontWeight:700,color:B.gray500,letterSpacing:1.2,textTransform:"uppercase"}}>{r.direction==="coleta"?"Coleta":"Envio"}</span>
+        <span style={{fontSize:13,color:B.white,fontWeight:600}}>{r.description||"—"}</span>
+        <span style={{marginLeft:"auto",fontSize:10,fontWeight:700,borderRadius:99,padding:"2px 9px",color:st.color,background:`${st.color}18`}}>{st.label}</span>
+      </div>
+      {(r.origin||r.destination)&&<div style={{fontSize:12,color:B.gray200,marginTop:4}}>{r.origin||"—"} <span style={{color:B.gray500}}>→</span> {r.destination||"—"}</div>}
+      <div style={{fontSize:11,color:B.gray500,marginTop:3}}>
+        {fmtDateBR(r.delivery_date)}
+        {r.vehicle_label?` · ${r.vehicle_label}`:""}
+        {r.driver_name?` · ${r.driver_name}${r.driver_plate?` (${r.driver_plate})`:""}`:""}
+        {r.eta&&open?` · previsão ${new Date(r.eta).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}`:""}
+        {r.delivered_at&&r.status==="delivered"?` · entregue ${new Date(r.delivered_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}`:""}
+        {r.source==="api"?" · via API 99":""}
+      </div>
+      {r.notes&&<div style={{fontSize:12,color:B.gray400,marginTop:4}}>{r.notes}</div>}
+      {canSeeValues&&r.cost!=null&&<div style={{fontSize:12,color:B.gray200,marginTop:6}}>Custo: <span style={{fontWeight:700,color:B.white}}>{fmtBRL(r.cost)}</span></div>}
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
+        {link&&<a href={link} target="_blank" rel="noopener noreferrer" style={{...pill(true),textDecoration:"none"}}>Rastrear</a>}
+        {next&&<button onClick={()=>setStatus(r,next)} style={pill(false,d99Status(next).color)}>{d99Status(next).label}</button>}
+        {open&&<button onClick={()=>window.confirm("Marcar como cancelada?")&&setStatus(r,"canceled")} style={pill(false)}>Cancelar</button>}
+        <button onClick={()=>edit(r)} style={pill(false)}>Editar</button>
+        {canSeeValues&&<button onClick={()=>del(r)} style={{...pill(false),color:B.red,borderColor:`${B.red}55`}}>Remover</button>}
+      </div>
+    </div>;
+  };
+
+  return <div style={{maxWidth:720,margin:"0 auto"}}>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+      <button onClick={()=>setView("open")} style={pill(view==="open")}>Em andamento{openCount?` · ${openCount}`:""}</button>
+      <button onClick={()=>setView("all")} style={pill(view==="all")}>Todas</button>
+      {!formOpen&&<button onClick={()=>{setForm(emptyForm);setFormOpen(true);}} style={{...pill(true),marginLeft:"auto"}}>+ Nova entrega</button>}
+    </div>
+    {canSeeValues&&monthRows.length>0&&<div style={{fontSize:11,color:B.gray400,marginBottom:14,letterSpacing:.3}}>Este mês: {monthRows.length} entrega(s) · {fmtBRL(monthCost)}</div>}
+
+    {formOpen&&<div style={{background:B.gray800,border:`1px solid ${accent}55`,borderRadius:14,padding:14,marginBottom:16,display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        <button onClick={()=>setForm(f=>({...f,direction:"envio"}))} style={pill(form.direction==="envio")}>Envio</button>
+        <button onClick={()=>setForm(f=>({...f,direction:"coleta"}))} style={pill(form.direction==="coleta")}>Coleta</button>
+        <input type="date" value={form.delivery_date} onChange={e=>setForm(f=>({...f,delivery_date:e.target.value}))} style={{...inp,width:"auto",marginLeft:"auto"}}/>
+      </div>
+      <div><div style={lbl}>O que vai / vem</div><input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Ex.: bico injetor, documento" style={inp}/></div>
+      <div style={{display:"flex",gap:8}}>
+        <div style={{flex:1}}><div style={lbl}>Origem</div><input value={form.origin} onChange={e=>setForm(f=>({...f,origin:e.target.value}))} placeholder="Oficina" style={inp}/></div>
+        <div style={{flex:1}}><div style={lbl}>Destino</div><input value={form.destination} onChange={e=>setForm(f=>({...f,destination:e.target.value}))} placeholder="Cliente, fornecedor" style={inp}/></div>
+      </div>
+      <div><div style={lbl}>Veículo (opcional)</div><input list="d99-vehicles" value={form.vehicle_label} onChange={e=>setForm(f=>({...f,vehicle_label:e.target.value}))} placeholder="Placa ou modelo" style={inp}/>
+        <datalist id="d99-vehicles">{vehicleOpts.map(o=><option key={o} value={o}/>)}</datalist></div>
+      <div><div style={lbl}>Link de rastreamento da 99</div><input value={form.tracking_url} onChange={e=>setForm(f=>({...f,tracking_url:e.target.value}))} placeholder="https://…" inputMode="url" style={inp}/></div>
+      <div style={{display:"flex",gap:8}}>
+        <div style={{flex:1}}><div style={lbl}>Entregador</div><input value={form.driver_name} onChange={e=>setForm(f=>({...f,driver_name:e.target.value}))} style={inp}/></div>
+        {canSeeValues&&<div style={{flex:1}}><div style={lbl}>Custo (R$)</div><input value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} inputMode="decimal" placeholder="0,00" style={inp}/></div>}
+      </div>
+      <div><div style={lbl}>Status</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{D99_STATUS.map(s=><button key={s.id} onClick={()=>setForm(f=>({...f,status:s.id}))} style={pill(form.status===s.id,s.color)}>{s.label}</button>)}</div></div>
+      <div><div style={lbl}>Observação</div><input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} style={inp}/></div>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+        <button onClick={()=>{setForm(emptyForm);setFormOpen(false);}} style={pill(false)}>Cancelar</button>
+        <button onClick={save} disabled={busy} style={pill(true)}>{busy?"Salvando…":"Salvar"}</button>
+      </div>
+    </div>}
+
+    <input value={q} onChange={e=>{setQ(e.target.value);setLimit(40);}} placeholder="Buscar por item, destino, veículo, entregador" style={{...inp,marginBottom:12}}/>
+    {filtered.length===0&&<div style={{padding:24,textAlign:"center",color:B.gray500,fontSize:13}}>{view==="open"?"Nenhuma entrega em andamento.":"Nenhuma entrega registrada."}</div>}
+    {filtered.slice(0,limit).map(r=><Card key={r.id} r={r}/>)}
+    {filtered.length>limit&&<button onClick={()=>setLimit(l=>l+40)} style={{...pill(false),width:"100%"}}>Mostrar mais</button>}
+  </div>;
+}
+
 function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
   const accent=B.blue;
   const [partners,setPartners]=useState([]);
@@ -18231,7 +18385,7 @@ export default function App() {
   const OFICINA_TABS=["clients","finishing","appointments","mechanics","partners"];
   const CADASTROS_TABS=["vehicles","clientsMonitor","mechanics","suppliers","tools"];
   const GESTAO_TABS=["finance","investments","sales","presenca"];
-  const COMPRAS_TABS=["stock","materiais","purchases","insumos"];
+  const COMPRAS_TABS=["stock","materiais","entregas99","purchases","insumos"];
 
   const goSection=(section,tab)=>{
     setNavSectionPersist(section);
@@ -18800,6 +18954,7 @@ export default function App() {
               {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
               {tabBtn("materiais","Ped. Compras",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 8v10a1 1 0 0 0 1 1h4M19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 8v10"/></svg>,B.orange)}
               {allowedTabs.includes("insumos")&&tabBtn("insumos","Insumos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.7s6 6.1 6 10.6a6 6 0 0 1-12 0C6 8.8 12 2.7 12 2.7z"/></svg>,"#14b8a6")}
+              {allowedTabs.includes("entregas99")&&tabBtn("entregas99","Entregas 99",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M15 6h2l3 8.5"/><path d="M5.5 17.5L9 10h6l3.5 7.5"/></svg>,"#f59e0b")}
               {allowedTabs.includes("purchases")&&tabBtn("purchases","Ped. Veículos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
             </>}
           </div>
@@ -19308,6 +19463,11 @@ export default function App() {
       {tab==="suppliers"&&allowedTabs.includes("suppliers")&&<>
         <TabHeader color={B.green} title="Fornecedores" subtitle="Cadastro de quem vende para a oficina — usado no autocompletar das compras de estoque"/>
         <SuppliersTab purchases={stockPurchases} actor={ROLE_CONFIG[adminRole]?.label||""} vehicles={vehicles} clients={clients} tasks={tasks} stock={stock} onAssignML={assignMLItem} onUndoMLSupplies={undoMLSupplies} onConfirmMLReceive={id=>mlRecvFn.current&&mlRecvFn.current(id)}/>
+      </>}
+
+      {tab==="entregas99"&&allowedTabs.includes("entregas99")&&<>
+        <TabHeader color="#f59e0b" title="Entregas 99" subtitle="Envios e coletas pela 99Entrega, com link de rastreamento e status"/>
+        <Deliveries99Tab vehicles={vehicles} canSeeValues={!isChief(adminRole)} actor={ROLE_CONFIG[adminRole]?.label||""}/>
       </>}
 
       {tab==="insumos"&&allowedTabs.includes("insumos")&&<>

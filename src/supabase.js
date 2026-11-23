@@ -1262,6 +1262,23 @@ export const db = {
     const { error } = await supabase.from("partner_jobs").delete().eq("id", id);
     if (error) throw error;
   },
+  // ── Entregas 99 ─────────────────────────────────────────────────────────────
+  async getDeliveries99() {
+    const { data, error } = await supabase.from("deliveries_99").select("*").order("delivery_date", { ascending: false }).order("created_at", { ascending: false });
+    if (error) throw error; return data || [];
+  },
+  async addDelivery99(d) {
+    const { data, error } = await supabase.from("deliveries_99").insert([d]).select().single();
+    if (error) throw error; return data;
+  },
+  async updateDelivery99(id, patch) {
+    const { data, error } = await supabase.from("deliveries_99").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+    if (error) throw error; return data;
+  },
+  async deleteDelivery99(id) {
+    const { error } = await supabase.from("deliveries_99").delete().eq("id", id);
+    if (error) throw error;
+  },
   async setPartnerJobsPaid(ids, paid) {
     const { error } = await supabase.from("partner_jobs").update({ paid, paid_at: paid ? new Date().toISOString() : null }).in("id", ids);
     if (error) throw error;

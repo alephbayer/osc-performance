@@ -18,9 +18,10 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 
 ## Entregas Uber (Uber Direct)
 - [x] Tela única Compras > Entregas (99 e Uber), migration 059 (`provider`, endereços, entregador) e edge functions `uber-direct` (JWT) e `uber-direct-webhook` (sem JWT, assinatura HMAC) (v2026.11.23.199)
-- [ ] **Aleph:** criar a conta em direct.uber.com (conta Uber da empresa), aceitar os termos; na aba Developer pegar as credenciais de **teste** e gravar nos secrets do Supabase: `UBER_CLIENT_ID`, `UBER_CLIENT_SECRET`, `UBER_CUSTOMER_ID`
-- [ ] **Aleph:** em Developer > Webhooks, criar webhook `https://lchfmoeyzgbepunetuch.supabase.co/functions/v1/uber-direct-webhook` (tipos delivery_status e courier_update) e gravar a Signing Key em `UBER_WEBHOOK_SIGNING_KEY`
-- [ ] Testar em sandbox: cotar, pedir, atualizar, cancelar, webhook (dá para simular o entregador com o Robocourier da Uber). Não testado ainda: formato do endereço brasileiro e telefone aceitos pela Uber
+- [x] **Aleph:** criar a conta em direct.uber.com (conta Uber da empresa), aceitar os termos; na aba Developer pegar as credenciais de **teste** e gravar nos secrets do Supabase: `UBER_CLIENT_ID`, `UBER_CLIENT_SECRET`, `UBER_CUSTOMER_ID`
+- [x] **Aleph:** em Developer > Webhooks, criar webhook `https://lchfmoeyzgbepunetuch.supabase.co/functions/v1/uber-direct-webhook` (tipos delivery_status e courier_update) e gravar a Signing Key em `UBER_WEBHOOK_SIGNING_KEY`
+- [x] Sandbox testado em 2026-11-23 pela função: cotar (R$ 12,40, BRL), pedir, atualizar, cancelar e webhook com assinatura válida. Obs.: no painel, "ID de cliente do desenvolvedor" = `UBER_CLIENT_ID` e "ID do usuário" = `UBER_CUSTOMER_ID`
+- [ ] Testar pela tela do app (Gestor): pedir, ver status mudar sozinho; simular entregador com o Robocourier da Uber
 - [ ] Produção: cartão em Billing + aprovação da Uber; trocar as credenciais de teste pelas de produção. Limite de segurança: `UBER_MAX_PER_DAY` (padrão 10 pedidos/24 h), porque a função aceita qualquer chamada com a chave pública do app (ver item de segurança sobre Supabase Auth)
 
 ## Para o Aleph validar

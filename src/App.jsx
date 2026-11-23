@@ -2247,18 +2247,18 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
   });
 }
 
-// Cobrança parcial: o chamador já filtra tarefas/itens/despesas escolhidos (PartialChargeModal). Só gera o PDF, não grava nada.
-async function generatePartialChargePDF({vehicle, isFD, ts, warrantyTs, client, employee, company, defaultRate}) {
+// Cobrança parcial: o chamador já filtra tarefas/itens/despesas escolhidos (PartialChargeModal). Só gera o PDF; o registro fica no modal.
+async function generatePartialChargePDF({vehicle, isFD, ts, warrantyTs, client, employee, company, defaultRate, number}) {
   const plate=(vehicle.plate||"").replace(/\s/g,"");
   return renderElegantQuote({
     vehicle, ts, warrantyTs, client, employee, company, defaultRate, partial:true,
     accent:isFD?[168,85,247]:[221,139,52], accentText:isFD?[130,60,200]:[190,105,25],
     divisionName:isFD?"OSC Finishing Division":(company?.name||"OSC Group"),
-    osLabel:isFD?(vehicle.osNumberFinishing?fmtOSFD(vehicle.osNumberFinishing):""):(vehicle.osNumber?fmtOS(vehicle.osNumber):""),
+    osLabel:[isFD?(vehicle.osNumberFinishing?fmtOSFD(vehicle.osNumberFinishing):""):(vehicle.osNumber?fmtOS(vehicle.osNumber):""),number?`Nº ${number}`:""].filter(Boolean).join("  ·  "),
     notes:"", checklist:[], perf:!isFD, payments:[],
     osDiscountPct:isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct, osDiscountPctFin:isFD?0:vehicle.osDiscountPctFinishing,
     tagline:isFD?"OSC Finishing Division — Excelência em cada detalhe":`${company?.name || "OSC Group"} — Excelência em cada revisão`,
-    fileName:`cobranca-parcial-${isFD?"finishing-":""}${plate}-${new Date().toISOString().slice(0,10)}.pdf`,
+    fileName:`cobranca-parcial-${number?number+"-":""}${isFD?"finishing-":""}${plate}-${new Date().toISOString().slice(0,10)}.pdf`,
   });
 }
 
@@ -13624,7 +13624,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.23.203";
+const APP_VERSION = "2026.11.23.204";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14813,76 +14813,108 @@ function deliveryReady(vehicle,tasks,isFD){
   const dc=(vehicle.deliveryCheck&&typeof vehicle.deliveryCheck==="object")?vehicle.deliveryCheck:{};
   return l.every(t=>t.done&&dc[t.id]);
 }
-// ─── Cobrança parcial: escolher tarefas/itens da OS e gerar PDF (só owner/admin; não grava nada) ───
-function partialChargeBuild({vehicle,tasks,isFD,defaultRate,sel}){
+// ─── Cobrança parcial: escolher tarefas/itens da OS e gerar PDF (só owner/admin) ───
+// Itens são identificados por chave estável (tarefa + nome/marca da peça; despesa pelos seus dados), não por posição,
+// para que a trava de "já cobrado" (tabela partial_charges) não passe para o item errado se a lista mudar.
+function partialChargeItems({vehicle,tasks,isFD,defaultRate}){
   const pool=tasks.filter(t=>t.vehicleId===vehicle.id&&(isFD?t.division==="finishing":true)&&!isInternalTask(t));
   const matOk=m=>!m.noCharge&&(m.name||Number(m.cost||0)>0||Number(m.freight||0)>0);
-  const ts=[], warrantyTs=[];
-  pool.forEach(t=>{
-    if(t.warranty){ if(sel.has(`w:${t.id}`)) warrantyTs.push(t); return; }
-    const labor=sel.has(`${t.id}:L`)&&Number(t.hours||0)>0;
-    const mats=(t.materials||[]).filter((m,i)=>matOk(m)&&sel.has(`${t.id}:M${i}`));
-    if(!labor&&!mats.length) return;
-    ts.push({...t,hours:labor?t.hours:0,discount:labor?t.discount:0,materials:mats});
+  const occ=()=>{const seen={};return base=>{seen[base]=(seen[base]||0)+1;return `${base}#${seen[base]}`;};};
+  const blocks=[];
+  pool.filter(t=>!t.warranty).forEach(t=>{
+    const items=[]; const c=taskCost(t,defaultRate); const nk=occ();
+    if(Number(t.hours||0)>0) items.push({key:`${t.id}:L`,tid:t.id,kind:"L",label:"Mão de obra",task:t.label,sub:t.rateType==="qty"?`${t.hours}x`:`${t.hours} h${c.discount>0?"  ·  com desconto":""}`,value:c.labor});
+    (t.materials||[]).forEach((m,i)=>{ if(!matOk(m)) return; items.push({key:nk(`${t.id}:M:${String(m.name||"").trim().toLowerCase()}|${String(m.brand||"").trim().toLowerCase()}`),tid:t.id,kind:"M",mi:i,task:t.label,label:`${m.brand?m.brand+" ":""}${m.name||"Material"}`,sub:`${Number(m.qty||1)} un${Number(m.freight||0)>0?"  ·  com frete":""}`,value:taskCost({materials:[m],hours:0},defaultRate).total}); });
+    if(items.length) blocks.push({t,items,sub:[t.category,(!isFD&&t.division==="finishing")?"Finishing":null,t.done?"Concluída":null].filter(Boolean).join("  ·  ")});
   });
-  const v={...vehicle,fuels:[],tows:[],freights:[],importParts:[],fuelCost:0};
+  const ex=[];
   if(!isFD){
-    if(sel.has("x:fuel0")) v.fuelCost=vehicle.fuelCost;
-    v.fuels=(vehicle.fuels||[]).filter((f,i)=>sel.has(`x:fuel:${i}`));
-    v.tows=(vehicle.tows||[]).filter((f,i)=>sel.has(`x:tow:${i}`));
-    v.freights=(vehicle.freights||[]).filter((f,i)=>sel.has(`x:fr:${i}`));
-    v.importParts=(vehicle.importParts||[]).filter((f,i)=>sel.has(`x:imp:${i}`));
+    const kf=occ(),kt=occ(),kr=occ(),ki=occ(), s=x=>String(x||"").trim().toLowerCase();
+    if(Number(vehicle.fuelCost||0)>0) ex.push({key:"x:fuel0",x:"fuel0",label:"Combustível",value:Number(vehicle.fuelCost)});
+    (vehicle.fuels||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({key:kf(`x:fuel:${s(f.type)}|${s(f.date)}`),x:"fuels",i,label:f.type||"Combustível",sub:f.date||"",value:Number(f.value)}));
+    (vehicle.tows||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({key:kt(`x:tow:${s(f.origin)}|${s(f.destination)}`),x:"tows",i,label:`Reboque ${i+1}`,sub:[f.origin,f.destination].filter(Boolean).join(" > "),value:Number(f.value)}));
+    (vehicle.freights||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({key:kr(`x:fr:${s(f.origin)}|${s(f.destination)}|${s(f.description)}`),x:"freights",i,label:`Frete ${i+1}`,sub:f.description||"",value:Number(f.value)}));
+    (vehicle.importParts||[]).forEach((p,i)=>importFinal(p)>0&&ex.push({key:ki(`x:imp:${s(p.name)}`),x:"importParts",i,label:p.name||"Peça importada",sub:"Peça importada",value:importFinal(p)}));
   }
+  return {pool,blocks,ex,war:pool.filter(t=>t.warranty)};
+}
+function partialChargeBuild({vehicle,tasks,isFD,defaultRate,sel}){
+  const it=partialChargeItems({vehicle,tasks,isFD,defaultRate});
+  const ts=[];
+  it.blocks.forEach(({t,items})=>{
+    const chosen=items.filter(x=>sel.has(x.key)); if(!chosen.length) return;
+    const labor=chosen.some(x=>x.kind==="L");
+    const mis=new Set(chosen.filter(x=>x.kind==="M").map(x=>x.mi));
+    ts.push({...t,hours:labor?t.hours:0,discount:labor?t.discount:0,materials:(t.materials||[]).filter((m,i)=>mis.has(i))});
+  });
+  const warrantyTs=it.war.filter(t=>sel.has(`w:${t.id}`));
+  const v={...vehicle,fuels:[],tows:[],freights:[],importParts:[],fuelCost:0};
+  it.ex.filter(x=>sel.has(x.key)).forEach(x=>{ if(x.x==="fuel0") v.fuelCost=vehicle.fuelCost; else v[x.x].push(vehicle[x.x][x.i]); });
   // total igual ao do PDF (renderElegantQuote): tarefas + despesas - desconto da OS sobre a mão de obra
   const pct=x=>Number(x||0);
-  const sum=l=>l.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
   const lab=l=>l.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
   const finLab=isFD?0:lab(ts.filter(t=>t.division==="finishing"));
   const perfLab=lab(ts)-finLab;
   const disc=isFD?perfLab*pct(vehicle.osDiscountPctFinishing)/100:perfLab*pct(vehicle.osDiscountPct)/100+finLab*pct(vehicle.osDiscountPctFinishing)/100;
-  const extras=isFD?0:Number(v.fuelCost||0)+[...v.fuels,...v.tows,...v.freights].reduce((s,f)=>s+Number(f.value||0),0)+v.importParts.reduce((s,p)=>s+importFinal(p),0);
-  return {pool,matOk,ts,warrantyTs,vehicle:v,total:sum(ts)+extras-disc,disc};
+  const extras=it.ex.filter(x=>sel.has(x.key)).reduce((s,x)=>s+x.value,0);
+  const all=[...it.blocks.flatMap(b=>b.items),...it.ex].filter(x=>sel.has(x.key)).map(x=>({key:x.key,label:x.task?`${x.task} — ${x.label}`:x.label,value:Math.round(x.value*100)/100}));
+  return {...it,ts,warrantyTs,vehicle:v,total:ts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0)+extras-disc,disc,items:all};
 }
 function PartialChargeModal({vehicle,tasks,isFD,defaultRate,client,employee,company,onClose}){
   const [sel,setSel]=useState(()=>new Set());
   const [busy,setBusy]=useState(false);
+  const [ask,setAsk]=useState(false);
+  const [charges,setCharges]=useState(null); // null = carregando
+  const [loadErr,setLoadErr]=useState("");
+  const division=isFD?"finishing":"performance";
+  const load=()=>db.getPartialCharges(vehicle.id,division).then(r=>{setCharges(r);setLoadErr("");}).catch(e=>{setCharges([]);setLoadErr(e?.message||String(e));});
+  useEffect(()=>{load();},[vehicle.id,division]);
   useEffect(()=>{const k=e=>{if(e.key==="Escape")onClose();};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k);},[]);
   const accent=isFD?FD.primary:B.orange;
   const R=n=>"R$ "+Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fd=iso=>{try{return new Date(iso).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});}catch{return "";}};
+  const active=(charges||[]).filter(c=>!c.canceled_at);
+  const locked={}; active.forEach(c=>(c.items||[]).forEach(x=>{ locked[x.key]={n:c.number,at:c.created_at,value:Number(x.value||0)}; }));
   const b=partialChargeBuild({vehicle,tasks,isFD,defaultRate,sel});
-  const toggle=keys=>setSel(prev=>{const n=new Set(prev);const all=keys.every(k=>n.has(k));keys.forEach(k=>all?n.delete(k):n.add(k));return n;});
-  const Box=({on,part})=><span style={{width:20,height:20,flex:"0 0 20px",borderRadius:5,border:`1.5px solid ${on||part?accent:B.gray500}`,background:on?accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{on?<ICheck s={13} c={B.white}/>:part?<span style={{width:9,height:2,background:accent,borderRadius:2}}/>:null}</span>;
-  const Row=({keys,label,sub,value,head})=>{const n=keys.filter(k=>sel.has(k)).length;return(
-    <button onClick={()=>toggle(keys)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,background:"none",border:"none",borderTop:head?"none":`1px solid ${B.gray700}55`,padding:head?"10px 2px 8px":"8px 2px 8px 28px",cursor:"pointer",color:B.white,textAlign:"left"}}>
-      <Box on={n>0&&n===keys.length} part={n>0&&n<keys.length}/>
+  const free=k=>!locked[k];
+  const toggle=keys=>{const ks=keys.filter(free); if(!ks.length) return; setSel(prev=>{const n=new Set(prev);const all=ks.every(k=>n.has(k));ks.forEach(k=>all?n.delete(k):n.add(k));return n;});};
+  const Box=({on,part,lock})=><span style={{width:20,height:20,flex:"0 0 20px",borderRadius:5,border:`1.5px solid ${lock?B.gray700:on||part?accent:B.gray500}`,background:lock?B.gray800:on?accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{lock?<ICheck s={12} c={B.gray500}/>:on?<ICheck s={13} c={B.white}/>:part?<span style={{width:9,height:2,background:accent,borderRadius:2}}/>:null}</span>;
+  const lockSub=(k,cur)=>{const l=locked[k]; if(!l) return null; const ch=Math.abs(Number(cur||0)-l.value)>0.009; return <span style={{display:"block",fontSize:10.5,color:ch?B.amber:B.gray500,marginTop:1}}>Cobrado em {fd(l.at)} · nº {l.n}{ch?` · valor mudou (era ${R(l.value)})`:""}</span>;};
+  const Row=({keys,label,sub,value,head,cur})=>{const fk=keys.filter(free);const lock=keys.length>0&&fk.length===0;const n=fk.filter(k=>sel.has(k)).length;return(
+    <button onClick={()=>toggle(keys)} disabled={lock} style={{width:"100%",display:"flex",alignItems:"center",gap:10,background:"none",border:"none",borderTop:head?"none":`1px solid ${B.gray700}55`,padding:head?"10px 2px 8px":"8px 2px 8px 28px",cursor:lock?"default":"pointer",color:B.white,textAlign:"left"}}>
+      <Box on={n>0&&n===fk.length} part={n>0&&n<fk.length} lock={lock}/>
       <span style={{flex:1,minWidth:0}}>
-        <span style={{display:"block",fontSize:head?13:12,fontWeight:head?700:400,color:head?B.white:B.gray200,overflow:"hidden",textOverflow:"ellipsis"}}>{label}</span>
+        <span style={{display:"block",fontSize:head?13:12,fontWeight:head?700:400,color:lock?B.gray500:head?B.white:B.gray200,overflow:"hidden",textOverflow:"ellipsis"}}>{label}</span>
         {sub&&<span style={{display:"block",fontSize:10.5,color:B.gray500,marginTop:1}}>{sub}</span>}
+        {keys.length===1&&lockSub(keys[0],cur)}
       </span>
-      <span style={{fontSize:head?12.5:11.5,color:head?B.white:B.gray300,whiteSpace:"nowrap"}}>{value}</span>
+      <span style={{fontSize:head?12.5:11.5,color:lock?B.gray500:head?B.white:B.gray300,whiteSpace:"nowrap"}}>{value}</span>
     </button>);};
-  const blocks=[];
-  b.pool.filter(t=>!t.warranty).forEach(t=>{
-    const items=[];
-    const c=taskCost(t,defaultRate);
-    if(Number(t.hours||0)>0) items.push({k:`${t.id}:L`,label:"Mão de obra",sub:t.rateType==="qty"?`${t.hours}x`:`${t.hours} h${c.discount>0?"  ·  com desconto":""}`,value:c.labor});
-    (t.materials||[]).forEach((m,i)=>{ if(!b.matOk(m)) return; items.push({k:`${t.id}:M${i}`,label:`${m.brand?m.brand+" ":""}${m.name||"Material"}`,sub:`${Number(m.qty||1)} un${Number(m.freight||0)>0?"  ·  com frete":""}`,value:taskCost({materials:[m],hours:0},defaultRate).total}); });
-    if(!items.length) return;
-    blocks.push({id:t.id,label:t.label,sub:[t.category,(!isFD&&t.division==="finishing")?"Finishing":null,t.done?"Concluída":null].filter(Boolean).join("  ·  "),items});
-  });
-  const ex=[];
-  if(!isFD){
-    if(Number(vehicle.fuelCost||0)>0) ex.push({k:"x:fuel0",label:"Combustível",value:Number(vehicle.fuelCost)});
-    (vehicle.fuels||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({k:`x:fuel:${i}`,label:f.type||"Combustível",sub:f.date||"",value:Number(f.value)}));
-    (vehicle.tows||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({k:`x:tow:${i}`,label:`Reboque ${i+1}`,sub:[f.origin,f.destination].filter(Boolean).join(" > "),value:Number(f.value)}));
-    (vehicle.freights||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({k:`x:fr:${i}`,label:`Frete ${i+1}`,sub:f.description||"",value:Number(f.value)}));
-    (vehicle.importParts||[]).forEach((p,i)=>importFinal(p)>0&&ex.push({k:`x:imp:${i}`,label:p.name||"Peça importada",sub:"Peça importada",value:importFinal(p)}));
-  }
-  const war=b.pool.filter(t=>t.warranty);
-  const allKeys=[...blocks.flatMap(x=>x.items.map(i=>i.k)),...ex.map(x=>x.k),...war.map(t=>`w:${t.id}`)];
-  const any=b.ts.length>0||b.warrantyTs.length>0||ex.some(x=>sel.has(x.k));
-  const gen=async()=>{ setBusy(true); try{ await generatePartialChargePDF({vehicle:b.vehicle,isFD,ts:b.ts,warrantyTs:b.warrantyTs,client,employee,company,defaultRate}); }catch(e){ alert("Erro ao gerar PDF: "+(e?.message||e)); } setBusy(false); };
+  const allKeys=[...b.blocks.flatMap(x=>x.items.map(i=>i.key)),...b.ex.map(x=>x.key),...b.war.map(t=>`w:${t.id}`)].filter(free);
+  const any=b.ts.length>0||b.warrantyTs.length>0||b.items.length>0;
+  const regCount=b.items.length;
+  const pdf=async(bb,number)=>generatePartialChargePDF({vehicle:bb.vehicle,isFD,ts:bb.ts,warrantyTs:bb.warrantyTs,client,employee,company,defaultRate,number});
+  const gen=async(register)=>{
+    setAsk(false); setBusy(true);
+    try{
+      let number=null;
+      if(register&&regCount){
+        const fresh=await db.getPartialCharges(vehicle.id,division); // evita cobrar o que outra pessoa acabou de registrar
+        const taken=new Set(fresh.filter(c=>!c.canceled_at).flatMap(c=>(c.items||[]).map(x=>x.key)));
+        if(b.items.some(x=>taken.has(x.key))){ setCharges(fresh); alert("Alguns itens acabaram de ser cobrados em outra cobrança. Confira a seleção."); setSel(new Set()); setBusy(false); return; }
+        number=fresh.reduce((m,c)=>Math.max(m,Number(c.number||0)),0)+1;
+        let who=""; try{ who=sessionStorage.getItem(ADMIN_SESSION_KEY)||""; }catch{}
+        await db.addPartialCharge({vehicle_id:vehicle.id,division,number,items:b.items,total:Math.round(b.total*100)/100,created_by:who||null});
+      }
+      await pdf(b,number);
+      if(number){ setSel(new Set()); await load(); }
+    }catch(e){ alert("Erro: "+(e?.message||e)); }
+    setBusy(false);
+  };
+  const reprint=async c=>{ setBusy(true); try{ await pdf(partialChargeBuild({vehicle,tasks,isFD,defaultRate,sel:new Set((c.items||[]).map(x=>x.key))}),c.number); }catch(e){ alert("Erro ao gerar PDF: "+(e?.message||e)); } setBusy(false); };
+  const cancel=async c=>{ if(!window.confirm(`Cancelar a cobrança nº ${c.number} (${R(c.total)})? Os itens dela voltam a ficar livres para cobrar.`)) return; try{ await db.cancelPartialCharge(c.id); await load(); }catch(e){ alert("Erro: "+(e?.message||e)); } };
   const sec=t=><div style={{fontSize:10,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:1.4,margin:"18px 2px 4px"}}>{t}</div>;
+  const sbtn={background:"none",border:`1px solid ${B.gray600}`,borderRadius:6,padding:"3px 8px",fontSize:11,cursor:"pointer"};
   return createPortal(<div style={{position:"fixed",inset:0,zIndex:300,background:B.black,display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     <div style={{padding:"calc(36px + env(safe-area-inset-top)) 16px 12px",borderBottom:`1px solid ${B.gray700}`,background:B.gray900}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -14893,29 +14925,51 @@ function PartialChargeModal({vehicle,tasks,isFD,defaultRate,client,employee,comp
         <button onClick={onClose} aria-label="Fechar" style={{width:40,height:40,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={16} c={B.white}/></button>
       </div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,fontSize:11,color:B.gray400}}>
-        <span>Escolha o que entra no PDF. Nada é gravado na OS.</span>
+        <span>Itens já cobrados ficam travados.</span>
         {allKeys.length>0&&<button onClick={()=>toggle(allKeys)} style={{background:"none",border:"none",color:accent,fontSize:11,cursor:"pointer",padding:0}}>{allKeys.every(k=>sel.has(k))?"Limpar":"Marcar tudo"}</button>}
       </div>
     </div>
     <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"4px 14px 24px"}}>
-      {allKeys.length===0&&<div style={{padding:"40px 10px",textAlign:"center",color:B.gray400,fontSize:13}}>Esta OS ainda não tem itens com valor.</div>}
-      {blocks.length>0&&sec("Serviços")}
-      {blocks.map(x=><div key={x.id} style={{borderBottom:`1px solid ${B.gray700}`}}>
-        <Row head keys={x.items.map(i=>i.k)} label={x.label} sub={x.sub} value={R(x.items.reduce((s,i)=>s+i.value,0))}/>
-        {x.items.map(i=><Row key={i.k} keys={[i.k]} label={i.label} sub={i.sub} value={R(i.value)}/>)}
+      {charges===null&&<div style={{padding:"30px 10px",textAlign:"center",color:B.gray400,fontSize:12}}>Carregando cobranças…</div>}
+      {loadErr&&<div style={{margin:"12px 2px",fontSize:11.5,color:B.amber}}>Não foi possível ler as cobranças registradas ({loadErr}). As travas não estão visíveis.</div>}
+      {charges!==null&&<>
+      {(charges||[]).length>0&&sec("Cobranças registradas")}
+      {(charges||[]).map(c=><div key={c.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 2px",borderBottom:`1px solid ${B.gray700}`,opacity:c.canceled_at?.45:1}}>
+        <span style={{flex:1,minWidth:0,fontSize:12}}>
+          <span style={{color:B.white,fontWeight:600}}>Nº {c.number}</span>
+          <span style={{color:B.gray400}}>  ·  {fd(c.created_at)}  ·  {(c.items||[]).length} {(c.items||[]).length===1?"item":"itens"}{c.canceled_at?"  ·  cancelada":""}</span>
+        </span>
+        <span style={{fontSize:12,whiteSpace:"nowrap",textDecoration:c.canceled_at?"line-through":"none"}}>{R(c.total)}</span>
+        {!c.canceled_at&&<button disabled={busy} onClick={()=>reprint(c)} style={{...sbtn,color:accent,borderColor:`${accent}66`}}>PDF</button>}
+        {!c.canceled_at&&<button onClick={()=>cancel(c)} style={{...sbtn,color:B.gray400}}>Cancelar</button>}
       </div>)}
-      {ex.length>0&&sec("Despesas adicionais")}
-      {ex.map(i=><div key={i.k} style={{borderBottom:`1px solid ${B.gray700}`}}><Row head keys={[i.k]} label={i.label} sub={i.sub} value={R(i.value)}/></div>)}
-      {war.length>0&&sec("Garantia (aparece como cortesia)")}
-      {war.map(t=><div key={t.id} style={{borderBottom:`1px solid ${B.gray700}`}}><Row head keys={[`w:${t.id}`]} label={t.label} value="Cortesia"/></div>)}
+      {allKeys.length===0&&b.blocks.length+b.ex.length+b.war.length===0&&<div style={{padding:"40px 10px",textAlign:"center",color:B.gray400,fontSize:13}}>Esta OS ainda não tem itens com valor.</div>}
+      {b.blocks.length>0&&sec("Serviços")}
+      {b.blocks.map(x=><div key={x.t.id} style={{borderBottom:`1px solid ${B.gray700}`}}>
+        <Row head keys={x.items.map(i=>i.key)} label={x.t.label} sub={x.sub} value={R(x.items.reduce((s,i)=>s+i.value,0))}/>
+        {x.items.map(i=><Row key={i.key} keys={[i.key]} label={i.label} sub={i.sub} value={R(i.value)} cur={i.value}/>)}
+      </div>)}
+      {b.ex.length>0&&sec("Despesas adicionais")}
+      {b.ex.map(i=><div key={i.key} style={{borderBottom:`1px solid ${B.gray700}`}}><Row head keys={[i.key]} label={i.label} sub={i.sub} value={R(i.value)} cur={i.value}/></div>)}
+      {b.war.length>0&&sec("Garantia (aparece como cortesia)")}
+      {b.war.map(t=><div key={t.id} style={{borderBottom:`1px solid ${B.gray700}`}}><Row head keys={[`w:${t.id}`]} label={t.label} value="Cortesia"/></div>)}
+      </>}
     </div>
+    {ask&&<div style={{padding:"14px 16px",borderTop:`1px solid ${B.gray700}`,background:B.gray800}}>
+      <div style={{fontSize:13,fontWeight:600}}>Registrar como cobrado?</div>
+      <div style={{fontSize:11.5,color:B.gray400,marginTop:3}}>Os {regCount} {regCount===1?"item":"itens"} desta cobrança ficam travados nas próximas. Dá para cancelar depois.</div>
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <button onClick={()=>gen(true)} style={{flex:1,background:accent,border:"none",borderRadius:8,padding:"10px 0",color:B.white,fontSize:12.5,fontWeight:700,cursor:"pointer"}}>Registrar e gerar</button>
+        <button onClick={()=>gen(false)} style={{flex:1,background:"none",border:`1px solid ${B.gray600}`,borderRadius:8,padding:"10px 0",color:B.gray200,fontSize:12.5,cursor:"pointer"}}>Só gerar PDF</button>
+      </div>
+    </div>}
     <div style={{padding:"12px 16px calc(12px + env(safe-area-inset-bottom))",borderTop:`1px solid ${B.gray700}`,background:B.gray900,display:"flex",alignItems:"center",gap:12}}>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:1.2}}>Total da cobrança</div>
         <div style={{fontSize:18,fontWeight:600,marginTop:1}}>{R(b.total)}</div>
         {b.disc>0.004&&<div style={{fontSize:10,color:B.gray500}}>já com desconto da OS sobre a mão de obra</div>}
       </div>
-      <button onClick={gen} disabled={!any||busy} style={{background:any&&!busy?accent:B.gray700,border:"none",borderRadius:10,padding:"11px 18px",color:any&&!busy?B.white:B.gray400,fontSize:13,fontWeight:700,cursor:any&&!busy?"pointer":"not-allowed",display:"flex",alignItems:"center",gap:6}}>
+      <button onClick={()=>regCount&&!loadErr?setAsk(a=>!a):gen(false)} disabled={!any||busy||charges===null} style={{background:any&&!busy?accent:B.gray700,border:"none",borderRadius:10,padding:"11px 18px",color:any&&!busy?B.white:B.gray400,fontSize:13,fontWeight:700,cursor:any&&!busy?"pointer":"not-allowed",display:"flex",alignItems:"center",gap:6}}>
         <IFileText s={14} c={any&&!busy?B.white:B.gray400}/>{busy?"Gerando…":"Gerar PDF"}
       </button>
     </div>

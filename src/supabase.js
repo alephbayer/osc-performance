@@ -1263,6 +1263,19 @@ export const db = {
     if (error) throw error;
   },
   // ── Entregas 99 ─────────────────────────────────────────────────────────────
+  // Cobranças parciais (itens cobrados ficam travados; cancelar libera)
+  async getPartialCharges(vehicleId, division) {
+    const { data, error } = await supabase.from("partial_charges").select("*").eq("vehicle_id", vehicleId).eq("division", division).order("number", { ascending: true });
+    if (error) throw error; return data || [];
+  },
+  async addPartialCharge(c) {
+    const { data, error } = await supabase.from("partial_charges").insert([c]).select().single();
+    if (error) throw error; return data;
+  },
+  async cancelPartialCharge(id) {
+    const { error } = await supabase.from("partial_charges").update({ canceled_at: new Date().toISOString() }).eq("id", id);
+    if (error) throw error;
+  },
   async getDeliveries99() {
     const { data, error } = await supabase.from("deliveries_99").select("*").order("delivery_date", { ascending: false }).order("created_at", { ascending: false });
     if (error) throw error; return data || [];

@@ -30,8 +30,9 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 
 ## Cobrança parcial em PDF
 - [x] Botão "Cobrança parcial" na OS (só Gestor/Administrativo): escolhe tarefas, MO, peças, despesas e garantia (cortesia) e gera PDF "Cobrança parcial" com total do que foi marcado; não mostra pagamentos nem saldo da OS e **não grava nada** (decisão do Aleph). Teste: `node scripts/pdf-test.cjs x.pdf parcial` (v2026.11.23.203)
-- [ ] **Aleph:** conferir no app ao vivo numa OS da Performance e numa da Finishing (seleção, total e PDF no celular)
-- [ ] Se precisar no futuro: registrar o que já foi cobrado para não cobrar duas vezes
+- [ ] **Aleph:** conferir no app ao vivo numa OS da Performance e numa da Finishing (seleção, total, registrar, travas, cancelar e PDF no celular)
+- [x] Registro do que já foi cobrado: tabela `partial_charges` (migration 060). Ao gerar, "Registrar e gerar" ou "Só gerar PDF"; itens registrados ficam travados (com aviso se o valor mudou depois), cobrança numerada, cancelar libera os itens, PDF pode ser gerado de novo. O PDF final da OS não muda (decisão do Aleph) (v2026.11.23.204)
+- [ ] Limite conhecido: a trava da peça usa tarefa + nome + marca. Renomear a peça depois de cobrada solta a trava; aumentar horas/quantidade só mostra aviso "valor mudou", não cobra a diferença
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

@@ -30,6 +30,7 @@ let __fn=__app.slice(__a); __fn=__fn.slice(0,__fn.indexOf('\n}\n')+3).replace('d
 eval('globalThis.renderElegantQuote='+__fn.replace('async function renderElegantQuote','async function'));
 const __ext=(sig,name)=>{const a=__app.indexOf(sig);let f=__app.slice(a);f=f.slice(0,f.indexOf('\n}\n')+3);eval('globalThis.'+name+'='+f.replace(/^(async )?function \w+/,'$1function'));};
 __ext('async function generatePartialChargePDF(','generatePartialChargePDF');
+__ext('function partialChargeItems(','partialChargeItems');
 __ext('function partialChargeBuild(','partialChargeBuild');
 const renderElegantQuote=(...a)=>globalThis.renderElegantQuote(...a);
 
@@ -59,12 +60,18 @@ const parcial=async()=>{
  const vehicle={id:"v",model:"Dodge Challenger SRT8",plate:"EDU2J19",year:2010,color:"Amarelo",osNumber:174,osNumberFinishing:31,osDiscountPct:10,
   tows:[{origin:"Barra",destination:"Oficina",value:350}],importParts:[{name:"Prisioneiros de cabeçote ARP",amount:419.99,rate:5.0,taxPct:60}]};
  // Performance: óleo só peças (sem MO e sem filtro de ar), cabeçotes inteiro, garantia, reboque e peça importada
- const sp=new Set(["a:M0","a:M1","b:L","b:M0","w:d","x:tow:0","x:imp:0"]);
+ const ip=partialChargeItems({vehicle,tasks,isFD:false,defaultRate:300});
+ console.log("chaves:",[...ip.blocks.flatMap(b=>b.items),...ip.ex].map(x=>x.key).join("  "));
+ const sp=new Set(["a:M:óleo 5w30 sintético|motul#1","a:M:filtro de óleo|mopar#1","b:L","b:M:juntas cometic mls|#1","w:d","x:tow:barra|oficina#1","x:imp:prisioneiros de cabeçote arp#1"]);
  const bp=partialChargeBuild({vehicle,tasks,isFD:false,defaultRate:300,sel:sp});
- console.log("Performance: tarefas",bp.ts.map(t=>t.label),"total",bp.total.toFixed(2));
- await generatePartialChargePDF({vehicle:bp.vehicle,isFD:false,ts:bp.ts,warrantyTs:bp.warrantyTs,client,employee:{name:"OSC"},company,defaultRate:300});
+ console.log("Performance: tarefas",bp.ts.map(t=>t.label),"itens",bp.items.length,"total",bp.total.toFixed(2));
+ await generatePartialChargePDF({vehicle:bp.vehicle,isFD:false,ts:bp.ts,warrantyTs:bp.warrantyTs,client,employee:{name:"OSC"},company,defaultRate:300,number:2});
  // Finishing: só a MO da pintura e o polimento
  const sf=new Set(["e:L","f:L"]);
+ // remover uma peça antes não muda a chave das outras
+ const t2=tasks.map(t=>t.id==="a"?{...t,materials:t.materials.slice(1)}:t);
+ const k2=partialChargeItems({vehicle,tasks:t2,isFD:false,defaultRate:300}).blocks[0].items.map(x=>x.key);
+ console.log("após remover o óleo:",k2.join("  "));
  const bf=partialChargeBuild({vehicle,tasks,isFD:true,defaultRate:300,sel:sf});
  console.log("Finishing: tarefas",bf.ts.map(t=>t.label),"total",bf.total.toFixed(2));
  await generatePartialChargePDF({vehicle:bf.vehicle,isFD:true,ts:bf.ts,warrantyTs:bf.warrantyTs,client,employee:{name:"OSC"},company,defaultRate:300});

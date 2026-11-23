@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Cobrança parcial: ao gerar o PDF, dá para registrar como cobrado; esses itens ficam travados nas próximas cobranças, com número, data e opção de cancelar ou gerar o PDF de novo"
+      },
+      {
+        "type": "feat",
         "text": "Cobrança parcial: na OS, escolher tarefas, mão de obra, peças e despesas e gerar um PDF de cobrança só com o que foi marcado"
       },
       {

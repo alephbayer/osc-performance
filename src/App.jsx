@@ -10648,6 +10648,17 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
         {total>0&&<div style={{fontSize:11,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>}
       </div>}
 
+      {onUpdateVehicle&&<div onClick={e=>e.stopPropagation()} style={{flexShrink:0}}>
+        <UploadBtn multiple folder={`parts/${vehicle.id}`} label="Fotos de peças" style={{padding:"4px 9px",fontSize:10}}
+          onFiles={urls=>{
+            const list=Array.isArray(vehicle.partsList)?vehicle.partsList:[];
+            const has=list.some(x=>x.id==="fotos-avulsas");
+            const next=has
+              ?list.map(x=>x.id==="fotos-avulsas"?{...x,photos:[...(x.photos||[]),...urls]}:x)
+              :[...list,{id:"fotos-avulsas",name:"Fotos de peças",qty:1,location:"",note:"",photos:urls}];
+            onUpdateVehicle(vehicle.id,{partsList:next});
+          }}/>
+      </div>}
       <div style={{color:B.gray400,flexShrink:0}}>{open?<IChevU s={15}/>:<IChevD s={15}/>}</div>
     </div>
 
@@ -13661,7 +13672,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.19.194";
+const APP_VERSION = "2026.11.23.195";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

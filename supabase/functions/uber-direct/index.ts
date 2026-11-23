@@ -47,7 +47,10 @@ async function uber(path: string, init: { method?: string; body?: unknown } = {}
   return j;
 }
 
-type Addr = { street?: string; number?: string; complement?: string; district?: string; city?: string; state?: string; zip?: string };
+type Addr = { street?: string; number?: string; complement?: string; district?: string; city?: string; state?: string; zip?: string; lat?: number; lng?: number };
+// Coordenadas ajudam a Uber a achar o endereço (em algumas regiões são exigidas)
+const coords = (prefix: string, a?: Addr) => (a && Number.isFinite(Number(a.lat)) && Number.isFinite(Number(a.lng)) && a.lat && a.lng)
+  ? { [`${prefix}_latitude`]: Number(a.lat), [`${prefix}_longitude`]: Number(a.lng) } : {};
 const addrJson = (a: Addr) => JSON.stringify({
   street_address: [[a.street, a.number].filter(Boolean).join(", "), [a.complement, a.district].filter(Boolean).join(" - ")],
   city: a.city || "", state: (a.state || "").toUpperCase(), zip_code: (a.zip || "").replace(/\D/g, ""), country: "BR",
@@ -115,7 +118,7 @@ Deno.serve(async (req) => {
     if (action === "quote") {
       const { pickup, dropoff } = body as { pickup: Addr; dropoff: Addr };
       if (!addrOk(pickup) || !addrOk(dropoff)) throw new Error("Preencha rua, cidade, UF e CEP da coleta e do destino");
-      const q = await uber("/delivery_quotes", { method: "POST", body: { pickup_address: addrJson(pickup), dropoff_address: addrJson(dropoff) } });
+      const q = await uber("/delivery_quotes", { method: "POST", body: { pickup_address: addrJson(pickup), dropoff_address: addrJson(dropoff), ...coords("pickup", pickup), ...coords("dropoff", dropoff) } });
       return json({ quote_id: q.id, fee: typeof q.fee === "number" ? q.fee / 100 : null, currency: q.currency, dropoff_eta: q.dropoff_eta, duration: q.duration, pickup_duration: q.pickup_duration, expires: q.expires });
     }
 
@@ -139,6 +142,7 @@ Deno.serve(async (req) => {
           pickup_address: addrJson(row.pickup_address), pickup_name: row.pickup_name || "OSC Group", pickup_phone_number: phoneE164(row.pickup_phone),
           dropoff_address: addrJson(row.dropoff_address), dropoff_name: row.dropoff_name || row.destination || "Destinatário", dropoff_phone_number: phoneE164(row.dropoff_phone),
           dropoff_notes: row.notes || undefined,
+          ...coords("pickup", row.pickup_address), ...coords("dropoff", row.dropoff_address),
           manifest_items: [{ name: row.description || "Encomenda", quantity: 1, size: sizes.includes(row.package_size) ? row.package_size : "small" }],
           external_id: row.id,
         },

@@ -13603,7 +13603,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.23.200";
+const APP_VERSION = "2026.11.23.201";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14687,6 +14687,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
   const isInstalled=(part,idx)=>{
     return partIsUsed(part,vehicle.id,tasks);
   };
+  const [lb, setLb] = useState(null);
   const [newName, setNewName] = useState("");
   const [newQty, setNewQty] = useState("1");
   const [newLoc, setNewLoc] = useState("");
@@ -14760,7 +14761,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
             <div style={{marginTop:6,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
               {(part.photos||[]).map((url,pi)=>(
                 <div key={pi} style={{position:"relative",width:56,height:56,borderRadius:6,overflow:"hidden",flexShrink:0}}>
-                  <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  <img src={url} alt="" onClick={()=>setLb({items:part.photos||[],current:url})} style={{width:"100%",height:"100%",objectFit:"cover",cursor:"zoom-in"}}/>
                   {managerMode&&<button onClick={()=>updatePart(part.id,{photos:(part.photos||[]).filter((_,i)=>i!==pi)})}
                     style={{position:"absolute",top:2,right:2,background:"rgba(0,0,0,.7)",border:"none",borderRadius:99,width:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",padding:0}}>
                     <IX s={9} c={B.white}/>
@@ -14777,6 +14778,9 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
         </div>);
       })}
     </div>
+    {lb&&createPortal(<div style={{position:"relative",zIndex:10000}}>
+      <PhotoLightbox items={lb.items} current={lb.current} onChange={c=>setLb(x=>({...x,current:c}))} onClose={()=>setLb(null)}/>
+    </div>,document.body)}
   </div>);
 }
 

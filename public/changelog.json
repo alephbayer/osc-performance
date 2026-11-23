@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Peças reservadas: tocar na foto abre a imagem ampliada, com zoom e navegação entre as fotos da peça"
+      },
+      {
+        "type": "feat",
         "text": "Entregas Uber: digitar o CEP preenche rua, bairro, cidade e UF; o nome de quem recebe sugere destinos já usados, com telefone e endereço"
       },
       {

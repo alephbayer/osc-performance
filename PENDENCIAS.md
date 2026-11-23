@@ -8,7 +8,9 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Primeira tarefa de teste pequena, conferindo o fluxo do `CLAUDE.md` (remoção do `ClientCard`, v2026.11.23.196)
 - [x] Pasta de análise de orçamentos criada **fora** deste repositório (ele é público): `~/OSC/orcamentos` (ver `LEIAME.md` lá). Extração repetível do Supabase e primeiro retrato feitos em 2026-11-23
 - [ ] **Aleph:** copiar planilhas e exportações de outros sistemas para `~/OSC/orcamentos/originais/` e preencher `INVENTARIO.md`
-- [ ] Aprovar os próximos passos do estudo (catálogo padronizado de serviços, faixa de preço/prazo para orçamento prévio, registro de tempo real por tarefa)
+- [x] Plano do estudo aprovado (2026-11-23). Feitos fora do repositório: catálogo padronizado (81 serviços, regras em `scripts/catalogo_regras.mjs` lá) e protótipo `analises/orcamento-previo.html` (faixa de preço e prazo a partir do histórico)
+- [ ] **Aleph:** usar o orçamento prévio nos próximos atendimentos e conferir o catálogo (`analises/catalogo-*.md`); apontar grupos errados
+- [ ] Depois das outras fontes: comparar com tempos de manual; decidir se leva para o app (sugestão de preço no orçamento, alerta de valor fora da faixa, botão iniciar/parar tarefa para medir tempo real)
 
 ## Entregas 99 (99Entrega)
 - [x] Base: tabela `deliveries_99` (migration 058) e tela Compras > Entregas 99, registro manual com link, status e custo; chefes sem valores (v2026.11.23.198)

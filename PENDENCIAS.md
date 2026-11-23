@@ -10,7 +10,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 
 ## Entregas 99 (99Entrega)
 - [x] Base: tabela `deliveries_99` (migration 058) e tela Compras > Entregas 99, registro manual com link, status e custo; chefes sem valores (v2026.11.23.198)
-- [ ] **Aleph:** pedir o token da API no Portal Empresas da 99 ("Solicitar token API"); a 99 manda a documentação por e-mail (até 2 dias úteis). Suporte: api-suporte@99app.com
+- [ ] **Aleph:** cadastro da empresa em 99app.com/99-entrega (formulário: nome, telefone, CNPJ, e-mail) -> completar cadastro no Portal 99Entrega Empresas -> pedir acesso à API (no portal ou api-suporte@99app.com). Atenção: a 99 anuncia API/Portal para quem faz mais de 300 entregas/mês; abaixo disso indica o app. Sem mensalidade, paga por km
 - [ ] Com a documentação: edge function `entrega-99` (OAuth, cotar/criar/cancelar/consultar + webhook com assinatura), secrets no Supabase; passar nos testes de sandbox exigidos pela 99. A API só acompanha entregas **criadas pela API** (`external_order_id`); entregas pedidas no app da 99 continuam manuais
 - [ ] Conferir no app ao vivo a tela Entregas 99 (owner e um chefe)
 

@@ -6,13 +6,22 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Instalar o Claude Code no Mac e abrir `~/osc-performance` (feito em 2026-11-23)
 - [ ] Conectar GitHub (poder dar push), Supabase e Vercel no Claude Code do Mac
 - [x] Primeira tarefa de teste pequena, conferindo o fluxo do `CLAUDE.md` (remoção do `ClientCard`, v2026.11.23.196)
-- [ ] Depois: criar a pasta de análise de orçamentos antigos, **fora** deste repositório (ele é público); sugestão `~/OSC/orcamentos` com `originais/`, `dados/`, `analises/`
+- [x] Pasta de análise de orçamentos criada **fora** deste repositório (ele é público): `~/OSC/orcamentos` (ver `LEIAME.md` lá). Extração repetível do Supabase e primeiro retrato feitos em 2026-11-23
+- [ ] **Aleph:** copiar planilhas e exportações de outros sistemas para `~/OSC/orcamentos/originais/` e preencher `INVENTARIO.md`
+- [ ] Aprovar os próximos passos do estudo (catálogo padronizado de serviços, faixa de preço/prazo para orçamento prévio, registro de tempo real por tarefa)
 
 ## Entregas 99 (99Entrega)
 - [x] Base: tabela `deliveries_99` (migration 058) e tela Compras > Entregas 99, registro manual com link, status e custo; chefes sem valores (v2026.11.23.198)
 - [ ] **Aleph:** cadastro da empresa em 99app.com/99-entrega (formulário: nome, telefone, CNPJ, e-mail) -> completar cadastro no Portal 99Entrega Empresas -> pedir acesso à API (no portal ou api-suporte@99app.com). Atenção: a 99 anuncia API/Portal para quem faz mais de 300 entregas/mês; abaixo disso indica o app. Sem mensalidade, paga por km
 - [ ] Com a documentação: edge function `entrega-99` (OAuth, cotar/criar/cancelar/consultar + webhook com assinatura), secrets no Supabase; passar nos testes de sandbox exigidos pela 99. A API só acompanha entregas **criadas pela API** (`external_order_id`); entregas pedidas no app da 99 continuam manuais
 - [ ] Conferir no app ao vivo a tela Entregas 99 (owner e um chefe)
+
+## Entregas Uber (Uber Direct)
+- [x] Tela única Compras > Entregas (99 e Uber), migration 059 (`provider`, endereços, entregador) e edge functions `uber-direct` (JWT) e `uber-direct-webhook` (sem JWT, assinatura HMAC) (v2026.11.23.199)
+- [ ] **Aleph:** criar a conta em direct.uber.com (conta Uber da empresa), aceitar os termos; na aba Developer pegar as credenciais de **teste** e gravar nos secrets do Supabase: `UBER_CLIENT_ID`, `UBER_CLIENT_SECRET`, `UBER_CUSTOMER_ID`
+- [ ] **Aleph:** em Developer > Webhooks, criar webhook `https://lchfmoeyzgbepunetuch.supabase.co/functions/v1/uber-direct-webhook` (tipos delivery_status e courier_update) e gravar a Signing Key em `UBER_WEBHOOK_SIGNING_KEY`
+- [ ] Testar em sandbox: cotar, pedir, atualizar, cancelar, webhook (dá para simular o entregador com o Robocourier da Uber). Não testado ainda: formato do endereço brasileiro e telefone aceitos pela Uber
+- [ ] Produção: cartão em Billing + aprovação da Uber; trocar as credenciais de teste pelas de produção. Limite de segurança: `UBER_MAX_PER_DAY` (padrão 10 pedidos/24 h), porque a função aceita qualquer chamada com a chave pública do app (ver item de segurança sobre Supabase Auth)
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

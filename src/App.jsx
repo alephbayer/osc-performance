@@ -13603,7 +13603,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.23.198";
+const APP_VERSION = "2026.11.23.199";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15828,8 +15828,9 @@ function shiftPartnerPeriod(per,dir){
   if(dir<0) return first?partnerPeriod(new Date(y,m-2,16).toLocaleDateString("sv-SE")):partnerPeriod(`${y}-${String(m).padStart(2,"0")}-01`);
   return first?partnerPeriod(`${y}-${String(m).padStart(2,"0")}-16`):partnerPeriod(new Date(y,m,1).toLocaleDateString("sv-SE"));
 }
-// ── Entregas 99 (99Entrega / 99 Moto) ──
-// Registro manual; a integração pela API oficial vai preencher as mesmas linhas (source="api").
+// ── Entregas (99Entrega e Uber Direct) ──
+// Tabela deliveries_99 (nome mantido); provider = "99" | "uber". source = "manual" | "api".
+// A Uber pode ser pedida pela API (edge function uber-direct); status chega pelo webhook uber-direct-webhook.
 const D99_STATUS=[
   {id:"requested", label:"Solicitada",  color:"#8b5cf6"},
   {id:"pickup",    label:"Indo buscar", color:"#f59e0b"},
@@ -15839,8 +15840,13 @@ const D99_STATUS=[
   {id:"returned",  label:"Devolvida",   color:"#ef4444"},
 ];
 const D99_OPEN=["requested","pickup","delivering"];
+const D_PROVIDERS=[{id:"99",label:"99"},{id:"uber",label:"Uber"}];
+const D_SIZES=[{id:"small",label:"Pequeno"},{id:"medium",label:"Médio"},{id:"large",label:"Grande"},{id:"xlarge",label:"Extra"}];
 const d99Status=id=>D99_STATUS.find(s=>s.id===id)||D99_STATUS[0];
 const safeHttpUrl=u=>{ try{ const x=new URL(String(u||"").trim()); return (x.protocol==="https:"||x.protocol==="http:")?x.href:""; }catch{ return ""; } };
+const emptyAddr={zip:"",street:"",number:"",complement:"",district:"",city:"",state:""};
+const addrLine=a=>a?[[a.street,a.number].filter(Boolean).join(", "),a.district,[a.city,a.state].filter(Boolean).join("/")].filter(Boolean).join(" · "):"";
+const addrComplete=a=>!!(a&&a.street&&a.city&&a.state&&String(a.zip||"").replace(/\D/g,"").length===8);
 
 function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
   const accent="#f59e0b";
@@ -15848,37 +15854,69 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
   const [loaded,setLoaded]=useState(false);
   const [loadErr,setLoadErr]=useState("");
   const [view,setView]=useState("open");
+  const [prov,setProv]=useState("all");
   const [q,setQ]=useState("");
   const [limit,setLimit]=useState(40);
   const [busy,setBusy]=useState(false);
-  const emptyForm={id:null,delivery_date:todayISO(),direction:"envio",description:"",origin:"",destination:"",vehicle_label:"",tracking_url:"",status:"requested",driver_name:"",cost:"",notes:""};
+  const [uberCfg,setUberCfg]=useState(null); // {configured, webhook}
+  const [origin,setOrigin]=useState({...emptyAddr,name:"",phone:""});
+  const [quote,setQuote]=useState(null);
+  const [rowBusy,setRowBusy]=useState(null);
+  const emptyForm={id:null,provider:"99",useApi:false,delivery_date:todayISO(),direction:"envio",description:"",origin:"",destination:"",vehicle_label:"",tracking_url:"",status:"requested",driver_name:"",cost:"",notes:"",
+    pickup:{...emptyAddr},pickup_name:"",pickup_phone:"",dropoff:{...emptyAddr},dropoff_name:"",dropoff_phone:"",package_size:"small"};
   const [form,setForm]=useState(emptyForm);
   const [formOpen,setFormOpen]=useState(false);
 
+  const reload=()=>db.getDeliveries99().then(setRows).catch(()=>{});
   useEffect(()=>{
     db.getDeliveries99().then(r=>{setRows(r);setLoaded(true);}).catch(e=>{setLoadErr(e?.message||"Erro ao carregar");setLoaded(true);});
+    if(canSeeValues){
+      db.uberDirect("status").then(setUberCfg).catch(()=>setUberCfg({configured:false}));
+      db.getDeliveryOrigin().then(s=>{ const o=s.delivery_origin||{}; setOrigin({...emptyAddr,name:s.company_name||"",phone:s.company_phone||"",...o}); }).catch(()=>{});
+    }
   },[]);
+  // Entregas da Uber em andamento: recarrega a cada 30 s (o webhook atualiza o banco)
+  const hasLiveApi=rows.some(r=>r.source==="api"&&D99_OPEN.includes(r.status));
+  useEffect(()=>{ if(!hasLiveApi) return; const t=setInterval(reload,30000); return ()=>clearInterval(t); },[hasLiveApi]);
 
   const fail=e=>alert(errMsg(e)||"Erro");
   const vLabel=v=>[v.plate,v.model].filter(Boolean).join(" · ");
   const vehicleOpts=vehicles.filter(v=>v.status!=="delivered").map(vLabel).filter(Boolean);
   const findVehicleId=label=>{ const l=String(label||"").trim(); if(!l) return null; const v=vehicles.find(x=>vLabel(x)===l)||vehicles.find(x=>x.plate&&normPlate(x.plate)===normPlate(l.split("·")[0])); return v?.id||null; };
+  const apiReady=canSeeValues&&uberCfg?.configured;
+  const isApiForm=form.provider==="uber"&&form.useApi&&!form.id;
+
+  const openNew=()=>{
+    setQuote(null);
+    setForm({...emptyForm,pickup:{...emptyAddr,...origin},pickup_name:origin.name||"",pickup_phone:origin.phone||""});
+    setFormOpen(true);
+  };
+  const setProvider=p=>setForm(f=>({...f,provider:p,useApi:p==="uber"&&!!apiReady&&!f.id}));
+  const baseRow=()=>{
+    const url=form.tracking_url.trim();
+    return {
+      provider:form.provider, delivery_date:form.delivery_date||todayISO(), direction:form.direction,
+      description:form.description.trim(), origin:form.origin.trim(), destination:form.destination.trim(),
+      vehicle_label:form.vehicle_label.trim()||null, vehicle_id:findVehicleId(form.vehicle_label),
+      tracking_url:url||null, driver_name:form.driver_name.trim()||null, notes:form.notes.trim()||null,
+    };
+  };
 
   const save=async()=>{
     if(busy) return;
     if(!form.description.trim()&&!form.destination.trim()) return alert("Informe o que vai na entrega ou o destino.");
     const url=form.tracking_url.trim();
     if(url&&!safeHttpUrl(url)) return alert("O link de rastreamento precisa começar com https://");
-    const row={
-      delivery_date:form.delivery_date||todayISO(), direction:form.direction,
-      description:form.description.trim(), origin:form.origin.trim(), destination:form.destination.trim(),
-      vehicle_label:form.vehicle_label.trim()||null, vehicle_id:findVehicleId(form.vehicle_label),
-      tracking_url:url||null, status:form.status, driver_name:form.driver_name.trim()||null, notes:form.notes.trim()||null,
-    };
-    if(form.status==="delivered"){ const old=rows.find(r=>r.id===form.id); row.delivered_at=old?.delivered_at||new Date().toISOString(); }
-    else row.delivered_at=null;
-    // Quem não vê valores não grava nem altera o custo
-    if(canSeeValues){ const c=String(form.cost).replace(",",".").trim(); row.cost=c===""?null:(Number(c)||0); }
+    const old=rows.find(r=>r.id===form.id);
+    const row=baseRow();
+    if(old?.source==="api"){ // pedida pela API: status, link, entregador e custo vêm da Uber
+      delete row.tracking_url; delete row.driver_name; delete row.provider;
+    } else {
+      row.status=form.status;
+      row.delivered_at=form.status==="delivered"?(old?.delivered_at||new Date().toISOString()):null;
+      // Quem não vê valores não grava nem altera o custo
+      if(canSeeValues){ const c=String(form.cost).replace(",",".").trim(); row.cost=c===""?null:(Number(c)||0); }
+    }
     setBusy(true);
     try{
       if(form.id){ const r=await db.updateDelivery99(form.id,row); setRows(p=>p.map(x=>x.id===form.id?r:x)); }
@@ -15887,12 +15925,58 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
     }catch(e){fail(e);}
     setBusy(false);
   };
+
+  const uberCheck=()=>{
+    if(!addrComplete(form.pickup)) return "Complete o endereço de coleta (rua, cidade, UF e CEP com 8 dígitos).";
+    if(!addrComplete(form.dropoff)) return "Complete o endereço de destino (rua, cidade, UF e CEP com 8 dígitos).";
+    if(!form.pickup_phone.replace(/\D/g,"")||!form.dropoff_phone.replace(/\D/g,"")) return "Informe o telefone da coleta e do destino.";
+    if(!form.description.trim()) return "Informe o que vai na entrega.";
+    return "";
+  };
+  const doQuote=async()=>{
+    const m=uberCheck(); if(m) return alert(m);
+    setBusy(true); setQuote(null);
+    try{ setQuote(await db.uberDirect("quote",{pickup:form.pickup,dropoff:form.dropoff})); }catch(e){fail(e);}
+    setBusy(false);
+  };
+  const doOrder=async()=>{
+    const m=uberCheck(); if(m) return alert(m);
+    const feeTxt=quote?.fee!=null?` por ${fmtBRL(quote.fee)}`:"";
+    if(!window.confirm(`Pedir a entrega à Uber${feeTxt}? A Uber cobra pela entrega.`)) return;
+    setBusy(true);
+    let created=null;
+    try{
+      const row={...baseRow(),provider:"uber",source:"api",status:"requested",created_by:actor||"",
+        origin:form.origin.trim()||addrLine(form.pickup), destination:form.destination.trim()||form.dropoff_name.trim()||addrLine(form.dropoff),
+        pickup_address:form.pickup,dropoff_address:form.dropoff,pickup_name:form.pickup_name.trim()||null,pickup_phone:form.pickup_phone.trim(),
+        dropoff_name:form.dropoff_name.trim()||null,dropoff_phone:form.dropoff_phone.trim(),package_size:form.package_size};
+      created=await db.addDelivery99(row);
+      const r=await db.uberDirect("create",{id:created.id,quote_id:quote?.quote_id||undefined});
+      setRows(p=>[r.row,...p]); setForm(emptyForm); setFormOpen(false); setQuote(null); notify("Entrega pedida à Uber");
+    }catch(e){
+      if(created){ try{ await db.deleteDelivery99(created.id); }catch{} }
+      fail(e);
+    }
+    setBusy(false);
+  };
+  const saveOrigin=async()=>{
+    const o={...form.pickup,name:form.pickup_name.trim(),phone:form.pickup_phone.trim()};
+    try{ await db.setDeliveryOrigin(o); setOrigin(o); notify("Endereço da oficina salvo"); }catch(e){fail(e);}
+  };
+
   const edit=r=>{
-    setForm({id:r.id,delivery_date:r.delivery_date||todayISO(),direction:r.direction||"envio",description:r.description||"",origin:r.origin||"",destination:r.destination||"",vehicle_label:r.vehicle_label||"",tracking_url:r.tracking_url||"",status:r.status||"requested",driver_name:r.driver_name||"",cost:r.cost==null?"":String(r.cost),notes:r.notes||""});
+    setQuote(null);
+    setForm({...emptyForm,id:r.id,provider:r.provider||"99",useApi:false,delivery_date:r.delivery_date||todayISO(),direction:r.direction||"envio",description:r.description||"",origin:r.origin||"",destination:r.destination||"",vehicle_label:r.vehicle_label||"",tracking_url:r.tracking_url||"",status:r.status||"requested",driver_name:r.driver_name||"",cost:r.cost==null?"":String(r.cost),notes:r.notes||""});
     setFormOpen(true);
   };
   const setStatus=async(r,status)=>{
     try{ const patch={status,delivered_at:status==="delivered"?(r.delivered_at||new Date().toISOString()):null}; const x=await db.updateDelivery99(r.id,patch); setRows(p=>p.map(y=>y.id===r.id?x:y)); }catch(e){fail(e);}
+  };
+  const apiAction=async(r,action)=>{
+    if(action==="cancel"&&!window.confirm("Cancelar esta entrega na Uber? Pode haver cobrança se o entregador já estiver a caminho.")) return;
+    setRowBusy(r.id);
+    try{ const x=await db.uberDirect(action,{id:r.id}); setRows(p=>p.map(y=>y.id===r.id?x.row:y)); if(action==="cancel") notify("Cancelamento enviado à Uber"); }catch(e){fail(e);}
+    setRowBusy(null);
   };
   const del=async r=>{ if(!window.confirm(`Remover a entrega "${r.description||r.destination||""}"?`)) return; try{ await db.deleteDelivery99(r.id); setRows(p=>p.filter(x=>x.id!==r.id)); notify("Entrega removida"); }catch(e){fail(e);} };
 
@@ -15901,21 +15985,45 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
   const lbl={fontSize:9,fontWeight:700,color:B.gray500,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4};
 
   if(!loaded) return <div style={{padding:30,textAlign:"center",color:B.gray400,fontSize:13}}>Carregando…</div>;
-  if(loadErr) return <div style={{padding:20,color:B.red,fontSize:13}}>Não foi possível carregar as entregas ({loadErr}). Verifique se a migration 058 foi aplicada no banco.</div>;
+  if(loadErr) return <div style={{padding:20,color:B.red,fontSize:13}}>Não foi possível carregar as entregas ({loadErr}). Verifique se as migrations 058 e 059 foram aplicadas no banco.</div>;
 
   const needle=q.trim().toLowerCase();
   const filtered=rows.filter(r=>view==="open"?D99_OPEN.includes(r.status):true)
+    .filter(r=>prov==="all"||(r.provider||"99")===prov)
     .filter(r=>!needle||[r.description,r.origin,r.destination,r.vehicle_label,r.driver_name,r.notes].some(s=>(s||"").toLowerCase().includes(needle)));
   const monthKey=todayISO().slice(0,7);
   const monthRows=rows.filter(r=>(r.delivery_date||"").startsWith(monthKey)&&r.status!=="canceled");
   const monthCost=monthRows.reduce((s,r)=>s+Number(r.cost||0),0);
   const openCount=rows.filter(r=>D99_OPEN.includes(r.status)).length;
 
+  // Campos de endereço (função comum, não componente, para não perder o foco ao digitar)
+  const addrFields=(key)=>{
+    const a=form[key]; const set=(k,v)=>{setQuote(null);setForm(f=>({...f,[key]:{...f[key],[k]:v}}));};
+    return <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      <div style={{display:"flex",gap:6}}>
+        <input value={a.zip} onChange={e=>set("zip",e.target.value)} placeholder="CEP" inputMode="numeric" style={{...inp,flex:"0 0 110px"}}/>
+        <input value={a.street} onChange={e=>set("street",e.target.value)} placeholder="Rua" style={inp}/>
+        <input value={a.number} onChange={e=>set("number",e.target.value)} placeholder="Nº" style={{...inp,flex:"0 0 70px"}}/>
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <input value={a.complement} onChange={e=>set("complement",e.target.value)} placeholder="Complemento" style={inp}/>
+        <input value={a.district} onChange={e=>set("district",e.target.value)} placeholder="Bairro" style={inp}/>
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <input value={a.city} onChange={e=>set("city",e.target.value)} placeholder="Cidade" style={inp}/>
+        <input value={a.state} onChange={e=>set("state",e.target.value.toUpperCase().slice(0,2))} placeholder="UF" style={{...inp,flex:"0 0 60px"}}/>
+      </div>
+    </div>;
+  };
+
   const Card=({r})=>{
     const st=d99Status(r.status); const link=safeHttpUrl(r.tracking_url); const open=D99_OPEN.includes(r.status);
+    const isApi=r.source==="api";
     const next=r.status==="requested"?"pickup":r.status==="pickup"?"delivering":r.status==="delivering"?"delivered":null;
+    const busyRow=rowBusy===r.id;
     return <div style={{background:B.gray800,border:`1px solid ${open?st.color+"55":B.gray700}`,borderRadius:14,padding:"12px 14px",marginBottom:10}}>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <span style={{fontSize:10,fontWeight:700,color:B.gray200,letterSpacing:1,border:`1px solid ${B.gray600}`,borderRadius:6,padding:"1px 6px"}}>{(r.provider||"99")==="uber"?"Uber":"99"}</span>
         <span style={{fontSize:10,fontWeight:700,color:B.gray500,letterSpacing:1.2,textTransform:"uppercase"}}>{r.direction==="coleta"?"Coleta":"Envio"}</span>
         <span style={{fontSize:13,color:B.white,fontWeight:600}}>{r.description||"—"}</span>
         <span style={{marginLeft:"auto",fontSize:10,fontWeight:700,borderRadius:99,padding:"2px 9px",color:st.color,background:`${st.color}18`}}>{st.label}</span>
@@ -15927,51 +16035,96 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
         {r.driver_name?` · ${r.driver_name}${r.driver_plate?` (${r.driver_plate})`:""}`:""}
         {r.eta&&open?` · previsão ${new Date(r.eta).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}`:""}
         {r.delivered_at&&r.status==="delivered"?` · entregue ${new Date(r.delivered_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}`:""}
-        {r.source==="api"?" · via API 99":""}
+        {isApi?" · pela API":""}
       </div>
+      {r.driver_phone&&open&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>Entregador: {r.driver_phone}</div>}
       {r.notes&&<div style={{fontSize:12,color:B.gray400,marginTop:4}}>{r.notes}</div>}
       {canSeeValues&&r.cost!=null&&<div style={{fontSize:12,color:B.gray200,marginTop:6}}>Custo: <span style={{fontWeight:700,color:B.white}}>{fmtBRL(r.cost)}</span></div>}
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
         {link&&<a href={link} target="_blank" rel="noopener noreferrer" style={{...pill(true),textDecoration:"none"}}>Rastrear</a>}
-        {next&&<button onClick={()=>setStatus(r,next)} style={pill(false,d99Status(next).color)}>{d99Status(next).label}</button>}
-        {open&&<button onClick={()=>window.confirm("Marcar como cancelada?")&&setStatus(r,"canceled")} style={pill(false)}>Cancelar</button>}
+        {!isApi&&next&&<button onClick={()=>setStatus(r,next)} style={pill(false,d99Status(next).color)}>{d99Status(next).label}</button>}
+        {!isApi&&open&&<button onClick={()=>window.confirm("Marcar como cancelada?")&&setStatus(r,"canceled")} style={pill(false)}>Cancelar</button>}
+        {isApi&&canSeeValues&&<button disabled={busyRow} onClick={()=>apiAction(r,"refresh")} style={pill(false)}>{busyRow?"…":"Atualizar"}</button>}
+        {isApi&&canSeeValues&&open&&<button disabled={busyRow} onClick={()=>apiAction(r,"cancel")} style={{...pill(false),color:B.red,borderColor:`${B.red}55`}}>Cancelar na Uber</button>}
         <button onClick={()=>edit(r)} style={pill(false)}>Editar</button>
-        {canSeeValues&&<button onClick={()=>del(r)} style={{...pill(false),color:B.red,borderColor:`${B.red}55`}}>Remover</button>}
+        {canSeeValues&&!(isApi&&open)&&<button onClick={()=>del(r)} style={{...pill(false),color:B.red,borderColor:`${B.red}55`}}>Remover</button>}
       </div>
     </div>;
   };
 
+  const editingApi=form.id&&rows.find(r=>r.id===form.id)?.source==="api";
+
   return <div style={{maxWidth:720,margin:"0 auto"}}>
-    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
       <button onClick={()=>setView("open")} style={pill(view==="open")}>Em andamento{openCount?` · ${openCount}`:""}</button>
       <button onClick={()=>setView("all")} style={pill(view==="all")}>Todas</button>
-      {!formOpen&&<button onClick={()=>{setForm(emptyForm);setFormOpen(true);}} style={{...pill(true),marginLeft:"auto"}}>+ Nova entrega</button>}
+      {!formOpen&&<button onClick={openNew} style={{...pill(true),marginLeft:"auto"}}>+ Nova entrega</button>}
+    </div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+      {[{id:"all",label:"99 e Uber"},...D_PROVIDERS].map(p=><button key={p.id} onClick={()=>setProv(p.id)} style={{...pill(prov===p.id,B.gray200),padding:"4px 12px",fontSize:11}}>{p.label}</button>)}
     </div>
     {canSeeValues&&monthRows.length>0&&<div style={{fontSize:11,color:B.gray400,marginBottom:14,letterSpacing:.3}}>Este mês: {monthRows.length} entrega(s) · {fmtBRL(monthCost)}</div>}
 
     {formOpen&&<div style={{background:B.gray800,border:`1px solid ${accent}55`,borderRadius:14,padding:14,marginBottom:16,display:"flex",flexDirection:"column",gap:10}}>
+      {!editingApi&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+        {D_PROVIDERS.map(p=><button key={p.id} onClick={()=>setProvider(p.id)} style={pill(form.provider===p.id)}>{p.label}</button>)}
+        {form.provider==="uber"&&!form.id&&canSeeValues&&<button onClick={()=>apiReady&&setForm(f=>({...f,useApi:!f.useApi}))} style={{...pill(form.useApi,B.blue),opacity:apiReady?1:.5,cursor:apiReady?"pointer":"default"}}>{form.useApi?"Pedir pela API":"Só registrar"}</button>}
+      </div>}
+      {form.provider==="uber"&&!form.id&&canSeeValues&&uberCfg&&!uberCfg.configured&&<div style={{fontSize:11,color:B.gray400}}>A integração com a Uber ainda não está configurada. Por enquanto a entrega fica só registrada.</div>}
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
         <button onClick={()=>setForm(f=>({...f,direction:"envio"}))} style={pill(form.direction==="envio")}>Envio</button>
         <button onClick={()=>setForm(f=>({...f,direction:"coleta"}))} style={pill(form.direction==="coleta")}>Coleta</button>
         <input type="date" value={form.delivery_date} onChange={e=>setForm(f=>({...f,delivery_date:e.target.value}))} style={{...inp,width:"auto",marginLeft:"auto"}}/>
       </div>
       <div><div style={lbl}>O que vai / vem</div><input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Ex.: bico injetor, documento" style={inp}/></div>
-      <div style={{display:"flex",gap:8}}>
-        <div style={{flex:1}}><div style={lbl}>Origem</div><input value={form.origin} onChange={e=>setForm(f=>({...f,origin:e.target.value}))} placeholder="Oficina" style={inp}/></div>
-        <div style={{flex:1}}><div style={lbl}>Destino</div><input value={form.destination} onChange={e=>setForm(f=>({...f,destination:e.target.value}))} placeholder="Cliente, fornecedor" style={inp}/></div>
-      </div>
+
+      {isApiForm?<>
+        <div><div style={lbl}>Coleta</div>
+          <div style={{display:"flex",gap:6,marginBottom:6}}>
+            <input value={form.pickup_name} onChange={e=>setForm(f=>({...f,pickup_name:e.target.value}))} placeholder="Nome" style={inp}/>
+            <input value={form.pickup_phone} onChange={e=>setForm(f=>({...f,pickup_phone:e.target.value}))} placeholder="Telefone" inputMode="tel" style={inp}/>
+          </div>
+          {addrFields("pickup")}
+          <button onClick={saveOrigin} style={{...pill(false),marginTop:6,padding:"4px 12px",fontSize:11}}>Salvar como endereço da oficina</button>
+        </div>
+        <div><div style={lbl}>Destino</div>
+          <div style={{display:"flex",gap:6,marginBottom:6}}>
+            <input value={form.dropoff_name} onChange={e=>setForm(f=>({...f,dropoff_name:e.target.value}))} placeholder="Nome de quem recebe" style={inp}/>
+            <input value={form.dropoff_phone} onChange={e=>setForm(f=>({...f,dropoff_phone:e.target.value}))} placeholder="Telefone" inputMode="tel" style={inp}/>
+          </div>
+          {addrFields("dropoff")}
+        </div>
+        <div><div style={lbl}>Tamanho</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{D_SIZES.map(s=><button key={s.id} onClick={()=>setForm(f=>({...f,package_size:s.id}))} style={pill(form.package_size===s.id)}>{s.label}</button>)}</div></div>
+      </>:<>
+        <div style={{display:"flex",gap:8}}>
+          <div style={{flex:1}}><div style={lbl}>Origem</div><input value={form.origin} onChange={e=>setForm(f=>({...f,origin:e.target.value}))} placeholder="Oficina" style={inp}/></div>
+          <div style={{flex:1}}><div style={lbl}>Destino</div><input value={form.destination} onChange={e=>setForm(f=>({...f,destination:e.target.value}))} placeholder="Cliente, fornecedor" style={inp}/></div>
+        </div>
+      </>}
+
       <div><div style={lbl}>Veículo (opcional)</div><input list="d99-vehicles" value={form.vehicle_label} onChange={e=>setForm(f=>({...f,vehicle_label:e.target.value}))} placeholder="Placa ou modelo" style={inp}/>
         <datalist id="d99-vehicles">{vehicleOpts.map(o=><option key={o} value={o}/>)}</datalist></div>
-      <div><div style={lbl}>Link de rastreamento da 99</div><input value={form.tracking_url} onChange={e=>setForm(f=>({...f,tracking_url:e.target.value}))} placeholder="https://…" inputMode="url" style={inp}/></div>
-      <div style={{display:"flex",gap:8}}>
-        <div style={{flex:1}}><div style={lbl}>Entregador</div><input value={form.driver_name} onChange={e=>setForm(f=>({...f,driver_name:e.target.value}))} style={inp}/></div>
-        {canSeeValues&&<div style={{flex:1}}><div style={lbl}>Custo (R$)</div><input value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} inputMode="decimal" placeholder="0,00" style={inp}/></div>}
-      </div>
-      <div><div style={lbl}>Status</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{D99_STATUS.map(s=><button key={s.id} onClick={()=>setForm(f=>({...f,status:s.id}))} style={pill(form.status===s.id,s.color)}>{s.label}</button>)}</div></div>
-      <div><div style={lbl}>Observação</div><input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} style={inp}/></div>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-        <button onClick={()=>{setForm(emptyForm);setFormOpen(false);}} style={pill(false)}>Cancelar</button>
-        <button onClick={save} disabled={busy} style={pill(true)}>{busy?"Salvando…":"Salvar"}</button>
+
+      {!isApiForm&&!editingApi&&<>
+        <div><div style={lbl}>Link de rastreamento</div><input value={form.tracking_url} onChange={e=>setForm(f=>({...f,tracking_url:e.target.value}))} placeholder="https://…" inputMode="url" style={inp}/></div>
+        <div style={{display:"flex",gap:8}}>
+          <div style={{flex:1}}><div style={lbl}>Entregador</div><input value={form.driver_name} onChange={e=>setForm(f=>({...f,driver_name:e.target.value}))} style={inp}/></div>
+          {canSeeValues&&<div style={{flex:1}}><div style={lbl}>Custo (R$)</div><input value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} inputMode="decimal" placeholder="0,00" style={inp}/></div>}
+        </div>
+        <div><div style={lbl}>Status</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{D99_STATUS.map(s=><button key={s.id} onClick={()=>setForm(f=>({...f,status:s.id}))} style={pill(form.status===s.id,s.color)}>{s.label}</button>)}</div></div>
+      </>}
+      <div><div style={lbl}>{isApiForm?"Observação para o entregador":"Observação"}</div><input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} style={inp}/></div>
+
+      {isApiForm&&quote&&<div style={{fontSize:12,color:B.gray200,background:B.gray900,borderRadius:8,padding:"8px 12px"}}>
+        Cotação Uber: <b style={{color:B.white}}>{quote.fee!=null?fmtBRL(quote.fee):"—"}</b>
+        {quote.dropoff_eta?` · chega por volta de ${new Date(quote.dropoff_eta).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}`:quote.duration?` · cerca de ${quote.duration} min`:""}
+      </div>}
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",flexWrap:"wrap"}}>
+        <button onClick={()=>{setForm(emptyForm);setFormOpen(false);setQuote(null);}} style={pill(false)}>Cancelar</button>
+        {isApiForm?<>
+          <button onClick={doQuote} disabled={busy} style={pill(false)}>{busy?"…":"Cotar"}</button>
+          <button onClick={doOrder} disabled={busy} style={pill(true)}>{busy?"Enviando…":"Pedir à Uber"}</button>
+        </>:<button onClick={save} disabled={busy} style={pill(true)}>{busy?"Salvando…":"Salvar"}</button>}
       </div>
     </div>}
 
@@ -18954,7 +19107,7 @@ export default function App() {
               {allowedTabs.includes("stock")&&tabBtn("stock","Estoque",<IWarehouse s={13}/>,B.purple)}
               {tabBtn("materiais","Ped. Compras",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 8v10a1 1 0 0 0 1 1h4M19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 8v10"/></svg>,B.orange)}
               {allowedTabs.includes("insumos")&&tabBtn("insumos","Insumos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.7s6 6.1 6 10.6a6 6 0 0 1-12 0C6 8.8 12 2.7 12 2.7z"/></svg>,"#14b8a6")}
-              {allowedTabs.includes("entregas99")&&tabBtn("entregas99","Entregas 99",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M15 6h2l3 8.5"/><path d="M5.5 17.5L9 10h6l3.5 7.5"/></svg>,"#f59e0b")}
+              {allowedTabs.includes("entregas99")&&tabBtn("entregas99","Entregas",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M15 6h2l3 8.5"/><path d="M5.5 17.5L9 10h6l3.5 7.5"/></svg>,"#f59e0b")}
               {allowedTabs.includes("purchases")&&tabBtn("purchases","Ped. Veículos",<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,B.amber)}
             </>}
           </div>
@@ -19466,7 +19619,7 @@ export default function App() {
       </>}
 
       {tab==="entregas99"&&allowedTabs.includes("entregas99")&&<>
-        <TabHeader color="#f59e0b" title="Entregas 99" subtitle="Envios e coletas pela 99Entrega, com link de rastreamento e status"/>
+        <TabHeader color="#f59e0b" title="Entregas" subtitle="Envios e coletas pela 99 e pela Uber, com rastreamento e status"/>
         <Deliveries99Tab vehicles={vehicles} canSeeValues={!isChief(adminRole)} actor={ROLE_CONFIG[adminRole]?.label||""}/>
       </>}
 

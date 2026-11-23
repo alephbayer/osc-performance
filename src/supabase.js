@@ -1279,6 +1279,25 @@ export const db = {
     const { error } = await supabase.from("deliveries_99").delete().eq("id", id);
     if (error) throw error;
   },
+  async getDeliveryOrigin() {
+    const { data, error } = await supabase.from("settings").select("delivery_origin,company_name,company_phone").eq("id", 1).single();
+    if (error) throw error; return data || {};
+  },
+  async setDeliveryOrigin(origin) {
+    const { error } = await supabase.from("settings").update({ delivery_origin: origin }).eq("id", 1);
+    if (error) throw error;
+  },
+  // Uber Direct (edge function uber-direct): status | quote | create | refresh | cancel
+  async uberDirect(action, body = {}) {
+    const { data, error } = await supabase.functions.invoke("uber-direct", { body: { action, ...body } });
+    if (error) {
+      let msg = error.message;
+      try { const j = await error.context?.json?.(); if (j?.error) msg = j.error; } catch {}
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  },
   async setPartnerJobsPaid(ids, paid) {
     const { error } = await supabase.from("partner_jobs").update({ paid, paid_at: paid ? new Date().toISOString() : null }).in("id", ids);
     if (error) throw error;

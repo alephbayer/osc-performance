@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Cobrança parcial: na OS, escolher tarefas, mão de obra, peças e despesas e gerar um PDF de cobrança só com o que foi marcado"
+      },
+      {
+        "type": "feat",
         "text": "Peças reservadas: tocar na foto abre a imagem ampliada, com zoom e navegação entre as fotos da peça"
       },
       {

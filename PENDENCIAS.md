@@ -28,6 +28,11 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] Testar pela tela do app (Gestor) numa região atendida: pedir, ver status mudar sozinho; simular entregador com o Robocourier da Uber
 - [ ] Produção: cartão em Billing + aprovação da Uber; trocar as credenciais de teste pelas de produção. Limite de segurança: `UBER_MAX_PER_DAY` (padrão 10 pedidos/24 h), porque a função aceita qualquer chamada com a chave pública do app (ver item de segurança sobre Supabase Auth)
 
+## Cobrança parcial em PDF
+- [x] Botão "Cobrança parcial" na OS (só Gestor/Administrativo): escolhe tarefas, MO, peças, despesas e garantia (cortesia) e gera PDF "Cobrança parcial" com total do que foi marcado; não mostra pagamentos nem saldo da OS e **não grava nada** (decisão do Aleph). Teste: `node scripts/pdf-test.cjs x.pdf parcial` (v2026.11.23.203)
+- [ ] **Aleph:** conferir no app ao vivo numa OS da Performance e numa da Finishing (seleção, total e PDF no celular)
+- [ ] Se precisar no futuro: registrar o que já foi cobrado para não cobrar duas vezes
+
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor
 - [ ] Subir o backup (zip de `backup-AAAA-MM-DD/`) para o local privado e confirmar

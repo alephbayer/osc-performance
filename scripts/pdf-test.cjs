@@ -2,6 +2,7 @@
 // Extrai a função direto de src/App.jsx e gera um PDF de exemplo (Challenger, serviço em "Ficha").
 // Uso: npm i --no-save jspdf@2.5.1 && node scripts/pdf-test.cjs saida.pdf
 // Variações: troque perf:true/false e divisionName ("OSC Group" / "OSC Finishing Division") nos dados abaixo.
+// Cobrança parcial: node scripts/pdf-test.cjs saida.pdf parcial  (gera saida-perf.pdf e saida-fin.pdf)
 // Depois: pdftoppm -r 70 -png saida.pdf pag   (e olhe cada página)
 const {jsPDF}=require('jspdf');
 const isInternalTask=t=>false;
@@ -27,6 +28,10 @@ const __app=__fs.readFileSync(__path.join(__dirname,'..','src','App.jsx'),'utf8'
 const __a=__app.indexOf('async function renderElegantQuote(o) {');
 let __fn=__app.slice(__a); __fn=__fn.slice(0,__fn.indexOf('\n}\n')+3).replace('doc.save(fileName);','require("fs").writeFileSync(fileName,Buffer.from(doc.output("arraybuffer")));');
 eval('globalThis.renderElegantQuote='+__fn.replace('async function renderElegantQuote','async function'));
+const __ext=(sig,name)=>{const a=__app.indexOf(sig);let f=__app.slice(a);f=f.slice(0,f.indexOf('\n}\n')+3);eval('globalThis.'+name+'='+f.replace(/^(async )?function \w+/,'$1function'));};
+__ext('async function generatePartialChargePDF(','generatePartialChargePDF');
+__ext('function partialChargeBuild(','partialChargeBuild');
+const renderElegantQuote=(...a)=>globalThis.renderElegantQuote(...a);
 
 const tests=async()=>{
  const esc="Remoção e reinstalação dos dois cabeçotes do motor 6.1 HEMI V8, equipado com sistema de sobrealimentação ProCharger, visando à substituição das juntas de vedação originais por juntas de alta performance Cometic MLS e à instalação de prisioneiros de cabeçote reforçados.\n\nO serviço contempla a desmontagem criteriosa dos componentes periféricos necessários ao acesso, incluindo elementos do sistema ProCharger, coletores de admissão e escapamento, componentes auxiliares e conjunto de acionamento das válvulas.\n\nApós a remoção, os cabeçotes serão encaminhados à retífica especializada para conferência de planicidade e avaliação do acabamento superficial, verificando sua compatibilidade com as exigências das juntas MLS. As superfícies de assentamento do bloco também serão inspecionadas e preparadas para a montagem.\n\nA reinstalação será realizada com juntas Cometic MLS e prisioneiros de cabeçote, observando os procedimentos específicos de limpeza, preparação das roscas, lubrificação dos elementos de fixação e sequência de aperto estabelecidos pelos respectivos fabricantes.\n\nO serviço será concluído com a remontagem dos componentes removidos, reinstalação do sistema ProCharger, reposição dos fluidos necessários e realização de verificações de estanqueidade e funcionamento do conjunto mecânico.";
@@ -39,4 +44,29 @@ const tests=async()=>{
  const vehicle={model:"Dodge Challenger SRT8",plate:"EDU2J19",year:2010,color:"Amarelo",osNumber:174,importParts:[{name:"Kit de junta superior Cometic",amount:497.70,rate:5.0,taxPct:60,status:"A caminho"},{name:"Prisioneiros de cabeçote ARP",amount:419.99,rate:5.0,taxPct:60,status:"A caminho"}]};
  await globalThis.renderElegantQuote({vehicle,ts:[t1,t2],warrantyTs:[],client:{name:"Alessandro Valentino Biond Cioffi",phone:"21975166070"},employee:{name:"OSC"},company:{name:"OSC Group",address:"Estrada da Ilha, 2706 - Galpão 04, Guaratiba",phone:"21966816241",document:"23783927000140"},defaultRate:420,accent:[221,139,52],accentText:[190,105,25],divisionName:"OSC Group",osLabel:"OS-174",notes:"",checklist:[],perf:true,payments:[],osDiscountPct:0,tagline:"x",fileName:process.argv[2]||"teste-orcamento.pdf"});
 };
-tests().catch(e=>{console.error(e);process.exit(1)});
+const parcial=async()=>{
+ const out=(process.argv[2]||"parcial.pdf").replace(/\.pdf$/,"");
+ const company={name:"OSC Group",address:"Estrada da Ilha, 2706 - Galpão 04, Guaratiba",phone:"21966816241",document:"23783927000140"};
+ const client={name:"Alessandro Valentino Biond Cioffi",phone:"21975166070"};
+ const tasks=[
+  {id:"a",vehicleId:"v",label:"Troca de óleo e filtros",hours:1.5,ratePerHour:300,division:"performance",category:"Manutenção",done:true,materials:[{name:"Óleo 5W30 sintético",brand:"Motul",qty:7,cost:60,markup:50},{name:"Filtro de óleo",brand:"Mopar",qty:1,cost:80,markup:50},{name:"Filtro de ar",qty:1,cost:120,markup:50}]},
+  {id:"b",vehicleId:"v",label:"Remoção e reinstalação dos cabeçotes",hours:38,ratePerHour:420,discount:500,division:"performance",category:"Motor",materials:[{name:"Juntas Cometic MLS",qty:2,cost:900,markup:30,freight:80}]},
+  {id:"c",vehicleId:"v",label:"Pendência interna",hours:0,division:"performance",materials:[]},
+  {id:"d",vehicleId:"v",label:"Reaperto do coletor",hours:2,warranty:true,division:"performance",materials:[]},
+  {id:"e",vehicleId:"v",label:"Pintura do capô",hours:10,ratePerHour:250,division:"finishing",category:"Pintura",materials:[{name:"Verniz HS",qty:1,cost:300,markup:50},{name:"Lixas",qty:10,cost:5,markup:50}]},
+  {id:"f",vehicleId:"v",label:"Polimento técnico",hours:6,ratePerHour:250,division:"finishing",category:"Polimento",materials:[]},
+ ];
+ const vehicle={id:"v",model:"Dodge Challenger SRT8",plate:"EDU2J19",year:2010,color:"Amarelo",osNumber:174,osNumberFinishing:31,osDiscountPct:10,
+  tows:[{origin:"Barra",destination:"Oficina",value:350}],importParts:[{name:"Prisioneiros de cabeçote ARP",amount:419.99,rate:5.0,taxPct:60}]};
+ // Performance: óleo só peças (sem MO e sem filtro de ar), cabeçotes inteiro, garantia, reboque e peça importada
+ const sp=new Set(["a:M0","a:M1","b:L","b:M0","w:d","x:tow:0","x:imp:0"]);
+ const bp=partialChargeBuild({vehicle,tasks,isFD:false,defaultRate:300,sel:sp});
+ console.log("Performance: tarefas",bp.ts.map(t=>t.label),"total",bp.total.toFixed(2));
+ await generatePartialChargePDF({vehicle:bp.vehicle,isFD:false,ts:bp.ts,warrantyTs:bp.warrantyTs,client,employee:{name:"OSC"},company,defaultRate:300});
+ // Finishing: só a MO da pintura e o polimento
+ const sf=new Set(["e:L","f:L"]);
+ const bf=partialChargeBuild({vehicle,tasks,isFD:true,defaultRate:300,sel:sf});
+ console.log("Finishing: tarefas",bf.ts.map(t=>t.label),"total",bf.total.toFixed(2));
+ await generatePartialChargePDF({vehicle:bf.vehicle,isFD:true,ts:bf.ts,warrantyTs:bf.warrantyTs,client,employee:{name:"OSC"},company,defaultRate:300});
+};
+(process.argv[3]==="parcial"?parcial():tests()).catch(e=>{console.error(e);process.exit(1)});

@@ -1835,7 +1835,8 @@ async function renderElegantQuote(o) {
   let inTable=false;
   const need=h=>{ if(y+h>H-24){ doc.addPage(); y=22; if(inTable) tableHeader(); } };
 
-  const featList=(ts||[]).filter(t=>t.featured&&specHasContent(t));
+  const featList=o.partial?[]:(ts||[]).filter(t=>t.featured&&specHasContent(t));
+  const docTitle=o.partial?"Cobrança parcial":featList.length?"Proposta de serviços":"Orçamento de serviços";
   // Prazo: resumo curto (cláusulas até ~60 caracteres) + restante, que vai para "Prazo — condições"
   const prazoSplit=raw=>{
     const lines=String(raw||"").trim().split(/\n+/).map(x=>x.trim()).filter(Boolean);
@@ -1868,7 +1869,7 @@ async function renderElegantQuote(o) {
   cap(divisionName,mx,30,7.5,ink);
   cap(`Emitido em ${fmtD()}`,W-mx,30,7,gray,{align:"right"});
   if(contact) txt(contact,mx,35,{s:7,c:gray});
-  serif(featList.length?"Proposta de serviços":"Orçamento de serviços",mx,54,28);
+  serif(docTitle,mx,54,28);
   if(osLabel) cap(osLabel,W-mx,54,8,gray,{align:"right"});
   y=62;
   }
@@ -2143,7 +2144,7 @@ async function renderElegantQuote(o) {
   const fm=featList.length>0; const extras=freightTotal>0||fuelTotal>0||towTotal>0||freightTotal2>0||importTot>0||osDiscountAmt>0||closingDisc>=0.01;
   const showSub=!fm||extras||(partsTotal>0.004&&laborTotal>0.004);
   need(70); y+=showSub?10:6; if(showSub){ hair(y,line,0.2,bx,W-mx); y+=7; }
-  if(showSub){ if(!fm||partsTotal>0.004) tl("Peças e materiais",partsTotal); if(!fm||laborTotal>0.004) tl("Mão de obra",laborTotal); }
+  if(showSub){ const z=!fm&&!o.partial; if(z||partsTotal>0.004) tl("Peças e materiais",partsTotal); if(z||laborTotal>0.004) tl("Mão de obra",laborTotal); }
   if(freightTotal>0) tl("Frete das peças",freightTotal);
   if(fuelTotal>0) tl("Combustível",fuelTotal);
   if(towTotal>0) tl("Reboque",towTotal);
@@ -2158,7 +2159,7 @@ async function renderElegantQuote(o) {
     hair(y,line,0.2); y+=6;
   } else {
   y+=1; hair(y,ink,0.35,bx,W-mx); y+=9;
-  cap("Total geral",bx,y,7.5,ink); serif(R(grandTotal),cT,y+1,22,{align:"right"}); y+=12;
+  if(o.partial){ cap("Total da cobrança",bx,y,7.5,ink); y+=11; serif(R(grandTotal),cT,y,22,{align:"right"}); y+=11; } else { cap("Total geral",bx,y,7.5,ink); serif(R(grandTotal),cT,y+1,22,{align:"right"}); y+=12; }
   }
   if(closingDisc>=0.01){ const nl=doc.splitTextToSize(`Desconto concedido após o fechamento da OS: ${o.closingNote}`,80); need(nl.length*3.6+4); doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...gray); nl.forEach(l=>{ doc.text(l,W-mx,y-3,{align:"right"}); y+=3.6; }); y+=2; }
 
@@ -2195,7 +2196,7 @@ async function renderElegantQuote(o) {
   // Nota final
   const pgBefore=doc.getNumberOfPages(); need(featList.length?36:24); const freshPg=doc.getNumberOfPages()>pgBefore; y+=6;
   doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray);
-  const fl=doc.splitTextToSize(featList.length?"Escopo conforme detalhamento das páginas anteriores. Prazos e valores são estimativas e podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo; qualquer alteração será previamente comunicada e acordada com o cliente.":"Este orçamento é uma estimativa: prazos e valores podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo; qualquer alteração será previamente comunicada e acordada com o cliente.",cw);
+  const fl=doc.splitTextToSize(o.partial?"Cobrança parcial referente apenas aos serviços e materiais listados acima. Os demais itens da OS serão cobrados à parte; seus prazos e valores podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo.":featList.length?"Escopo conforme detalhamento das páginas anteriores. Prazos e valores são estimativas e podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo; qualquer alteração será previamente comunicada e acordada com o cliente.":"Este orçamento é uma estimativa: prazos e valores podem variar conforme o andamento do veículo e eventuais intercorrências ou descobertas ao longo do processo; qualquer alteração será previamente comunicada e acordada com o cliente.",cw);
   doc.text(fl,mx,y); y+=fl.length*4+2; if(!featList.length) doc.text(tagline,mx,y);
   if(featList.length){
     need(30); y=(freshPg||y<110)?y+30:Math.max(y+28,H-24-30);
@@ -2243,6 +2244,21 @@ async function generateFinishingPDF(vehicle, tasks, client, employee, defaultRat
     payments:(payments||[]).filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId&&(p.division||"performance")==="finishing"), osDiscountPct:vehicle.osDiscountPctFinishing,
     tagline:"OSC Finishing Division — Excelência em cada detalhe",
     fileName:`finishing-${(vehicle.plate||"").replace(/\s/g,"")}-${new Date().toISOString().slice(0,10)}.pdf`,
+  });
+}
+
+// Cobrança parcial: o chamador já filtra tarefas/itens/despesas escolhidos (PartialChargeModal). Só gera o PDF, não grava nada.
+async function generatePartialChargePDF({vehicle, isFD, ts, warrantyTs, client, employee, company, defaultRate}) {
+  const plate=(vehicle.plate||"").replace(/\s/g,"");
+  return renderElegantQuote({
+    vehicle, ts, warrantyTs, client, employee, company, defaultRate, partial:true,
+    accent:isFD?[168,85,247]:[221,139,52], accentText:isFD?[130,60,200]:[190,105,25],
+    divisionName:isFD?"OSC Finishing Division":(company?.name||"OSC Group"),
+    osLabel:isFD?(vehicle.osNumberFinishing?fmtOSFD(vehicle.osNumberFinishing):""):(vehicle.osNumber?fmtOS(vehicle.osNumber):""),
+    notes:"", checklist:[], perf:!isFD, payments:[],
+    osDiscountPct:isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct, osDiscountPctFin:isFD?0:vehicle.osDiscountPctFinishing,
+    tagline:isFD?"OSC Finishing Division — Excelência em cada detalhe":`${company?.name || "OSC Group"} — Excelência em cada revisão`,
+    fileName:`cobranca-parcial-${isFD?"finishing-":""}${plate}-${new Date().toISOString().slice(0,10)}.pdf`,
   });
 }
 
@@ -5742,6 +5758,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [showTLNote,setShowTLNote]=useState(false);
   const [tlNoteText,setTLNoteText]=useState("");
   const [pdfLoading,setPdfLoading]=useState(false);
+  const [showPartial,setShowPartial]=useState(false);
 
   const isFD=division==="finishing";
   const delivReady=deliveryReady(vehicle,tasks,isFD);
@@ -5790,6 +5807,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     {orderTarget&&<OrderPartModal target={orderTarget} vehicleId={vehicle.id}
       onClose={()=>setOrderTarget(null)}
       onSubmit={async(po)=>{ await onAddPurchaseOrder(po); }}/>}
+    {showPartial&&managerMode&&<PartialChargeModal vehicle={vehicle} tasks={tasks} isFD={isFD} defaultRate={defaultRate} client={cli} employee={mech} company={company} onClose={()=>setShowPartial(false)}/>}
     {showDelivCheck&&<DeliveryCheckModal vehicle={vehicle} tasks={vts} isFD={isFD} managerMode={managerMode} actor={managerMode?(isOwner?"Gestor":"Admin"):(currentMechanic?.name||"Mecânico")} onUpdateVehicle={onUpdateVehicle} onClose={()=>setShowDelivCheck(false)}
       onPdf={()=>generateDeliveryCheckPDF(buildDeliveryInfo({vehicle,tasks:vts.filter(x=>!x.warranty),deliveryCheck:vehicle.deliveryCheck||{},client:clients.find(c=>c.id===vehicle.clientId),employees,company,isFD}),{save:true})}/>}
     {showPage&&createPortal(<VehicleStagesPage vehicle={vehicle} tasks={tasks} defaultRate={defaultRate} isFD={isFD} managerMode={managerMode}
@@ -5889,6 +5907,9 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             style={{background:vehicle.urgent?`${B.red}22`:"none",border:`1px solid ${vehicle.urgent?B.red:B.gray600}`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:vehicle.urgent?B.red:B.gray500,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill={vehicle.urgent?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             {vehicle.urgent?"Urgente":"Prioridade"}
+          </button>}
+          {managerMode&&<button onClick={()=>setShowPartial(true)} style={{background:`${B.amber}10`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700}}>
+            <IFileText s={11} c={B.amber}/>Cobrança parcial
           </button>}
           {/* Checklist */}
           <button onClick={()=>setSCL(p=>!p)} style={{background:showChecklist?`${B.blue}22`:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.blue,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700,flex:"0 0 auto"}}>
@@ -13603,7 +13624,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.23.202";
+const APP_VERSION = "2026.11.23.203";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14791,6 +14812,114 @@ function deliveryReady(vehicle,tasks,isFD){
   if(l.length===0) return true;
   const dc=(vehicle.deliveryCheck&&typeof vehicle.deliveryCheck==="object")?vehicle.deliveryCheck:{};
   return l.every(t=>t.done&&dc[t.id]);
+}
+// ─── Cobrança parcial: escolher tarefas/itens da OS e gerar PDF (só owner/admin; não grava nada) ───
+function partialChargeBuild({vehicle,tasks,isFD,defaultRate,sel}){
+  const pool=tasks.filter(t=>t.vehicleId===vehicle.id&&(isFD?t.division==="finishing":true)&&!isInternalTask(t));
+  const matOk=m=>!m.noCharge&&(m.name||Number(m.cost||0)>0||Number(m.freight||0)>0);
+  const ts=[], warrantyTs=[];
+  pool.forEach(t=>{
+    if(t.warranty){ if(sel.has(`w:${t.id}`)) warrantyTs.push(t); return; }
+    const labor=sel.has(`${t.id}:L`)&&Number(t.hours||0)>0;
+    const mats=(t.materials||[]).filter((m,i)=>matOk(m)&&sel.has(`${t.id}:M${i}`));
+    if(!labor&&!mats.length) return;
+    ts.push({...t,hours:labor?t.hours:0,discount:labor?t.discount:0,materials:mats});
+  });
+  const v={...vehicle,fuels:[],tows:[],freights:[],importParts:[],fuelCost:0};
+  if(!isFD){
+    if(sel.has("x:fuel0")) v.fuelCost=vehicle.fuelCost;
+    v.fuels=(vehicle.fuels||[]).filter((f,i)=>sel.has(`x:fuel:${i}`));
+    v.tows=(vehicle.tows||[]).filter((f,i)=>sel.has(`x:tow:${i}`));
+    v.freights=(vehicle.freights||[]).filter((f,i)=>sel.has(`x:fr:${i}`));
+    v.importParts=(vehicle.importParts||[]).filter((f,i)=>sel.has(`x:imp:${i}`));
+  }
+  // total igual ao do PDF (renderElegantQuote): tarefas + despesas - desconto da OS sobre a mão de obra
+  const pct=x=>Number(x||0);
+  const sum=l=>l.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+  const lab=l=>l.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
+  const finLab=isFD?0:lab(ts.filter(t=>t.division==="finishing"));
+  const perfLab=lab(ts)-finLab;
+  const disc=isFD?perfLab*pct(vehicle.osDiscountPctFinishing)/100:perfLab*pct(vehicle.osDiscountPct)/100+finLab*pct(vehicle.osDiscountPctFinishing)/100;
+  const extras=isFD?0:Number(v.fuelCost||0)+[...v.fuels,...v.tows,...v.freights].reduce((s,f)=>s+Number(f.value||0),0)+v.importParts.reduce((s,p)=>s+importFinal(p),0);
+  return {pool,matOk,ts,warrantyTs,vehicle:v,total:sum(ts)+extras-disc,disc};
+}
+function PartialChargeModal({vehicle,tasks,isFD,defaultRate,client,employee,company,onClose}){
+  const [sel,setSel]=useState(()=>new Set());
+  const [busy,setBusy]=useState(false);
+  useEffect(()=>{const k=e=>{if(e.key==="Escape")onClose();};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k);},[]);
+  const accent=isFD?FD.primary:B.orange;
+  const R=n=>"R$ "+Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const b=partialChargeBuild({vehicle,tasks,isFD,defaultRate,sel});
+  const toggle=keys=>setSel(prev=>{const n=new Set(prev);const all=keys.every(k=>n.has(k));keys.forEach(k=>all?n.delete(k):n.add(k));return n;});
+  const Box=({on,part})=><span style={{width:20,height:20,flex:"0 0 20px",borderRadius:5,border:`1.5px solid ${on||part?accent:B.gray500}`,background:on?accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{on?<ICheck s={13} c={B.white}/>:part?<span style={{width:9,height:2,background:accent,borderRadius:2}}/>:null}</span>;
+  const Row=({keys,label,sub,value,head})=>{const n=keys.filter(k=>sel.has(k)).length;return(
+    <button onClick={()=>toggle(keys)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,background:"none",border:"none",borderTop:head?"none":`1px solid ${B.gray700}55`,padding:head?"10px 2px 8px":"8px 2px 8px 28px",cursor:"pointer",color:B.white,textAlign:"left"}}>
+      <Box on={n>0&&n===keys.length} part={n>0&&n<keys.length}/>
+      <span style={{flex:1,minWidth:0}}>
+        <span style={{display:"block",fontSize:head?13:12,fontWeight:head?700:400,color:head?B.white:B.gray200,overflow:"hidden",textOverflow:"ellipsis"}}>{label}</span>
+        {sub&&<span style={{display:"block",fontSize:10.5,color:B.gray500,marginTop:1}}>{sub}</span>}
+      </span>
+      <span style={{fontSize:head?12.5:11.5,color:head?B.white:B.gray300,whiteSpace:"nowrap"}}>{value}</span>
+    </button>);};
+  const blocks=[];
+  b.pool.filter(t=>!t.warranty).forEach(t=>{
+    const items=[];
+    const c=taskCost(t,defaultRate);
+    if(Number(t.hours||0)>0) items.push({k:`${t.id}:L`,label:"Mão de obra",sub:t.rateType==="qty"?`${t.hours}x`:`${t.hours} h${c.discount>0?"  ·  com desconto":""}`,value:c.labor});
+    (t.materials||[]).forEach((m,i)=>{ if(!b.matOk(m)) return; items.push({k:`${t.id}:M${i}`,label:`${m.brand?m.brand+" ":""}${m.name||"Material"}`,sub:`${Number(m.qty||1)} un${Number(m.freight||0)>0?"  ·  com frete":""}`,value:taskCost({materials:[m],hours:0},defaultRate).total}); });
+    if(!items.length) return;
+    blocks.push({id:t.id,label:t.label,sub:[t.category,(!isFD&&t.division==="finishing")?"Finishing":null,t.done?"Concluída":null].filter(Boolean).join("  ·  "),items});
+  });
+  const ex=[];
+  if(!isFD){
+    if(Number(vehicle.fuelCost||0)>0) ex.push({k:"x:fuel0",label:"Combustível",value:Number(vehicle.fuelCost)});
+    (vehicle.fuels||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({k:`x:fuel:${i}`,label:f.type||"Combustível",sub:f.date||"",value:Number(f.value)}));
+    (vehicle.tows||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({k:`x:tow:${i}`,label:`Reboque ${i+1}`,sub:[f.origin,f.destination].filter(Boolean).join(" > "),value:Number(f.value)}));
+    (vehicle.freights||[]).forEach((f,i)=>Number(f.value)>0&&ex.push({k:`x:fr:${i}`,label:`Frete ${i+1}`,sub:f.description||"",value:Number(f.value)}));
+    (vehicle.importParts||[]).forEach((p,i)=>importFinal(p)>0&&ex.push({k:`x:imp:${i}`,label:p.name||"Peça importada",sub:"Peça importada",value:importFinal(p)}));
+  }
+  const war=b.pool.filter(t=>t.warranty);
+  const allKeys=[...blocks.flatMap(x=>x.items.map(i=>i.k)),...ex.map(x=>x.k),...war.map(t=>`w:${t.id}`)];
+  const any=b.ts.length>0||b.warrantyTs.length>0||ex.some(x=>sel.has(x.k));
+  const gen=async()=>{ setBusy(true); try{ await generatePartialChargePDF({vehicle:b.vehicle,isFD,ts:b.ts,warrantyTs:b.warrantyTs,client,employee,company,defaultRate}); }catch(e){ alert("Erro ao gerar PDF: "+(e?.message||e)); } setBusy(false); };
+  const sec=t=><div style={{fontSize:10,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:1.4,margin:"18px 2px 4px"}}>{t}</div>;
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:300,background:B.black,display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+    <div style={{padding:"calc(36px + env(safe-area-inset-top)) 16px 12px",borderBottom:`1px solid ${B.gray700}`,background:B.gray900}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:10,fontWeight:700,color:accent,textTransform:"uppercase",letterSpacing:1.4}}>Cobrança parcial</div>
+          <div style={{fontSize:16,fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{vehicle.model} <span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate}</span></div>
+        </div>
+        <button onClick={onClose} aria-label="Fechar" style={{width:40,height:40,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={16} c={B.white}/></button>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,fontSize:11,color:B.gray400}}>
+        <span>Escolha o que entra no PDF. Nada é gravado na OS.</span>
+        {allKeys.length>0&&<button onClick={()=>toggle(allKeys)} style={{background:"none",border:"none",color:accent,fontSize:11,cursor:"pointer",padding:0}}>{allKeys.every(k=>sel.has(k))?"Limpar":"Marcar tudo"}</button>}
+      </div>
+    </div>
+    <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"4px 14px 24px"}}>
+      {allKeys.length===0&&<div style={{padding:"40px 10px",textAlign:"center",color:B.gray400,fontSize:13}}>Esta OS ainda não tem itens com valor.</div>}
+      {blocks.length>0&&sec("Serviços")}
+      {blocks.map(x=><div key={x.id} style={{borderBottom:`1px solid ${B.gray700}`}}>
+        <Row head keys={x.items.map(i=>i.k)} label={x.label} sub={x.sub} value={R(x.items.reduce((s,i)=>s+i.value,0))}/>
+        {x.items.map(i=><Row key={i.k} keys={[i.k]} label={i.label} sub={i.sub} value={R(i.value)}/>)}
+      </div>)}
+      {ex.length>0&&sec("Despesas adicionais")}
+      {ex.map(i=><div key={i.k} style={{borderBottom:`1px solid ${B.gray700}`}}><Row head keys={[i.k]} label={i.label} sub={i.sub} value={R(i.value)}/></div>)}
+      {war.length>0&&sec("Garantia (aparece como cortesia)")}
+      {war.map(t=><div key={t.id} style={{borderBottom:`1px solid ${B.gray700}`}}><Row head keys={[`w:${t.id}`]} label={t.label} value="Cortesia"/></div>)}
+    </div>
+    <div style={{padding:"12px 16px calc(12px + env(safe-area-inset-bottom))",borderTop:`1px solid ${B.gray700}`,background:B.gray900,display:"flex",alignItems:"center",gap:12}}>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:1.2}}>Total da cobrança</div>
+        <div style={{fontSize:18,fontWeight:600,marginTop:1}}>{R(b.total)}</div>
+        {b.disc>0.004&&<div style={{fontSize:10,color:B.gray500}}>já com desconto da OS sobre a mão de obra</div>}
+      </div>
+      <button onClick={gen} disabled={!any||busy} style={{background:any&&!busy?accent:B.gray700,border:"none",borderRadius:10,padding:"11px 18px",color:any&&!busy?B.white:B.gray400,fontSize:13,fontWeight:700,cursor:any&&!busy?"pointer":"not-allowed",display:"flex",alignItems:"center",gap:6}}>
+        <IFileText s={14} c={any&&!busy?B.white:B.gray400}/>{busy?"Gerando…":"Gerar PDF"}
+      </button>
+    </div>
+  </div>,document.body);
 }
 function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,managerMode,onPdf}) {
   const [confirmReset,setConfirmReset]=useState(false);

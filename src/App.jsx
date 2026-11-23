@@ -6629,7 +6629,6 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   </>);
 }
 
-// ─── ClientCard ───────────────────────────────────────────────────────────────
 // Histórico de pagamentos (aportes) do cliente: por carro e por OS, com datas
 function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
   const [open,setOpen]=useState(false); const [openV,setOpenV]=useState({});
@@ -6679,74 +6678,6 @@ function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
         </div>); })}
     </div>}
   </div>);
-}
-
-function ClientCard({client,vehicles,tasks,employees,clients,stock,defaultRate,onUpdatePhone,onUpdateName,onUpdateEmail,onDelete,onSendWA,onTransferMechanic,onTransferOwner,onToggleTask,onDeleteTask,onAddTask,onUpdateTask,onUpdateVehicle,onDeleteVehicle,onConsumeStock,onReturnStock,payments=[],onAddPayment,onDeletePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,isOwner=false}) {
-  const [open,setOpen]=useState(false);
-  const [confirmDel,setConfirmDel]=useState(false);
-  const cliV=vehicles.filter(v=>v.clientId===client.id);
-  const totT=tasks.filter(t=>cliV.find(v=>v.id===t.vehicleId)).length;
-  const donT=tasks.filter(t=>cliV.find(v=>v.id===t.vehicleId)&&t.done).length;
-  const grand=cliV.reduce((s,v)=>s+vehicleTotal(v.id,tasks,defaultRate,v),0);
-  return (<><div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,marginBottom:20,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,.35)"}}>
-    <div style={{padding:"12px 16px",background:B.gray900,borderBottom:`2px solid ${B.blue}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-      <div style={{width:42,height:42,borderRadius:10,background:B.blueBg,border:`1px solid ${B.blue}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IUser s={22} c={B.blue}/></div>
-      <div style={{flex:1,minWidth:120}}>
-        <InlineEdit value={client.name} onSave={v=>onUpdateName(client.id,v)} placeholder="Nome"/>
-        <div style={{fontSize:12,color:B.gray400,marginTop:2,display:"flex",gap:8,flexWrap:"wrap"}}>
-          <span>{cliV.length} veículo{cliV.length!==1?"s":""}</span><span>·</span><span>{donT}/{totT} tarefas</span>
-          {totT>0&&donT===totT&&<span style={{color:B.green,fontWeight:700}}>✓ Pronto!</span>}
-          {grand>0&&<span style={{color:B.amber,fontWeight:700}}>💰 {fmtBRL(grand)}</span>}
-        </div>
-        {totT>0&&<ProgressBar value={donT} max={totT}/>}
-        <div style={{display:"flex",alignItems:"center",gap:5,marginTop:3}}><IPhone s={12} c={client.phone?B.wa:B.gray500}/><InlineEdit value={client.phone} onSave={v=>onUpdatePhone(client.id,v)} placeholder="+ WhatsApp"/></div>
-        <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
-          <span style={{fontSize:10,color:B.gray500}}>✉</span>
-          <InlineEdit value={client.email||""} onSave={v=>onUpdateEmail(client.id,v)} placeholder="+ E-mail"/>
-        </div>
-      </div>
-      <div style={{display:"flex",gap:5,flexShrink:0}}>
-        <button onClick={()=>onSendWA(client)} style={{padding:"7px 11px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:4,background:client.phone?B.wa:B.gray700,color:client.phone?B.white:B.gray500}}>
-          <IPhone s={13} c={client.phone?B.white:B.gray500}/>{client.phone?"WA":"Sem WA"}
-        </button>
-        {isOwner&&<button onClick={()=>{
-          try{
-            const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
-            delete pins[client.id];
-            localStorage.setItem(CLIENT_PIN_KEY,JSON.stringify(pins));
-            toast_(`PIN de ${client.name} resetado ✓`);
-          }catch(e){}
-        }} title="Resetar PIN do portal do cliente"
-          style={{background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:8,padding:"5px 8px",cursor:"pointer",color:B.amber,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:3,flexShrink:0,whiteSpace:"nowrap"}}>
-          🔑 Reset PIN
-        </button>}
-        <button onClick={()=>setConfirmDel(true)} style={{background:`${B.white}10`,border:"none",borderRadius:8,padding:7,cursor:"pointer",color:B.gray400,display:"flex"}}
-          onMouseEnter={e=>{e.currentTarget.style.background="#ef444430";e.currentTarget.style.color=B.red;}}
-          onMouseLeave={e=>{e.currentTarget.style.background=`${B.white}10`;e.currentTarget.style.color=B.gray400;}}><ITrash s={14}/></button>
-        <button onClick={()=>setOpen(o=>!o)} style={{background:`${B.white}10`,border:"none",borderRadius:8,padding:7,cursor:"pointer",color:B.gray400,display:"flex"}}>{open?<IChevU s={14} c={B.gray400}/>:<IChevD s={14} c={B.gray400}/>}</button>
-      </div>
-    </div>
-    {open&&<div style={{padding:"12px 16px"}}>
-      {cliV.length===0?<p style={{fontSize:13,color:B.gray400}}>Sem veículos. Vá à aba <b style={{color:B.orange}}>Mecânicos</b> → <b style={{color:B.blue}}>Cliente</b> no veículo.</p>
-        :cliV.map(v=><VehicleCard key={v.id} vehicle={v} tasks={tasks} employees={employees} clients={clients} stock={stock} defaultRate={defaultRate} managerMode={true}
-          onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onUpdateTask={onUpdateTask} onUpdateVehicle={onUpdateVehicle}
-          onDeleteVehicle={onDeleteVehicle} onTransferMechanic={onTransferMechanic} onTransferOwner={onTransferOwner}
-          onConsumeStock={onConsumeStock} onReturnStock={onReturnStock}
-          payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} company={company}
-          onAddMechanic={onAddMechanic} onRemoveMechanic={onRemoveMechanic} onSetStatus={onSetStatus} onDeliver={onDeliver} isOwner={isOwner}/>)}
-      <ClientPaymentsHistory cliV={cliV} payments={payments}/>
-      {grand>0&&(()=>{const grandPaid=cliV.reduce((s,v)=>s+vehiclePaid(v.id,payments),0); const grandBal=grand-grandPaid; return (
-        <div style={{marginTop:4,padding:"11px 16px",background:B.amberBg,border:`1px solid ${B.amber}55`,borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-          <span style={{fontWeight:700,color:B.amber}}>💰 Total do cliente</span>
-          <div style={{display:"flex",gap:14,alignItems:"center"}}>
-            <span style={{fontSize:18,fontWeight:900,color:B.amber}}>{fmtBRL(grand)}</span>
-            {grandBal>0?<span style={{fontSize:12,fontWeight:700,color:B.red}}>Deve {fmtBRL(grandBal)}</span>:<span style={{fontSize:12,fontWeight:700,color:B.green}}>✓ Pago</span>}
-          </div>
-        </div>);})()}
-    </div>}
-  </div>
-  {confirmDel&&<ConfirmModal title="Remover cliente?" message={<>Tem certeza que deseja remover <b style={{color:B.white}}>{client.name}</b>? Os veículos dele serão desvinculados, mas não excluídos.</>} confirmLabel="Remover cliente" onConfirm={()=>{onDelete(client.id);setConfirmDel(false);}} onCancel={()=>setConfirmDel(false)}/>}
-  </>);
 }
 
 // ─── StockTab ─────────────────────────────────────────────────────────────────
@@ -13672,7 +13603,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.23.195";
+const APP_VERSION = "2026.11.23.196";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

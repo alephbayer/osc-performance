@@ -3,9 +3,9 @@
 Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize ao terminar** (marque feito, acrescente o que surgir). Assim nada depende da memória da conversa.
 
 ## Em andamento: levar o desenvolvimento para o Claude Code no Mac
-- [ ] Instalar o Claude Code no Mac e abrir `~/osc-performance`
+- [x] Instalar o Claude Code no Mac e abrir `~/osc-performance` (feito em 2026-11-23)
 - [ ] Conectar GitHub (poder dar push), Supabase e Vercel no Claude Code do Mac
-- [ ] Primeira tarefa de teste pequena, conferindo o fluxo do `CLAUDE.md`
+- [x] Primeira tarefa de teste pequena, conferindo o fluxo do `CLAUDE.md` (remoção do `ClientCard`, v2026.11.23.196)
 - [ ] Depois: criar a pasta de análise de orçamentos antigos, **fora** deste repositório (ele é público); sugestão `~/OSC/orcamentos` com `originais/`, `dados/`, `analises/`
 
 ## Para o Aleph validar
@@ -17,7 +17,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] Validade da proposta em PDF (precisa o número de dias definido pelo Aleph)
 
 ## Limpeza técnica
-- [ ] Remover o código morto `ClientCard` em `App.jsx`
+- [x] Remover o código morto `ClientCard` em `App.jsx` (v2026.11.23.196)
 - [ ] Changelog: faltam as entradas entre 2026-08-19 e 2026-11-18 (`public/changelog.json`)
 
 ## Segurança (sem urgência, discutir antes de mexer)

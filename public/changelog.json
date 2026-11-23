@@ -3,6 +3,10 @@
     "date": "2026-11-23",
     "changes": [
       {
+        "type": "fix",
+        "text": "Limpeza interna: removido código antigo que não era mais usado, sem mudança no uso do app"
+      },
+      {
         "type": "feat",
         "text": "Cadastros > Veículos: botão Fotos de peças em cada veículo, para anexar fotos mesmo sem OS aberta"
       }

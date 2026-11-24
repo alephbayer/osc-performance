@@ -1848,7 +1848,7 @@ async function renderElegantQuote(o) {
   // Cabeçalho
   const lockM=featList.length?(perf?[null,"Performance Division"]:/^OSC\s+(.+)$/i.exec(String(divisionName||"").trim())):null; // capa tipográfica: OSC GROUP + nome da divisão em destaque
   const fmtPh=v=>{ const d=String(v||"").replace(/\D/g,""); const n=(d.length>=12&&d.startsWith("55"))?d.slice(2):d; return n.length===11?`(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`:n.length===10?`(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`:String(v||""); };
-  const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,company?.document&&`CNPJ: ${company.document}`].filter(Boolean).join("   ·   ");
+  const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,company?.document&&`CNPJ: ${(d=>d.length===14?`${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`:company.document)(String(company.document).replace(/\D/g,""))}`].filter(Boolean).join("   ·   ");
   const colR=mx+cw/2+4;
   if(lockM){
     cap("OSC Group",mx,24,7.5,ink,{cs:2.6});
@@ -1937,7 +1937,7 @@ async function renderElegantQuote(o) {
     });
     if(prazoRest.length){ doc.setFont("helvetica","italic"); doc.setFontSize(8.5); doc.setTextColor(...gray); let ny=ymax+8; doc.splitTextToSize(prazoRest.join(" "),cw).forEach(l=>{ doc.text(l,mx,ny); ny+=4.2; }); ymax=ny-4.2; }
     y=ymax+9; hair(y,line,0.2); y+=9;
-    const contHead=()=>{ doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F"); cap(divisionName,mx,30,7.5,ink); cap("Continuação",W-mx,30,7,gray,{align:"right"}); { let tl=String(t.label||"").toUpperCase(); doc.setFont("helvetica","normal"); doc.setFontSize(6.5); while(tl.length>8&&doc.getTextWidth(tl)+0.8*tl.length>cw){ tl=tl.slice(0,-2); } if(tl!==String(t.label||"").toUpperCase()) tl=tl.trimEnd()+"…"; cap(tl,mx,35,6.5,gray); } y=46; };
+    const contHead=()=>{ doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F"); cap(divisionName,mx,30,7.5,ink); cap("Continuação",W-mx,30,7,gray,{align:"right"}); { let tl=String(t.label||"").toUpperCase(); doc.setFont("helvetica","normal"); doc.setFontSize(6.5); const fits=v=>doc.getTextWidth(v)+0.8*v.length<=cw; if(!fits(tl)){ while(tl.includes(" ")&&!fits(tl.replace(/[\s,;.:–—-]+$/,"")+" …")) tl=tl.replace(/\s*\S+$/,""); tl=tl.replace(/[\s,;.:–—-]+$/,"")+" …"; while(tl.length>8&&!fits(tl)) tl=tl.slice(0,-3)+"…"; } cap(tl,mx,35,6.5,gray); } y=46; };
     const needF=h=>{ if(y+h>H-24){ doc.addPage(); contHead(); } };
     const para=(txtv,gap=2.6)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.splitTextToSize(txtv,cw).forEach(l=>{ needF(6); txt(l,mx,y,{s:10,c:body}); y+=5.4; }); y+=gap; };
     const bullet=(txtv,mark,gap=1.4)=>{ doc.setFont("helvetica","normal"); doc.setFontSize(10); const lines=doc.splitTextToSize(txtv,cw-10); needF(lines.length*5.2+2);
@@ -1988,11 +1988,12 @@ async function renderElegantQuote(o) {
     // Capa: serviços incluídos (sem valores) e, em seguida, as páginas de detalhamento
     need(30); cap("Escopo resumido",mx,y,6.5,gray); y+=3; hair(y,ink,0.35); y+=8;
     const allSv=[...(ts||[]).filter(t=>t.featured&&specHasContent(t)),...(ts||[]).filter(t=>!(t.featured&&specHasContent(t)))];
+    const oneF=allSv.filter(t=>t.featured&&specHasContent(t)).length===1;
     allSv.forEach((t,ix)=>{
       const isF=t.featured&&specHasContent(t);
       const lns=isF?String((t.spec&&t.spec.escopo)||"").split(/\n+/).map(x=>x.trim()).filter(Boolean):[];
-      const first=isF?String(lns.find(x=>!/^[-–•*]\s+/.test(x))||lns[0]||"").replace(/:$/,"").replace(/\s+(das|dos|nas|nos|as|os)\s+seguintes\s+\S+$/i,"").replace(/[,;]\s*$/,"")+(lns.length?".":""):"";
-      const prazoC=isF?prazoSplit(t.spec&&t.spec.prazo).short:"";
+      const first=isF?String(lns.find(x=>!/^[-–•*]\s+/.test(x))||lns[0]||"").replace(/:$/,"").replace(/\s+(das|dos|nas|nos|as|os)\s+seguintes\s+\S+$/i,"").replace(/[,;.]\s*$/,"")+(lns.length?".":""):"";
+      const prazoC=isF&&!oneF?prazoSplit(t.spec&&t.spec.prazo).short:"";
       doc.setFont("helvetica","bold"); doc.setFontSize(10.5);
       const tl=doc.splitTextToSize(t.label,cw-14);
       doc.setFont("helvetica","normal"); doc.setFontSize(9);
@@ -2153,6 +2154,7 @@ async function renderElegantQuote(o) {
   if(osDiscountAmt>0) tl(discLabel,osDiscountAmt,true);
   if(closingDisc>=0.01) tl("Desconto após o fechamento",closingDisc,true);
   if(oneLine){
+    if(!showSub&&!extras&&!o.partial) y=Math.min(y,64);
     y+=2; hair(y,ink,0.35); y+=8;
     cap("Serviço contratado",mx,y,6.5,gray); cap("Total geral",W-mx,y,6.5,gray,{align:"right"}); y+=12;
     doc.setFont("times","normal"); doc.setFontSize(22); const totW=doc.getTextWidth(R(grandTotal));
@@ -13626,7 +13628,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.205";
+const APP_VERSION = "2026.11.24.206";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

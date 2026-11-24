@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "PDF de orçamento: sem ponto duplo no resumo, CNPJ formatado no cabeçalho, prazo uma vez só na capa, título cortado por palavra nas páginas de continuação e página de investimento mais compacta"
+      },
+      {
+        "type": "fix",
         "text": "PDF de orçamento: na página de investimento, nome do serviço longo agora quebra em linhas e não passa por cima do valor"
       }
     ]

@@ -4,6 +4,18 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Link de acompanhamento: a linha do tempo volta a mostrar as peças e materiais, agora numa entrada só por serviço, com a quantidade de itens e os primeiros nomes"
+      },
+      {
+        "type": "fix",
+        "text": "Link de acompanhamento: pagamentos na linha do tempo com valor formatado e escondido quando \"Valores ocultos\" está ligado"
+      },
+      {
+        "type": "fix",
+        "text": "Link de acompanhamento e histórico: emojis trocados por ícones de traço, textos em português e cabeçalho mostra só a divisão do carro (Performance, Finishing ou as duas)"
+      },
+      {
+        "type": "feat",
         "text": "Link de acompanhamento: peças e materiais de cada serviço ficam recolhidos (o cliente abre se quiser), a linha do tempo não mostra mais os lançamentos de material e o status das peças ficou simples: Pedido, A caminho, Chegou"
       },
       {

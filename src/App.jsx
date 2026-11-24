@@ -12464,6 +12464,49 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 }
 
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
+// Ícones de traço do link público (substituem emojis)
+const PV_IC={
+  check:'<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l3 3 5-6"/>',
+  box:'<rect x="3" y="3" width="18" height="18" rx="4"/>',
+  done:'<path d="M20 6L9 17l-5-5"/>',
+  wrench:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  note:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  pkg:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>',
+  pay:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  photo:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  chat:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>',
+  alert:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  fuel:'<path d="M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18M2 22h14M6 6h6v4H6z"/><path d="M15 9h2a2 2 0 0 1 2 2v5a2 2 0 0 0 4 0V8l-3-3"/>',
+  truck:'<rect x="1" y="4" width="14" height="12" rx="1"/><path d="M15 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>',
+  brush:'<path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/>',
+  list:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+  cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  ready:'<path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4L12 14l-3-3"/>',
+  dot:'<circle cx="12" cy="12" r="3"/>',
+};
+function PvIc({n,s=14,c="currentColor",style}) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,...style}} dangerouslySetInnerHTML={{__html:PV_IC[n]||PV_IC.dot}}/>;
+}
+// Linha do tempo do link público: tira o emoji do título e junta os lançamentos de material numa entrada por tarefa
+const pvStripEmoji=t=>String(t||"").replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u,"");
+function pvTimeline(evs,tasks){
+  const mats={}, rest=[];
+  (evs||[]).forEach(e=>{ if(e.type==="materials") (mats[e.title]=mats[e.title]||[]).push(e); else rest.push(e); });
+  const merged=Object.entries(mats).map(([title,list])=>{
+    const label=title.replace(/^Materiais — /,"");
+    const t=(tasks||[]).find(x=>x.label===label);
+    if(!t) return null; // tarefa interna, removida ou renomeada: não mostra
+    const names=[...new Set((t.materials||[]).map(m=>String(m?.name||"").trim()).filter(Boolean))];
+    if(!names.length) return null;
+    const last=list.reduce((a,b)=>new Date(b.createdAt)>new Date(a.createdAt)?b:a);
+    const cut=n=>n.length>42?n.slice(0,40).replace(/[\s,;:.-]+\S*$/,"")+"…":n;
+    const shown=names.slice(0,3).map(cut).join(", ")+(names.length>3?` e mais ${names.length-3}`:"");
+    return {...last,id:"mat-"+last.id,title:`Peças e materiais — ${label}`,body:`${names.length} ${names.length===1?"item":"itens"}: ${shown}`};
+  }).filter(Boolean);
+  return [...rest,...merged].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+}
 // Link público: lista de peças/materiais de uma tarefa, recolhida por padrão (o cliente abre se quiser).
 function PvMatToggle({count,children}) {
   const [open,setOpen]=useState(false);
@@ -12542,10 +12585,10 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const [lb,setLB]=useState(null);
   useEffect(()=>{
     if(!v?.id) return;
-    db.loadTimeline(v.id).then(evs=>{setTimeline(evs.filter(e=>e.type!=="materials"));setTlLoaded(true);}).catch(()=>setTlLoaded(true));
+    db.loadTimeline(v.id).then(evs=>{setTimeline(evs);setTlLoaded(true);}).catch(()=>setTlLoaded(true));
   },[v?.id]);
   if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
-    <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
+    <div style={{textAlign:"center",color:B.gray400}}><div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><PvIc n="search" s={40} c={B.gray500}/></div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
   </div>);
 
   const perfTasks=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
@@ -12578,7 +12621,8 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     const base=doneN===0?"Entrada: metade da mão de obra":"Serviços já feitos e entrada dos que estão em andamento";
     return base+(extras.length?`, mais ${extras.join(" e ")}`:"");
   })();
-  const shownTl=tlAll?timeline:timeline.slice(0,5);
+  const tlView=pvTimeline(timeline,tasks.filter(t=>t.vehicleId===v.id));
+  const shownTl=tlAll?tlView:tlView.slice(0,5);
   const hasPecas=purchaseOrders.some(o=>o.vehicleId===v.id)||[...(v.partsList||[]),...(v.partsListFinishing||[])].some(p=>p.name);
   const hasFotos=[...photos,...photosF].some(p=>p.url);
   const hasImport=(v.importParts||[]).some(p=>importFinal(p)>0);
@@ -12660,7 +12704,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* Top row: logos + name */}
       <div style={{padding:"0 max(18px, calc((100% - 680px)/2 + 18px)) 10px",paddingTop:"calc(40px + env(safe-area-inset-top))",display:"flex",alignItems:"center",gap:8}}>
         <div style={{flex:1,minWidth:0}}>
-          <OscLockup h={34}/>
+          <OscLockup h={34} div={hasPerf&&hasFin?"both":hasFin?"finishing":"performance"}/>
           <div style={{height:1,background:B.gray700,margin:"10px 0 8px"}}/>
           <div style={{fontSize:10,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Acompanhamento de serviço</div>
         </div>
@@ -12738,11 +12782,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       </div>
       </div>
       {/* ── Últimas atualizações ── */}
-      {tlLoaded&&timeline.length>0&&<div style={S.card}>
+      {tlLoaded&&tlView.length>0&&<div style={S.card}>
         <div onClick={()=>setTlOpen(o=>!o)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span style={{fontWeight:800,fontSize:15,color:B.white,flex:1}}>Últimas atualizações</span>
-          <span style={{fontSize:11,color:B.gray500}}>{timeline.length} {timeline.length!==1?"registros":"registro"}</span>
+          <span style={{fontSize:11,color:B.gray500}}>{tlView.length} {tlView.length!==1?"registros":"registro"}</span>
           {tlOpen?<IChevU s={13} c={B.gray500}/>:<IChevD s={13} c={B.gray500}/>}
         </div>
         {tlOpen&&<div style={{...S.pad,paddingTop:4}}>
@@ -12753,13 +12797,16 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               const evDate=new Date(ev.createdAt);
               const dateStr=evDate.toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"});
               const timeStr=evDate.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-              const typeIcon={task_done:"✅",task_added:"🔧",task_update:"📝",materials:"📦",parts_order:"🔧",payment:"💰",photo:"📷",note:"💬"}[ev.type]||"•";
+              const typeIcon={task_done:"done",task_added:"wrench",task_update:"note",materials:"pkg",parts_order:"pkg",payment:"pay",photo:"photo",note:"chat"}[ev.type]||"dot";
+              const payM=ev.type==="payment"?pvStripEmoji(ev.title).match(/^Pagamento\s*[—-]\s*R\$\s*([\d.,]+)/):null;
+              const payN=payM?Number(payM[1].replace(/\./g,"").replace(",",".")):null;
+              const evTitle=payM&&isFinite(payN)?`Pagamento recebido · ${fmtBRL(payN)}`:pvStripEmoji(ev.title);
               return(<div key={ev.id} style={{display:"flex",gap:12,marginBottom:i<shownTl.length-1?16:0,position:"relative"}}>
                 <div style={{width:28,height:28,borderRadius:99,background:`${evColor}22`,border:`2px solid ${evColor}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1,fontSize:11,marginTop:1}}>
-                  {typeIcon}
+                  <PvIc n={typeIcon} s={13} c={evColor}/>
                 </div>
                 <div style={{flex:1,paddingTop:2}}>
-                  <div style={{fontSize:13,fontWeight:700,color:B.white,lineHeight:1.3}}>{ev.title}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:B.white,lineHeight:1.3}}>{evTitle}</div>
                   {ev.body&&<div style={{fontSize:12,color:B.gray300,marginTop:2,lineHeight:1.4,whiteSpace:"pre-wrap"}}>{ev.body}</div>}
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4,alignItems:"center"}}>
                     {ev.category&&<span style={{fontSize:9,fontWeight:700,color:evColor,background:`${evColor}18`,borderRadius:4,padding:"1px 5px"}}>{ev.category}</span>}
@@ -12770,7 +12817,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               </div>);
             })}
           </div>
-          {timeline.length>5&&<button onClick={()=>setTlAll(a=>!a)} style={{marginTop:12,width:"100%",minHeight:44,background:"none",border:`1px solid ${B.gray700}`,borderRadius:10,color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer"}}>{tlAll?"Mostrar só as últimas":`Ver a linha do tempo completa (${timeline.length})`}</button>}
+          {tlView.length>5&&<button onClick={()=>setTlAll(a=>!a)} style={{marginTop:12,width:"100%",minHeight:44,background:"none",border:`1px solid ${B.gray700}`,borderRadius:10,color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer"}}>{tlAll?"Mostrar só as últimas":`Ver a linha do tempo completa (${tlView.length})`}</button>}
         </div>}
       </div>}
 
@@ -12799,7 +12846,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             Serviços concluídos — veículo em fase de testes
           </div>}
           {progPct===100&&v.status==="ready"&&<div style={{background:B.greenBg,border:`1px solid ${B.green}55`,borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,fontWeight:700,color:B.green,textAlign:"center"}}>
-            🎉 Seu veículo está pronto para retirada!
+            Seu veículo está pronto para retirada!
           </div>}
 
           {/* Tasks grouped by category */}
@@ -12807,7 +12854,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           {((v.fuels||[]).filter(f=>Number(f.value||0)>0).length>0||(v.tows||[]).filter(t=>Number(t.value||0)>0).length>0||(v.freights||[]).filter(f=>Number(f.value||0)>0).length>0)&&<div style={{marginBottom:12,display:"flex",flexDirection:"column",gap:6}}>
             {(v.fuels||[]).filter(f=>Number(f.value||0)>0).map((f,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
-                <span style={{fontSize:16}}>⛽</span>
+                <PvIc n="fuel" s={16} c={B.gray400}/>
                 <div style={{flex:1,minWidth:0}}>
                   <span style={{fontSize:13,color:B.gray300}}>{f.type||"Combustível"}</span>
                   {f.date&&<span style={{fontSize:11,color:B.gray500,marginLeft:6}}>{f.date}</span>}
@@ -12817,7 +12864,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             ))}
             {(v.tows||[]).filter(t=>Number(t.value||0)>0).map((t,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"8px 12px"}}>
-                <span style={{fontSize:16}}>🚛</span>
+                <PvIc n="truck" s={16} c={B.gray400}/>
                 <div style={{flex:1,minWidth:0}}>
                   <span style={{fontSize:13,color:B.gray300}}>Reboque</span>
                   {(t.origin||t.destination)&&<span style={{fontSize:11,color:B.gray500,marginLeft:6}}>{t.origin&&t.destination?`${t.origin} → ${t.destination}`:t.origin||t.destination}</span>}
@@ -12875,7 +12922,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   const signer=t.completedByEmployeeId?employees.find(e=>e.id===t.completedByEmployeeId):null;
                   return (<div key={t.id} style={{padding:"10px 12px",marginBottom:4,background:t.outsourced?`${"#a78bfa"}08`:t.done?`${B.green}08`:B.gray900,borderRadius:10,border:`1px solid ${t.outsourced?"#a78bfa33":t.done?B.green+"22":B.gray700}`}}>
                     <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                      <span style={{fontSize:18,flexShrink:0,marginTop:1}}>{t.done?"✅":"⬜"}</span>
+                      <PvIc n={t.done?"check":"box"} s={18} c={t.done?B.green:B.gray500} style={{marginTop:1}}/>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                           <span style={{fontSize:14,color:t.done?B.gray400:t.outsourced?"#c4b5fd":B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
@@ -12887,7 +12934,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                             <span style={{fontSize:11,color:m.imported?"#60a5fa":B.gray500,fontWeight:m.imported?700:400}}>{m.name}</span>
                             {m.brand&&<span style={{fontSize:10,color:B.gray600}}>· {m.brand}</span>}
                             {m.qty!=null&&Number(m.qty)!==1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
-                            {m.imported&&<span style={{fontSize:9,fontWeight:800,color:"#60a5fa",background:"#60a5fa12",border:"1px solid #60a5fa33",borderRadius:4,padding:"0px 5px",whiteSpace:"nowrap"}}>✈ Importado</span>}
+                            {m.imported&&<span style={{fontSize:9,fontWeight:800,color:"#60a5fa",background:"#60a5fa12",border:"1px solid #60a5fa33",borderRadius:4,padding:"0px 5px",whiteSpace:"nowrap"}}>Importado</span>}
                           </div>
                         ))}</PvMatToggle>
                         {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
@@ -12931,7 +12978,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* ── Finishing Division tasks ── */}
       {hasFin&&finTasks.length>0&&<div style={{...S.card,border:`1px solid ${FD.border}`}}>
         <div style={{background:FD.bg,borderBottom:`2px solid ${FD.primary}`,padding:"10px 16px",display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:16}}>🎨</span>
+          <PvIc n="brush" s={16} c={FD.primary}/>
           <span style={{fontWeight:800,fontSize:13,color:FD.primary}}>OSC Finishing Division</span>
           {v.osNumberFinishing&&<span style={{fontSize:11,color:FD.primary,background:`${FD.primary}18`,borderRadius:5,padding:"1px 7px",fontWeight:800}}>{fmtOSFD(v.osNumberFinishing)}</span>}
           <span style={{fontSize:11,color:B.gray400,marginLeft:"auto"}}>{finTasks.filter(t=>t.done).length}/{finTasks.length} concluídos</span>
@@ -12959,7 +13006,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 const signer=t.completedByEmployeeId?employees.find(e=>e.id===t.completedByEmployeeId):null;
                 return (<div key={t.id} style={{padding:"10px 12px",marginBottom:4,background:t.done?`${B.green}08`:B.gray900,borderRadius:10,border:`1px solid ${t.done?B.green+"22":B.gray700}`}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                    <span style={{fontSize:18,flexShrink:0,marginTop:1}}>{t.done?"✅":"⬜"}</span>
+                    <PvIc n={t.done?"check":"box"} s={18} c={t.done?B.green:B.gray500} style={{marginTop:1}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <span style={{fontSize:14,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
                       {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
@@ -13107,7 +13154,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
             const okItems=cl.filter(c=>c.status==="ok");
             return (<div style={{marginBottom:12,background:B.gray900,borderRadius:10,overflow:"hidden",border:`1px solid ${B.gray700}`}}>
               <div style={{padding:"10px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:13,fontWeight:800,color:B.blue}}>📋 Checklist de entrada</span>
+                <span style={{fontSize:13,fontWeight:800,color:B.blue}}>Checklist de entrada</span>
                 <span style={{fontSize:11,color:B.green,marginLeft:4}}>✓ {okItems.length} ok</span>
                 {badItems.length>0&&<span style={{fontSize:11,color:"#f87171"}}>✕ {badItems.length} com problema</span>}
               </div>
@@ -13117,7 +13164,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   const isBad=state?.status==="bad";
                   const catColor=CAT_MAP[item.category]||B.gray500;
                   return (<div key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:`1px solid ${B.gray800}`}}>
-                    <span style={{fontSize:14,flexShrink:0}}>{isBad?"⚠️":"✅"}</span>
+                    <PvIc n={isBad?"alert":"done"} s={14} c={isBad?"#f87171":B.green}/>
                     <span style={{fontSize:12,color:isBad?"#fca5a5":B.gray300,flex:1}}>{item.label}</span>
                     <span style={{fontSize:9,fontWeight:700,color:catColor,background:catColor+"18",borderRadius:4,padding:"1px 5px",flexShrink:0}}>{item.category}</span>
                   </div>);
@@ -13141,7 +13188,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       {/* ── Warranty section ── */}
       {warrantyAllTasks.length>0&&<div style={{background:B.gray900,borderRadius:14,overflow:"hidden",margin:"0 0 16px",border:`2px solid ${B.red}44`}}>
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",background:`${B.red}18`,borderBottom:`1px solid ${B.red}33`}}>
-          <span style={{fontSize:20}}>🔴</span>
+          <PvIc n="shield" s={18} c={B.red}/>
           <div>
             <div style={{fontWeight:800,fontSize:14,color:B.red}}>Serviços em Garantia</div>
             <div style={{fontSize:11,color:`${B.red}99`}}>Sem cobrança ao cliente</div>
@@ -13159,7 +13206,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               {wGroup.map((t,i)=>(
                 <div key={i} style={{padding:"10px 12px",marginBottom:4,background:`${B.red}08`,borderRadius:10,border:`1px solid ${B.red}33`}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                    <span style={{fontSize:18,flexShrink:0}}>🔴</span>
+                    <PvIc n="shield" s={16} c={B.red} style={{marginTop:2}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:14,color:B.gray100,fontWeight:600}}>{t.label}</div>
                       {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
@@ -13639,7 +13686,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.210";
+const APP_VERSION = "2026.11.24.211";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13837,7 +13884,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
   const v=vehicles.find(x=>x.id===vehicleId);
   const [lb,setLB]=useState(null);
   if(!v) return (<div style={{background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",minHeight:"60vh"}}>
-    <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
+    <div style={{textAlign:"center",color:B.gray400}}><div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><PvIc n="search" s={40} c={B.gray500}/></div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
   </div>);
 
   const sortedHistory=[...osHistory.filter(h=>h.vehicle_id===v.id)].sort((a,b)=>new Date(b.delivered_at||b.entered_at||0)-new Date(a.delivered_at||a.entered_at||0));
@@ -13864,7 +13911,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
           const tPhotos=(photos||[]).filter(p=>p.taskId===t.id);
           return (<div key={i} style={{padding:"8px 10px",marginBottom:3,background:t.done?`${B.green}08`:B.gray900,borderRadius:8,border:`1px solid ${t.done?B.green+"22":B.gray700}`}}>
             <div style={{display:"flex",gap:7,alignItems:"flex-start"}}>
-              <span style={{fontSize:15,flexShrink:0}}>{t.done?"✅":"⬜"}</span>
+              <PvIc n={t.done?"check":"box"} s={16} c={t.done?B.green:B.gray500}/>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600}}>{t.label}</div>
                 {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
@@ -13889,7 +13936,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
   return (<div style={{minHeight:"100svh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",gap:12}}>
-      <div style={{width:36,height:36,borderRadius:8,background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📋</div>
+      <div style={{width:36,height:36,borderRadius:8,background:B.purple,display:"flex",alignItems:"center",justifyContent:"center"}}><PvIc n="list" s={18} c="#fff"/></div>
       <div>
         <OscLogo h={20}/>
         <div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Histórico de serviços</div>
@@ -13913,7 +13960,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
             </div>}
             {v.color&&<div style={{background:B.gray700,borderRadius:7,padding:"6px 12px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Cor</div>
-              <div style={{fontSize:14,fontWeight:700,color:B.gray200}}>🎨 {v.color}</div>
+              <div style={{fontSize:14,fontWeight:700,color:B.gray200}}>{v.color}</div>
             </div>}
           </div>
         </div>
@@ -13922,7 +13969,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       {/* Active OS */}
       {hasActive&&<div style={S.card}>
         <div style={S.pad}>
-          <div style={{fontWeight:800,fontSize:13,color:B.orange,marginBottom:10}}>🔧 OS em andamento</div>
+          <div style={{fontWeight:800,fontSize:13,color:B.orange,marginBottom:10}}>OS em andamento</div>
           {/* Estimated materials warning */}
           {(()=>{
             const estimatedMats=activeTasks.flatMap(t=>(t.materials||[]).filter(m=>m.estimated&&m.name).map(m=>m.name));
@@ -13930,7 +13977,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
             return(
               <div style={{background:"#eab30818",border:"2px solid #eab30855",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                  <span style={{fontSize:16}}>⚠️</span>
+                  <PvIc n="alert" s={16} c={B.amber}/>
                   <span style={{fontWeight:800,fontSize:13,color:"#eab308"}}>Itens com valor estimado</span>
                 </div>
                 <p style={{fontSize:12,color:"#eab30899",margin:"0 0 8px 0",lineHeight:1.5}}>
@@ -13952,7 +13999,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
             const catOrder=buildCatOrder(wts);
             return(<div style={{marginTop:14}}>
               <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:`${B.red}18`,border:`2px solid ${B.red}55`,borderRadius:10,marginBottom:10}}>
-                <span style={{fontSize:18}}>🔴</span>
+                <PvIc n="shield" s={18} c={B.red}/>
                 <div>
                   <div style={{fontWeight:800,fontSize:13,color:B.red}}>Serviços em Garantia</div>
                   <div style={{fontSize:11,color:`${B.red}99`}}>Sem cobrança ao cliente</div>
@@ -13969,7 +14016,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
                   {group.map((t,i)=>(
                     <div key={i} style={{padding:"8px 10px",marginBottom:3,background:`${B.red}08`,borderRadius:8,border:`1px solid ${B.red}33`}}>
                       <div style={{display:"flex",gap:7,alignItems:"flex-start"}}>
-                        <span style={{fontSize:15,flexShrink:0}}>🔴</span>
+                        <PvIc n="shield" s={15} c={B.red}/>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:13,color:B.gray100,fontWeight:600}}>{t.label}</div>
                           {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
@@ -14006,10 +14053,10 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
               {h.os_number&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:6,padding:"2px 10px",fontWeight:800,fontSize:13}}>{fmtOS(h.os_number)}</span>}
               <div style={{fontSize:11,color:B.gray400}}>
-                {entryDate&&<span>📅 {entryDate}</span>}
-                {delivDate&&<span style={{marginLeft:10}}>✅ Entregue {delivDate}</span>}
+                {entryDate&&<span>Entrada {entryDate}</span>}
+                {delivDate&&<span style={{marginLeft:10}}>Entregue {delivDate}</span>}
               </div>
-              {mechs.length>0&&<div style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>🔧 {mechs.join(", ")}</div>}
+              {mechs.length>0&&<div style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>{mechs.join(", ")}</div>}
             </div>
             {renderTaskList(hTasks)}
             {hTasks.length===0&&<div style={{fontSize:13,color:B.gray500}}>Nenhuma tarefa registrada.</div>}
@@ -15629,13 +15676,13 @@ function OscLogo({h=28,center=false}) {
     style={{display:"block",height:h,width:"auto",maxWidth:"100%",margin:center?"0 auto":0}}/>;
 }
 // Logo OSC GROUP + linha "PERFORMANCE & FINISHING DIVISION" (maiúsculas espaçadas, na largura do logo)
-function OscLockup({h=40}) {
+function OscLockup({h=40,div="both"}) {
   const w=Math.round(h*660/108), fs=h*0.21;
   const word=(t,c)=><span style={{color:c,marginRight:"-.3em",whiteSpace:"nowrap"}}>{t}</span>;
   return <div style={{width:w,maxWidth:"100%"}}>
     <OscLogo h={h}/>
-    <div style={{display:"flex",justifyContent:"space-between",marginTop:h*0.28,fontSize:fs,fontWeight:600,letterSpacing:".3em",lineHeight:1,paddingLeft:1}}>
-      {word("PERFORMANCE","#DD8B34")}{word("&",B.gray500)}{word("FINISHING DIVISION",FD.primary)}
+    <div style={{display:"flex",justifyContent:div==="both"?"space-between":"flex-start",marginTop:h*0.28,fontSize:fs,fontWeight:600,letterSpacing:".3em",lineHeight:1,paddingLeft:1}}>
+      {div!=="finishing"&&word("PERFORMANCE","#DD8B34")}{div==="both"&&word("&",B.gray500)}{div!=="performance"&&word("FINISHING DIVISION",FD.primary)}
     </div>
   </div>;
 }

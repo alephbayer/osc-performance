@@ -53,7 +53,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Limpeza do que o cliente vê: materiais recolhidos por tarefa (`PvMatToggle`), linha do tempo do link sem eventos `materials` (continuam no banco e no app interno), status de pedido de peça: Pedido / A caminho / Chegou (v2026.11.24.210)
 - [x] Linha do tempo do link: materiais voltam consolidados, uma entrada por tarefa ("Peças e materiais — tarefa", N itens, 3 primeiros nomes, data do último lançamento), lidos da tarefa atual (`pvTimeline`); tarefa interna/renomeada não aparece. Pagamentos formatados e com valor oculto quando "Valores ocultos". Emojis trocados por ícones de traço (`PvIc`) no `?v=` e `?vh=`; cabeçalho `OscLockup div=` mostra só a divisão do carro (v2026.11.24.211)
 - [ ] Os títulos da linha do tempo ainda são gravados com emoji no banco (o link tira na exibição; o app interno continua mostrando)
-- Próximos combinados (avaliação do portal, 2026-11-24): histórico como aba e link encurtado -> link seguro com código e função no banco (discutir antes)
+- [x] Materiais da linha do tempo expansíveis item a item; histórico virou aba "Histórico" do `?v=` (links `?vh=` antigos redirecionam para `?v=<8>&aba=historico`); link curto `?v=<8 primeiros caracteres do id>` em `getPublicLink`, WhatsApp e "Link histórico" (sem migration; `loadPublicVehicle` resolve o prefixo e exige que seja único; 119 veículos, 0 colisões em 2026-11-24). Links com id inteiro continuam valendo (v2026.11.24.212)
+- [ ] Próximo combinado (avaliação do portal): link seguro com código próprio revogável e função no banco que devolve só aquele carro, para fechar as tabelas à chave pública (discutir antes de mexer). Obs.: o link curto tem 8 caracteres hex; hoje isso não piora nada porque a API pública já lista todos os veículos
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

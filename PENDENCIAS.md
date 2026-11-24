@@ -71,7 +71,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Decidido (Aleph, 2026-11-24): as mensagens de WhatsApp montadas pelo app **mantêm** os emojis; a regra "sem emojis" vale para a interface e as notificações
 - [x] Bloco 1 da revisão do portal (v2026.11.24.220): aprovar/recusar com confirmação (portal e `?q=`); anotação nova manda push à oficina e mostra erro se falhar; anotação só pode ser apagada até 15 min depois (só na interface; o banco segue aberto)
 - [x] Revisão do portal, bloco 2 (v2026.11.24.221): botão WhatsApp da oficina no topo (`OSC_WA`); aviso no iPhone sobre Tela de Início; "Agora não" lembrado 30 dias; barra de baixo com até 5 abas (Agendamentos e Peças viraram atalhos no Início); login com DDD; confirmar ao sair
-- [ ] Revisão do portal, bloco 3 (limpeza): código morto no `ClientPortal` (popup de saldo nunca exibido, cálculo de dívida sem uso, `tabBtn`); saldo calculado em 3 lugares (cartão, Conta, página do veículo)
+- [x] Revisão do portal, bloco 3 (v2026.11.24.222): código morto removido do `ClientPortal`; cartão do Início e aba Conta usam `portalVehicleDue` (valores conferidos iguais antes/depois num cliente com 4 veículos). A página do veículo (`PublicVehicleView`, sessão do link de acompanhamento) ainda tem a própria conta
 - [ ] Ideia: aprovação parcial de orçamento (cliente escolhe os itens). Nem portal nem `?q=` têm; a conversão em agendamento já usa `approvedItems`, mas a lista de orçamentos da oficina não mostra o que foi aprovado
 - [ ] Achado não tratado: os 4 quadrinhos do PIN às vezes não pulam sozinhos para o próximo dígito (automação; conferir no celular)
 

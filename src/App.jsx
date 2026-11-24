@@ -368,6 +368,21 @@ function PortalHistoryCard({h,v,payments}) {
   </div>);
 }
 
+// Saldo da OS aberta de um veículo no portal do cliente. Cartão do Início e aba Conta usam esta mesma conta.
+function portalVehicleDue(v,tasks,payments,defaultRate){
+  const perfTasks=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
+  const finTasks=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
+  const perfTotal=v.enteredAt?vehicleTotal(v.id,perfTasks,defaultRate,v):0;
+  const finLabor=finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0);
+  const finMat=finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).mat,0);
+  const finDisc=finLabor*Number(v.osDiscountPctFinishing||0)/100;
+  const finTotal=v.enteredAtFinishing?finLabor+finMat-finDisc:0;
+  const vPayments=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId);
+  const paid=vPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const totalDue=perfTotal+finTotal;
+  return {perfTasks,finTasks,perfTotal,finTotal,finDisc,totalDue,vPayments,paid,balance:totalDue-paid};
+}
+
 function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen,onPhoto}) {
   const vts=tasks.filter(t=>t.vehicleId===v.id&&!t.warranty);
   const done=vts.filter(t=>t.done).length;
@@ -376,12 +391,7 @@ function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen,onPhoto}) {
   const finTs=vts.filter(t=>t.division==="finishing");
   const hasPerf=!!v.enteredAt||perfTs.length>0, hasFin=!!v.enteredAtFinishing||finTs.length>0;
   const st=v.status==="ready"||(vts.length>0&&done===vts.length)?{l:"Pronto",c:B.green}:v.status==="paused"?{l:"Pausado",c:B.amber}:{l:"Em serviço",c:B.orange};
-  const perfTotal=v.enteredAt?vehicleTotal(v.id,tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"),defaultRate,v):0;
-  const finTasks=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
-  const finLabor=finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0);
-  const finTotal=v.enteredAtFinishing?finLabor+finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).mat,0)-finLabor*Number(v.osDiscountPctFinishing||0)/100:0;
-  const paid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((a,p)=>a+Number(p.amount),0);
-  const balance=perfTotal+finTotal-paid;
+  const {balance}=portalVehicleDue(v,tasks,payments,defaultRate);
   return (<div style={{position:"relative",marginBottom:14}}>
     <button onClick={onOpen} style={{display:"block",width:"100%",textAlign:"left",padding:0,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16,overflow:"hidden",cursor:"pointer",fontFamily:"inherit",color:B.white}}>
     <div style={{height:132,background:v.photo?`url(${v.photo}) center/cover`:`linear-gradient(135deg,${B.gray700},${B.gray900})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
@@ -539,7 +549,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   const [openVid,setOpenVid]=useState(null);
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
-  const [showDebtPopup,setShowDebtPopup]=useState(false);
   const [confirmQ,setConfirmQ]=useState(null); // {id, act:"approve"|"reject"}
   const [busyQ,setBusyQ]=useState(false);
 
@@ -558,15 +567,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
     });
   },[]);
 
-  useEffect(()=>{
-    const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
-    const cliHist=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
-    const hasDebt=cliHist.some(h=>{
-      const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);
-      return Math.round((Number(h.total_value||h.totalValue||0)-paid)*100)/100>0.01;
-    });
-    // aviso de saldo em aberto agora aparece como cartão na tela inicial
-  },[]);
 
   const dismissPush=()=>{ try{ localStorage.setItem(PUSH_DISMISS_KEY,String(Date.now())); }catch{} setPushStatus("denied"); };
   const requestPush=async()=>{
@@ -578,8 +578,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
     const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
     await db.saveClientPushSubscription(client.id,sub);
     setPushStatus("granted");
-  }; // active | history | account
-  const blue=B.blue;
+  };
 
   const cliVehicles=vehicles.filter(v=>v.clientId===client.id);
   const activeVehicles=cliVehicles.filter(v=>v.enteredAt||v.enteredAtFinishing||tasks.some(t=>t.vehicleId===v.id&&!t.done));
@@ -598,14 +597,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
     .filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id))
     .sort((a,b)=>new Date(b.delivered_at||b.deliveredAt||0)-new Date(a.delivered_at||a.deliveredAt||0));
 
-  const tabBtn=(key,label,icon)=>(
-    <button onClick={()=>setTab(key)} style={{flex:1,padding:"8px 4px 6px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:700,
-      background:tab===key?blue:"transparent",color:tab===key?B.white:B.gray400,
-      display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:0}}>
-      <span style={{display:"flex",alignItems:"center",justifyContent:"center",opacity:tab===key?1:.7}}>{icon}</span>
-      <span style={{fontSize:10,lineHeight:1.2,textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{label}</span>
-    </button>
-  );
 
 
   // ── Avisos que pedem atenção (tela inicial) ──
@@ -626,35 +617,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
 
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
 
-    {/* Debt popup */}
-    {showDebtPopup&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:B.gray900,borderRadius:20,padding:28,maxWidth:340,width:"100%",border:`2px solid ${B.red}55`,boxShadow:"0 8px 40px rgba(0,0,0,.6)"}}>
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:48,marginBottom:12,display:"flex",justifyContent:"center"}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-          <div style={{fontWeight:900,fontSize:18,color:B.white,marginBottom:8}}>Saldo em aberto</div>
-          <div style={{fontSize:14,color:B.gray400,lineHeight:1.6}}>Identificamos um ou mais serviços anteriores com valor pendente de pagamento.</div>
-        </div>
-        <div style={{background:`${B.red}12`,border:`1px solid ${B.red}33`,borderRadius:12,padding:"12px 16px",marginBottom:20}}>
-          {(()=>{
-            const cliVehicleIds=new Set(vehicles.filter(v=>v.clientId===client.id).map(v=>v.id));
-            const cliHist=osHistory.filter(h=>(h.client_id||h.clientId)===client.id||cliVehicleIds.has(h.vehicle_id));
-            return cliHist.filter(h=>{const paid=Math.round(payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0)*100)/100;return Number(h.total_value||h.totalValue||0)-paid>=0.01;}).map(h=>{
-              const osNum=h.os_number||h.osNumber;const div=h.division||"performance";
-              const osLabel=div==="finishing"?fmtOSFD(osNum):fmtOS(osNum);
-              const totalValue=Number(h.total_value||h.totalValue||0);
-              const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((s,p)=>s+Number(p.amount),0);
-              return (<div key={h.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${B.red}22`}}>
-                <span style={{fontSize:13,color:B.gray300,fontWeight:700}}>{osLabel}</span>
-                <span style={{fontSize:15,fontWeight:900,color:B.red}}>{fmtBRL(totalValue-paid)}</span>
-              </div>);
-            });
-          })()}
-        </div>
-        <div style={{fontSize:12,color:B.gray500,textAlign:"center",marginBottom:16}}>Consulte a aba <strong style={{color:B.white}}>Conta</strong> para mais detalhes ou entre em contato conosco.</div>
-        <button onClick={()=>{setShowDebtPopup(false);setTab("account");}} style={{width:"100%",padding:"13px",borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",marginBottom:8}}>Ver conta</button>
-        <button onClick={()=>setShowDebtPopup(false)} style={{width:"100%",padding:"11px",borderRadius:12,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>Fechar</button>
-      </div>
-    </div>}
     {/* Header */}
     <div style={{background:B.black,padding:"0 18px",paddingTop:"calc(40px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",paddingBottom:10}}>
@@ -769,7 +731,6 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       {/* ── Account ── */}
       {tab==="account"&&<>
         {(()=>{
-          const cliCredit=(quotes.length>=0?[]:[]); // placeholder
           const totalCredit=(clientCredits||[]).filter(c=>c.clientId===client.id).reduce((s,c)=>s+Number(c.amount),0);
           if(totalCredit<=0) return null;
           return(<div style={{background:`${B.blue}15`,border:`1px solid ${B.blue}33`,borderRadius:12,padding:"14px 16px",marginBottom:14,display:"flex",alignItems:"center",gap:12}}>
@@ -786,12 +747,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           let due=debtTotal;
           cliVehicles.forEach(v=>{
             if(!(v.enteredAt||v.enteredAtFinishing)) return;
-            const pT=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
-            const fT=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
-            const fL=fT.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0);
-            const tot=(v.enteredAt?vehicleTotal(v.id,pT,defaultRate,v):0)+(v.enteredAtFinishing?fL+fT.reduce((a,t)=>a+taskCost(t,defaultRate).mat,0)-fL*Number(v.osDiscountPctFinishing||0)/100:0);
-            const pd=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((a,p)=>a+Number(p.amount),0);
-            due+=Math.max(0,tot-pd);
+            due+=Math.max(0,portalVehicleDue(v,tasks,payments,defaultRate).balance);
           });
           return (<div style={{textAlign:"center",padding:"22px 16px 24px",marginBottom:16,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16}}>
             <div style={{fontSize:10,letterSpacing:1.2,color:B.gray500,fontWeight:700,textTransform:"uppercase"}}>Saldo total em aberto</div>
@@ -802,20 +758,10 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
         })()}
         <PixPaymentBox/>
         {cliVehicles.map(v=>{
-          const vPayments=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId);
+          const {perfTasks,finTasks,finDisc,totalDue,vPayments,paid:totalPaid,balance}=portalVehicleDue(v,tasks,payments,defaultRate);
           const vHistory=cliHistory.filter(h=>(h.vehicle_id||h.vehicleId)===v.id);
           const hasActivity=v.enteredAt||v.enteredAtFinishing||vPayments.length>0||vHistory.length>0;
           if(!hasActivity) return null;
-          const perfTasks=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
-          const finTasks=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
-          const perfTotal=vehicleTotal(v.id,perfTasks,defaultRate,v);
-          const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-          const finMat=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
-          const finDisc=finLabor*Number(v.osDiscountPctFinishing||0)/100;
-          const finTotal=finLabor+finMat-finDisc;
-          const totalDue=(v.enteredAt?perfTotal:0)+(v.enteredAtFinishing?finTotal:0);
-          const totalPaid=vPayments.reduce((s,p)=>s+Number(p.amount),0);
-          const balance=totalDue-totalPaid;
           const hasActiveOS=!!(v.enteredAt||v.enteredAtFinishing);
           const lbl={fontSize:9,letterSpacing:1,fontWeight:700,textTransform:"uppercase",marginBottom:4};
           return (<div key={v.id} style={{marginBottom:18}}>

@@ -66,10 +66,10 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Aprovar/recusar orçamento (portal e link `?q=`) manda push à oficina, sem valores porque chega também aos chefes (v2026.11.24.216)
 - [x] Rascunho fica interno: o portal não mostra nem carrega orçamento `draft` (migration 061). O push "Orçamento disponível" saiu da criação e foi para o botão "Enviar"; "Orçamento atualizado" só vai se o orçamento já foi enviado. **Aleph:** o rascunho que já existe para um cliente só volta a aparecer para ele depois de "Enviar". Não testado no app interno (precisa da senha): o push do "Enviar"
 - [x] O link público de orçamento `?q=` tem raiz própria (`PublicQuoteRoot`) e lê só aquele orçamento; antes carregava o banco inteiro (v2026.11.24.217)
-- [ ] Link `?q=`: orçamento ligado a um veículo cadastrado mostra "Veículo" no título (só usa o modelo digitado à mão)
+- [x] Link `?q=`: título usa modelo e placa do veículo cadastrado; botão WhatsApp do cadastro do cliente abre a conversa (v2026.11.24.219). "Nova versão" na primeira visita não é bug: só aparece quando o navegador já guardou uma versão anterior
 - [x] Emojis restantes: títulos de push, botões de editar, status de pedidos/investimentos (antes o push de pedido saía com "check"/"cart" escrito no título) e abas do quadro (v2026.11.24.218). Ficaram de propósito os símbolos de texto ✓ ✕ → ← ⌘
 - [x] Decidido (Aleph, 2026-11-24): as mensagens de WhatsApp montadas pelo app **mantêm** os emojis; a regra "sem emojis" vale para a interface e as notificações
-- [ ] Achados ainda não tratados: emojis nos títulos das notificações push (cliente e oficina); "Nova versão disponível" aparece já na primeira visita; botão WhatsApp no cadastro do cliente não faz nada; os 4 quadrinhos do PIN às vezes não pulam sozinhos para o próximo dígito (automação; conferir no celular)
+- [ ] Achado não tratado: os 4 quadrinhos do PIN às vezes não pulam sozinhos para o próximo dígito (automação; conferir no celular)
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

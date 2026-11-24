@@ -4,6 +4,14 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Link de orçamento: quando o orçamento é de um veículo cadastrado, o título mostra o modelo e a placa em vez de \"Veículo\""
+      },
+      {
+        "type": "fix",
+        "text": "Clientes: o botão WhatsApp no cadastro do cliente agora abre a conversa"
+      },
+      {
+        "type": "fix",
         "text": "Notificações sem emojis no título (oficina, mecânicos e clientes); botões de editar, status de pedidos e investimentos e abas do quadro com ícones de traço ou só texto"
       },
       {

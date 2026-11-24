@@ -8435,7 +8435,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
             <ClientPaymentsHistory cliV={cliVs} payments={payments} osHistory={osHistory}/>
             {/* Action buttons */}
             <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
-              {cli.phone&&<button onClick={()=>{}} style={{padding:"7px 14px",borderRadius:8,background:B.wa,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+              {cli.phone&&<button onClick={()=>{ const d=cleanPhone(cli.phone); window.open(`https://wa.me/${d.length<=11?"55"+d:d}`,"_blank"); }} style={{padding:"7px 14px",borderRadius:8,background:B.wa,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                 <IPhone s={13} c={B.white}/>WhatsApp
               </button>}
               {isOwner&&<button onClick={async()=>{
@@ -9215,7 +9215,11 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
   const [selected,setSelected]=useState(null); // null=all or Set of item ids
 
   useEffect(()=>{
-    db.getQuote(quoteId).then(q=>{setQuote(q);setLoading(false);}).catch(()=>setLoading(false));
+    db.getQuote(quoteId).then(async q=>{
+      // orçamento ligado a um veículo cadastrado: usa o modelo e a placa do cadastro no título
+      if(q&&q.vehicleId&&!q.tempModel){ try{ const c=await db.getQuoteContext(q); q={...q,tempModel:c.model,tempPlate:q.tempPlate||c.plate}; }catch{} }
+      setQuote(q);setLoading(false);
+    }).catch(()=>setLoading(false));
   },[quoteId]);
 
   if(loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#f8f9fa",color:"#333",fontSize:15}}>Carregando orçamento…</div>;
@@ -13751,7 +13755,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.218";
+const APP_VERSION = "2026.11.24.219";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

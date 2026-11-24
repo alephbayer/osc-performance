@@ -3,6 +3,10 @@
     "date": "2026-11-24",
     "changes": [
       {
+        "type": "feat",
+        "text": "App inteiro: emojis trocados por ícones de traço, no mesmo padrão do link de acompanhamento"
+      },
+      {
         "type": "fix",
         "text": "Link de acompanhamento: na linha do tempo, o traço vertical não passa mais por dentro dos ícones"
       },

@@ -1187,14 +1187,14 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
       {box("Previsão a entrar",r.receive,B.blue,toExec>0.005?`${m(toExec)} ainda a executar`:"total das OS − pago")}
     </div>
     {r.list.length===0
-      ?<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"14px 16px",fontSize:13,color:B.gray400,textAlign:"center"}}>Nenhum valor em aberto 🎉</div>
+      ?<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"14px 16px",fontSize:13,color:B.gray400,textAlign:"center"}}>Nenhum valor em aberto <Ic n="spark"/></div>
       :<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,overflow:"hidden"}}>
         {rows.map((c,i)=>(<div key={c.id} style={{borderTop:i?`1px solid ${B.gray700}`:"none"}}>
           <button onClick={()=>setOpen(open===c.id?null:c.id)} style={{width:"100%",background:"none",border:"none",cursor:"pointer",padding:"11px 14px",display:"flex",alignItems:"center",gap:10,textAlign:"left",fontFamily:"inherit"}}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:700,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
               <div style={{fontSize:10,color:B.gray500,marginTop:1}}>
-                {c.items.length} OS · previsão {m(c.receive)}{c.closed>0.005&&<span style={{color:B.red,fontWeight:700}}> · {m(c.closed)} fechada</span>}{c.credit>0.005&&<span style={{color:B.blue}}> · 💳 {m(c.credit)} crédito abatido</span>}
+                {c.items.length} OS · previsão {m(c.receive)}{c.closed>0.005&&<span style={{color:B.red,fontWeight:700}}> · {m(c.closed)} fechada</span>}{c.credit>0.005&&<span style={{color:B.blue}}> · <Ic n="pay"/> {m(c.credit)} crédito abatido</span>}
               </div>
             </div>
             <div style={{textAlign:"right"}}>
@@ -1286,12 +1286,12 @@ function SplitBox({total,perfStr,setPerfStr,perfBal,finBal}){
     <div style={{fontSize:10,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Divisão do valor entre as empresas</div>
     <div style={{display:"flex",gap:8}}>
       <div style={{flex:1}}>
-        <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:3}}>⚙️ Performance (R$)</div>
+        <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:3}}><Ic n="gear"/> Performance (R$)</div>
         <input value={perfStr} onChange={e=>setPerfStr(e.target.value)} placeholder={fmtR2(r.auto)} type="number" step="0.01"
           style={{width:"100%",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
       </div>
       <div style={{flex:1}}>
-        <div style={{fontSize:10,color:FD.primary,fontWeight:700,marginBottom:3}}>🎨 Finishing (R$)</div>
+        <div style={{fontSize:10,color:FD.primary,fontWeight:700,marginBottom:3}}><Ic n="brush"/> Finishing (R$)</div>
         <div style={{padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray700}`,background:B.gray900,color:B.white,fontSize:13,fontWeight:700}}>{fmtR2(Math.max(0,r.fin))}</div>
       </div>
     </div>
@@ -3495,7 +3495,7 @@ function PhotoLightbox({items,current,onChange,onClose,taskLabel}) {
     {nav&&<div style={{position:"fixed",top:22,left:0,right:0,textAlign:"center",color:"rgba(255,255,255,.75)",fontSize:12,fontWeight:700,letterSpacing:1.5,pointerEvents:"none"}}>{idx+1} / {n}</div>}
     <ZoomImg src={urlOf(current)} onSwipe={nav?d=>goRef.current(d):undefined} style={{maxWidth:"95vw",maxHeight:"75vh",objectFit:"contain",borderRadius:8}}/>
     {(cur.caption||label)&&<div style={{textAlign:"center",padding:"0 20px"}}>
-      {label&&<div style={{color:"#c4b5fd",fontWeight:700,fontSize:13,marginBottom:2}}>🔗 {label}</div>}
+      {label&&<div style={{color:"#c4b5fd",fontWeight:700,fontSize:13,marginBottom:2}}><Ic n="link"/> {label}</div>}
       {cur.caption&&<div style={{color:B.gray200,fontSize:13}}>{cur.caption}</div>}
     </div>}
     {nav&&n<=12&&<div style={{display:"flex",gap:5}}>{items.map((_,i)=><span key={i} style={{width:i===idx?16:6,height:6,borderRadius:99,background:i===idx?"#fff":"rgba(255,255,255,.3)",transition:"width .2s"}}/>)}</div>}
@@ -3802,8 +3802,8 @@ function ShareModal({title,subtitle,phone,text,accentColor=B.wa,onClose}) {
       <div style={{padding:20}}>
         <textarea readOnly value={text} style={{width:"100%",height:200,padding:12,borderRadius:8,border:`1px solid ${B.gray700}`,background:B.gray900,color:B.gray200,fontSize:12.5,fontFamily:"monospace",resize:"none",boxSizing:"border-box",lineHeight:1.6}}/>
         <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
-          {phone&&<button onClick={()=>window.open(`https://wa.me/${num}?text=${encodeURIComponent(text)}`,"_blank")} style={{flex:2,minWidth:150,padding:"10px 0",borderRadius:10,background:B.wa,border:"none",color:B.white,fontWeight:800,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>📲 Enviar direto</button>}
-          <button onClick={()=>window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,"_blank")} style={{flex:1,minWidth:100,padding:"10px 0",borderRadius:10,background:phone?B.gray700:B.wa,border:`1px solid ${B.gray600}`,color:B.white,fontWeight:700,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}>📱 WA</button>
+          {phone&&<button onClick={()=>window.open(`https://wa.me/${num}?text=${encodeURIComponent(text)}`,"_blank")} style={{flex:2,minWidth:150,padding:"10px 0",borderRadius:10,background:B.wa,border:"none",color:B.white,fontWeight:800,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}><Ic n="phone"/> Enviar direto</button>}
+          <button onClick={()=>window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,"_blank")} style={{flex:1,minWidth:100,padding:"10px 0",borderRadius:10,background:phone?B.gray700:B.wa,border:`1px solid ${B.gray600}`,color:B.white,fontWeight:700,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="phone"/> WA</button>
           <button onClick={copy} style={{padding:"10px 12px",borderRadius:10,background:cp?B.greenBg:B.gray700,border:`1px solid ${cp?B.green:B.gray600}`,color:cp?B.green:B.gray200,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:4}}><ICopy s={13}/>{cp?"Copiado!":"Copiar"}</button>
           <button onClick={onClose} style={{padding:"10px 12px",borderRadius:10,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontWeight:600,fontSize:12}}>✕</button>
         </div>
@@ -4059,7 +4059,7 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
           <input value={plate} onChange={e=>{setPlate(e.target.value.toUpperCase());setPlateErr("");}} placeholder="Ex: ABC-1234"
             style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${plateConflict?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:1}}/>
           {plateConflict&&<div style={{fontSize:11,color:B.red,marginTop:5,display:"flex",alignItems:"center",gap:4}}>
-            ⚠️ Placa já cadastrada: <b>{plateConflict.model}</b>{plateConflict.plate&&` (${plateConflict.plate})`}
+            <Ic n="alert"/> Placa já cadastrada: <b>{plateConflict.model}</b>{plateConflict.plate&&` (${plateConflict.plate})`}
           </div>}
         </div>
         <div style={{marginBottom:18}}>
@@ -4260,12 +4260,12 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
   return (<div style={{background:bg,border,borderRadius:8,padding:"7px 10px",width:"100%",boxSizing:"border-box"}}>
     {/* Estimated banner */}
     {isEstimated&&<div style={{display:"flex",alignItems:"center",gap:5,marginBottom:5,padding:"3px 7px",background:`${estimatedColor}22`,borderRadius:5}}>
-      <span style={{fontSize:10}}>⚠️</span>
+      <span style={{fontSize:10}}><Ic n="alert"/></span>
       <span style={{fontSize:10,fontWeight:800,color:estimatedColor,letterSpacing:.3}}>ESTIMADO — quantidade a confirmar</span>
     </div>}
     {/* Line 1: icon + name + remove */}
     <div style={{display:"flex",alignItems:"center",gap:6}}>
-      {mat.fromStock?<IWarehouse s={13} c={isEstimated?estimatedColor:B.purple}/>:isImported?<span style={{fontSize:13}}>✈️</span>:<IBox s={13} c={isEstimated?estimatedColor:isML?mlColor:B.gray400}/>}
+      {mat.fromStock?<IWarehouse s={13} c={isEstimated?estimatedColor:B.purple}/>:isImported?<span style={{fontSize:13}}><Ic n="plane"/></span>:<IBox s={13} c={isEstimated?estimatedColor:isML?mlColor:B.gray400}/>}
       <div style={{flex:1,minWidth:0}}>
         {readOnlyName||mat.fromStock
           ?<div style={{flex:1,minWidth:0}}>
@@ -4293,7 +4293,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
       <button onClick={()=>onUpdate(idx,{...mat,estimated:!isEstimated})}
         title={isEstimated?"Confirmar quantidade":"Marcar como estimado"}
         style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
-        ⚠ {isEstimated?"Estimado":"Estimado?"}
+        <Ic n="alert"/> {isEstimated?"Estimado":"Estimado?"}
       </button>
       {isQuote&&onCommit&&<button onClick={()=>onCommit(idx)} title="Dar baixa deste produto no estoque (passa a ser material lançado na OS)"
         style={{background:`${B.amber}22`,border:`1px solid ${B.amber}88`,borderRadius:5,padding:"2px 8px",cursor:"pointer",color:B.amber,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
@@ -4307,17 +4307,17 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
       {onOrder&&!mat.fromStock&&!isQuote&&<button onClick={()=>onOrder(idx,mat)}
         title={mat.ordered?"Já existe um pedido de compra para este material. Toque para fazer outro":"Criar pedido de compra deste material"}
         style={{background:mat.ordered?`${B.blue}22`:`${B.amber}14`,border:`1px solid ${mat.ordered?B.blue+"66":B.amber+"55"}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.ordered?B.blue:B.amber,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
-        {mat.ordered?"✓ Pedido feito":"🛒 Pedir"}
+        {mat.ordered?"✓ Pedido feito":<><Ic n="cart"/> Pedir</>}
       </button>}
       {showCost&&!mat.fromStock&&!isQuote&&<button onClick={()=>onUpdate(idx,{...mat,bought:!isBought})}
         title={isBought?"Peça conta como comprada (entra no investido). Toque para tirar da conta":"Peça fora da conta do investido. Toque para incluir"}
         style={{background:isBought?`${B.green}22`:"none",border:`1px solid ${isBought?B.green+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isBought?B.green:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
-        🛒 {isBought?"Comprado":"Fora da conta"}
+        <Ic n="cart"/> {isBought?"Comprado":"Fora da conta"}
       </button>}
       {!mat.fromStock&&!isQuote&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
         title={isImported?"Remover marcação de importado":"Marcar como importado"}
         style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
-        ✈ {isImported?"Importado":"Import."}
+        <Ic n="plane"/> {isImported?"Importado":"Import."}
       </button>}
     </div>}
 
@@ -4361,7 +4361,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
 
       {/* Row B: Freight — full width */}
       {showCost&&<div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 10px"}}>
-        <span style={{fontSize:11}}>🚚</span>
+        <span style={{fontSize:11}}><Ic n="truck"/></span>
         <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Frete R$</span>
         <div style={{flex:1}}>
           <InlineEdit value={freight?fmtR2(freight):""} onSave={v=>onUpdate(idx,{...mat,freight:parseFloat(v.replace(",","."))||0})} placeholder="0,00" type="number"/>
@@ -4585,7 +4585,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <TaskLabel task={task} onUpdate={onUpdate}/>
             {!task.done&&!task.warranty&&!task.outsourced&&!task.hours&&!mats.some(m=>m.cost>0)&&<span title="Sem valor: fica interna (fora do PDF e do acompanhamento do cliente) até receber mão de obra ou material" style={{fontSize:9,fontWeight:700,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:4,padding:"1px 5px",flexShrink:0,cursor:"default"}}>
-              ⚠ sem valor
+              <Ic n="alert"/> sem valor
             </span>}
           </div>
           {/* Description — optional */}
@@ -4685,7 +4685,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         <button onClick={()=>onUpdate(task.id,{rateType:task.rateType==="qty"?"hour":"qty",ratePerHour:null,hours:0})}
           title={task.rateType==="qty"?"Cobrar por hora":"Cobrar por quantidade"}
           style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
-          {task.rateType==="qty"?"📦 Qtd":"⏱ H"}
+          {task.rateType==="qty"?<><Ic n="pkg"/> Qtd</>:<><Ic n="clock"/> H</>}
         </button>
         {c.total>0&&<div style={{marginLeft:"auto",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 10px",flexShrink:0,textAlign:"right"}}>
           {!task.warranty&&c.discount>0&&<div style={{fontSize:10,color:B.gray500,textDecoration:"line-through",lineHeight:1.2}}>{fmtBRL(c.total+c.discount)}</div>}
@@ -4711,7 +4711,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.purple}22`}}>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:12,fontWeight:700,color:B.white}}>{p.name}{p.brand?<span style={{color:B.gray400,fontWeight:400}}> — {p.brand}</span>:""}</div>
-            <div style={{fontSize:10,color:B.purple}}>📦 Reservado{p.location?` · ${p.location}`:""} · Restam: {remainingOf(p)}/{p.qty||1}{p.value?` · ${fmtBRL(p.value)}`:""}</div>
+            <div style={{fontSize:10,color:B.purple}}><Ic n="pkg"/> Reservado{p.location?` · ${p.location}`:""} · Restam: {remainingOf(p)}/{p.qty||1}{p.value?` · ${fmtBRL(p.value)}`:""}</div>
           </div>
           <button onClick={()=>addFromReserved(p)} style={{padding:"5px 12px",borderRadius:7,background:B.purple,border:"none",color:B.white,fontWeight:800,fontSize:11,cursor:"pointer",flexShrink:0}}>+ Usar</button>
         </div>
@@ -4782,7 +4782,7 @@ function NewOSModal({division,vehicles,clients,employees,onClose,onConfirm}) {
   const relevantEmps=employees.filter(e=>isFin?e.division==="finishing":(e.division||"performance")==="performance");
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
     <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:420,width:"100%",border:`1px solid ${color}44`}}>
-      <div style={{fontWeight:800,fontSize:16,color:B.white,marginBottom:4}}>{isFin?"🎨 Nova OS — Finishing":"🔧 Nova OS — Performance"}</div>
+      <div style={{fontWeight:800,fontSize:16,color:B.white,marginBottom:4}}>{isFin?<><Ic n="brush"/> Nova OS — Finishing</>:<><Ic n="wrench"/> Nova OS — Performance</>}</div>
       <div style={{fontSize:12,color:B.gray400,marginBottom:14}}>Selecione o veículo para abrir a OS</div>
       <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar veículo ou cliente..."
         style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8}}/>
@@ -4935,7 +4935,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
           style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit"}}/>
 
         {selected.size>0&&<div style={{background:`${B.red}10`,border:`1px solid ${B.red}33`,borderRadius:8,padding:"8px 12px",fontSize:11,color:B.red}}>
-          ⚠ {selected.size} tarefa{selected.size!==1?"s":""} selecionada{selected.size!==1?"s":""} ser{selected.size!==1?"ão":"á"} removida{selected.size!==1?"s":""} da OS atual ao confirmar.
+          <Ic n="alert"/> {selected.size} tarefa{selected.size!==1?"s":""} selecionada{selected.size!==1?"s":""} ser{selected.size!==1?"ão":"á"} removida{selected.size!==1?"s":""} da OS atual ao confirmar.
         </div>}
       </div>
 
@@ -5331,10 +5331,10 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
       </div>
       <div style={importBodyS}>
         <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", color: B.gray200, fontSize: 12 }}>
-          {busy ? "Lendo nota…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF ou foto da compra"}
+          {busy ? "Lendo nota…" : file ? <><Ic n="file"/>{` ${file.name} (toque para trocar)`}</> : <><Ic n="file"/> Escolher PDF ou foto da compra</>}
           <input type="file" accept="application/pdf,image/*" style={{ display: "none" }} onChange={e => { N.analyze(e.target.files?.[0], decorate); e.target.value = ""; }} />
         </label>
-        <button type="button" onClick={() => N.setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📚 Usar nota já guardada de um fornecedor {N.showDocs ? "▲" : "▼"}</button>
+        <button type="button" onClick={() => N.setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}><Ic n="book"/> Usar nota já guardada de um fornecedor {N.showDocs ? "▲" : "▼"}</button>
         {N.showDocs && <NoteDocPicker docs={N.docs} regSup={regSup} impMap={N.impMap} fieldS={importFieldS} onPick={d => N.pickDoc(d, decorate)} />}
         {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
         {note?.viaVision && <div style={{ fontSize: 11.5, color: B.amber, background: `${B.amber}14`, border: `1px solid ${B.amber}33`, borderRadius: 8, padding: "8px 10px", lineHeight: 1.45 }}>Nota lida por imagem (IA). Confira nomes, quantidades e valores antes de lançar — as linhas em que a conta não fechou ficam marcadas para revisar.</div>}
@@ -5357,7 +5357,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
               {supplier.trim() && !regMatch && <div style={{ fontSize: 10, color: B.amber, marginTop: 3 }}>Fornecedor sem cadastro — o PDF só é anexado a fornecedores cadastrados (Cadastros → Fornecedores).</div>}
               {regMatch && keepPdf && <div style={{ fontSize: 10, color: B.gray400, marginTop: 3 }}>A nota será anexada ao cadastro de {regMatch.name}.</div>}
             </div>
-            <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens. Linhas com ⚠ foram lidas com menos certeza.</div>
+            <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens. Linhas com <Ic n="alert"/> foram lidas com menos certeza.</div>
           </>}
           {rows.map(r => (
             <div key={r.id} style={{ minWidth: 0, boxSizing: "border-box", background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on && !r.imp ? B.orange + "66" : B.gray700}`, opacity: r.imp ? 0.55 : r.on ? 1 : 0.6 }}>
@@ -5376,7 +5376,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
                     <div style={{ flex: "1 1 100%", minWidth: 0 }}><TaskPicker value={r.tid} onChange={v => N.upd(r.id, { tid: v })} vts={vts} allowDefault /></div>
                   </div>
                   {(r.dup || !r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>
-                    {r.dup ? "⚠ Parece já lançado nessa OS" : r.kind === "freight" ? "Frete (lançado como item sem markup)" : "⚠ Leitura incerta — confira"}
+                    {r.dup ? <><Ic n="alert"/> Parece já lançado nessa OS</> : r.kind === "freight" ? "Frete (lançado como item sem markup)" : <><Ic n="alert"/> Leitura incerta — confira</>}
                   </div>}
                 </>}
             </div>
@@ -5437,7 +5437,7 @@ function StockProductPicker({ value, onChange, stock }) {
   const list = stock.filter(s => !nq || _normName(s.name + " " + (s.brand || "")).includes(nq)).slice(0, 40);
   const pickIt = v => { onChange(v); setOpen(false); setQ(""); };
   return (<div style={{ position: "relative", minWidth: 0, width: "100%" }}>
-    <button type="button" onClick={() => setOpen(o => !o)} style={{ display: "block", width: "100%", maxWidth: "100%", boxSizing: "border-box", textAlign: "left", background: B.gray900, border: `1px solid ${cur ? B.purple + "88" : B.gray700}`, borderRadius: 6, color: cur ? B.purple : B.amber, padding: "5px 7px", fontSize: 12, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cur ? `📦 ${cur.name} (em estoque: ${cur.qty})` : "＋ Criar produto novo"} ▾</button>
+    <button type="button" onClick={() => setOpen(o => !o)} style={{ display: "block", width: "100%", maxWidth: "100%", boxSizing: "border-box", textAlign: "left", background: B.gray900, border: `1px solid ${cur ? B.purple + "88" : B.gray700}`, borderRadius: 6, color: cur ? B.purple : B.amber, padding: "5px 7px", fontSize: 12, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cur ? <><Ic n="pkg"/>{` ${cur.name} (em estoque: ${cur.qty})`}</> : "＋ Criar produto novo"} ▾</button>
     {open && <div style={{ position: "absolute", zIndex: 5, left: 0, right: 0, top: "100%", marginTop: 2, background: B.gray900, border: `1px solid ${B.purple}66`, borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,.5)", padding: 6 }}>
       <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar produto do estoque…" style={{ background: B.gray800, border: `1px solid ${B.gray700}`, borderRadius: 6, color: B.white, padding: "6px 8px", fontSize: 12, outline: "none", width: "100%", boxSizing: "border-box", marginBottom: 4 }} />
       <div style={{ maxHeight: 190, overflowY: "auto" }}>
@@ -5648,10 +5648,10 @@ function StockImportModal({ stock, onClose, onImport }) {
       </div>
       <div style={importBodyS}>
         <label style={{ border: `1px dashed ${B.gray700}`, borderRadius: 10, padding: "14px 10px", textAlign: "center", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", color: B.gray200, fontSize: 12 }}>
-          {busy ? "Lendo nota…" : file ? `📄 ${file.name} (toque para trocar)` : "📄 Escolher PDF ou foto da nota"}
+          {busy ? "Lendo nota…" : file ? <><Ic n="file"/>{` ${file.name} (toque para trocar)`}</> : <><Ic n="file"/> Escolher PDF ou foto da nota</>}
           <input type="file" accept="application/pdf,image/*" style={{ display: "none" }} onChange={e => { N.analyze(e.target.files?.[0], decorate); e.target.value = ""; }} />
         </label>
-        <button type="button" onClick={() => N.setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>📚 Usar nota já guardada de um fornecedor {N.showDocs ? "▲" : "▼"}</button>
+        <button type="button" onClick={() => N.setShowDocs(v => !v)} style={{ background: `${B.blue}12`, border: `1px solid ${B.blue}44`, color: B.blue, borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}><Ic n="book"/> Usar nota já guardada de um fornecedor {N.showDocs ? "▲" : "▼"}</button>
         {N.showDocs && <NoteDocPicker docs={N.docs} regSup={regSup} impMap={N.impMap} fieldS={importFieldS} onPick={d => N.pickDoc(d, decorate)} />}
         {err && <div style={{ fontSize: 12, color: B.red, background: `${B.red}15`, borderRadius: 8, padding: "8px 10px" }}>{err}</div>}
         {note?.viaVision && <div style={{ fontSize: 11.5, color: B.amber, background: `${B.amber}14`, border: `1px solid ${B.amber}33`, borderRadius: 8, padding: "8px 10px", lineHeight: 1.45 }}>Nota lida por imagem (IA). Confira nomes, quantidades e valores antes de lançar — as linhas em que a conta não fechou ficam marcadas para revisar.</div>}
@@ -5668,7 +5668,7 @@ function StockImportModal({ stock, onClose, onImport }) {
               <div style={{ flex: "1 1 110px", minWidth: 0 }}><div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Nº da nota</div><input value={invoice} onChange={e => setInvoice(e.target.value)} style={importFieldS} /></div>
               <div style={{ flex: "1 1 100px", minWidth: 0 }}><div style={{ fontSize: 10, color: B.gray400, marginBottom: 3 }}>Markup p/ produtos novos %</div><input value={markup} onChange={e => setMarkup(e.target.value)} inputMode="decimal" style={importFieldS} /></div>
             </div>
-            <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens e a qual produto do estoque cada um pertence. Linhas com ⚠ foram lidas com menos certeza.</div>
+            <div style={{ fontSize: 11, color: B.gray400 }}>Confira os itens e a qual produto do estoque cada um pertence. Linhas com <Ic n="alert"/> foram lidas com menos certeza.</div>
           </>}
           {rows.map(r => (
             <div key={r.id} style={{ minWidth: 0, boxSizing: "border-box", background: B.gray900, borderRadius: 8, padding: 8, border: `1px solid ${r.on && !r.imp ? B.purple + "66" : B.gray700}`, opacity: r.imp ? 0.55 : r.on ? 1 : 0.6 }}>
@@ -5688,7 +5688,7 @@ function StockImportModal({ stock, onClose, onImport }) {
                   </div>
                   {r.on && badQty(r) && <div style={{ fontSize: 10, marginTop: 4, color: B.red }}>O estoque trabalha com unidades inteiras — ajuste a quantidade (e o valor) deste item.</div>}
                   {r.auto && r.pid && <div style={{ fontSize: 10, marginTop: 4, color: B.gray400 }}>Associado automaticamente a um produto existente — confira.</div>}
-                  {(!r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>{r.kind === "freight" ? "Frete normalmente não entra no estoque (fica desmarcado)." : "⚠ Leitura incerta — confira"}</div>}
+                  {(!r.sure || r.kind === "freight") && <div style={{ fontSize: 10, marginTop: 4, color: B.amber }}>{r.kind === "freight" ? "Frete normalmente não entra no estoque (fica desmarcado)." : <><Ic n="alert"/> Leitura incerta — confira</>}</div>}
                 </>}
             </div>
           ))}
@@ -5897,7 +5897,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             </>);
             return(
               <button onClick={()=>{
-                if(hasEstimated){alert("⚠️ Há materiais estimados. Confirme antes de marcar como pronto.");return;}
+                if(hasEstimated){alert("Há materiais estimados. Confirme antes de marcar como pronto.");return;}
                 onSetStatus&&onSetStatus(vehicle.id,"ready");
               }} style={{flex:1,background:hasEstimated?`${B.amber}33`:`${B.blue}33`,border:"none",borderRadius:8,padding:"7px 0",cursor:"pointer",color:hasEstimated?B.amber:B.blue,display:"flex",alignItems:"center",justifyContent:"center",gap:4,fontSize:11,fontWeight:800}}>
                 {hasEstimated?<><IWarning s={12} c={B.amber}/>Estimados</>:<><ICheck s={12} c={B.blue}/>Pronto</>}
@@ -6483,7 +6483,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     {showNextVisit&&<NextVisitModal vehicle={vehicle} tasks={tasks} clients={clients} defaultRate={defaultRate} onClose={()=>setShowNextVisit(false)} onCreateAppointment={onCreateAppointment} onDeleteTask={onDeleteTask}/>}
     {showTLNote&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{background:B.gray900,borderRadius:14,padding:20,maxWidth:380,width:"100%",border:`1px solid ${B.blue}44`}}>
-        <div style={{fontWeight:800,fontSize:14,color:B.white,marginBottom:4}}>💬 Nota para o cliente</div>
+        <div style={{fontWeight:800,fontSize:14,color:B.white,marginBottom:4}}><Ic n="chat"/> Nota para o cliente</div>
         <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>Aparece na timeline do link de acompanhamento</div>
         <textarea value={tlNoteText} onChange={e=>setTLNoteText(e.target.value)} rows={4} placeholder="Ex: Identificamos que a junta do cabeçote também precisará de substituição..."
           style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
@@ -6499,7 +6499,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         <div style={{display:"flex",gap:8,marginTop:10}}>
           <button onClick={async()=>{
             if(!tlNoteText.trim()) return;
-            await onPostTimeline(vehicle.id,{type:"note",title:"💬 Atualização da equipe",body:tlNoteText.trim(),color:B.blue});
+            await onPostTimeline(vehicle.id,{type:"note",title:"Atualização da equipe",body:tlNoteText.trim(),color:B.blue});
             // Open WhatsApp if client has phone
             const cli=clients.find(c=>c.id===vehicle.clientId);
             if(cli?.phone){
@@ -6620,7 +6620,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         {employee.specialty&&<span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,borderRadius:5,padding:"2px 8px"}}>Filtra: {employee.specialty}</span>}
       </div>}
       {activeEmpV2.filter(v=>!isPzE(v)).map(renderEV)}
-      {activeEmpV2.some(isPzE)&&<><div style={{display:"flex",alignItems:"center",gap:8,margin:"22px 2px 10px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}>⏸ Pausados · {activeEmpV2.filter(isPzE).length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>{activeEmpV2.filter(isPzE).map(renderEV)}</>}
+      {activeEmpV2.some(isPzE)&&<><div style={{display:"flex",alignItems:"center",gap:8,margin:"22px 2px 10px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}><Ic n="pause"/> Pausados · {activeEmpV2.filter(isPzE).length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>{activeEmpV2.filter(isPzE).map(renderEV)}</>}
       {doneEmpV2.length>0&&<div style={{marginTop:activeEmpV2.length>0?8:0}}>
         <div onClick={()=>setDoneOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:8,background:`${B.green}10`,border:`1px solid ${B.green}22`,cursor:"pointer",userSelect:"none",marginBottom:doneOpen?8:0}}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -6808,7 +6808,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
           <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
             style={{width:"100%",marginTop:7,padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           {hasFinishing&&<div style={{marginTop:8}}>
-            {hasBoth&&<div style={{fontSize:10,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:5}}>⚠ Para qual divisão é este pagamento?</div>}
+            {hasBoth&&<div style={{fontSize:10,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:5}}><Ic n="alert"/> Para qual divisão é este pagamento?</div>}
             <div style={{display:"flex",gap:6}}>
               {hasBoth&&<button onClick={()=>setPayDiv("split")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="split"?B.green:B.gray600}`,background:payDiv==="split"?`${B.green}22`:"none",color:payDiv==="split"?B.green:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}>Dividir</button>}
               {hasPerformance&&<button onClick={()=>setPayDiv("performance")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="performance"?B.orange:B.gray600}`,background:payDiv==="performance"?`${B.orange}22`:"none",color:payDiv==="performance"?B.orange:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><IGear s={11} c={payDiv==="performance"?B.orange:B.gray400}/>Performance</button>}
@@ -6923,7 +6923,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       {(search||filterType)&&<button onClick={()=>{setSearch("");setFT("");}} style={{padding:"7px 12px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontSize:13}}>Limpar filtros</button>}
       <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
         {onUseItem&&<button onClick={()=>setStkView("usage")} style={{padding:"8px 14px",borderRadius:8,background:`${B.blue}18`,border:`1px solid ${B.blue}66`,color:B.blue,cursor:"pointer",fontWeight:700,fontSize:13}}>Consumo interno</button>}
-        {onImportNote&&<button onClick={()=>setShowImport(true)} style={{padding:"8px 14px",borderRadius:8,background:`${B.purple}18`,border:`1px solid ${B.purple}66`,color:B.purple,cursor:"pointer",fontWeight:700,fontSize:13}}>📥 Importar nota</button>}
+        {onImportNote&&<button onClick={()=>setShowImport(true)} style={{padding:"8px 14px",borderRadius:8,background:`${B.purple}18`,border:`1px solid ${B.purple}66`,color:B.purple,cursor:"pointer",fontWeight:700,fontSize:13}}><Ic n="download"/> Importar nota</button>}
         <button onClick={()=>setShowAdd(p=>!p)} style={{padding:"8px 16px",borderRadius:8,background:B.purple,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>
           <IPlus s={14} c={B.white}/>Novo produto
         </button>
@@ -6963,7 +6963,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
     </div>}
 
     {/* Stock list */}
-    {filtered.length===0?<div style={{textAlign:"center",padding:"48px 0",color:B.gray400}}><div style={{fontSize:40,marginBottom:12}}>📦</div><div style={{fontWeight:700,color:B.gray200,marginBottom:4}}>Estoque vazio</div><div style={{fontSize:13}}>Adicione produtos clicando em "Novo produto".</div></div>
+    {filtered.length===0?<div style={{textAlign:"center",padding:"48px 0",color:B.gray400}}><div style={{fontSize:40,marginBottom:12}}><Ic n="pkg"/></div><div style={{fontWeight:700,color:B.gray200,marginBottom:4}}>Estoque vazio</div><div style={{fontSize:13}}>Adicione produtos clicando em "Novo produto".</div></div>
       :<div style={{display:"flex",flexDirection:"column",gap:8}}>
         {filtered.map(item=><StockRow key={item.id} item={item} salePrice={salePrice(item)} onLightbox={setLB} onOpen={()=>setOpenItem(item)}/>)}
       </div>}
@@ -7061,7 +7061,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
       </div>
       <div style={{fontSize:11,color:B.gray400,marginTop:2,display:"flex",gap:6,flexWrap:"wrap"}}>
         {item.type&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{item.type}</span>}
-        {item.location&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>📍 {item.location}</span>}
+        {item.location&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}><Ic n="pin"/> {item.location}</span>}
       </div>
       {item.notes&&<div style={{fontSize:11,color:B.gray500,marginTop:3,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{item.notes}</div>}
     </div>
@@ -7267,7 +7267,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
                 <span style={{fontSize:12,color:B.gray400,whiteSpace:"nowrap"}}>Quantidade:</span>
                 <input value={orderQty} onChange={e=>setOrderQty(e.target.value)} type="number" min="1" step="1"
                   style={{width:70,padding:"6px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-                {!form.orderLink&&<span style={{fontSize:11,color:B.amber,flex:1}}>⚠ Insira um link para gerar o pedido</span>}
+                {!form.orderLink&&<span style={{fontSize:11,color:B.amber,flex:1}}><Ic n="alert"/> Insira um link para gerar o pedido</span>}
               </div>
               <button disabled={!canOrder} onClick={()=>{
                 save();
@@ -7439,7 +7439,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         {nameHelp(true)}
         <VehiclePicker value={vid} onChange={v=>{setVid(v);setTid("");setLk(null);}} vehicles={vehicles} clients={clients}/>
         {vid&&lkCands.length>0&&<div style={{background:`${B.purple}14`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"7px 9px"}}>
-          <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:2}}>💡 Parece algo já lançado neste carro</div>
+          <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:2}}><Ic n="bulb"/> Parece algo já lançado neste carro</div>
           <div style={{fontSize:10.5,color:B.gray400,marginBottom:6,lineHeight:1.4}}>Toque para vincular e corrigir o lançamento (valor, quantidade) em vez de duplicar.</div>
           <div style={{display:"flex",flexDirection:"column",gap:5}}>{lkCands.map(c=>{const on=lk&&lk.tid===c.tid&&lk.idx===c.idx;const mc=Number(c.m.cost)||0,mq=Number(c.m.qty)||1;return <button key={c.tid+c.idx} onClick={()=>{if(on){setLk(null);}else{setLk({tid:c.tid,idx:c.idx});setTid(c.tid);setNameStr(c.name);setMarkup(String(c.m.markup??markup));}}} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${on?B.purple:B.purple+"55"}`,background:on?`${B.purple}33`:"none",color:B.white,fontSize:11.5,cursor:"pointer",textAlign:"left",lineHeight:1.4}}>{on?"✓ ":""}{c.name}<div style={{fontSize:10.5,color:B.gray400}}>{c.tl} · lançado {mq}× {fmtBRL(mc)} (custo){(Number(c.m.markup)||0)?` +${c.m.markup}%`:""}</div></button>;})}</div>
           {lk&&<div style={{fontSize:10.5,color:B.amber,marginTop:6,lineHeight:1.4}}>Vai atualizar para {qEff||"?"}× {fmtBRL(unitCost)} (custo) conforme o Mercado Livre.</div>}
@@ -7465,7 +7465,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>Adicionar compra a um item existente</button>;})()}
         {pickOpen&&<StockItemPickModal stock={stock} suggested={sugg} onPick={id=>{setPid(id);setPickOpen(false);}} onClose={()=>setPickOpen(false)}/>}
         {!pid&&sugg.length>0&&<div style={{background:`${B.purple}14`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"7px 9px"}}>
-          <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:5}}>💡 Parece um item que já existe no estoque</div>
+          <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:5}}><Ic n="bulb"/> Parece um item que já existe no estoque</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{sugg.map(x=><button key={x.id} onClick={()=>setPid(x.id)} style={{padding:"4px 10px",borderRadius:99,border:`1px solid ${B.purple}66`,background:"none",color:B.white,fontSize:11.5,cursor:"pointer",textAlign:"left"}}>{x.name}{x.brand?` · ${x.brand}`:""}</button>)}</div>
         </div>}
         {qtyBox}
@@ -7481,7 +7481,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         {nameHelp(false)}
         {qtyBox}
         {frBox}
-        <div style={{display:"flex",gap:6}}>{[["ambos","⚙️🎨 Ambas"],["performance","⚙️ Performance"],["finishing","🎨 Finishing"]].map(([k,l])=><button key={k} onClick={()=>setSdiv(k)} style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${sdiv===k?B.amber:B.gray600}`,background:sdiv===k?`${B.amber}18`:B.gray900,color:sdiv===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+        <div style={{display:"flex",gap:6}}>{[["ambos","Ambas"],["performance","Performance"],["finishing","Finishing"]].map(([k,l])=><button key={k} onClick={()=>setSdiv(k)} style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${sdiv===k?B.amber:B.gray600}`,background:sdiv===k?`${B.amber}18`:B.gray900,color:sdiv===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
         <div style={{fontSize:11,color:B.gray500,lineHeight:1.45}}>Lança <b style={{color:B.gray200}}>{fmtBRL(total+fr)}</b> como despesa “Insumos” no mês da compra, no Financeiro. Não vai para OS nem para o estoque.</div>
       </div>}
       {mode==="tool"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -7610,7 +7610,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(errMsg(e)); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const fmtS=d=>{ if(!d) return ""; const x=new Date(d); const same=x.getFullYear()===new Date().getFullYear(); return x.toLocaleDateString("pt-BR",same?{day:"2-digit",month:"2-digit"}:{day:"2-digit",month:"2-digit",year:"2-digit"}); };
-  const destLbl=i=>i.destination==="return"?`↩ Devolução${i.return_reason?` · ${i.return_reason}`:""}`:i.destination==="vehicle"?`🚗 ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?(i.stock_plan&&!i.stock_id?"📦 Estoque · entra quando for entregue":"📦 Estoque"):i.destination==="supplies"?"🧴 Insumos · custo do mês":i.destination==="tool"?"🔧 Ferramentas · patrimônio":"— ignorado";
+  const destLbl=i=>i.destination==="return"?`↩ Devolução${i.return_reason?` · ${i.return_reason}`:""}`:i.destination==="vehicle"?`${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="stock"?(i.stock_plan&&!i.stock_id?"Estoque · entra quando for entregue":"Estoque"):i.destination==="supplies"?"Insumos · custo do mês":i.destination==="tool"?"Ferramentas · patrimônio":"— ignorado";
   const fmtT=d=>d?new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
   const timeline=i=>{
     const h={}; (Array.isArray(i.ship_history)?i.ship_history:[]).forEach(e=>{ if(e&&e.status&&e.date&&!h[e.status]) h[e.status]=e.date; });
@@ -7619,16 +7619,16 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     const cur=i.ship_status;
     const rank={pending:0,handling:1,ready_to_ship:2,shipped:3,delivered:4};
     const steps=[
-      {k:"order",ic:"🛒",l:"Pedido feito",d:i.ordered_at,done:true},
-      {k:"paid",ic:"💳",l:"Pagamento aprovado",d:i.paid_at,done:!!i.paid_at},
-      {k:"handling",ic:"📦",l:"Preparando o envio",d:h.handling,done:!!h.handling||(rank[cur]??-1)>=1},
-      {k:"ready_to_ship",ic:"🏷️",l:"Pronto para envio",d:h.ready_to_ship,done:!!h.ready_to_ship||(rank[cur]??-1)>=2},
-      {k:"shipped",ic:"🚚",l:"A caminho",d:h.shipped,done:!!h.shipped||(rank[cur]??-1)>=3},
-      {k:"delivered",ic:"✅",l:"Entregue",d:h.delivered||(cur==="delivered"?i.status_at:null),done:cur==="delivered"||!!h.delivered},
+      {k:"order",ic:"cart",l:"Pedido feito",d:i.ordered_at,done:true},
+      {k:"paid",ic:"pay",l:"Pagamento aprovado",d:i.paid_at,done:!!i.paid_at},
+      {k:"handling",ic:"pkg",l:"Preparando o envio",d:h.handling,done:!!h.handling||(rank[cur]??-1)>=1},
+      {k:"ready_to_ship",ic:"tag",l:"Pronto para envio",d:h.ready_to_ship,done:!!h.ready_to_ship||(rank[cur]??-1)>=2},
+      {k:"shipped",ic:"truck",l:"A caminho",d:h.shipped,done:!!h.shipped||(rank[cur]??-1)>=3},
+      {k:"delivered",ic:"ready",l:"Entregue",d:h.delivered||(cur==="delivered"?i.status_at:null),done:cur==="delivered"||!!h.delivered},
     ];
-    if(cur==="not_delivered") steps.push({k:"nd",ic:"⚠️",l:"Não entregue",d:h.not_delivered||i.status_at,done:true});
+    if(cur==="not_delivered") steps.push({k:"nd",ic:"alert",l:"Não entregue",d:h.not_delivered||i.status_at,done:true});
     if(i.destination==="return") steps.push({k:"ret",ic:"↩",l:`Devolução · ${RET_ST[i.return_status||"todo"]}${i.return_reason?` (${i.return_reason})`:""}`,d:i.assigned_at,done:true,by:i.assigned_by});
-    if(i.destination&&i.destination!=="ignored"&&i.destination!=="return") steps.push({k:"dest",ic:"📌",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":i.destination==="tool"?"Destinada · Ferramentas (patrimônio)":(i.stock_plan&&!i.stock_id?"Destinada · Estoque (entra na entrega)":"Destinada · Estoque"),d:i.assigned_at,done:true,by:i.assigned_by});
+    if(i.destination&&i.destination!=="ignored"&&i.destination!=="return") steps.push({k:"dest",ic:"pin",l:i.destination==="vehicle"?`Destinada · ${i.vehicle_label||"OS"}${i.task_label?` · ${i.task_label}`:""}`:i.destination==="supplies"?"Destinada · Insumos (custo do mês)":i.destination==="tool"?"Destinada · Ferramentas (patrimônio)":(i.stock_plan&&!i.stock_id?"Destinada · Estoque (entra na entrega)":"Destinada · Estoque"),d:i.assigned_at,done:true,by:i.assigned_by});
     if(i.destination==="ignored") steps.push({k:"ign",ic:"—",l:"Ignorada (não é da oficina)",d:i.assigned_at,done:true,by:i.assigned_by});
     return steps;
   };
@@ -7654,7 +7654,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
             {live&&i.ship_substatus&&!out&&<span style={{fontWeight:500,opacity:.85}}>· {mlSubLbl(i.ship_substatus)}</span>}
           </span>
           {live&&i.eta_at&&<span style={{fontSize:11,color:B.gray400}}>previsão <b style={{color:B.gray200,fontWeight:600}}>{fmtS(i.eta_at)}</b></span>}
-          {live&&(i.delivery_key||i.ml_key)&&<span style={{fontSize:11,color:B.black,background:B.amber,borderRadius:6,padding:"1px 7px",fontWeight:800}}>🔑 {i.delivery_key||i.ml_key}</span>}
+          {live&&(i.delivery_key||i.ml_key)&&<span style={{fontSize:11,color:B.black,background:B.amber,borderRadius:6,padding:"1px 7px",fontWeight:800}}><Ic n="key"/> {i.delivery_key||i.ml_key}</span>}
         </div>);
       })()}
       {needsConfirm(i)&&onConfirmReceive&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:9,background:`${B.amber}14`,border:`1px solid ${B.amber}44`}}>
@@ -7662,14 +7662,14 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         <div style={{fontSize:11,color:B.gray300,marginTop:4,lineHeight:1.4}}>Confira se o material veio correto antes de confirmar{i.destination==="stock"?" a entrada no estoque":""}.</div>
         <button disabled={busy==="rc"+i.id} onClick={async e=>{ e.stopPropagation(); setBusy("rc"+i.id); try{ await onConfirmReceive(i.id); await loadItems(); }catch(er){ setErr(errMsg(er)||"Erro ao confirmar"); } setBusy(""); }} style={{marginTop:8,background:B.amber,color:B.black,border:"none",borderRadius:8,padding:"7px 12px",fontSize:11.5,fontWeight:800,cursor:"pointer",opacity:busy==="rc"+i.id?.6:1}}>{busy==="rc"+i.id?"Confirmando…":"Veio correto · confirmar recebimento"}</button>
       </div>}
-      {isPending&&(()=>{ const sg=stockHints[i.id]; return sg?<div style={{fontSize:11,color:B.purple,marginTop:6,wordBreak:"break-word"}}>💡 Parece estoque: {sg.name}{sg.brand?` · ${sg.brand}`:""}</div>:null; })()}
+      {isPending&&(()=>{ const sg=stockHints[i.id]; return sg?<div style={{fontSize:11,color:B.purple,marginTop:6,wordBreak:"break-word"}}><Ic n="bulb"/> Parece estoque: {sg.name}{sg.brand?` · ${sg.brand}`:""}</div>:null; })()}
       {!isPending&&<div style={{fontSize:11,color:B.green,marginTop:6,wordBreak:"break-word"}}>{destLbl(i)}</div>}
       {i.destination==="return"&&(()=>{ const dd=retDays(i.return_deadline); const done=i.return_status==="done"; const col=done?B.green:dd==null?B.gray400:dd<0||dd<=2?B.red:dd<=4?B.amber:B.gray300; return (<div style={{display:"flex",gap:"4px 8px",flexWrap:"wrap",alignItems:"center",marginTop:6}}>
         <span style={{fontSize:11,fontWeight:700,color:col,background:`${col}1f`,borderRadius:99,padding:"2px 9px"}}>{done?"Devolução concluída":i.return_deadline?(dd<0?`prazo venceu há ${-dd}d`:dd===0?"devolver até hoje":`devolver até ${fmtS(i.return_deadline+"T12:00:00-03:00")} · ${dd}d`):"sem prazo definido"}</span>
         <span style={{fontSize:11,color:B.gray400}}>{RET_ST[i.return_status||"todo"]}</span>
       </div>); })()}
       {isPending&&i.suggest_vehicle_id&&<div style={{fontSize:11,color:"#2aa5b5",marginTop:4,wordBreak:"break-word"}}>Sugestão do pedido: {i.suggest_vehicle_label||"carro"}{i.suggest_task_label?` · ${i.suggest_task_label}`:""} · confirme em Destinar</div>}
-      {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}>🔗 {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
+      {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}><Ic n="link"/> {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
       {isPending?(selMode?null:<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>)
@@ -7680,8 +7680,8 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
    </div>
    {exp[i.id]&&<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B.gray700}`}}>
      <div style={{display:"flex",gap:"3px 14px",flexWrap:"wrap",fontSize:11,color:B.gray400,marginBottom:10}}>
-       <span>🛒 Comprado em <b style={{color:B.gray200,fontWeight:600}}>{fmtD(i.ordered_at)}</b></span>
-       {!isPending&&i.assigned_at&&<span>📌 Destinada em <b style={{color:B.gray200,fontWeight:600}}>{fmtD(i.assigned_at)}</b></span>}
+       <span><Ic n="cart"/> Comprado em <b style={{color:B.gray200,fontWeight:600}}>{fmtD(i.ordered_at)}</b></span>
+       {!isPending&&i.assigned_at&&<span><Ic n="pin"/> Destinada em <b style={{color:B.gray200,fontWeight:600}}>{fmtD(i.assigned_at)}</b></span>}
        {i.permalink&&<a href={i.permalink} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:B.blue,textDecoration:"none"}}>ver anúncio ↗</a>}
      </div>
      {i.destination==="return"&&<div onClick={e=>e.stopPropagation()} style={{background:B.gray800,borderRadius:10,padding:"9px 10px",marginBottom:10,display:"flex",flexDirection:"column",gap:8}}>
@@ -7690,14 +7690,14 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
          <button onClick={()=>{ if(window.confirm("Desfazer a devolução? A compra volta para “Sem destino”.")) setRet(i,{destination:null,return_status:null,return_deadline:null,return_reason:null,assigned_by:null,assigned_at:null}); }} style={{marginLeft:"auto",background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>desfazer devolução</button></div>
      </div>}
      {i.ship_status!=="delivered"&&i.ship_status!=="cancelled"&&<div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10,fontSize:11,color:B.gray300}}>
-       🔑 Palavra-chave p/ entregador
+       <Ic n="key"/> Palavra-chave p/ entregador
        <input key={i.id+"|"+(i.delivery_key||"")} defaultValue={i.delivery_key||""} placeholder={i.ml_key?`${i.ml_key} (do ML)`:"digite a palavra"} onBlur={async e=>{const v=e.target.value.trim(); if(v===(i.delivery_key||"")) return; try{ await db.setMLItem(i.id,{delivery_key:v||null}); await loadItems(); }catch(er){ setErr(er.message||"Erro ao salvar"); }}} style={{flex:1,minWidth:120,padding:"6px 9px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
        {i.ml_key&&<span style={{color:B.gray500}}>detectada no ML: {i.ml_key}</span>}
      </div>}
      <div style={{display:"flex",flexDirection:"column",gap:0}}>
        {timeline(i).map((st,ix,arr)=><div key={st.k} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
          <div style={{display:"flex",flexDirection:"column",alignItems:"center",width:18,flexShrink:0}}>
-           <span style={{fontSize:12,lineHeight:"18px",opacity:st.done?1:.35}}>{st.ic}</span>
+           <span style={{fontSize:12,lineHeight:"18px",opacity:st.done?1:.35,display:"flex",alignItems:"center",height:18}}><Ic n={st.ic}/></span>
            {ix<arr.length-1&&<span style={{width:1,flex:1,minHeight:10,background:st.done?B.green+"66":B.gray700}}/>}
          </div>
          <div style={{paddingBottom:8,minWidth:0}}>
@@ -7765,7 +7765,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         {(!shut.returns||fil==="return"||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{returns.map(i=>row(i,false))}</div>}</>}
       {waiting.length>0&&<><button onClick={()=>tgShut("waiting")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",padding:0,cursor:"pointer",fontSize:10,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,margin:"12px 0 6px"}}><span style={{display:"inline-block",transition:"transform .2s",transform:(shut.waiting&&!nqs)?"none":"rotate(90deg)"}}>▸</span>Destinadas · aguardando entrega ({waiting.length})</button>
         {(!shut.waiting||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{waiting.map(i=>row(i,false))}</div>}</>}
-      {pending.length===0&&waiting.length===0&&<div style={{fontSize:12,color:B.gray500}}>{!items.length?"Nenhuma compra ainda — toque em Sincronizar.":(fil!=="all"||nqs)?(done.length?null:"Nada encontrado."):"Tudo concluído. 👌"}</div>}
+      {pending.length===0&&waiting.length===0&&<div style={{fontSize:12,color:B.gray500}}>{!items.length?"Nenhuma compra ainda — toque em Sincronizar.":(fil!=="all"||nqs)?(done.length?null:"Nada encontrado."):<>Tudo concluído. <Ic n="ready"/></>}</div>}
       {done.length>0&&<div style={{marginTop:12}}>
         <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.green,fontSize:11,fontWeight:700,cursor:"pointer",padding:0}}>{(showDone||nqs)?"▾":"▸"} ✓ Concluídas — entregues e destinadas ({done.length})</button>
         {(showDone||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>{done.map(i=>row(i,false))}</div>}
@@ -7938,7 +7938,7 @@ function ToolsTab({showValues=true}) {
               {t.seller&&<span>{t.seller}</span>}
               {t.link&&<a href={t.link} target="_blank" rel="noreferrer" style={{color:B.blue,textDecoration:"none"}}>anúncio ↗</a>}
             </div>
-            <div style={{fontSize:11,marginTop:5,color:t.location?B.teal||"#14b8a6":B.gray600}}>📍 {t.location||"sem local definido"}</div>
+            <div style={{fontSize:11,marginTop:5,color:t.location?B.teal||"#14b8a6":B.gray600}}><Ic n="pin"/> {t.location||"sem local definido"}</div>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
             <button onClick={()=>setEdit(t.id)} style={{background:"none",border:"none",color:B.gray400,fontSize:11,cursor:"pointer"}}>editar</button>
@@ -8030,15 +8030,15 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,fontSize:11,color:B.gray300}}>
           {sp.cnpj&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{sp.cnpj}</span>}
-          {sp.phone&&<a href={wa?`https://wa.me/${wa.length<=11?"55"+wa:wa}`:undefined} target="_blank" rel="noreferrer" style={{background:B.gray700,borderRadius:5,padding:"1px 7px",color:B.green,textDecoration:"none"}}>📞 {sp.phone}</a>}
-          {sp.contact&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>👤 {sp.contact}</span>}
+          {sp.phone&&<a href={wa?`https://wa.me/${wa.length<=11?"55"+wa:wa}`:undefined} target="_blank" rel="noreferrer" style={{background:B.gray700,borderRadius:5,padding:"1px 7px",color:B.green,textDecoration:"none"}}><Ic n="phone"/> {sp.phone}</a>}
+          {sp.contact&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}><Ic n="user"/> {sp.contact}</span>}
           {sp.email&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>✉ {sp.email}</span>}
         </div>
         {sp.address&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{sp.address}</div>}
         {sp.notes&&<div style={{fontSize:11,color:B.gray500,marginTop:4,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{sp.notes}</div>}
         {(()=>{const sd=docs.filter(d=>d.supplier_id===sp.id);return (<div style={{marginTop:8}}>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>setOpenDocs(openDocs===sp.id?null:sp.id)} style={{padding:"3px 10px",borderRadius:7,background:`${B.blue}12`,border:`1px solid ${B.blue}44`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer"}}>📄 Notas ({sd.length}) {openDocs===sp.id?"▲":"▼"}</button>
+            <button onClick={()=>setOpenDocs(openDocs===sp.id?null:sp.id)} style={{padding:"3px 10px",borderRadius:7,background:`${B.blue}12`,border:`1px solid ${B.blue}44`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer"}}><Ic n="file"/> Notas ({sd.length}) {openDocs===sp.id?"▲":"▼"}</button>
             <label style={{padding:"3px 10px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,fontSize:11,cursor:"pointer",opacity:upBusy?.6:1}}>{upBusy?"Enviando…":"＋ Anexar PDF"}
               <input type="file" accept="application/pdf" style={{display:"none"}} disabled={upBusy} onChange={e=>{attach(sp,e.target.files?.[0]);e.target.value="";}}/>
             </label>
@@ -8046,7 +8046,7 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
           {openDocs===sp.id&&<div style={{display:"flex",flexDirection:"column",gap:5,marginTop:8}}>
             {sd.length===0&&<div style={{fontSize:11,color:B.gray500}}>Nenhuma nota anexada. As notas importadas em uma OS (com este fornecedor) aparecem aqui.</div>}
             {sd.map(d=><div key={d.id} style={{background:B.gray900,borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              <a href={d.file_url} target="_blank" rel="noreferrer" style={{color:B.blue,fontSize:12,fontWeight:700,textDecoration:"none",flex:"1 1 160px",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📄 {d.file_name||"nota.pdf"}</a>
+              <a href={d.file_url} target="_blank" rel="noreferrer" style={{color:B.blue,fontSize:12,fontWeight:700,textDecoration:"none",flex:"1 1 160px",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><Ic n="file"/> {d.file_name||"nota.pdf"}</a>
               {(()=>{const m=d.note_id&&impMap[d.note_id];if(!m)return null;const full=m.total>0&&m.keys.size>=m.total;return <span style={{fontSize:10,fontWeight:800,color:full?B.green:B.amber}}>{full?"✓ importada":`parcial ${m.keys.size}/${m.total}`}</span>;})()}
               <span style={{fontSize:10,color:B.gray500}}>{new Date(d.created_at).toLocaleDateString("pt-BR")}{d.vehicle_label?` · ${d.vehicle_label}`:""}{d.total!=null?` · ${fmtBRL(Number(d.total))}`:""}</span>
               <button onClick={()=>{if(window.confirm("Remover esta nota?"))delDoc(d.id);}} style={{background:"none",border:"none",color:B.red,fontSize:11,cursor:"pointer"}}>remover</button>
@@ -8251,7 +8251,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
         {!isCollapsed&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
           {activeVs.map(v=>mkVC(v))}
           {pausedVs.length>0&&<>
-            <div style={{display:"flex",alignItems:"center",gap:8,margin:"14px 2px 4px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}>⏸ Pausados · {pausedVs.length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:8,margin:"14px 2px 4px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}><Ic n="pause"/> Pausados · {pausedVs.length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>
             {pausedVs.map(v=>mkVC(v))}
           </>}
           {doneVs.length>0&&<div style={{marginTop:activeAll.length>0?4:0}}>
@@ -8328,7 +8328,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
 
     {filtered.length===0?
       <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
-        <div style={{fontSize:40,marginBottom:12}}>👤</div>
+        <div style={{fontSize:40,marginBottom:12}}><Ic n="user"/></div>
         <div style={{fontWeight:700,color:B.gray200}}>{search?"Nenhum cliente encontrado":"Nenhum cliente cadastrado"}</div>
       </div>
     :<div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -8354,14 +8354,14 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:700,fontSize:14,color:B.white}}>{cli.name}</div>
               <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:2}}>
-                {cli.phone&&<span style={{fontSize:11,color:B.wa}}>📱 {cli.phone}</span>}
+                {cli.phone&&<span style={{fontSize:11,color:B.wa}}><Ic n="phone"/> {cli.phone}</span>}
                 {cli.email&&<span style={{fontSize:11,color:B.gray400}}>✉ {cli.email}</span>}
               </div>
             </div>
             <div style={{textAlign:"right",flexShrink:0,marginRight:6}}>
               <div style={{fontSize:11,color:B.gray400}}>{cliVs.length} veículo{cliVs.length!==1?"s":" "}· {doneTasks}/{totalTasks} tarefas</div>
               {totalValue>0&&<div style={{fontSize:13,fontWeight:800,color:B.amber}}>{fmtBRL(totalValue)}</div>}
-              {totalOwed>0&&<div style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px",marginTop:2}}>⚠ {fmtBRL(totalOwed)} em aberto</div>}
+              {totalOwed>0&&<div style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px",marginTop:2}}><Ic n="alert"/> {fmtBRL(totalOwed)} em aberto</div>}
             </div>
             <div style={{color:B.gray400,flexShrink:0}}>{isOpen?<IChevU s={15}/>:<IChevD s={15}/>}</div>
           </div>
@@ -8385,7 +8385,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
             </div>
 
             {/* Vehicle history */}
-            <div style={{fontSize:10,color:B.blue,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>🚗 Veículos</div>
+            <div style={{fontSize:10,color:B.blue,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}><Ic n="car"/> Veículos</div>
             {cliVs.length===0?<div style={{fontSize:13,color:B.gray400,textAlign:"center",padding:"12px 0"}}>Nenhum veículo vinculado.</div>
             :<div style={{display:"flex",flexDirection:"column",gap:6}}>
               {cliVs.map(v=>{
@@ -8403,7 +8403,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
                       {v.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(v.osNumber)}</span>}
                     </div>
                     <div style={{fontSize:11,color:B.gray400,marginTop:2}}>
-                      {emp&&<span>🔧 {emp.name} · </span>}
+                      {emp&&<span><Ic n="wrench"/> {emp.name} · </span>}
                       <span>{vDone.length}/{vts.length} serviços</span>
                     </div>
                     {vts.length>0&&<ProgressBar value={vDone.length} max={vts.length}/>}
@@ -8430,7 +8430,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
                   toast_(`PIN de ${cli.name} resetado ✓`);
                 }catch(e){}
               }} style={{padding:"7px 12px",borderRadius:8,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
-                🔑 Resetar PIN do portal
+                <Ic n="key"/> Resetar PIN do portal
               </button>}
               <button onClick={()=>setConfirmDel(cli.id)} style={{marginLeft:"auto",padding:"7px 12px",borderRadius:8,background:"transparent",border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
                 <ITrash s={13} c={B.red}/>Remover cliente
@@ -8487,7 +8487,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
     setSaving(true);
     try{
       const selTask=vTasks.find(t=>t.id===selT);
-      const title=selTask?`💬 ${selTask.label}`:"💬 Atualização da equipe";
+      const title=selTask?`${selTask.label}`:"Atualização da equipe";
       const color=selTask?(CAT_MAP?.[selTask.category]||B.blue):B.blue;
       await onPost(selV.id,{type:selTask?"task_update":"note",title,body:note.trim(),actor:adminRole==="owner"?"Gestor":"Admin",category:selTask?.category||null,color});
       // Open WhatsApp if toggled and client has phone
@@ -8710,7 +8710,7 @@ function RemindersPanel({onClose,reminders=[],vehicles=[],clients=[],adminRole,o
                   {r.category&&<span style={{fontSize:9,color:B.gray400,background:B.gray700,borderRadius:4,padding:"1px 5px"}}>{r.category}</span>}
                   {r.visibility!=="both"&&<span style={{fontSize:9,color:B.purple,background:`${B.purple}18`,borderRadius:4,padding:"1px 5px"}}>{r.visibility==="owner"?"Gestor":"Admin"}</span>}
                   {v&&<span style={{fontSize:9,color:B.orange,background:`${B.orange}18`,borderRadius:4,padding:"1px 5px"}}>{v.model}</span>}
-                  {r.dueDate&&<span style={{fontSize:9,color:isOverdue?B.red:B.gray500,fontWeight:isOverdue?700:400}}>{isOverdue?"⚠ ":""}{new Date(r.dueDate+"T12:00").toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}</span>}
+                  {r.dueDate&&<span style={{fontSize:9,color:isOverdue?B.red:B.gray500,fontWeight:isOverdue?700:400}}>{isOverdue?<><Ic n="alert"/> </>:""}{new Date(r.dueDate+"T12:00").toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}</span>}
                 </div>
               </div>
               <button onClick={()=>onDelete(r.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0,flexShrink:0}}
@@ -9212,7 +9212,7 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
   const total=quoteTotal(items);
   const alreadyAnswered=quote.status==="approved"||quote.status==="rejected"||done;
   const statusColor=quote.status==="approved"||done==="approved"?B.green:quote.status==="rejected"||done==="rejected"?B.red:B.amber;
-  const statusLabel=quote.status==="approved"||done==="approved"?"✅ Aprovado":quote.status==="rejected"||done==="rejected"?"❌ Recusado":"⏳ Aguardando aprovação";
+  const statusLabel=quote.status==="approved"||done==="approved"?"Aprovado":quote.status==="rejected"||done==="rejected"?"Recusado":"Aguardando aprovação";
 
   return(<div style={{minHeight:"100vh",background:"#f0f0f5",fontFamily:"'Inter','Segoe UI',sans-serif",padding:"0 0 60px"}}>
     {/* Header */}
@@ -9258,11 +9258,11 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
       {!alreadyAnswered&&<div style={{display:"flex",flexDirection:"column",gap:10,marginTop:8}}>
         <button onClick={async()=>{setDone("approved");await onApprove(quoteId,items);}}
           style={{padding:"14px 0",borderRadius:12,background:"#16a34a",border:"none",color:"#fff",fontWeight:800,fontSize:16,cursor:"pointer"}}>
-          ✅ Aprovar orçamento
+          <Ic n="ready"/> Aprovar orçamento
         </button>
         <button onClick={async()=>{setDone("rejected");await onReject(quoteId);}}
           style={{padding:"14px 0",borderRadius:12,background:"#fff",border:"2px solid #ef4444",color:"#ef4444",fontWeight:700,fontSize:15,cursor:"pointer"}}>
-          ❌ Recusar
+          <Ic n="xc"/> Recusar
         </button>
         <div style={{textAlign:"center",fontSize:11,color:"#aaa",marginTop:4}}>Ao aprovar, você concorda com os serviços e valores listados acima.</div>
       </div>}
@@ -9491,7 +9491,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
                     style={{flex:1,background:"none",border:"none",color:B.white,fontSize:13,fontWeight:700,outline:"none",padding:0}}/>
                   <button onClick={()=>{const items=[...form.items];items[i]={...it,outsourced:!it.outsourced};setForm(p=>({...p,items}));}}
                     style={{background:it.outsourced?`${B.purple}33`:"none",border:`1px solid ${it.outsourced?B.purple:B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:it.outsourced?B.purple:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
-                    {it.outsourced?"🔧 Terceirizado":"Terceirizar"}
+                    {it.outsourced?<><Ic n="wrench"/> Terceirizado</>:"Terceirizar"}
                   </button>
                 </div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -9657,15 +9657,15 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
             </button>}
             {!isConverted&&<button onClick={()=>copyLink(q.id)}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.blue}18`,border:`1px solid ${B.blue}33`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              {copiedId===q.id?"✓ Copiado":"🔗 Link"}
+              {copiedId===q.id?"✓ Copiado":<><Ic n="link"/> Link</>}
             </button>}
             {isEditable&&<button onClick={()=>{onUpdate(q.id,{status:"sent"});copyLink(q.id);}}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,color:B.amber,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-              📤 Enviar
+              <Ic n="upload"/> Enviar
             </button>}
             {q.status==="approved"&&!q.appointmentId&&<button onClick={()=>onConvertToAppointment(q)}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}33`,color:B.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-              ✅ Converter
+              <Ic n="ready"/> Converter
             </button>}
             <button onClick={()=>onDelete(q.id)}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",marginLeft:"auto"}}>
@@ -9851,7 +9851,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
           </div>
           <div style={{textAlign:"right",flexShrink:0}}>
             {a.scheduledDate&&<div style={{fontSize:11,fontWeight:800,color:B.purple,background:`${B.purple}15`,border:`1px solid ${B.purple}33`,borderRadius:6,padding:"2px 8px",marginBottom:4}}>
-              📅 {new Date(a.scheduledDate+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"})}
+              <Ic n="cal"/> {new Date(a.scheduledDate+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"})}
             </div>}
             {totalPaid>0&&<div style={{fontSize:11,color:B.green,fontWeight:700}}>{fmtBRL(totalPaid)} pago</div>}
             {balance>0&&<div style={{fontSize:11,color:B.amber,fontWeight:700}}>{fmtBRL(balance)} pendente</div>}
@@ -10302,7 +10302,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
 
     {sorted.length===0?
       <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
-        <div style={{fontSize:40,marginBottom:12}}>🚗</div>
+        <div style={{fontSize:40,marginBottom:12}}><Ic n="car"/></div>
         <div style={{fontWeight:700,color:B.gray200,marginBottom:4}}>{search?"Nenhum veículo encontrado":"Nenhum veículo cadastrado"}</div>
         <div style={{fontSize:13}}>Clique em <b style={{color:B.orange}}>+ Novo veículo</b> para cadastrar o primeiro.</div>
       </div>
@@ -10365,10 +10365,10 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
         <span style={{fontSize:11,color:B.gray400}}>Total: <b style={{color:B.amber}}>{fmtBRL(totalValue)}</b></span>
         {h.discount_note&&<span style={{fontSize:10,color:B.red,background:`${B.red}12`,borderRadius:4,padding:"1px 5px"}}>{h.discount_note}</span>}
         <span style={{fontSize:11,color:B.gray400}}>Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></span>
-        {owed>0&&<span style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px"}}>⚠ {fmtBRL(owed)} em aberto</span>}
+        {owed>0&&<span style={{fontSize:11,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px"}}><Ic n="alert"/> {fmtBRL(owed)} em aberto</span>}
         {owed===0&&paid>0&&<span style={{fontSize:11,fontWeight:700,color:B.green,display:"inline-flex",alignItems:"center",gap:3}}><ICheck s={10} c={B.green}/>Quitado</span>}
         {overpaid>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber}}>+{fmtBRL(overpaid)} excedente</span>}
-        {(()=>{const cliCredit=clientCredits.filter(c=>c.clientId===h.client_id).reduce((s,c)=>s+c.amount,0);return cliCredit>0&&<span style={{fontSize:11,fontWeight:700,color:B.blue,background:`${B.blue}15`,borderRadius:5,padding:"1px 7px"}}>💳 {fmtBRL(cliCredit)} crédito disponível</span>;})()}
+        {(()=>{const cliCredit=clientCredits.filter(c=>c.clientId===h.client_id).reduce((s,c)=>s+c.amount,0);return cliCredit>0&&<span style={{fontSize:11,fontWeight:700,color:B.blue,background:`${B.blue}15`,borderRadius:5,padding:"1px 7px"}}><Ic n="pay"/> {fmtBRL(cliCredit)} crédito disponível</span>;})()}
       </div>
       <div style={{display:"flex",gap:5,flexShrink:0}}>
         {overpaid>0&&onAddClientCredit&&<button onClick={async()=>{
@@ -10376,7 +10376,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
           // Register offsetting payment to zero the balance
           onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:-(overpaid),method:"Crédito",paidAt:new Date().toISOString(),note:"Convertido em crédito de cliente",division:h.division||"performance"});
         }} style={{background:`${B.blue}15`,border:`1px solid ${B.blue}33`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.blue,fontSize:11,fontWeight:700}}>
-          💳 Salvar crédito
+          <Ic n="pay"/> Salvar crédito
         </button>}
         {owed>0&&onUpdateHistory&&!showDiscount&&<button onClick={()=>{setShowDiscount(true);setShowForm(false);}}
           style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
@@ -10459,7 +10459,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
       if(totalCredit<=0||owed<=0||!onAddPayment) return null;
       return(<div style={{marginBottom:8,padding:"10px",background:`${B.blue}0a`,border:`1px solid ${B.blue}22`,borderRadius:8}}>
         <div style={{fontSize:11,fontWeight:700,color:B.blue,marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
-          💳 Crédito disponível: {fmtBRL(totalCredit)}
+          <Ic n="pay"/> Crédito disponível: {fmtBRL(totalCredit)}
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           <input value={creditApply} onChange={e=>setCreditApply(e.target.value)} type="number" step="0.01"
@@ -10566,17 +10566,17 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
             <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
             {vehicle.year&&<span style={{color:B.gray400}}>{vehicle.year}</span>}
-            {(vehicle.color||vehicle.year)&&vehicle.color&&<span style={{color:B.gray300}}>🎨 {vehicle.color}</span>}
+            {(vehicle.color||vehicle.year)&&vehicle.color&&<span style={{color:B.gray300}}><Ic n="brush"/> {vehicle.color}</span>}
             {vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>}
             {cli&&<span style={{color:B.blue,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
-            {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}>📋 {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
+            {!hasActiveOS&&sortedHistory.length>0&&<span style={{color:B.gray500,fontSize:10}}><Ic n="list"/> {sortedHistory.length} OS anterior{sortedHistory.length!==1?"es":""}</span>}
           {(()=>{
             const totalOwed=sortedHistory.reduce((s,h)=>{
               const paid=Math.round(payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0)*100)/100;
               return s+Math.max(0,Math.round((Number(h.total_value||0)-paid)*100)/100);
             },0);
             if(totalOwed<=0) return null;
-            return <span style={{fontSize:10,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px",flexShrink:0}}>⚠ {fmtBRL(totalOwed)} em aberto</span>;
+            return <span style={{fontSize:10,fontWeight:800,color:"#fff",background:B.red,borderRadius:5,padding:"1px 7px",flexShrink:0}}><Ic n="alert"/> {fmtBRL(totalOwed)} em aberto</span>;
           })()}
           </div>
           {vts.length>0&&<ProgressBar value={done.length} max={vts.length}/>}
@@ -10587,12 +10587,12 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       <div className="osc-vhc-timer" style={{flexShrink:0,textAlign:"right",marginRight:4}}>
         {elapsed&&vehicle.deliveredAt
           ?<div style={{background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",display:"flex",alignItems:"center",gap:6}}>
-              <div style={{fontSize:9,color:B.green,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>✅ Entregue</div>
+              <div style={{fontSize:9,color:B.green,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}><Ic n="ready"/> Entregue</div>
               <div style={{fontSize:12,fontWeight:800,color:B.green}}>{elapsed.label}</div>
             </div>
           :elapsed
             ?<div style={{background:`${elapsed.color}18`,border:`1px solid ${elapsed.color}44`,borderRadius:8,padding:"4px 10px",display:"flex",alignItems:"center",gap:6}}>
-                <div style={{fontSize:9,color:elapsed.color,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>⏱ Na oficina</div>
+                <div style={{fontSize:9,color:elapsed.color,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}><Ic n="clock"/> Na oficina</div>
                 <div style={{fontSize:13,fontWeight:800,color:elapsed.color}}>{elapsed.label}</div>
               </div>
             :!hasActiveOS&&<div style={{background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:8,padding:"4px 10px",display:"flex",alignItems:"center",gap:6}}>
@@ -10669,7 +10669,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
         {/* Entry time */}
         {(editEntry||vehicle.enteredAt)&&<div style={{marginBottom:14,padding:"10px 14px",background:B.gray900,borderRadius:10,border:`1px solid ${B.gray700}`}}>
-          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>📅 Data/hora de entrada na oficina</div>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}><Ic n="cal"/> Data/hora de entrada na oficina</div>
           {editEntry
             ?<div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
                 <input value={entryInput} onChange={e=>setEntryInput(e.target.value)} type="datetime-local"
@@ -10695,7 +10695,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
         {/* Pending services */}
         {pending.length>0&&<>
-          <div style={{fontSize:10,color:B.amber,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>⏳ Serviços pendentes ({pending.length})</div>
+          <div style={{fontSize:10,color:B.amber,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}><Ic n="hourglass"/> Serviços pendentes ({pending.length})</div>
           <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12}}>
             {pending.map(t=>(
               <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 10px",background:`${B.amber}11`,border:`1px solid ${B.amber}33`,borderRadius:7}}>
@@ -10708,7 +10708,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
         {/* Completed services */}
         {done.length>0&&<>
-          <div style={{fontSize:10,color:B.green,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>✅ Concluídos ({done.length})</div>
+          <div style={{fontSize:10,color:B.green,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}><Ic n="ready"/> Concluídos ({done.length})</div>
           <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:8}}>
             {done.map(t=>{
               const tc=taskCost(t,defaultRate);
@@ -10735,23 +10735,23 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
       {/* Active OS status badges */}
       {(hasActiveOS||vehicle.enteredAtFinishing)&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
-        {hasActiveOS&&<span style={{fontSize:11,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:6,padding:"3px 10px"}}>⚙️ Performance em andamento</span>}
+        {hasActiveOS&&<span style={{fontSize:11,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:6,padding:"3px 10px"}}><Ic n="gear"/> Performance em andamento</span>}
         {clientNotes.length>0&&<span style={{fontSize:11,fontWeight:700,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"3px 10px"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""} do cliente</span>}
-        {vehicle.enteredAtFinishing&&<span style={{fontSize:11,fontWeight:700,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:6,padding:"3px 10px"}}>🎨 Finishing em andamento</span>}
+        {vehicle.enteredAtFinishing&&<span style={{fontSize:11,fontWeight:700,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:6,padding:"3px 10px"}}><Ic n="brush"/> Finishing em andamento</span>}
       </div>}
 
       {/* No active OS — open buttons */}
       {!hasActiveOS&&!vehicle.enteredAtFinishing&&<div style={{textAlign:"center",padding:"16px 0",color:B.gray400}}>
-        <div style={{fontSize:22,marginBottom:4}}>✅</div>
+        <div style={{fontSize:22,marginBottom:4}}><Ic n="ready"/></div>
         <div style={{fontWeight:600,color:B.gray200,fontSize:13}}>Veículo disponível para nova OS</div>
         <div style={{fontSize:12,color:B.gray500,marginTop:2,marginBottom:10}}>Nenhuma OS em andamento neste momento</div>
       </div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:4}}>
         {onOpenOS&&!hasActiveOS&&<button onClick={()=>setShowOpenOS(true)} style={{padding:"7px 16px",borderRadius:9,background:B.greenBg,border:`1px solid ${B.green}44`,color:B.green,cursor:"pointer",fontWeight:700,fontSize:12,display:"inline-flex",alignItems:"center",gap:5}}>
-          <IPlus s={13} c={B.green}/>⚙️ OS Performance
+          <IPlus s={13} c={B.green}/><Ic n="gear"/> OS Performance
         </button>}
         {onOpenOSFinishing&&!vehicle.enteredAtFinishing&&<button onClick={()=>setShowOpenOSFD(true)} style={{padding:"7px 16px",borderRadius:9,background:FD.bg,border:`1px solid ${FD.border}`,color:FD.primary,cursor:"pointer",fontWeight:700,fontSize:12,display:"inline-flex",alignItems:"center",gap:5}}>
-          <IPlus s={13} c={FD.primary}/>🎨 OS Finishing
+          <IPlus s={13} c={FD.primary}/><Ic n="brush"/> OS Finishing
         </button>}
       </div>
 
@@ -10763,10 +10763,10 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:sortedHistory.length>0&&showHistory?10:0}}>
           {sortedHistory.length>0
             ?<button onClick={()=>setShowHistory(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,flex:1}}>
-                <div style={{fontSize:10,color:B.purple,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>📋 Histórico de OSs ({sortedHistory.length})</div>
+                <div style={{fontSize:10,color:B.purple,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}><Ic n="list"/> Histórico de OSs ({sortedHistory.length})</div>
                 <div style={{color:B.gray400,marginLeft:"auto"}}>{showHistory?<IChevU s={13}/>:<IChevD s={13}/>}</div>
               </button>
-            :<div style={{flex:1,fontSize:10,color:B.gray500,fontWeight:600,textTransform:"uppercase",letterSpacing:.5}}>📋 Primeira OS deste veículo</div>}
+            :<div style={{flex:1,fontSize:10,color:B.gray500,fontWeight:600,textTransform:"uppercase",letterSpacing:.5}}><Ic n="list"/> Primeira OS deste veículo</div>}
           <button onClick={()=>{
             const url=getPublicLink(vehicle.id,"historico");
             navigator.clipboard?.writeText(url);
@@ -10804,7 +10804,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                   const hIsOpen=hBalance>=0.01;
                   return(<>
                     <span style={{fontSize:12,fontWeight:800,color:B.amber,marginLeft:"auto"}}>{fmtBRL(h.total_value)}</span>
-                    {hIsOpen&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 7px",whiteSpace:"nowrap"}}>⚠ {fmtBRL(hBalance)} em aberto</span>}
+                    {hIsOpen&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 7px",whiteSpace:"nowrap"}}><Ic n="alert"/> {fmtBRL(hBalance)} em aberto</span>}
                     {!hIsOpen&&hPaid>0&&<span style={{fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"2px 7px"}}>Quitado</span>}
                   </>);
                 })()}
@@ -10832,27 +10832,27 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 {isOwner&&<button onClick={()=>{
                   const osLabel=h.os_number?fmtOS(h.os_number):"OS";
                   if(!window.confirm(`Excluir ${osLabel} do histórico de ${vehicle.model}?\n\nEsta ação não pode ser desfeita.`)) return;
-                  if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nTem certeza que deseja excluir permanentemente ${osLabel}?\n\nTodos os dados desta OS serão perdidos.`)) return;
+                  if(!window.confirm(`CONFIRMAÇÃO FINAL\n\nTem certeza que deseja excluir permanentemente ${osLabel}?\n\nTodos os dados desta OS serão perdidos.`)) return;
                   onDeleteOsHistory&&onDeleteOsHistory(h.id);
                 }} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.red,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
                   <ITrash s={10} c={B.red}/>
                 </button>}
               </div>
               <div style={{fontSize:11,color:B.gray400,display:"flex",gap:12,flexWrap:"wrap",marginBottom:hTasks.length?6:0}}>
-                {h.entered_at&&<span>📅 Entrada: {new Date(h.entered_at).toLocaleDateString("pt-BR")}</span>}
-                {h.delivered_at&&<span>✅ Entrega: {new Date(h.delivered_at).toLocaleDateString("pt-BR")}</span>}
-                {totalMs&&<span>⏱ {fmtMs(totalMs)} total{workMs&&workMs!==totalMs?` · ${fmtMs(workMs)} em serviço`:""}</span>}
+                {h.entered_at&&<span><Ic n="cal"/> Entrada: {new Date(h.entered_at).toLocaleDateString("pt-BR")}</span>}
+                {h.delivered_at&&<span><Ic n="ready"/> Entrega: {new Date(h.delivered_at).toLocaleDateString("pt-BR")}</span>}
+                {totalMs&&<span><Ic n="clock"/> {fmtMs(totalMs)} total{workMs&&workMs!==totalMs?` · ${fmtMs(workMs)} em serviço`:""}</span>}
               </div>
               {/* Extras: fuel, tows, discount */}
               {(Number(h.fuel_cost||0)>0||(h.tows||[]).length>0||Number(h.os_discount_pct||0)>0)&&
                 <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
-                  {Number(h.fuel_cost||0)>0&&<span style={{fontSize:10,color:B.amber,background:`${B.amber}15`,border:`1px solid ${B.amber}33`,borderRadius:5,padding:"1px 7px"}}>⛽ {fmtBRL(h.fuel_cost)}</span>}
+                  {Number(h.fuel_cost||0)>0&&<span style={{fontSize:10,color:B.amber,background:`${B.amber}15`,border:`1px solid ${B.amber}33`,borderRadius:5,padding:"1px 7px"}}><Ic n="fuel"/> {fmtBRL(h.fuel_cost)}</span>}
                   {(h.tows||[]).map((t,i)=>Number(t.value||0)>0&&<span key={i} style={{fontSize:10,color:"#60a5fa",background:"#60a5fa15",border:"1px solid #60a5fa33",borderRadius:5,padding:"1px 7px"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> {t.origin&&t.destination?`${t.origin}→${t.destination} · `:""}{fmtBRL(t.value)}</span>)}
                   {Number(h.os_discount_pct||0)>0&&<span style={{fontSize:10,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:5,padding:"1px 7px"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> -{h.os_discount_pct}% m.o.</span>}
                 </div>}
               {hTasks.length>0&&<div style={{display:"flex",flexDirection:"column",gap:3}}>
                 {hTasks.map((t,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"3px 6px",background:t.done?B.greenBg:`${B.amber}11`,borderRadius:5}}>
-                  <span style={{fontSize:10}}>{t.done?"✅":"⏳"}</span>
+                  <span style={{fontSize:10}}>{t.done?<><Ic n="ready"/></>:<><Ic n="hourglass"/></>}</span>
                   <span style={{fontSize:11.5,color:B.gray200,flex:1}}>{t.label}</span>
                   {taskCost(t,defaultRate).total>0&&<span style={{fontSize:10,color:t.done?B.green:B.amber,fontWeight:700}}>{fmtBRL(taskCost(t,defaultRate).total)}</span>}
                 </div>)}
@@ -10863,8 +10863,8 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 const has=Object.keys(hdc).length>0;
                 const btn={display:"inline-flex",alignItems:"center",gap:6,marginTop:8,padding:"7px 12px",borderRadius:8,background:`${B.green}14`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:800,fontSize:11.5,cursor:"pointer",textDecoration:"none",fontFamily:"inherit"};
                 if(!has) return <div style={{marginTop:8,fontSize:10.5,color:B.gray500}}>Sem conferência de entrega registrada nesta OS.</div>;
-                if(h.delivery_check_pdf) return <a href={h.delivery_check_pdf} target="_blank" rel="noopener noreferrer" style={btn}>📄 Conferência de entrega (PDF)</a>;
-                return <button style={btn} onClick={async()=>{try{await generateDeliveryCheckPDF(buildDeliveryInfo({vehicle:{...vehicle,osNumber:h.os_number,osNumberFinishing:h.os_number,enteredAt:h.entered_at,enteredAtFinishing:h.entered_at},tasks:hTasks.filter(x=>!x.warranty),deliveryCheck:hdc,client:hClient,employees,company,isFD:h.division==="finishing",deliveredAt:h.delivered_at,mechanicIds:h.mechanic_ids||h.mechanicIds||[]}),{save:true});}catch(e){alert("Erro ao gerar PDF: "+(e.message||e));}}}>📄 Conferência de entrega (PDF)</button>;
+                if(h.delivery_check_pdf) return <a href={h.delivery_check_pdf} target="_blank" rel="noopener noreferrer" style={btn}><Ic n="file"/> Conferência de entrega (PDF)</a>;
+                return <button style={btn} onClick={async()=>{try{await generateDeliveryCheckPDF(buildDeliveryInfo({vehicle:{...vehicle,osNumber:h.os_number,osNumberFinishing:h.os_number,enteredAt:h.entered_at,enteredAtFinishing:h.entered_at},tasks:hTasks.filter(x=>!x.warranty),deliveryCheck:hdc,client:hClient,employees,company,isFD:h.division==="finishing",deliveredAt:h.delivered_at,mechanicIds:h.mechanic_ids||h.mechanicIds||[]}),{save:true});}catch(e){alert("Erro ao gerar PDF: "+(e.message||e));}}}><Ic n="file"/> Conferência de entrega (PDF)</button>;
               })()}
               {/* Photos from this OS */}
               {(h.photos||[]).filter(p=>p).length>0&&<div style={{marginTop:8}}>
@@ -10915,7 +10915,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       {/* Delete vehicle — owner only, no active OS, inside expanded card */}
       {isOwner&&!hasActiveOS&&!hasActiveFinishing&&onDeleteVehicle&&open&&<div style={{padding:"12px 16px",borderTop:`1px solid ${B.gray700}`}}>
         <button onClick={()=>{          if(!window.confirm(`Excluir ${vehicle.model}${vehicle.plate?` (${vehicle.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
-          if(!window.confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${vehicle.model}?`)) return;
+          if(!window.confirm(`CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${vehicle.model}?`)) return;
           onDeleteVehicle(vehicle.id);
         }} style={{background:"none",border:`1px solid ${B.red}33`,borderRadius:7,padding:"6px 12px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:5,opacity:.7}}
           onMouseEnter={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.background=`${B.red}12`;}}
@@ -10932,7 +10932,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 }
 // ─── Finance Tab ──────────────────────────────────────────────────────────────
 // ─── Investments Tab ──────────────────────────────────────────────────────────
-const PRIORITY_LABELS = ["","🔴 Urgente","🟠 Alta","🟡 Média","🟢 Baixa","⚪ Futura"];
+const PRIORITY_LABELS = ["","Urgente","Alta","Média","Baixa","Futura"];
 const PRIORITY_COLORS = ["","#ef4444","#f97316","#eab308","#22c55e","#6b7280"];
 const INV_STATUS = {
   pending:  {label:"Pendente",  color:"#f59e0b", icon:"⏳", next:"approved",  nextLabel:"Aprovar"},
@@ -10946,12 +10946,12 @@ function InvFormPanel({cat,form,setForm,editId,onSubmit,onCancel,hideCategoryTog
   const isMat=hideCategoryToggle||(form.category||cat)==="materiais";
   return (<div style={{background:B.gray900,borderRadius:11,padding:14,border:`1px solid ${isMat?B.amber+"44":(form.category||cat)==="pesado"?B.red+"44":B.blue+"44"}`,marginBottom:14}}>
     <div style={{fontSize:11,fontWeight:700,color:isMat?B.amber:(form.category||cat)==="pesado"?B.red:B.blue,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>
-      {isMat?"📦 Material Sortido":(form.category||cat)==="pesado"?"🔧 Investimento Pesado":"⚡ Investimento Leve"} — {editId?"Editar":"Novo"}
+      {isMat?<><Ic n="pkg"/> Material Sortido</>:(form.category||cat)==="pesado"?<><Ic n="wrench"/> Investimento Pesado</>:<><Ic n="zap"/> Investimento Leve</>} — {editId?"Editar":"Novo"}
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {/* Category toggle — hidden in materiais context, and excludes materiais option in investments */}
       {!hideCategoryToggle&&<div style={{display:"flex",gap:6}}>
-        {[{k:"pesado",l:"🔧 Pesado"},{k:"leve",l:"⚡ Leve"}].map(c=>(
+        {[{k:"pesado",l:"Pesado"},{k:"leve",l:"Leve"}].map(c=>(
           <button key={c.k} type="button" onClick={()=>setForm(p=>({...p,category:c.k}))}
             style={{flex:1,padding:"8px 0",borderRadius:8,border:`1px solid ${(form.category||cat)===c.k?(c.k==="pesado"?B.red:B.blue):B.gray600}`,background:(form.category||cat)===c.k?(c.k==="pesado"?`${B.red}18`:`${B.blue}18`):"none",color:(form.category||cat)===c.k?(c.k==="pesado"?B.red:B.blue):B.gray500,fontWeight:700,fontSize:12,cursor:"pointer"}}>
             {c.l}
@@ -10973,9 +10973,9 @@ function InvFormPanel({cat,form,setForm,editId,onSubmit,onCancel,hideCategoryTog
       <div style={{display:"flex",gap:8}}>
         <select value={form.division} onChange={e=>setForm(p=>({...p,division:e.target.value}))}
           style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
-          <option value="performance">⚙️ Performance</option>
-          <option value="finishing">🎨 Finishing</option>
-          <option value="ambos">⚙️🎨 Ambos</option>
+          <option value="performance">Performance</option>
+          <option value="finishing">Finishing</option>
+          <option value="ambos">Ambos</option>
         </select>
         <select value={form.priority} onChange={e=>setForm(p=>({...p,priority:e.target.value}))}
           style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
@@ -10983,7 +10983,7 @@ function InvFormPanel({cat,form,setForm,editId,onSubmit,onCancel,hideCategoryTog
           <option value="2">Alta</option>
           <option value="3">Média</option>
           <option value="4">Baixa</option>
-          <option value="5">⚪ Futura</option>
+          <option value="5">Futura</option>
         </select>
       </div>
       <div style={{display:"flex",gap:8}}>
@@ -11002,7 +11002,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
   const [confirmDel,setConfirmDel]=useState(false);
   const st=INV_STATUS[inv.status]||INV_STATUS.pending;
   const prColor=PRIORITY_COLORS[inv.priority]||B.gray500;
-  const divLabel=inv.division==="finishing"?"🎨":inv.division==="ambos"?"⚙️🎨":"⚙️";
+  const divLabel=inv.division==="finishing"?<Ic n="brush"/>:inv.division==="ambos"?<><Ic n="gear"/> <Ic n="brush"/></>:<Ic n="gear"/>;
   const total=inv.value*(inv.quantity||1);
   const canEdit=adminRole==="owner"||adminRole==="admin"||isChief(adminRole);
   const canApprove=adminRole==="owner"||adminRole==="admin";
@@ -11051,7 +11051,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
           {inv.value>0&&<span style={{fontSize:12,color:B.white,fontWeight:700}}>{fmtBRL(total)}{inv.quantity>1&&inv.category!=="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({inv.quantity}× {fmtBRL(inv.value)})</span>:inv.quantity>1&&inv.category==="materiais"?<span style={{color:B.gray500,fontWeight:400}}> ({fmtBRL(inv.value)} cada)</span>:""}</span>}
           {inv.link&&<a href={inv.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:B.blue,display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Ver link</a>}
           {adminRole==="owner"&&inv.link&&inv.status!=="received"&&inv.status!=="bought"&&<button
-            onClick={()=>onUpdate(inv.id,{link:"",status:"pending",objective:(inv.objective?inv.objective+"\n":"")+"⚠ Link inválido — por favor substitua."})}
+            onClick={()=>onUpdate(inv.id,{link:"",status:"pending",objective:(inv.objective?inv.objective+"\n":"")+"Link inválido — por favor substitua."})}
             style={{fontSize:10,fontWeight:700,color:B.red,background:`${B.red}12`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Link inválido
@@ -11078,7 +11078,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
     <div style={{borderTop:`1px solid ${B.gray700}`,padding:"8px 12px",display:"flex",gap:6,flexWrap:"wrap"}}>
       {canApprove&&inv.status==="pending"&&<button onClick={()=>onUpdate(inv.id,{status:"approved"})}
         style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontSize:12,fontWeight:800,cursor:"pointer",minWidth:80}}>
-        ✅ Aprovar
+        <Ic n="ready"/> Aprovar
       </button>}
       {canBuy&&inv.status==="approved"&&<button onClick={()=>onUpdate(inv.id,{status:"bought"})}
         style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.purple}22`,border:`1px solid ${B.purple}44`,color:B.purple,fontSize:12,fontWeight:800,cursor:"pointer",minWidth:80}}>
@@ -11086,7 +11086,7 @@ function InvCard({inv,adminRole,onUpdate,onStartEdit}) {
       </button>}
       {canBuy&&inv.status==="bought"&&<button onClick={()=>onUpdate(inv.id,{status:"received"})}
         style={{flex:1,padding:"9px 0",borderRadius:9,background:`${B.green}22`,border:`1px solid ${B.green}44`,color:B.green,fontSize:12,fontWeight:800,cursor:"pointer",minWidth:80}}>
-        🎉 Recebido
+        <Ic n="spark"/> Recebido
       </button>}
       {canBuy&&inv.status==="bought"&&<button onClick={()=>onUpdate(inv.id,{status:"pending",link:""})}
         style={{padding:"9px 12px",borderRadius:9,background:`${B.amber}15`,border:`1px solid ${B.amber}33`,color:B.amber,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
@@ -11141,14 +11141,14 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
   const [openMateriais,setOpenMateriais]=useState(false);
 
   const statusGroups=[
-    {key:"pending",  label:"⏳ Pendentes",  color:"#f59e0b"},
+    {key:"pending",  label:"Pendentes",  color:"#f59e0b"},
     {key:"approved", label:"Aprovados",   color:"#3b82f6"},
     {key:"bought",   label:"Comprados",   color:"#8b5cf6"},
-    {key:"received", label:"🎉 Recebidos",   color:"#22c55e"},
+    {key:"received", label:"Recebidos",   color:"#22c55e"},
   ];
 
   const sectionHeader=(items,color,icon,title,open,setOpen)=>{
-    const iconEl = icon==="box" ? <IBox s={16} c={color}/> : icon==="tool" ? <IWrench s={16} c={color}/> : <span style={{fontSize:16}}>{icon}</span>;
+    const iconEl = icon==="box" ? <IBox s={16} c={color}/> : icon==="tool" ? <IWrench s={16} c={color}/> : <Ic n={icon} s={16} c={color}/>;
     return(<button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"12px 14px",background:B.gray800,border:`1px solid ${color}33`,borderRadius:open?"12px 12px 0 0":12,cursor:"pointer",textAlign:"left",marginBottom:open?0:8}}>
       <span style={{display:"flex",alignItems:"center",justifyContent:"center"}}>{iconEl}</span>
       <div style={{flex:1}}>
@@ -11199,7 +11199,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     {/* Filters — hidden when locked to a defaultCategory */}
     {!defaultCategory&&<div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10,alignItems:"center"}}>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
-        {[{k:"all",l:"Todos"},{k:"pesado",l:"🔧 Pesados"},{k:"leve",l:"⚡ Leves"}].map(f=>(
+        {[{k:"all",l:"Todos"},{k:"pesado",l:"Pesados"},{k:"leve",l:"Leves"}].map(f=>(
           <button key={f.k} onClick={()=>setCatFilter(f.k)} style={{padding:"5px 14px",borderRadius:99,border:`1px solid ${catFilter===f.k?B.orange:B.gray700}`,background:catFilter===f.k?`${B.orange}22`:"none",color:catFilter===f.k?B.orange:B.gray400,fontWeight:700,fontSize:11,cursor:"pointer"}}>{f.l}</button>
         ))}
       </div>
@@ -11235,7 +11235,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
 
     {/* Leves */}
     {(catFilter==="all"||catFilter==="leve")&&<div style={{marginBottom:8}}>
-      {sectionHeader(leves,B.blue,"⚡","Investimentos Leves",openLeve,setOpenLeve)}
+      {sectionHeader(leves,B.blue,"zap","Investimentos Leves",openLeve,setOpenLeve)}
       {openLeve&&<div style={{border:`1px solid ${B.blue}33`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:"10px 8px",marginBottom:16}}>
         {renderCat(leves,B.blue,openLeve)}
       </div>}
@@ -11252,7 +11252,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     {/* Stock export modal for materiais */}
     {stockModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setStockModal(null)}>
       <div style={{background:B.gray900,borderRadius:16,padding:24,width:"100%",maxWidth:420,border:`1px solid ${B.amber}44`}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:4}}>📦 {stockModal.name} recebido!</div>
+        <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:4}}><Ic n="pkg"/> {stockModal.name} recebido!</div>
         <div style={{fontSize:12,color:B.gray400,marginBottom:18}}>O que deseja fazer com estes materiais?</div>
 
         <div style={{background:B.gray800,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${B.gray700}`}}>
@@ -11279,12 +11279,12 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
             if(onAddToStock) await onAddToStock({name:stockForm.name||stockModal.name,qty:parseInt(stockForm.qty)||1,price:parseFloat(stockForm.price)||0,unit:stockForm.unit,category:"materiais"});
             setStockModal(null);
           }} style={{width:"100%",padding:"10px",borderRadius:10,background:`${B.amber}22`,border:`1px solid ${B.amber}55`,color:B.amber,fontWeight:800,fontSize:13,cursor:"pointer"}}>
-            📦 Receber e enviar para o estoque
+            <Ic n="pkg"/> Receber e enviar para o estoque
           </button>
         </div>
 
         <button onClick={async()=>{await onUpdate(stockModal.id,{status:"received"});setStockModal(null);}} style={{width:"100%",padding:"10px",borderRadius:10,background:`${B.green}18`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:8}}>
-          ✅ Receber e usar agora (sem estoque)
+          <Ic n="ready"/> Receber e usar agora (sem estoque)
         </button>
         <button onClick={()=>setStockModal(null)} style={{width:"100%",padding:"9px",borderRadius:10,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>
           Cancelar
@@ -11340,7 +11340,7 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[],stock=[],onConsumeS
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
       <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.5}}>Pedidos de peças</div>
       {!adding&&!stkMode&&<div style={{display:"flex",gap:6}}>
-        {onConsumeStock&&<button onClick={()=>setStkMode(true)} style={{padding:"4px 12px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:11,cursor:"pointer"}}>📦 Do estoque</button>}
+        {onConsumeStock&&<button onClick={()=>setStkMode(true)} style={{padding:"4px 12px",borderRadius:7,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:700,fontSize:11,cursor:"pointer"}}><Ic n="pkg"/> Do estoque</button>}
         <button onClick={()=>setAdding(true)} style={{padding:"4px 12px",borderRadius:7,background:`${B.amber}22`,border:`1px solid ${B.amber}55`,color:B.amber,fontWeight:700,fontSize:11,cursor:"pointer"}}>+ Novo pedido</button>
       </div>}
     </div>
@@ -11410,7 +11410,7 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[],stock=[],onConsumeS
           {form.photoUrl
             ?<img src={form.photoUrl} alt="" style={{width:48,height:48,borderRadius:7,objectFit:"cover",border:`1px solid ${B.gray600}`}}/>
             :<label style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,fontSize:11,cursor:"pointer",fontWeight:600}}>
-              📷 {uploading?"Enviando...":"Foto (opcional)"}
+              <Ic n="photo"/> {uploading?"Enviando...":"Foto (opcional)"}
               <input type="file" accept="image/*" multiple onChange={handlePhoto} style={{display:"none"}}/>
             </label>}
           {form.photoUrl&&<button onClick={()=>setForm(p=>({...p,photoUrl:""}))} style={{background:"none",border:"none",cursor:"pointer",color:B.red,fontSize:11}}>Remover</button>}
@@ -11485,7 +11485,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
 
   const confirmReturn=async(o)=>{
     // Reset back to pending, clear admin fields, add a note about return
-    await onUpdate(o.id,{status:"pending",link:"",costPrice:null,notesAdmin:"⚠️ Item devolvido — localizar novamente",quantity:o.quantity});
+    await onUpdate(o.id,{status:"pending",link:"",costPrice:null,notesAdmin:"Item devolvido — localizar novamente",quantity:o.quantity});
     setReturnModal(null);
   };
 
@@ -11516,16 +11516,16 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
             <div style={{fontWeight:800,fontSize:14,color:B.white}}>{o.partName}</div>
             {o.description&&<div style={{fontSize:12,color:B.gray400,marginTop:2}}>{o.description}</div>}
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
-              {v&&<span style={{fontSize:10,color:B.blue,background:`${B.blue}18`,borderRadius:5,padding:"1px 7px",fontWeight:700}}>🚗 {v.model}</span>}
-              {emp&&<span style={{fontSize:10,color:B.orange,background:`${B.orange}18`,borderRadius:5,padding:"1px 7px",fontWeight:700}}>👤 {emp.name}</span>}
-              {t&&<span style={{fontSize:10,color:B.gray400,background:B.gray700,borderRadius:5,padding:"1px 7px"}}>🔧 {t.label}</span>}
+              {v&&<span style={{fontSize:10,color:B.blue,background:`${B.blue}18`,borderRadius:5,padding:"1px 7px",fontWeight:700}}><Ic n="car"/> {v.model}</span>}
+              {emp&&<span style={{fontSize:10,color:B.orange,background:`${B.orange}18`,borderRadius:5,padding:"1px 7px",fontWeight:700}}><Ic n="user"/> {emp.name}</span>}
+              {t&&<span style={{fontSize:10,color:B.gray400,background:B.gray700,borderRadius:5,padding:"1px 7px"}}><Ic n="wrench"/> {t.label}</span>}
               <span style={{fontSize:10,color:B.gray500}}>Qtd: {o.quantity}</span>
             </div>
           </div>
           <div style={{textAlign:"right",flexShrink:0}}>
             <div style={{fontSize:11,fontWeight:800,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}44`,borderRadius:6,padding:"2px 8px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}{o.receivedAt&&o.status==="received"?` · ${new Date(o.receivedAt).toLocaleDateString("pt-BR")}`:""}</div>
             {isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>✓ Instalada</div>}
-            {isReserved&&!isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.purple,background:`${B.purple}18`,border:`1px solid ${B.purple}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>📦 Armazenada</div>}
+            {isReserved&&!isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.purple,background:`${B.purple}18`,border:`1px solid ${B.purple}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}><Ic n="pkg"/> Armazenada</div>}
             <div style={{fontSize:10,color:B.gray500,marginTop:4,lineHeight:1.5}}>
               {(()=>{const f=d=>new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}).replace(",","");
                 return (<>
@@ -11590,7 +11590,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
           </button>}
           {(adminRole==="owner"||adminRole==="admin")&&o.status==="received"&&<button onClick={()=>{if(window.confirm(`Excluir "${o.partName}" definitivamente?\n\nO pedido e a peça reservada no veículo serão removidos.`))onDelete&&onDelete(o.id);}}
             style={{padding:"6px 12px",borderRadius:8,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-            🗑 Excluir
+            <Ic n="trash"/> Excluir
           </button>}
           {(adminRole==="owner"||adminRole==="admin")&&(o.status==="bought"||o.status==="ready_to_buy")&&<button onClick={()=>setReturnModal(o)}
             style={{padding:"6px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}33`,color:B.red,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
@@ -11602,7 +11602,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
           </a>}
           {/* Link inválido — owner sinaliza ao admin */}
           {adminRole==="owner"&&o.link&&(o.status==="approved"||o.status==="ready_to_buy")&&<button
-            onClick={()=>onUpdate(o.id,{link:"",status:"approved",notesAdmin:(o.notesAdmin?o.notesAdmin+"\n":"")+"⚠ Link inválido — por favor substitua."})}
+            onClick={()=>onUpdate(o.id,{link:"",status:"approved",notesAdmin:(o.notesAdmin?o.notesAdmin+"\n":"")+"Link inválido — por favor substitua."})}
             style={{padding:"6px 12px",borderRadius:8,background:`${B.red}12`,border:`1px solid ${B.red}44`,color:B.red,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Link inválido
@@ -11636,9 +11636,9 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
                   {o.costPrice&&<div style={{fontSize:11,color:B.green}}>R$ {Number(o.costPrice).toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>}
                 </div>
                 {isInstalled&&<span style={{fontSize:10,color:B.blue,fontWeight:700,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}>✓ Instalada</span>}
-                {isReserved&&!isInstalled&&<span style={{fontSize:10,color:B.purple,fontWeight:700,background:`${B.purple}18`,padding:"2px 7px",borderRadius:6}}>📦 Reservada</span>}
+                {isReserved&&!isInstalled&&<span style={{fontSize:10,color:B.purple,fontWeight:700,background:`${B.purple}18`,padding:"2px 7px",borderRadius:6}}><Ic n="pkg"/> Reservada</span>}
                 {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>setReturnModal(o)} style={{background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:700}}>Devolver</button>}
-                {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>{if(window.confirm(`Excluir "${o.partName}" definitivamente?\n\nO pedido e a peça reservada no veículo serão removidos.`))onDelete&&onDelete(o.id);}} title="Excluir" style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:700}}>🗑</button>}
+                {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>{if(window.confirm(`Excluir "${o.partName}" definitivamente?\n\nO pedido e a peça reservada no veículo serão removidos.`))onDelete&&onDelete(o.id);}} title="Excluir" style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:700}}><Ic n="trash"/></button>}
               </div>
             </div>);
   };
@@ -11646,7 +11646,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
     {/* Receive decision modal */}
     {receiveModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReceiveModal(null)}>
       <div style={{background:B.gray800,borderRadius:18,maxWidth:380,width:"100%",border:`1px solid ${B.green}55`,padding:24}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontSize:22,textAlign:"center",marginBottom:8}}>📦</div>
+        <div style={{fontSize:22,textAlign:"center",marginBottom:8}}><Ic n="pkg"/></div>
         <div style={{fontWeight:800,fontSize:16,color:B.white,textAlign:"center",marginBottom:4}}>Peça recebida!</div>
         <div style={{fontSize:13,color:B.gray300,textAlign:"center",marginBottom:4}}><b style={{color:B.white}}>{receiveModal.partName}</b></div>
         <div style={{fontSize:12,color:B.gray400,textAlign:"center",marginBottom:20}}>A peça está correta? O que fazer com ela?</div>
@@ -11654,10 +11654,10 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
           style={{width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           <button onClick={()=>confirmReceive(false)} disabled={!location.trim()} style={{opacity:location.trim()?1:0.45,width:"100%",padding:"12px 0",borderRadius:10,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>
-            ✅ Instalar agora — adicionar à tarefa
+            <Ic n="ready"/> Instalar agora — adicionar à tarefa
           </button>
           <button onClick={()=>confirmReceive(true)} disabled={!location.trim()} style={{opacity:location.trim()?1:0.45,width:"100%",padding:"12px 0",borderRadius:10,background:`${B.purple}22`,border:`1px solid ${B.purple}55`,color:B.purple,fontWeight:800,fontSize:14,cursor:"pointer"}}>
-            📦 Reservar — guardar no veículo
+            <Ic n="pkg"/> Reservar — guardar no veículo
           </button>
           <button onClick={()=>{setReceiveModal(null);setReturnModal(receiveModal);}} style={{width:"100%",padding:"12px 0",borderRadius:10,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,fontWeight:800,fontSize:14,cursor:"pointer"}}>
             ↩ Devolver — item incorreto
@@ -11719,7 +11719,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10,justifyContent:"center"}}>
       {[
         {key:"all",label:`Todos (${orders.length})`,color:B.gray400},
-        {key:"pending",label:`⏳ Pendentes (${pendingCount})`,color:"#f59e0b"},
+        {key:"pending",label:`Pendentes (${pendingCount})`,color:"#f59e0b"},
         {key:"approved",label:`✓ Aprovados (${approvedCount})`,color:"#3b82f6"},
         {key:"ready_to_buy",label:`Prontos (${readyCount})`,color:"#6366f1"},
         {key:"bought",label:`Comprados (${boughtCount})`,color:"#8b5cf6"},
@@ -11768,11 +11768,11 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
 
 // ─── Expenses Panel ───────────────────────────────────────────────────────────
 const EXPENSE_CATS = [
-  {id:"salario",  label:"Salário",   color:"#3b82f6", icon:"👤"},
-  {id:"aluguel",  label:"Aluguel",   color:"#f59e0b", icon:"🏢"},
-  {id:"servicos", label:"Serviços",  color:"#8b5cf6", icon:"🔌"},
-  {id:"outros",   label:"Outros",    color:"#6b7280", icon:"📦"},
-  {id:"insumos",  label:"Insumos",   color:"#14b8a6", icon:"🧴"},
+  {id:"salario",  label:"Salário",   color:"#3b82f6", icon:"user"},
+  {id:"aluguel",  label:"Aluguel",   color:"#f59e0b", icon:"building"},
+  {id:"servicos", label:"Serviços",  color:"#8b5cf6", icon:"plug"},
+  {id:"outros",   label:"Outros",    color:"#6b7280", icon:"pkg"},
+  {id:"insumos",  label:"Insumos",   color:"#14b8a6", icon:"drop"},
 ];
 
 function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
@@ -11819,7 +11819,7 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
             style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
           <select value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value,...(e.target.value==="insumos"?{recurrent:false}:{})}))}
             style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
-            {EXPENSE_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+            {EXPENSE_CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
         </div>
         {form.category==="insumos"&&<div style={{display:"flex",gap:8}}>
@@ -11831,9 +11831,9 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
         <div style={{display:"flex",gap:8}}>
           <select value={form.division} onChange={e=>setForm(p=>({...p,division:e.target.value}))}
             style={{flex:1,padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
-            <option value="ambos">⚙️🎨 Ambas</option>
-            <option value="performance">⚙️ Performance</option>
-            <option value="finishing">🎨 Finishing</option>
+            <option value="ambos">Ambas</option>
+            <option value="performance">Performance</option>
+            <option value="finishing">Finishing</option>
           </select>
           <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:B.gray300,cursor:"pointer",padding:"0 4px"}}>
             <input type="checkbox" checked={form.recurrent} onChange={e=>setForm(p=>({...p,recurrent:e.target.checked}))} style={{accentColor:B.orange}}/>
@@ -11855,7 +11855,7 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
   return (<div style={{marginTop:24,background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
     {/* Header */}
     <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"14px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left"}}>
-      <div style={{width:34,height:34,borderRadius:8,background:`${B.red}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>💸</div>
+      <div style={{width:34,height:34,borderRadius:8,background:`${B.red}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}><Ic n="money"/></div>
       <div style={{flex:1}}>
         <div style={{fontWeight:800,fontSize:14,color:B.white}}>Despesas Fixas</div>
         <div style={{fontSize:11,color:B.gray400}}>Salários, aluguel e custos operacionais</div>
@@ -11872,7 +11872,7 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
       {byCat.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
         {byCat.map(c=>(
           <div key={c.id} style={{background:`${c.color}18`,border:`1px solid ${c.color}33`,borderRadius:8,padding:"6px 12px",display:"flex",alignItems:"center",gap:6}}>
-            <span>{c.icon}</span>
+            <Ic n={c.icon} c={c.color}/>
             <div>
               <div style={{fontSize:10,color:c.color,fontWeight:700}}>{c.label}</div>
               <div style={{fontSize:12,fontWeight:800,color:B.white}}>{fmtBRL(c.total)}</div>
@@ -11887,12 +11887,12 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
         const cat=EXPENSE_CATS.find(c=>c.id===e.category)||EXPENSE_CATS[3];
         if(editId===e.id) return <div key={e.id}><FormRow/></div>;
         return (<div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${B.gray700}`}}>
-          <span style={{fontSize:18,flexShrink:0}}>{cat.icon}</span>
+          <span style={{fontSize:18,flexShrink:0,display:"flex",color:cat.color}}><Ic n={cat.icon}/></span>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:13,fontWeight:700,color:B.white}}>{e.name}</div>
             <div style={{fontSize:10,color:B.gray500}}>
               <span style={{color:cat.color}}>{cat.label}</span>
-              {" · "}{e.division==="ambos"?"⚙️🎨":e.division==="finishing"?"🎨":"⚙️"}
+              {" · "}{e.division==="ambos"?<><Ic n="gear"/><Ic n="brush"/></>:e.division==="finishing"?<><Ic n="brush"/></>:<><Ic n="gear"/></>}
               {e.recurrent&&" · Mensal"}
             </div>
           </div>
@@ -12349,7 +12349,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
           <div style={{flex:"1 1 160px",minWidth:0}}>
             <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.v.model} <span style={{color:B.gray400,fontFamily:"monospace",fontSize:11}}>{r.v.plate}</span></div>
             <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap"}}>
-              {r.cli&&<span>👤 {r.cli.name}</span>}{r.mech&&<span>🔧 {r.mech.name}</span>}
+              {r.cli&&<span><Ic n="user"/> {r.cli.name}</span>}{r.mech&&<span><Ic n="wrench"/> {r.mech.name}</span>}
             </div>
           </div>
           <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
@@ -12378,7 +12378,7 @@ function ProductivityPanel({employees,vehicles,tasks,defaultRate}) {
 
   return (<div style={{marginTop:28}}>
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-      <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>📈 Produtividade Mensal por Funcionário</div>
+      <div style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}><Ic n="trend"/> Produtividade Mensal por Funcionário</div>
       <input type="month" value={month} onChange={e=>setMonth(e.target.value)}
         style={{padding:"6px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
       <span style={{fontSize:11,color:B.gray500}}>{monthLabel(month)} · capacidade: {capacityHours}h (dias úteis × 8h)</span>
@@ -12465,7 +12465,7 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 }
 
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
-// Ícones de traço do link público (substituem emojis)
+// Ícones de traço do app inteiro (substituem emojis). Use <Ic n="..."/> no meio do texto: herda tamanho e cor.
 const PV_IC={
   check:'<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l3 3 5-6"/>',
   box:'<rect x="3" y="3" width="18" height="18" rx="4"/>',
@@ -12485,10 +12485,48 @@ const PV_IC={
   cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
   ready:'<path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4L12 14l-3-3"/>',
+  hourglass:'<path d="M6 2h12M6 22h12M7 2v4a5 5 0 0 0 10 0V2M7 22v-4a5 5 0 0 1 10 0v4"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  play:'<path d="M6 4l14 8-14 8z"/>',
+  xc:'<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>',
+  nut:'<path d="M12 2l8.66 5v10L12 22l-8.66-5V7z"/><circle cx="12" cy="12" r="3"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  car:'<path d="M3 13l2.2-5.5A2 2 0 0 1 7 6h10a2 2 0 0 1 1.8 1.5L21 13v4h-2M5 17H3v-4h18"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/><path d="M9.5 17h5"/>',
+  cart:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',
+  user:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  money:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  trash:'<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+  spark:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  zap:'<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>',
+  pin:'<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  bulb:'<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/>',
+  drop:'<path d="M12 2.7l5.7 5.6a8 8 0 1 1-11.3 0z"/>',
+  key:'<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2M17 6l3 3M15 8l2 2"/>',
+  flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
+  phone:'<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>',
+  plane:'<path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  store:'<path d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/>',
+  refresh:'<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+  tag:'<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><path d="M7 7h.01"/>',
+  building:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+  plug:'<path d="M12 22v-5M9 8V2M15 8V2M18 8v5a6 6 0 0 1-12 0V8z"/>',
+  trend:'<path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/>',
+  bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  folder:'<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
   dot:'<circle cx="12" cy="12" r="3"/>',
 };
 function PvIc({n,s=14,c="currentColor",style}) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,...style}} dangerouslySetInnerHTML={{__html:PV_IC[n]||PV_IC.dot}}/>;
+}
+function Ic({n,s="1em",c="currentColor",style}) {
+  return <PvIc n={n} s={s} c={c} style={{verticalAlign:"-0.14em",...style}}/>;
 }
 // Linha do tempo do link público: tira o emoji do título e junta os lançamentos de material numa entrada por tarefa
 const pvStripEmoji=t=>String(t||"").replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u,"");
@@ -13488,7 +13526,7 @@ function LoadingScreen() {
 function ErrorScreen({msg}) {
   return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",padding:20}}>
     <div style={{textAlign:"center",maxWidth:400}}>
-      <div style={{fontSize:40,marginBottom:14}}>⚠️</div>
+      <div style={{fontSize:40,marginBottom:14}}><Ic n="alert"/></div>
       <div style={{color:B.white,fontWeight:700,fontSize:16,marginBottom:8}}>Erro ao conectar</div>
       <div style={{color:B.gray400,fontSize:13}}>{msg}</div>
     </div>
@@ -13579,7 +13617,7 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     <div style={{background:B.gray900,borderBottom:`1px solid ${B.gray700}`,padding:"0 18px",paddingTop:"env(safe-area-inset-top)",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
       <div style={{maxWidth:680,margin:"0 auto",display:"flex",alignItems:"center",height:58,gap:12}}>
-        <div style={{width:36,height:36,borderRadius:9,background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{isFD?<span style={{fontSize:18}}>🎨</span>:<IWrench s={18} c={B.white}/>}</div>
+        <div style={{width:36,height:36,borderRadius:9,background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{isFD?<span style={{fontSize:18}}><Ic n="brush"/></span>:<IWrench s={18} c={B.white}/>}</div>
         <div><div style={{fontWeight:800,fontSize:14,color:B.white}}>{employee.name}</div><div style={{fontSize:10,color:B.gray400,textTransform:"uppercase",letterSpacing:.5}}>Minhas Tarefas — {isFD?"OSC Finishing Division":"OSC Performance"}</div></div>
         <button onClick={()=>setShowPartners(true)} style={{marginLeft:"auto",padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12}}>Parceiros</button>
         <button onClick={onLogout} style={{marginLeft:0,padding:"7px 12px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color:B.gray300,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
@@ -13591,7 +13629,7 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
     <div style={{maxWidth:680,margin:"0 auto",padding:"20px 14px",paddingBottom:"calc(40px + env(safe-area-inset-bottom))",minHeight:"100vh"}}>
       {/* Push notification banner */}
       {pushStatus==="asking"&&<div style={{background:`${accentColor}18`,border:`1px solid ${accentColor}44`,borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-        <span style={{fontSize:20}}>🔔</span>
+        <span style={{fontSize:20}}><Ic n="bell"/></span>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:13,fontWeight:700,color:B.white}}>Ativar notificações?</div>
           <div style={{fontSize:11,color:B.gray400}}>Receba alertas quando houver atualizações nos seus veículos.</div>
@@ -13603,8 +13641,8 @@ function MechanicPortal({employee,vehicles,tasks,employees,clients,stock,onAddTa
         <div><div style={{fontSize:12,color:B.gray400}}>Resumo do dia</div><div style={{fontWeight:700,fontSize:14,color:B.white}}>{empV.length} veículo{empV.length!==1?"s":""} · {donT}/{totT} tarefas</div></div>
         {totT>0&&<ProgressBar value={donT} max={totT}/>}
       </div>
-      {empV.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>🔧</div><div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum veículo atribuído a você ainda</div></div>
-        :<>{empV.filter(v=>!isPz(v)).map(renderMV)}{empV.some(isPz)&&<><div style={{display:"flex",alignItems:"center",gap:8,margin:"22px 2px 10px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}>⏸ Pausados · {empV.filter(isPz).length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>{empV.filter(isPz).map(renderMV)}</>}</>}
+      {empV.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}><Ic n="wrench"/></div><div style={{fontWeight:700,fontSize:15,color:B.gray200}}>Nenhum veículo atribuído a você ainda</div></div>
+        :<>{empV.filter(v=>!isPz(v)).map(renderMV)}{empV.some(isPz)&&<><div style={{display:"flex",alignItems:"center",gap:8,margin:"22px 2px 10px",color:B.amber}}><span style={{fontSize:10,fontWeight:800,letterSpacing:2,textTransform:"uppercase"}}><Ic n="pause"/> Pausados · {empV.filter(isPz).length}</span><div style={{flex:1,height:1,background:`${B.amber}33`}}/></div>{empV.filter(isPz).map(renderMV)}</>}</>}
     </div>
     </div>{/* end scroll */}
   {showPartners&&<div style={{position:"fixed",inset:0,zIndex:300,background:B.black,overflowY:"auto",paddingTop:"env(safe-area-inset-top)"}}>
@@ -13700,7 +13738,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.213";
+const APP_VERSION = "2026.11.24.214";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13711,7 +13749,7 @@ function ChangelogModal({onClose}) {
   return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.orange}55`,overflow:"hidden",maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"16px 20px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:36,height:36,borderRadius:9,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🚀</div>
+        <div style={{width:36,height:36,borderRadius:9,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="spark"/></div>
         <div>
           <div style={{fontWeight:800,fontSize:15,color:B.white}}>Nova versão disponível</div>
           <div style={{fontSize:11,color:B.gray400}}>v{APP_VERSION}</div>
@@ -13724,7 +13762,7 @@ function ChangelogModal({onClose}) {
             <div style={{fontSize:11,color:B.gray500,marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>{new Date(e.date).toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}</div>
             {e.changes.map((c,j)=>(
               <div key={j} style={{display:"flex",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.gray700}`}}>
-                <span style={{color:c?.type==="fix"?B.blue:c?.type==="feat"?B.green:B.orange,flexShrink:0,marginTop:1}}>{c?.type==="fix"?"🔧":c?.type==="feat"?"✨":"→"}</span>
+                <span style={{color:c?.type==="fix"?B.blue:c?.type==="feat"?B.green:B.orange,flexShrink:0,marginTop:1}}>{c?.type==="fix"?<><Ic n="wrench"/></>:c?.type==="feat"?<><Ic n="spark"/></>:"→"}</span>
                 <span style={{fontSize:13,color:B.gray200,lineHeight:1.4}}>{typeof c==="string"?c:c?.text||""}</span>
               </div>
             ))}
@@ -13840,7 +13878,7 @@ function AdminLoginScreen({onLogin}) {
   if(offerBio) return (
     <div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",padding:20}}>
       <div style={{maxWidth:380,width:"100%",background:B.gray800,borderRadius:20,padding:32,border:`1px solid ${B.gray700}`,textAlign:"center"}}>
-        <div style={{fontSize:52,marginBottom:12}}>🔐</div>
+        <div style={{fontSize:52,marginBottom:12}}><Ic n="lock"/></div>
         <div style={{fontWeight:800,fontSize:17,color:B.white,marginBottom:8}}>Ativar acesso biométrico?</div>
         <div style={{fontSize:13,color:B.gray400,marginBottom:24,lineHeight:1.6}}>
           Na próxima vez, você pode entrar com<br/>Face ID, Touch ID ou biometria do dispositivo<br/>sem precisar digitar a senha.
@@ -14129,7 +14167,7 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
     <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",border:`2px solid #f59e0b55`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
       {/* Header */}
       <div style={{background:B.gray900,borderBottom:`2px solid #f59e0b`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:24}}>⛽</span>
+        <span style={{fontSize:24}}><Ic n="fuel"/></span>
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:15,color:B.white}}>Lançar Combustível</div>
           <div style={{fontSize:11,color:B.gray400}}>Lançamento rápido por veículo</div>
@@ -14147,14 +14185,14 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
               {activeVehicles.length>3&&<div style={{position:"relative",marginBottom:8}}>
                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cor…"
                   style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-                <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+                <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
               </div>}
               <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflowY:"auto"}}>
                 {filteredVehicles.length===0&&<div style={{fontSize:13,color:B.gray500,padding:"8px 12px"}}>Nenhum veículo encontrado</div>}
                 {filteredVehicles.map(v=>(
                   <button key={v.id} onClick={()=>setSelectedId(v.id)}
                     style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:`2px solid ${selectedId===v.id?"#f59e0b":B.gray600}`,background:selectedId===v.id?"#f59e0b15":B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
-                    <span style={{fontSize:18,flexShrink:0}}>🚗</span>
+                    <span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
                       <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
@@ -14196,7 +14234,7 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
         {/* Save */}
         <button onClick={save} disabled={!selectedId||!value||saving}
           style={{width:"100%",padding:"13px 0",borderRadius:10,background:selectedId&&value?"#f59e0b":B.gray700,border:"none",color:selectedId&&value?B.black:B.gray500,fontWeight:800,fontSize:15,cursor:selectedId&&value?"pointer":"not-allowed",marginTop:4}}>
-          {saving?"Salvando…":"⛽ Confirmar abastecimento"}
+          {saving?"Salvando…":<><Ic n="fuel"/> Confirmar abastecimento</>}
         </button>
       </div>
     </div>
@@ -14247,14 +14285,14 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
           {activeVehicles.length>3&&<div style={{position:"relative",marginBottom:8}}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar modelo, placa ou cor…"
               style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
           </div>}
           <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:180,overflowY:"auto"}}>
             {filtered.length===0&&<div style={{fontSize:13,color:B.gray500,padding:"8px 12px"}}>Nenhum veículo encontrado</div>}
             {filtered.map(v=>(
               <button key={v.id} onClick={()=>setSelectedId(v.id)}
                 style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${selectedId===v.id?B.green:B.gray600}`,background:selectedId===v.id?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
-                <span style={{fontSize:16,flexShrink:0}}>🚗</span>
+                <span style={{fontSize:16,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
                   <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
@@ -14633,9 +14671,9 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           {t.outsourced&&<span style={{fontSize:9,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",borderRadius:4,padding:"1px 6px"}}>3º</span>}
           {t.warranty&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:4,padding:"1px 6px"}}>Garantia</span>}
           {Number(t.hours)>0&&<span style={{fontSize:10,color:B.gray400}}>{t.hours}h</span>}
-          {warn&&<span title="Esta tarefa não tem tempo de mão de obra lançado" style={{fontSize:9,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,borderRadius:4,padding:"1px 6px"}}>⚠ sem {isFD?"quantidade":"tempo de M.O."}</span>}
+          {warn&&<span title="Esta tarefa não tem tempo de mão de obra lançado" style={{fontSize:9,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,borderRadius:4,padding:"1px 6px"}}><Ic n="alert"/> sem {isFD?"quantidade":"tempo de M.O."}</span>}
           {mats.length>0&&<span style={{fontSize:10,color:B.gray400}}>{mats.length} peça{mats.length!==1?"s":""}</span>}
-          {matMatches(t).map((m,mi)=><span key={mi} style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,borderRadius:4,padding:"1px 6px"}}>🔩 {m.name}{m.brand?` · ${m.brand}`:""}</span>)}
+          {matMatches(t).map((m,mi)=><span key={mi} style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,borderRadius:4,padding:"1px 6px"}}><Ic n="nut"/> {m.name}{m.brand?` · ${m.brand}`:""}</span>)}
           {(t.updates||[]).length>0&&<span style={{fontSize:10,color:B.gray400}}>{(t.updates||[]).length} atualiz.</span>}
           {t.done&&t.completedAt&&<span style={{fontSize:10,color:B.green,marginLeft:"auto"}}>✓ {fmtD(t.completedAt)}</span>}
         </div>
@@ -14656,8 +14694,8 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         <span style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"flex-end",alignItems:"center"}}>
           {t.outsourced&&<span style={{fontSize:9,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",borderRadius:4,padding:"1px 6px"}}>3º</span>}
           {t.warranty&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}18`,borderRadius:4,padding:"1px 6px"}}>Garantia</span>}
-          {warn&&<span title="Sem tempo de mão de obra lançado" style={{fontSize:9,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,borderRadius:4,padding:"1px 6px"}}>⚠ sem {isFD?"quantidade":"tempo de M.O."}</span>}
-          {matMatches(t).map((m,mi)=><span key={mi} style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,borderRadius:4,padding:"1px 6px"}}>🔩 {m.name}</span>)}
+          {warn&&<span title="Sem tempo de mão de obra lançado" style={{fontSize:9,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,borderRadius:4,padding:"1px 6px"}}><Ic n="alert"/> sem {isFD?"quantidade":"tempo de M.O."}</span>}
+          {matMatches(t).map((m,mi)=><span key={mi} style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,borderRadius:4,padding:"1px 6px"}}><Ic n="nut"/> {m.name}</span>)}
           {!qn&&mats.length>0&&<span style={{fontSize:10,color:B.gray400}}>{mats.length} peça{mats.length!==1?"s":""}</span>}
           {t.done&&t.completedAt&&<span style={{fontSize:10,color:B.green}}>{fmtD(t.completedAt)}</span>}
         </span>
@@ -14680,7 +14718,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           <div style={{fontSize:12,color:B.gray400}}><span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>{(isFD?vehicle.osNumberFinishing:vehicle.osNumber)?` · ${isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber)}`:""}</div>
         </div>
         <button onClick={()=>{try{navigator.clipboard.writeText(`${window.location.origin}/?carro=${vehicle.id}`);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch(e){}}}
-          style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:copied?B.green:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{copied?"✓ Link copiado":"🔗 Copiar link"}</button>
+          style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:copied?B.green:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{copied?"✓ Link copiado":<><Ic n="link"/> Copiar link</>}</button>
       </div>
       {managerMode&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:10}}>
         {[["Total da OS",finTotal,B.white],["Investido",finInvested,B.green],["Pago",finPaid,B.blue],[finBalance>=0?"A receber":"Crédito",Math.abs(finBalance),finBalance>0.005?B.amber:B.green]].map(([l,v,c])=>(
@@ -14700,7 +14738,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         <div style={{height:6,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99}}/></div>
       </div>
       {view!=="full"&&noLaborAll.length>0&&<div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",background:`${B.amber}12`,border:`1px solid ${B.amber}55`,borderRadius:10,padding:"9px 12px",marginBottom:10}}>
-        <span style={{fontSize:12,color:B.amber,fontWeight:700,flex:1,minWidth:200}}>⚠ {noLaborAll.length} tarefa{noLaborAll.length!==1?"s":""} sem {isFD?"quantidade":"tempo de mão de obra"} lançad{isFD?"a":"o"} ({noLaborAll.filter(t=>t.done).length} concluída{noLaborAll.filter(t=>t.done).length!==1?"s":""})</span>
+        <span style={{fontSize:12,color:B.amber,fontWeight:700,flex:1,minWidth:200}}><Ic n="alert"/> {noLaborAll.length} tarefa{noLaborAll.length!==1?"s":""} sem {isFD?"quantidade":"tempo de mão de obra"} lançad{isFD?"a":"o"} ({noLaborAll.filter(t=>t.done).length} concluída{noLaborAll.filter(t=>t.done).length!==1?"s":""})</span>
         <button onClick={()=>setOnlyNoLabor(o=>!o)} style={{padding:"5px 12px",borderRadius:7,border:`1px solid ${B.amber}`,background:onlyNoLabor?B.amber:"none",color:onlyNoLabor?B.black:B.amber,fontWeight:800,fontSize:11,cursor:"pointer"}}>{onlyNoLabor?"Mostrar todas":"Ver só essas"}</button>
       </div>}
       {view!=="full"&&<div style={{position:"relative",marginBottom:10}}>
@@ -14709,14 +14747,14 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         {qn&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{vts.length} resultado{vts.length!==1?"s":""} de {allVts.length} tarefa{allVts.length!==1?"s":""}</div>}
       </div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-        {tabBtn("board","▦ Quadro")}{tabBtn("lanes","☰ Categorias")}{tabBtn("cats","▥ Blocos")}{tabBtn("full","📋 OS completa")}
+        {tabBtn("board","▦ Quadro")}{tabBtn("lanes","☰ Categorias")}{tabBtn("cats","▥ Blocos")}{tabBtn("full","OS completa")}
         {managerMode&&onAddTask&&view!=="full"&&<button onClick={()=>setNewTaskOpen(true)} style={{marginLeft:"auto",padding:"7px 14px",borderRadius:8,border:"none",background:accent,color:B.white,fontWeight:800,fontSize:12,cursor:"pointer"}}>+ Nova tarefa</button>}
       </div>
       {newTaskOpen&&<NewTaskModal isFD={isFD} defaultRate={defaultRate} onClose={()=>setNewTaskOpen(false)} onSave={(label,cat,extra)=>onAddTask(vehicle.id,label,cat,div,extra)}/>}
       {view==="board"&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:14,alignItems:"start"}}>
         <div>
           <div style={{fontSize:11,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>A fazer ({todo.length}){managerMode&&<span style={{float:"right",color:B.gray300}}>{fmtBRL(sumT(todo))}</span>}</div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>{todo.map(renderCard)}{todo.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nada pendente 🎉</div>}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>{todo.map(renderCard)}{todo.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nada pendente <Ic n="spark"/></div>}</div>
         </div>
         <div>
           <div style={{fontSize:11,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Concluídas ({done.length}){managerMode&&<span style={{float:"right",color:B.gray300}}>{fmtBRL(sumT(done))}</span>}</div>
@@ -14814,7 +14852,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
 
   return (<div>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-      <span style={{fontSize:13,fontWeight:800,color:B.purple}}>🔩 Peças reservadas</span>
+      <span style={{fontSize:13,fontWeight:800,color:B.purple}}><Ic n="nut"/> Peças reservadas</span>
       <span style={{fontSize:11,color:B.gray400}}>{parts.length} item{parts.length!==1?"s":""}</span>
       {managerMode&&<button onClick={()=>setAdding(p=>!p)} style={{marginLeft:"auto",padding:"3px 10px",borderRadius:6,background:adding?`${B.purple}22`:`${B.purple}12`,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontSize:11,fontWeight:700}}>
         {adding?"✕ Cancelar":"+ Adicionar"}
@@ -14844,7 +14882,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
       {parts.map((part,idx)=>{
         const installed=isInstalled(part,idx);
         return (<div key={part.id||idx} style={{padding:"8px 10px",background:installed?`${B.green}08`:B.gray900,border:`1px solid ${installed?B.green+"44":B.gray700}`,borderRadius:8,display:"flex",alignItems:"flex-start",gap:8}}>
-          <span style={{fontSize:16,flexShrink:0}}>🔩</span>
+          <span style={{fontSize:16,flexShrink:0}}><Ic n="nut"/></span>
           <div style={{flex:1,minWidth:0}}>
             <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
               {managerMode
@@ -14858,7 +14896,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
               {installed&&<span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",flexShrink:0}}>✓ Utilizada</span>}
               {!installed&&partUsedQty(part,vehicle.id,tasks)>0&&<span style={{fontSize:10,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:5,padding:"1px 7px",flexShrink:0}}>{partUsedQty(part,vehicle.id,tasks)}/{part.qty||1} usada(s) · restam {Number(part.qty||1)-partUsedQty(part,vehicle.id,tasks)}</span>}
             </div>
-            {part.location&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>📍 {managerMode
+            {part.location&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}><Ic n="pin"/> {managerMode
               ?<InlineEdit value={part.location} onSave={v=>updatePart(part.id,{location:v})} placeholder="Localização"/>
               :<span>{part.location}</span>}
             </div>}
@@ -14876,7 +14914,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
               ))}
               {managerMode&&<UploadBtn onFile={url=>{
                 updatePart(part.id,{photos:[...(part.photos||[]),url]});
-              }} folder={`parts/${vehicle.id}`} label="📷" style={{width:56,height:56,borderRadius:6,fontSize:20,justifyContent:"center",flexDirection:"column"}}/>}
+              }} folder={`parts/${vehicle.id}`} label="" style={{width:56,height:56,borderRadius:6,fontSize:20,justifyContent:"center",flexDirection:"column"}}/>}
             </div>
           </div>
           {managerMode&&<button onClick={()=>removePart(part.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:2,flexShrink:0}}
@@ -15129,10 +15167,10 @@ function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,ma
     </div>
     <div style={{padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",borderTop:`1px solid ${B.gray700}`,background:B.gray900}}>
       {complete
-        ?<div style={{padding:"12px 14px",borderRadius:12,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:800,fontSize:13.5,textAlign:"center"}}>✅ Conferência completa{lastAt?` · ${fmtAt(lastAt)}`:""}</div>
+        ?<div style={{padding:"12px 14px",borderRadius:12,background:`${B.green}18`,border:`1px solid ${B.green}55`,color:B.green,fontWeight:800,fontSize:13.5,textAlign:"center"}}><Ic n="ready"/> Conferência completa{lastAt?` · ${fmtAt(lastAt)}`:""}</div>
         :<div style={{fontSize:12.5,color:B.gray400,textAlign:"center"}}>{openN>0?`Há ${openN} serviço${openN!==1?"s":""} ainda em aberto na OS.`:"Marque cada item conforme for conferindo no veículo."}</div>}
       {onPdf&&checkedN>0&&<button onClick={async()=>{setPdfBusy(true);try{await onPdf();}catch(e){alert("Erro ao gerar PDF: "+(e.message||e));}setPdfBusy(false);}} disabled={pdfBusy}
-        style={{width:"100%",minHeight:46,marginTop:8,borderRadius:12,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontWeight:700,fontSize:13.5,cursor:pdfBusy?"wait":"pointer",fontFamily:"inherit"}}>{pdfBusy?"Gerando PDF…":"📄 PDF da conferência"}</button>}
+        style={{width:"100%",minHeight:46,marginTop:8,borderRadius:12,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontWeight:700,fontSize:13.5,cursor:pdfBusy?"wait":"pointer",fontFamily:"inherit"}}>{pdfBusy?"Gerando PDF…":<><Ic n="file"/> PDF da conferência</>}</button>}
       {managerMode&&checkedN>0&&<div style={{marginTop:8,textAlign:"center"}}>
         {confirmReset
           ?<span style={{fontSize:12,color:B.gray300}}>Zerar toda a conferência? <button onClick={()=>{onUpdateVehicle(vehicle.id,{deliveryCheck:{}});setConfirmReset(false);}} style={{background:"none",border:"none",color:B.red,fontWeight:800,cursor:"pointer",fontSize:12,minHeight:36,padding:"0 8px"}}>Sim, zerar</button><button onClick={()=>setConfirmReset(false)} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:12,minHeight:36,padding:"0 8px"}}>Cancelar</button></span>
@@ -15217,10 +15255,10 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
   return (<div>
     {/* Header */}
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-      <span style={{fontSize:13,fontWeight:800,color:accentColor}}>📋 Checklist {isFD?"estético":"de entrada"}</span>
+      <span style={{fontSize:13,fontWeight:800,color:accentColor}}><Ic n="list"/> Checklist {isFD?"estético":"de entrada"}</span>
       <span style={{fontSize:11,color:B.gray400}}>{okCount} ok · {badCount} com problema</span>
       {!isFD&&<button onClick={()=>setShowAdvanced(p=>!p)} style={{marginLeft:"auto",padding:"3px 10px",borderRadius:6,background:showAdvanced?`${B.red}18`:`${B.amber}15`,border:`1px solid ${showAdvanced?B.red+"44":B.amber+"33"}`,color:showAdvanced?B.red:B.amber,cursor:"pointer",fontSize:11,fontWeight:700}}>
-        {showAdvanced?"− Recolher avançado":"🔧 + Diagnóstico avançado"}
+        {showAdvanced?"− Recolher avançado":<><Ic n="wrench"/> + Diagnóstico avançado</>}
       </button>}
     </div>
 
@@ -15236,7 +15274,7 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
         const showDivider = showAdvanced && idx === CHECKLIST_ITEMS.filter(i=>i.level==="basic").length;
 
         return (<div key={item.id}>
-          {showDivider&&<div style={{fontSize:9,color:B.red,textTransform:"uppercase",letterSpacing:.5,margin:"8px 0 4px",fontWeight:700}}>🔧 Diagnóstico avançado</div>}
+          {showDivider&&<div style={{fontSize:9,color:B.red,textTransform:"uppercase",letterSpacing:.5,margin:"8px 0 4px",fontWeight:700}}><Ic n="wrench"/> Diagnóstico avançado</div>}
           <div style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${isBad?"#f87171"+"55":isOk?B.green+"33":B.gray700}`,background:isBad?"#f8717108":isOk?`${B.green}06`:B.gray900,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             {/* Category dot */}
             <span style={{width:7,height:7,borderRadius:99,background:catColor,flexShrink:0,display:"inline-block"}}/>
@@ -15280,7 +15318,7 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
           </div>
         ))}
         <label style={{width:90,height:90,borderRadius:8,border:`2px dashed ${B.gray600}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:4,flexShrink:0}}>
-          <span style={{fontSize:20}}>📷</span>
+          <span style={{fontSize:20}}><Ic n="photo"/></span>
           <span style={{fontSize:9,color:B.gray500}}>+ Foto</span>
           <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={async e=>{
             const files=Array.from(e.target.files||[]);
@@ -15348,7 +15386,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
     <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",border:`2px solid ${B.blue}55`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
       {/* Header */}
       <div style={{background:B.gray900,borderBottom:`2px solid ${B.blue}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>📦</div>
+        <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}><Ic n="pkg"/></div>
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:15,color:B.white}}>Material rápido</div>
           <div style={{fontSize:11,color:B.gray400}}>Adicione sem precisar abrir o veículo</div>
@@ -15363,13 +15401,13 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
           {activeVehicles.length>3&&<div style={{position:"relative",marginBottom:8}}>
             <input value={vSearch} onChange={e=>setVSearch(e.target.value)} placeholder="Buscar modelo, placa ou cor…"
               style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
           </div>}
           <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:150,overflowY:"auto"}}>
             {filteredVehicles.map(v=>(
               <button key={v.id} onClick={()=>{setSelectedVid(v.id);setSelectedTid("");}}
                 style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:9,border:`2px solid ${selectedVid===v.id?B.blue:B.gray600}`,background:selectedVid===v.id?`${B.blue}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
-                <span style={{fontSize:15,flexShrink:0}}>🚗</span>
+                <span style={{fontSize:15,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:selectedVid===v.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
                   <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
@@ -15389,7 +15427,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
               {vehicleTasks.map(t=>(
                 <button key={t.id} onClick={()=>setSelectedTid(t.id)}
                   style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,border:`2px solid ${selectedTid===t.id?B.blue:B.gray600}`,background:selectedTid===t.id?`${B.blue}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
-                  <span style={{fontSize:13,flexShrink:0}}>{t.done?"✅":"⬜"}</span>
+                  <span style={{fontSize:13,flexShrink:0}}>{t.done?<><Ic n="ready"/></>:<><Ic n="box"/></>}</span>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:13,color:selectedTid===t.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.label}</div>
                     {t.category&&<div style={{fontSize:10,color:CAT_MAP[t.category]||B.gray500,fontWeight:700}}>{t.category}</div>}
@@ -15408,7 +15446,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
               ✏️ Manual
             </button>
             <button onClick={()=>setMatMode("stock")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${matMode==="stock"?B.purple:B.gray600}`,background:matMode==="stock"?`${B.purple}22`:"none",color:matMode==="stock"?B.purple:B.gray400,fontWeight:700,fontSize:12,cursor:"pointer"}}>
-              🏪 Do estoque
+              <Ic n="store"/> Do estoque
             </button>
           </div>
 
@@ -15416,7 +15454,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
             <div style={{position:"relative"}}>
               <input value={stockSearch} onChange={e=>setStockSearch(e.target.value)} placeholder="Buscar no estoque…" autoFocus
                 style={{width:"100%",padding:"9px 12px 9px 32px",borderRadius:8,border:`1px solid ${B.purple}44`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-              <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+              <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:160,overflowY:"auto"}}>
               {stock.filter(s=>s.qty>0&&(!stockSearch||s.name.toLowerCase().includes(stockSearch.toLowerCase())||(s.brand||"").toLowerCase().includes(stockSearch.toLowerCase()))).map(s=>(
@@ -15476,7 +15514,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
         {/* Save (only for manual mode) */}
         {selectedTid&&matMode==="manual"&&<button onClick={()=>save()} disabled={!name.trim()||saving}
           style={{width:"100%",padding:"13px 0",borderRadius:10,background:name.trim()?B.blue:B.gray700,border:"none",color:name.trim()?B.white:B.gray500,fontWeight:800,fontSize:15,cursor:name.trim()?"pointer":"not-allowed",flexShrink:0}}>
-          {saving?"Salvando…":"📦 Adicionar material"}
+          {saving?"Salvando…":<><Ic n="pkg"/> Adicionar material</>}
         </button>}
         {selectedTid&&matMode==="manual"&&<div style={{fontSize:11,color:B.gray500,textAlign:"center",marginTop:-8}}>Enter para salvar e adicionar outro na mesma tarefa</div>}
       </div>
@@ -15575,7 +15613,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
           <div style={{position:"relative",marginBottom:8}}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar modelo, placa ou cliente…"
               style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:200,overflowY:"auto"}}>
             {histRows.length===0&&<div style={{fontSize:12,color:B.gray500,textAlign:"center",padding:"10px 0"}}>{showSettled?"Nenhuma OS fechada encontrada":"Nenhuma OS fechada com saldo em aberto"}</div>}
@@ -15603,14 +15641,14 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
           {activeVehicles.length>3&&<div style={{position:"relative",marginBottom:8}}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar modelo, placa, cor ou cliente…"
               style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
           </div>}
           <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:180,overflowY:"auto"}}>
             {filtered.map(v=>{
               const cli=clients.find(c=>c.id===v.clientId);
               return (<button key={v.id} onClick={()=>{setSelectedId(v.id);setPayDiv(divisionBalances(v,tasks,payments,defaultRate).hasBoth?"split":"performance");setPerfStr("");}}
                 style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${selectedId===v.id?B.green:B.gray600}`,background:selectedId===v.id?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
-                <span style={{fontSize:16,flexShrink:0}}>🚗</span>
+                <span style={{fontSize:16,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
                   <div style={{fontSize:11,color:B.gray400}}>{v.plate}{cli?` · ${cli.name}`:""}</div>
@@ -15685,7 +15723,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
         {/* Save */}
         <button onClick={save} disabled={!ready||saving}
           style={{width:"100%",padding:"13px 0",borderRadius:10,background:ready?B.green:B.gray700,border:"none",color:ready?B.white:B.gray500,fontWeight:800,fontSize:15,cursor:ready&&!saving?"pointer":"not-allowed"}}>
-          {saving?"Registrando…":`💰 Registrar ${amountNum>0?fmtBRL(amountNum):""}`}
+          {saving?"Registrando…":<><Ic n="money"/>{` Registrar ${amountNum>0?fmtBRL(amountNum):""}`}</>}
         </button>
       </div>
     </div>
@@ -15737,7 +15775,7 @@ function GlobalErrorDisplay() {
   },[]);
   if(!err) return null;
   return (<div style={{position:"fixed",top:60,left:16,right:16,zIndex:9999,padding:16,background:"#1a0000",border:"1px solid #f87171",borderRadius:10,color:"#fca5a5",fontFamily:"monospace",fontSize:12}}>
-    <div style={{fontWeight:800,color:"#f87171",marginBottom:6}}>⚠ Erro (handler)</div>
+    <div style={{fontWeight:800,color:"#f87171",marginBottom:6}}><Ic n="alert"/> Erro (handler)</div>
     <pre style={{whiteSpace:"pre-wrap",wordBreak:"break-all",margin:0}}>{err}</pre>
     <button onClick={()=>setErr(null)} style={{marginTop:8,padding:"4px 12px",borderRadius:6,background:"#7f1d1d",border:"1px solid #f87171",color:"#fff",cursor:"pointer",fontSize:11}}>Fechar</button>
   </div>);
@@ -15751,7 +15789,7 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.error) return (
       <div style={{padding:24,background:"#1a0000",border:"1px solid #f87171",borderRadius:12,margin:16,color:"#fca5a5",fontFamily:"monospace",fontSize:12}}>
-        <div style={{fontWeight:800,color:"#f87171",fontSize:14,marginBottom:8}}>⚠ Erro de renderização</div>
+        <div style={{fontWeight:800,color:"#f87171",fontSize:14,marginBottom:8}}><Ic n="alert"/> Erro de renderização</div>
         <pre style={{whiteSpace:"pre-wrap",wordBreak:"break-all"}}>{this.state.error?.message}</pre>
         <button onClick={()=>this.setState({error:null})} style={{marginTop:12,padding:"6px 14px",borderRadius:7,background:"#7f1d1d",border:"1px solid #f87171",color:"#fff",cursor:"pointer"}}>Tentar novamente</button>
       </div>
@@ -16571,7 +16609,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
         <div style={{fontSize:11,color:B.gray200,marginBottom:6}}>Fotos do depois (opcional)</div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
           {delPhotos.map(u=><img key={u} src={u} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:7}}/>)}
-          <label style={{...pill(false),cursor:"pointer"}}>📷 {uploading?"Enviando…":"Adicionar"}<input type="file" accept="image/*" multiple onChange={e=>upPhotos(e,u=>setDelPhotos(p=>[...p,...u]))} style={{display:"none"}}/></label>
+          <label style={{...pill(false),cursor:"pointer"}}><Ic n="photo"/> {uploading?"Enviando…":"Adicionar"}<input type="file" accept="image/*" multiple onChange={e=>upPhotos(e,u=>setDelPhotos(p=>[...p,...u]))} style={{display:"none"}}/></label>
         </div>
         <div style={{display:"flex",gap:8,marginTop:10}}>
           <button disabled={busy||uploading} onClick={()=>deliver(j)} style={{flex:1,padding:"9px",borderRadius:8,border:"none",background:B.green,color:"#000",fontWeight:800,fontSize:12,cursor:"pointer"}}>Confirmar entrega</button>
@@ -16664,7 +16702,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
           <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Observação (opcional)" rows={2} style={{...inp,width:"100%",marginTop:10,resize:"none"}}/>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:10}}>
             {form.before.map(u=><img key={u} src={u} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:7}}/>)}
-            <label style={{...pill(false),cursor:"pointer"}}>📷 {uploading?"Enviando…":"Fotos do antes"}<input type="file" accept="image/*" multiple onChange={e=>upPhotos(e,u=>setForm(f=>({...f,before:[...f.before,...u]})))} style={{display:"none"}}/></label>
+            <label style={{...pill(false),cursor:"pointer"}}><Ic n="photo"/> {uploading?"Enviando…":"Fotos do antes"}<input type="file" accept="image/*" multiple onChange={e=>upPhotos(e,u=>setForm(f=>({...f,before:[...f.before,...u]})))} style={{display:"none"}}/></label>
           </div>
           <div style={{display:"flex",gap:8,marginTop:14}}>
             <button disabled={busy||uploading} onClick={saveJob} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:accent,color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>{busy?"Salvando…":form.id?"Salvar alterações":"Lançar"}</button>
@@ -16678,7 +16716,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
       {view==="hist"&&<>
         <div style={{position:"relative",marginBottom:14}}>
           <input value={q} onChange={e=>{setQ(e.target.value);setLimit(40);}} placeholder="Buscar por placa, modelo ou serviço…" style={{...inp,width:"100%",paddingLeft:34}}/>
-          <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",fontSize:14}}>🔍</span>
+          <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",fontSize:14}}><Ic n="search"/></span>
           {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,cursor:"pointer"}}>✕</button>}
         </div>
         <div style={{fontSize:11,color:B.gray500,marginBottom:10}}>{histAll.length} trabalho{histAll.length!==1?"s":""}{canSeeValues&&histAll.length>0?` · ${fmtBRL(histAll.reduce((s,j)=>s+Number(j.total||0),0))}`:""}</div>
@@ -16748,7 +16786,7 @@ function PresencaTab({employees, isOwner=false}) {
 
   const save=async(newData, mk)=>{
     setData(p=>({...p,[mk]:newData}));
-    try{ await db.setPresenca(mk, newData); }catch(e){ console.error("presenca save:",e); notify("⚠ Presença não foi salva — "+errMsg(e)); }
+    try{ await db.setPresenca(mk, newData); }catch(e){ console.error("presenca save:",e); notify("Presença não foi salva — "+errMsg(e)); }
   };
 
   const isWorkday=(dateStr)=>{
@@ -16968,7 +17006,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
     {/* View switcher */}
     <div style={{display:"flex",gap:6,marginBottom:20}}>
       <ViewBtn id="sell" label="Vender"/>
-      <ViewBtn id="shelf" label="🏪 Prateleira"/>
+      <ViewBtn id="shelf" label="Prateleira"/>
       <ViewBtn id="history" label="Histórico"/>
     </div>
 
@@ -16990,7 +17028,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
       <div style={{position:"relative",marginBottom:8}}>
         <input value={stockSearch} onChange={e=>setStockSearch(e.target.value)} placeholder="Buscar item do estoque..."
           style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-        <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:13}}>🔍</span>
+        <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:13}}><Ic n="search"/></span>
         {stockSearch&&<button onClick={()=>setStockSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:12}}>✕</button>}
       </div>
       {stockSearch&&<div style={{background:B.gray800,borderRadius:8,border:`1px solid ${B.gray700}`,marginBottom:16,maxHeight:220,overflowY:"auto"}}>
@@ -17072,7 +17110,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
             <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{item.category} · {fmtBRL(Number(item.price))}</div>
           </div>
           <button onClick={()=>openShelfForm(item)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:13}}>✏️</button>
-          <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}>🗑</button>
+          <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}><Ic n="trash"/></button>
         </div>
       ))}
       {showShelfForm&&createPortal(<div style={{position:"fixed",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:window.innerWidth>=700?"center":"flex-end",justifyContent:"center"}} onClick={()=>setShowShelfForm(false)}>
@@ -17147,7 +17185,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
               <button onClick={()=>setEditSale(null)} style={{padding:"6px 12px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,fontSize:12,cursor:"pointer"}}>Cancelar</button>
             </div>
           </div>):(<>
-            {sale.client_name&&<div style={{fontSize:12,color:B.blue,fontWeight:600,marginTop:3}}>👤 {sale.client_name}</div>}
+            {sale.client_name&&<div style={{fontSize:12,color:B.blue,fontWeight:600,marginTop:3}}><Ic n="user"/> {sale.client_name}</div>}
             {sale.description&&<div style={{fontSize:12,color:B.white,marginTop:2}}>{sale.description}</div>}
             {sale.note&&<div style={{fontSize:11,color:B.gray400,marginTop:4}}>{sale.note}</div>}
           </>)}
@@ -17271,7 +17309,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
             {matchedVehicles.map(v=>{
               const c=clients.find(c=>c.id===v.clientId);
               return <div key={v.id} onClick={()=>selectExistingVehicle(v)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:rowBg,borderRadius:12,marginBottom:6,border:rowBorder,cursor:"pointer"}}>
-                <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🚗</div>
+                <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}><Ic n="car"/></div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,color:textColor,fontSize:13}}>{v.model} <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
                   {c&&<div style={{fontSize:11,color:subColor}}>{c.name}</div>}
@@ -17284,7 +17322,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
           {q&&matchedClients.length>0&&<>
             <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:8,marginTop:4}}>Clientes</div>
             {matchedClients.map(c=><div key={c.id} onClick={()=>selectExistingClient(c)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:rowBg,borderRadius:12,marginBottom:6,border:rowBorder,cursor:"pointer"}}>
-              <div style={{width:36,height:36,borderRadius:9,background:`${B.green}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>👤</div>
+              <div style={{width:36,height:36,borderRadius:9,background:`${B.green}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}><Ic n="user"/></div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,color:textColor,fontSize:13}}>{c.name}</div>
                 {c.phone&&<div style={{fontSize:11,color:subColor}}>{c.phone}</div>}
@@ -17360,11 +17398,11 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
           <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Empresa</div>
           <div style={{display:"flex",gap:8,marginBottom:20}}>
             <button onClick={()=>setDivision("performance")} style={{flex:1,padding:"16px 8px",borderRadius:14,border:`2px solid ${division==="performance"?B.orange:"rgba(255,255,255,.1)"}`,background:division==="performance"?`${B.orange}18`:"transparent",cursor:"pointer",transition:"all .2s"}}>
-              <div style={{fontSize:22,marginBottom:4}}>⚙️</div>
+              <div style={{fontSize:22,marginBottom:4}}><Ic n="gear"/></div>
               <div style={{fontWeight:800,fontSize:13,color:division==="performance"?B.orange:B.gray300}}>OSC Performance</div>
             </button>
             <button onClick={()=>setDivision("finishing")} style={{flex:1,padding:"16px 8px",borderRadius:14,border:`2px solid ${division==="finishing"?FD.primary:"rgba(255,255,255,.1)"}`,background:division==="finishing"?`${FD.primary}18`:"transparent",cursor:"pointer",transition:"all .2s"}}>
-              <div style={{fontSize:22,marginBottom:4}}>🎨</div>
+              <div style={{fontSize:22,marginBottom:4}}><Ic n="brush"/></div>
               <div style={{fontWeight:800,fontSize:13,color:division==="finishing"?FD.primary:B.gray300}}>OSC Finishing</div>
             </button>
           </div>
@@ -17568,7 +17606,7 @@ function MainApp() {
   const [cN,setCN]=useState(""); const [cP,setCP]=useState(""); const [cE,setCE]=useState("");
 
   const toast_=useCallback(m=>{setTst(null);setTimeout(()=>setTst(m),10);},[]);
-  const errToast=useCallback(e=>{console.error(e);toast_(errMsg(e).startsWith("Sem internet")?"⚠ "+errMsg(e):"⚠ Erro: "+(errMsg(e)||"falha de conexão"));},[toast_]);
+  const errToast=useCallback(e=>{console.error(e);toast_(errMsg(e).startsWith("Sem internet")?errMsg(e):"Erro: "+(errMsg(e)||"falha de conexão"));},[toast_]);
   _oscToast=toast_;
   const [online,setOnline]=useState(()=>typeof navigator==="undefined"||navigator.onLine!==false);
   useEffect(()=>{ const on=()=>setOnline(true), off=()=>setOnline(false); window.addEventListener("online",on); window.addEventListener("offline",off); return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);}; },[]);
@@ -17890,7 +17928,7 @@ function MainApp() {
         const vModel=v?.model||v?.plate||"Veículo";
         const div="photosFinishing" in patch?"Finishing":"Performance";
         db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});
-        postTimeline(id,{type:"photo",title:"📷 Fotos adicionadas",body:div,actor:null,color:"#6366f1"});
+        postTimeline(id,{type:"photo",title:"Fotos adicionadas",body:div,actor:null,color:"#6366f1"});
       }
       // Notify mechanics when vehicle is marked urgent
       if("urgent" in patch&&patch.urgent){
@@ -17964,7 +18002,7 @@ function MainApp() {
         db.sendPushToAdmins(`✅ Pronto — ${vModel}`,"Veículo concluiu todos os serviços e está pronto para entrega.","/?").catch(()=>{});
         if(v?.clientId) db.sendPushToClient(v.clientId,`✅ ${vModel} — Pronto!`,"Seu veículo concluiu todos os serviços e está pronto para retirada!",`/?v=${vid}`).catch(()=>{});
       } else {
-        const statusLabel=newStatus==="paused"?"⏸ pausado (Performance)":"▶ retomado (Performance)";
+        const statusLabel=newStatus==="paused"?"pausado (Performance)":"▶ retomado (Performance)";
         const statusMsg=newStatus==="paused"?"O serviço de performance foi pausado.":"O serviço de performance foi retomado.";
         pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,statusMsg);
         if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de performance foi pausado momentaneamente.":"O serviço de performance foi retomado!",`/?portal=cliente`).catch(()=>{});
@@ -17990,7 +18028,7 @@ function MainApp() {
     try{
       await db.updateVehicle(vid,patch);
       const vModel=v?.model||v?.plate||"Veículo";
-      const statusLabel=newStatus==="paused"?"⏸ pausado (Finishing)":newStatus==="active"?"▶ retomado (Finishing)":"atualizado";
+      const statusLabel=newStatus==="paused"?"pausado (Finishing)":newStatus==="active"?"▶ retomado (Finishing)":"atualizado";
       pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de Finishing foi pausado.":"O serviço de Finishing foi retomado.");
       if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de acabamento (Finishing) foi pausado momentaneamente.":"O serviço de acabamento (Finishing) foi retomado!",`/?portal=cliente`).catch(()=>{});
     }catch(e){errToast(e);}
@@ -18179,7 +18217,7 @@ function MainApp() {
       if(v?.clientId) db.sendPushToClient(v.clientId,`🔧 Novo serviço — ${vModel}`,lbl,`/?v=${vid}`).catch(()=>{});
       // Timeline: task added
       const catColor=category?(CAT_MAP?.[category]||B.blue):B.blue;
-      postTimeline(vid,{type:"task_added",title:`🔧 ${lbl}`,body:"Serviço incluído na OS",actor:adminRole==="owner"?"Gestor":"Admin",category:category||null,color:catColor});
+      postTimeline(vid,{type:"task_added",title:`${lbl}`,body:"Serviço incluído na OS",actor:adminRole==="owner"?"Gestor":"Admin",category:category||null,color:catColor});
       return row;
     }catch(e){errToast(e);}
   };
@@ -18229,7 +18267,7 @@ function MainApp() {
         // Timeline: task completed
         const actor=employees.find(e=>e.id===signerEmployeeId)?.name||null;
         const catColor=t.category?(CAT_MAP?.[t.category]||B.green):B.green;
-        postTimeline(t.vehicleId,{type:"task_done",title:`✅ ${t.label}`,body:"",actor,category:t.category||null,color:catColor});
+        postTimeline(t.vehicleId,{type:"task_done",title:`${t.label}`,body:"",actor,category:t.category||null,color:catColor});
         // Auto-remove specialist mechanic if all their specialty tasks are done
         if(t.category){
           const specialist=employees.find(e=>e.specialty===t.category&&e.division!=="finishing");
@@ -18346,7 +18384,7 @@ function MainApp() {
           db.sendPushToClient(v.clientId,`Atualização — ${vModel}`,`${t?.label||"Serviço"}: ${lastUpdate.text.slice(0,80)}${lastUpdate.text.length>80?"…":""}`,`/?v=${v.id}`).catch(()=>{});
           // Timeline: task update
           const catColor=t?.category?(CAT_MAP?.[t.category]||B.blue):B.blue;
-          postTimeline(t.vehicleId,{type:"task_update",title:`📝 ${t?.label||"Serviço"}`,body:lastUpdate.text,actor:lastUpdate.author||null,category:t?.category||null,color:catColor});
+          postTimeline(t.vehicleId,{type:"task_update",title:`${t?.label||"Serviço"}`,body:lastUpdate.text,actor:lastUpdate.author||null,category:t?.category||null,color:catColor});
         }
       }
       // Timeline: materials added (debounced consolidation)
@@ -18461,7 +18499,7 @@ function MainApp() {
     if(!item) return;
     const newSalePrice=Math.round(lastCost*(1+Number(item.markup||0)/100)*100)/100;
     setStk(p=>p.map(s=>s.id===stockId?{...s,costPrice:lastCost,salePrice:newSalePrice}:s));
-    try{ await db.updateStock(stockId,{costPrice:lastCost,salePrice:newSalePrice}); }catch(e){ toast_("⚠ "+errMsg(e)); }
+    try{ await db.updateStock(stockId,{costPrice:lastCost,salePrice:newSalePrice}); }catch(e){ toast_(errMsg(e)); }
   };
 
   const addPurchase=async(purchase)=>{
@@ -18551,12 +18589,12 @@ function MainApp() {
         const exp=await db.addExpense({name:`Insumos: ${nm}`.slice(0,160),amount:Math.round((total+frt)*100)/100,category:"insumos",division:d.division||"ambos",recurrent:false,qty,date:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"})+"T12:00:00-03:00":undefined});
         setExpenses(p=>[...p,exp]);
         await db.setMLItem(item.id,{expense_id:exp.id});
-        toast_(`🧴 ${fmtBRL(total+frt)} lançado em Insumos (${new Date(item.ordered_at||Date.now()).toLocaleDateString("pt-BR")}) ✓`);
+        toast_(`${fmtBRL(total+frt)} lançado em Insumos (${new Date(item.ordered_at||Date.now()).toLocaleDateString("pt-BR")}) ✓`);
       } else if(d.type==="tool"){
         const nm=String(d.name||item.title||"").trim();
         const tl=await db.addTool({name:nm,value:Math.round((total+frt)*100)/100,qty:Math.max(1,Math.round(qty)),purchased_at:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"}):null,location:d.location||"",link:item.permalink,seller:item.seller,ml_item_id:item.id});
         await db.setMLItem(item.id,{tool_id:tl.id});
-        toast_("🔧 Ferramenta adicionada ao patrimônio ✓");
+        toast_("Ferramenta adicionada ao patrimônio ✓");
       } else if(d.type==="stock"){
         const q=Math.max(1,Math.round(qty));
         const _bn=String(d.brand||"").trim(), _nm=String(d.name||item.title||"").trim();
@@ -18566,7 +18604,7 @@ function MainApp() {
           if(sid) await db.setMLItem(item.id,{stock_id:sid});
         } else {
           await db.setMLItem(item.id,{stock_plan:plan});
-          toast_("📦 Destinada ao estoque — entra quando o Mercado Livre marcar como entregue ✓");
+          toast_("Destinada ao estoque — entra quando o Mercado Livre marcar como entregue ✓");
         }
       }
     }catch(e){
@@ -18703,7 +18741,7 @@ function MainApp() {
           if(!(await db.claimMLStockPlan(x.id))) continue; // outro aparelho já cuidou
           try{
             const sid=await importStockNote({items:[{pid:plan.pid||"",brand:plan.brand,name:plan.name,qty:plan.qty,cost:plan.cost}],supplierName:"Mercado Livre",date:String(x.delivered_at||x.status_at||x.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:plan.invoice||("ML "+x.ml_order_id),markup:plan.markup});
-            if(sid){ await db.setMLItem(x.id,{stock_id:sid}); toast_("📦 Recebimento confirmado — entrou no estoque ✓"); }
+            if(sid){ await db.setMLItem(x.id,{stock_id:sid}); toast_("Recebimento confirmado — entrou no estoque ✓"); }
           }catch(e){ try{ await db.setMLItem(x.id,{stock_plan:plan}); }catch{} console.warn("ml stock entry",e); throw e; }
         }
       }catch(e){ console.warn("ml stock pending",e); }
@@ -18720,7 +18758,7 @@ function MainApp() {
               const v=vehicles.find(x=>x.id===po.vehicleId);
               if(po.employeeId) db.sendPushToEmployee(po.employeeId,`✅ Pedido atualizado — ${v?.model||"Veículo"}`,`${po.partName}: ${PO_STATUS.received.label}`,"/?portal=mecanico").catch(()=>{});
               await poReserve({...po,status:"received",costPrice:unit},"Na oficina — a definir");
-              toast_(`📦 "${po.partName}" recebido — entrega confirmada no Mercado Livre ✓`);
+              toast_(`"${po.partName}" recebido — entrega confirmada no Mercado Livre ✓`);
             }
           } else if(m.link_type==="inv"){
             const inv=investments.find(x=>x.id===m.link_id);
@@ -18737,11 +18775,11 @@ function MainApp() {
                 if(ex&&Math.abs(newTotal-Number(ex.amount))>=0.01){
                   await db.updateExpense(ex.id,{name:ex.name,amount:newTotal,category:ex.category,recurrent:ex.recurrent,division:ex.division});
                   setExpenses(p=>p.map(e=>e.id===ex.id?{...e,amount:newTotal}:e));
-                  toast_(`💰 Financeiro ajustado: ${fmtBRL(oldTotal)} → ${fmtBRL(newTotal)}`);
+                  toast_(`Financeiro ajustado: ${fmtBRL(oldTotal)} → ${fmtBRL(newTotal)}`);
                 }
               }catch(e){ console.warn("ml expense fix",e); }
               if(inv.stockItemId){ await addPurchase({stockId:inv.stockItemId,qty:inv.quantity||1,unitCost:unit,purchaseDate:new Date().toISOString().slice(0,10),supplier:"Mercado Livre",note:"Recebido automaticamente (Mercado Livre)"}); try{ await db.syncMLByLink("inv",inv.id,{destination:"stock",stock_id:inv.stockItemId,assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }catch{} }
-              toast_(`📦 "${inv.name}" recebido — entrega confirmada no Mercado Livre ✓`);
+              toast_(`"${inv.name}" recebido — entrega confirmada no Mercado Livre ✓`);
             }
           }
           await db.setMLItem(m.id,{link_done_at:new Date().toISOString()});
@@ -18797,7 +18835,7 @@ function MainApp() {
       toast_(`Pagamento de ${fmtBRL(p.amount)} registrado ✓`);
       const v=vehicles.find(x=>x.id===p.vehicleId);
       if(v?.clientId) db.sendPushToClient(v.clientId,`💰 Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${p.method}`,`/?portal=cliente`).catch(()=>{});
-      postTimeline(p.vehicleId,{type:"payment",title:`💰 Pagamento — ${fmtBRL(p.amount)}`,body:p.method||"",actor:null,color:B.green});
+      postTimeline(p.vehicleId,{type:"payment",title:`Pagamento — ${fmtBRL(p.amount)}`,body:p.method||"",actor:null,color:B.green});
     }
     catch(e){errToast(e);}
   };
@@ -18949,7 +18987,7 @@ function MainApp() {
       const totalDevido=devedores.reduce((s,d)=>s+d.totalOwed,0);
 
       if(!hasPurchases&&!hasInvest&&!hasNotes&&lowStock===0&&pendingMateriais===0&&approvedMateriais===0&&boughtMateriais===0&&todayCalEvents.length===0&&devedores.length===0) return(
-        <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${B.gray700}`,textAlign:"center",color:B.gray600,fontSize:13}}>✅ Nenhum alerta no momento</div>
+        <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${B.gray700}`,textAlign:"center",color:B.gray600,fontSize:13}}><Ic n="ready"/> Nenhum alerta no momento</div>
       );
       return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         {/* Devedores card */}
@@ -19254,7 +19292,7 @@ function MainApp() {
       </div>
       {loading&&<div style={{padding:"24px 0",textAlign:"center",color:B.gray500,fontSize:13}}>Carregando…</div>}
       {!loading&&files.length===0&&<div style={{padding:"32px 0",textAlign:"center",color:B.gray500,fontSize:13}}>
-        <div style={{fontSize:32,marginBottom:8}}>📁</div>
+        <div style={{fontSize:32,marginBottom:8}}><Ic n="folder"/></div>
         Nenhum arquivo ainda. Clique em "+ PDF" para enviar.
       </div>}
       {files.filter(f=>f.name&&f.name!==".emptyFolderPlaceholder").map(f=>(
@@ -19274,7 +19312,7 @@ function MainApp() {
           <div style={{display:"flex",gap:5,flexShrink:0}}>
             <button onClick={()=>copyLink(f.name)}
               style={{padding:"5px 10px",borderRadius:7,background:copiedId===f.name?`${B.green}22`:`${B.blue}18`,border:`1px solid ${copiedId===f.name?B.green:B.blue}33`,color:copiedId===f.name?B.green:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              {copiedId===f.name?"✓ Copiado":"🔗 Link"}
+              {copiedId===f.name?"✓ Copiado":<><Ic n="link"/> Link</>}
             </button>
             <button onClick={()=>setConfirmDel(f.name)}
               style={{padding:"5px 8px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center"}}>
@@ -19289,7 +19327,7 @@ function MainApp() {
 
   const MaisPage=()=>{
     const adminLogout=()=>{setAdminRole(null);try{sessionStorage.removeItem(ADMIN_SESSION_KEY);}catch{}};
-    const themeLabel=themePref==="auto"?"🌗 Automático":themePref==="dark"?"🌙 Escuro":"☀️ Claro";
+    const themeLabel=themePref==="auto"?"Automático":themePref==="dark"?"Escuro":"Claro";
     const clientPortalUrl=`${window.location.origin}/?portal=cliente`;
     const mechPortalUrl=`${window.location.origin}/?portal=mecanico`;
     const Item=({icon,label,sub,color=B.orange,onClick,right})=>(
@@ -19448,12 +19486,12 @@ function MainApp() {
       {/* ══ MECHANICS ══ */}
       {tab==="mechanics"&&allowedTabs.includes("mechanics")&&<>
         <TabHeader color={B.orange} title="Mecânicos" subtitle="Tarefas, materiais e progresso da equipe"/>
-        {employees.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}>🔧</div><div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum mecânico</div></div>
+        {employees.length===0?<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}><div style={{fontSize:44,marginBottom:12}}><Ic n="wrench"/></div><div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhum mecânico</div></div>
           :<>
             {employees.length>2&&<div style={{position:"relative",marginBottom:14}}>
               <input value={mechSearch} onChange={e=>setMechSearch(e.target.value)} placeholder="Buscar mecânico ou veículo…"
                 style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-              <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+              <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
               {mechSearch&&<button onClick={()=>setMechSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
             </div>}
             {[...employees]
@@ -19493,7 +19531,7 @@ function MainApp() {
             : allActive;
           if(allActive.length===0) return (
             <div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
-              <div style={{fontSize:44,marginBottom:12}}>🔧</div>
+              <div style={{fontSize:44,marginBottom:12}}><Ic n="wrench"/></div>
               <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhuma OS em andamento</div>
               <div style={{fontSize:13}}>Os veículos aparecem aqui quando têm uma OS aberta.</div>
             </div>
@@ -19528,7 +19566,7 @@ function MainApp() {
             <div style={{position:"relative",flex:1}}>
             <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder={osParts?"Modelo, placa, cliente ou peça…":"Buscar por modelo, placa ou cliente…"}
               style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}>🔍</span>
+            <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
             {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
             </div>
             <PartsToggle on={osParts} setOn={setOsParts} color={B.orange}/>
@@ -19700,7 +19738,7 @@ function MainApp() {
             (finParts&&vehHasPart(v,finSearch,tasks))
           ):activeFin;
           if(activeFin.length===0) return (<div style={{textAlign:"center",padding:"56px 0",color:B.gray400}}>
-            <div style={{fontSize:44,marginBottom:12}}>🎨</div>
+            <div style={{fontSize:44,marginBottom:12}}><Ic n="brush"/></div>
             <div style={{fontWeight:700,fontSize:15,color:B.gray200,marginBottom:4}}>Nenhuma OS da Finishing em andamento</div>
           </div>);
           if(filtered.length===0&&finSearch) return (<div style={{textAlign:"center",padding:"32px 0",color:B.gray400,fontSize:13}}>Nenhum resultado para "<b style={{color:B.white}}>{finSearch}</b>"</div>);
@@ -19893,7 +19931,7 @@ function MainApp() {
                   recurrent:false,
                 });
                 setExpenses(p=>[...p,exp]);
-                toast_(`💰 R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
+                toast_(`R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
               }
             }
           }catch(e){errToast(e);}}}
@@ -19916,7 +19954,7 @@ function MainApp() {
                 const total=inv.value*(inv.quantity||1);
                 const exp=await db.addExpense({name:`Mat. Sortido: ${inv.name}`,amount:total,category:"materiais",division:inv.division||"ambos",recurrent:false});
                 setExpenses(p=>[...p,exp]);
-                toast_(`💰 R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
+                toast_(`R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
               }
             }
             // When received and linked to a stock item — add to purchase history and update qty
@@ -20092,7 +20130,7 @@ function MainApp() {
         return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickPedidoOS(false)}>
           <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.amber}44`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-              <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🛒</div>
+              <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="cart"/></div>
               <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Novo pedido de peça</div><div style={{fontSize:11,color:B.gray400}}>Para uma OS em andamento</div></div>
               <button onClick={()=>setShowQuickPedidoOS(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
             </div>
@@ -20103,7 +20141,7 @@ function MainApp() {
                 <div style={{position:"relative",marginBottom:6}}>
                   <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
                     style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500}}>🔍</span>
+                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500}}><Ic n="search"/></span>
                 </div>
                 {activeVehicles.length===0
                   ?<div style={{fontSize:13,color:B.gray500,padding:"10px",textAlign:"center"}}>Nenhuma OS em andamento</div>
@@ -20112,7 +20150,7 @@ function MainApp() {
                       const cli=clients.find(c=>c.id===v.clientId);
                       const sel=vehicleId===v.id;
                       return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.amber}22`:B.gray800,border:`1px solid ${sel?B.amber:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
-                        {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}>🚗</span>}
+                        {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>}
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
                           {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
@@ -20174,7 +20212,7 @@ function MainApp() {
         return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickPecasVeiculo(false)}>
           <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.purple}44`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-              <div style={{width:36,height:36,borderRadius:10,background:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🔩</div>
+              <div style={{width:36,height:36,borderRadius:10,background:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="nut"/></div>
               <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Adicionar peça ao veículo</div><div style={{fontSize:11,color:B.gray400}}>Peça enviada pelo cliente</div></div>
               <button onClick={()=>setShowQuickPecasVeiculo(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
             </div>
@@ -20185,7 +20223,7 @@ function MainApp() {
                 <div style={{position:"relative",marginBottom:6}}>
                   <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por modelo, placa ou cliente…"
                     style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500}}>🔍</span>
+                  <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500}}><Ic n="search"/></span>
                 </div>
                 <div style={{maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
                   {filtered.map(v=>{
@@ -20193,12 +20231,12 @@ function MainApp() {
                     const sel=vehicleId===v.id;
                     const parts=(v.partsList||[]).length;
                     return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.purple}22`:B.gray800,border:`1px solid ${sel?B.purple:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
-                      {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}>🚗</span>}
+                      {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>}
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
                         {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                       </div>
-                      {parts>0&&<span style={{fontSize:10,fontWeight:800,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"1px 6px",flexShrink:0}}>{parts}🔩</span>}
+                      {parts>0&&<span style={{fontSize:10,fontWeight:800,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"1px 6px",flexShrink:0}}>{parts}<Ic n="nut"/></span>}
                       {sel&&<span style={{color:B.purple,fontSize:14,flexShrink:0}}>✓</span>}
                     </button>);
                   })}
@@ -20244,7 +20282,7 @@ function MainApp() {
         return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickMatSortidos(false)}>
           <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.amber}44`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📦</div>
+              <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="pkg"/></div>
               <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Pedido de material sortido</div><div style={{fontSize:11,color:B.gray400}}>Adiciona direto aos Materiais Sortidos</div></div>
               <button onClick={()=>setShowQuickMatSortidos(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
             </div>

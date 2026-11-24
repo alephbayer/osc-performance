@@ -430,16 +430,29 @@ function ClientNotesTab({client, vehicles}) {
       .catch(()=>setLoading(false));
   },[selectedVehicle]);
 
+  const [saving,setSaving]=useState(false);
+  const [noteErr,setNoteErr]=useState("");
   const addNote=async()=>{
-    if(!newNote.trim()||!selectedVehicle) return;
-    const row=await db.addClientVehicleNote(selectedVehicle,client.id,newNote.trim());
-    setNotes(p=>[row,...p]);
-    setNewNote("");
+    const text=newNote.trim();
+    if(!text||!selectedVehicle||saving) return;
+    setSaving(true); setNoteErr("");
+    try{
+      const row=await db.addClientVehicleNote(selectedVehicle,client.id,text);
+      setNotes(p=>[row,...p]);
+      setNewNote("");
+      const v=vehicles.find(x=>x.id===selectedVehicle);
+      db.sendPushToAdmins(`Anotação do cliente — ${v?.model||"Veículo"}`,`${client.name}: ${text.length>120?text.slice(0,117)+"…":text}`,"/?").catch(()=>{});
+    }catch(e){ setNoteErr("Não foi possível salvar a anotação. Verifique a conexão e tente de novo."); }
+    finally{ setSaving(false); }
   };
 
+  // depois de alguns minutos a oficina pode já ter lido: a anotação não pode mais ser apagada pelo cliente
+  const NOTE_DELETE_MIN=15;
+  const canDelete=n=>!n.resolved&&Date.now()-new Date(n.created_at).getTime()<NOTE_DELETE_MIN*60000;
   const deleteNote=async(id)=>{
-    await db.deleteClientVehicleNote(id);
-    setNotes(p=>p.filter(n=>n.id!==id));
+    setNoteErr("");
+    try{ await db.deleteClientVehicleNote(id); setNotes(p=>p.filter(n=>n.id!==id)); }
+    catch(e){ setNoteErr("Não foi possível apagar a anotação. Tente de novo."); }
   };
 
   const blue=B.blue;
@@ -461,7 +474,8 @@ function ClientNotesTab({client, vehicles}) {
       <textarea value={newNote} onChange={e=>setNewNote(e.target.value)}
         placeholder="Ex: Barulho estranho ao frear, ar-condicionado não gela, luz do painel acesa..."
         rows={3} style={{width:"100%",padding:"4px 2px",border:"none",background:"transparent",color:B.white,fontSize:14,outline:"none",resize:"none",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.55}}/>
-      <button onClick={addNote} disabled={!newNote.trim()}
+      {noteErr&&<div style={{color:B.red,fontSize:12,marginTop:6}}>{noteErr}</div>}
+      <button onClick={addNote} disabled={!newNote.trim()||saving}
         style={{marginTop:8,width:"100%",minHeight:44,borderRadius:12,background:newNote.trim()?B.orange:B.gray700,border:"none",color:newNote.trim()?B.white:B.gray500,fontWeight:800,fontSize:13,cursor:newNote.trim()?"pointer":"not-allowed",fontFamily:"inherit"}}>
         Adicionar anotação
       </button>
@@ -481,7 +495,7 @@ function ClientNotesTab({client, vehicles}) {
                 {n.resolved&&<span style={{color:B.green,fontWeight:700,letterSpacing:.5,textTransform:"uppercase"}}>Resolvida</span>}
               </div>
             </div>
-            {!n.resolved&&<button onClick={()=>deleteNote(n.id)} aria-label="Excluir anotação"
+            {canDelete(n)&&<button onClick={()=>deleteNote(n.id)} aria-label="Excluir anotação" title={`Pode ser apagada até ${NOTE_DELETE_MIN} minutos depois de enviada`}
               style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:6,flexShrink:0}}>
               <ITrash s={14}/>
             </button>}
@@ -524,6 +538,8 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
   const [showDebtPopup,setShowDebtPopup]=useState(false);
+  const [confirmQ,setConfirmQ]=useState(null); // {id, act:"approve"|"reject"}
+  const [busyQ,setBusyQ]=useState(false);
 
   useEffect(()=>{
     if(!VAPID_PUBLIC_KEY) return;
@@ -972,12 +988,26 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
               <div style={sec}>Observações</div>
               <div style={{fontSize:12,color:B.gray300,whiteSpace:"pre-wrap",lineHeight:1.55}}>{q.notes}</div>
             </div>}
-            {isPending&&<div style={{padding:"14px 18px 18px",display:"flex",gap:10,borderTop:`1px solid ${B.gray700}`}}>
-              <button onClick={async()=>{await onApproveQuote(q.id,items);}}
+            {isPending&&confirmQ?.id===q.id&&<div ref={el=>{ if(el&&!el.dataset.shown){ el.dataset.shown="1"; setTimeout(()=>{try{el.scrollIntoView({block:"center",behavior:"smooth"});}catch{}},30); } }} style={{padding:"14px 18px 18px",borderTop:`1px solid ${B.gray700}`}}>
+              <div style={{fontSize:13,color:B.white,fontWeight:700,lineHeight:1.5,marginBottom:4}}>{confirmQ.act==="approve"?"Confirmar a aprovação?":"Confirmar a recusa?"}</div>
+              <div style={{fontSize:12,color:B.gray400,lineHeight:1.55,marginBottom:12}}>{confirmQ.act==="approve"?`${items.length} serviço${items.length!==1?"s":""} · ${fmtBRL(total)}. A oficina recebe o aviso e entra em contato para agendar.`:"A oficina recebe o aviso de que você não aprovou este orçamento."}</div>
+              <div style={{display:"flex",gap:10}}>
+                <button disabled={busyQ} onClick={async()=>{setBusyQ(true);try{ if(confirmQ.act==="approve") await onApproveQuote(q.id,items); else await onRejectQuote(q.id); }finally{ setBusyQ(false); setConfirmQ(null); }}}
+                  style={{flex:1,minHeight:46,borderRadius:12,background:confirmQ.act==="approve"?B.green:B.red,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",opacity:busyQ?.6:1}}>
+                  {busyQ?"Enviando…":confirmQ.act==="approve"?"Sim, aprovar":"Sim, recusar"}
+                </button>
+                <button disabled={busyQ} onClick={()=>setConfirmQ(null)}
+                  style={{minHeight:46,padding:"0 18px",borderRadius:12,background:"none",border:`1px solid ${B.gray600}`,color:B.gray300,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                  Voltar
+                </button>
+              </div>
+            </div>}
+            {isPending&&confirmQ?.id!==q.id&&<div style={{padding:"14px 18px 18px",display:"flex",gap:10,borderTop:`1px solid ${B.gray700}`}}>
+              <button onClick={()=>setConfirmQ({id:q.id,act:"approve"})}
                 style={{flex:1,minHeight:46,borderRadius:12,background:B.green,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7,fontFamily:"inherit"}}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Aprovar orçamento
               </button>
-              <button onClick={async()=>{await onRejectQuote(q.id);}}
+              <button onClick={()=>setConfirmQ({id:q.id,act:"reject"})}
                 style={{minHeight:46,padding:"0 18px",borderRadius:12,background:"none",border:`1px solid ${B.gray600}`,color:B.gray300,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                 Recusar
               </button>
@@ -9212,7 +9242,7 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
   const [quote,setQuote]=useState(null);
   const [loading,setLoading]=useState(true);
   const [done,setDone]=useState(null); // "approved"|"rejected"
-  const [selected,setSelected]=useState(null); // null=all or Set of item ids
+  const [confirm,setConfirm]=useState(null); // "approve"|"reject"
 
   useEffect(()=>{
     db.getQuote(quoteId).then(async q=>{
@@ -9272,12 +9302,23 @@ function PublicQuoteView({quoteId,onApprove,onReject}) {
       </div>}
 
       {/* Actions */}
-      {!alreadyAnswered&&<div style={{display:"flex",flexDirection:"column",gap:10,marginTop:8}}>
-        <button onClick={async()=>{setDone("approved");await onApprove(quoteId,items);}}
+      {!alreadyAnswered&&confirm&&<div style={{background:"#fff",borderRadius:12,padding:"16px",marginTop:8,border:`2px solid ${confirm==="approve"?"#16a34a":"#ef4444"}`}}>
+        <div style={{fontWeight:800,fontSize:15,color:"#222",marginBottom:4}}>{confirm==="approve"?"Confirmar a aprovação?":"Confirmar a recusa?"}</div>
+        <div style={{fontSize:13,color:"#666",lineHeight:1.5,marginBottom:14}}>{confirm==="approve"?`${items.length} serviço${items.length!==1?"s":""} · ${fmtBRL(total)}. A oficina recebe o aviso e entra em contato para agendar.`:"A oficina recebe o aviso de que você não aprovou este orçamento."}</div>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={async()=>{const act=confirm;setConfirm(null);if(act==="approve"){setDone("approved");await onApprove(quoteId,items);}else{setDone("rejected");await onReject(quoteId);}}}
+            style={{flex:1,padding:"13px 0",borderRadius:12,background:confirm==="approve"?"#16a34a":"#ef4444",border:"none",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>
+            {confirm==="approve"?"Sim, aprovar":"Sim, recusar"}
+          </button>
+          <button onClick={()=>setConfirm(null)} style={{padding:"13px 18px",borderRadius:12,background:"#fff",border:"1px solid #ccc",color:"#555",fontWeight:700,fontSize:14,cursor:"pointer"}}>Voltar</button>
+        </div>
+      </div>}
+      {!alreadyAnswered&&!confirm&&<div style={{display:"flex",flexDirection:"column",gap:10,marginTop:8}}>
+        <button onClick={()=>setConfirm("approve")}
           style={{padding:"14px 0",borderRadius:12,background:"#16a34a",border:"none",color:"#fff",fontWeight:800,fontSize:16,cursor:"pointer"}}>
           <Ic n="ready"/> Aprovar orçamento
         </button>
-        <button onClick={async()=>{setDone("rejected");await onReject(quoteId);}}
+        <button onClick={()=>setConfirm("reject")}
           style={{padding:"14px 0",borderRadius:12,background:"#fff",border:"2px solid #ef4444",color:"#ef4444",fontWeight:700,fontSize:15,cursor:"pointer"}}>
           <Ic n="xc"/> Recusar
         </button>
@@ -13755,7 +13796,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.219";
+const APP_VERSION = "2026.11.24.220";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

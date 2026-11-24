@@ -3,6 +3,18 @@
     "date": "2026-11-24",
     "changes": [
       {
+        "type": "feat",
+        "text": "Portal do cliente e link de orçamento: aprovar ou recusar pede confirmação, mostrando quantos serviços e o valor"
+      },
+      {
+        "type": "feat",
+        "text": "Portal do cliente: anotação nova avisa a oficina por notificação; se não salvar, o cliente vê o erro"
+      },
+      {
+        "type": "fix",
+        "text": "Portal do cliente: anotação só pode ser apagada até 15 minutos depois de enviada"
+      },
+      {
         "type": "fix",
         "text": "Link de orçamento: quando o orçamento é de um veículo cadastrado, o título mostra o modelo e a placa em vez de \"Veículo\""
       },

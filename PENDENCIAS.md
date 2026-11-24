@@ -46,6 +46,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] `?v=` e `?vh=` carregam só os dados daquele veículo (`db.loadPublicVehicle` em `supabase.js`, componente `PublicVehicleRoot`): antes baixavam o banco inteiro (todos os clientes, pagamentos, estoque) para o navegador de quem abrisse. Pedidos de peça sem custo/link; funcionário e cliente só id e nome; atualiza a cada 60 s e ao voltar para a aba (antes era realtime). `?vh=` passou a esconder tarefas internas/sem valor, como o `?v=` (v2026.11.24.207)
 - [ ] Limite: com a chave pública e policies `using (true)`, quem souber usar a API ainda lê qualquer tabela (ver Segurança). A correção acima tira os dados da página, não do banco
 - [ ] Limite: foto de peça vinda do estoque agora casa o nome exato (antes ignorava maiúsculas/minúsculas)
+- [x] Linha do tempo "Materiais — tarefa": editar nome/marca/qtd/valor de um material contava como novo lançamento (comparava por nome) e o aviso "Materiais atualizados" saía a cada mudança. Agora só itens acrescentados contam (`addedMaterials`), o aviso diz "Material incluído" e inclusões seguidas viram um registro só (v2026.11.24.208)
+- [ ] Os registros duplicados antigos na linha do tempo continuam lá (não apaguei). Testado só a regra isolada e o build; não testei incluindo/editando material no app ao vivo
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

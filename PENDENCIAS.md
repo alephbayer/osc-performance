@@ -49,6 +49,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Linha do tempo "Materiais — tarefa": editar nome/marca/qtd/valor de um material contava como novo lançamento (comparava por nome) e o aviso "Materiais atualizados" saía a cada mudança. Agora só itens acrescentados contam (`addedMaterials`), o aviso diz "Material incluído" e inclusões seguidas viram um registro só (v2026.11.24.208)
 - [x] Apagados 12 registros repetidos antigos (nome antigo de material renomeado), em 2026-11-24, com o ok do Aleph; cópia em `~/OSC/backups/timeline-materiais-apagados-2026-11-24.json` (13 linhas: inclui "Bronzina de biela 010", que o Aleph decidiu manter no banco)
 - [x] Testado pelo Aleph no app ao vivo (2026-11-24): editar material não gera mais lançamento
+- [x] Aba Conta simplificada: "A pagar agora" no topo; resumo com total da OS, já pago e restante até a entrega; pagamentos e detalhamento recolhidos; saiu o comparativo "Investido até agora" e os textos de fórmula. Nomes do Pix/TED **não mexer** (pedido do Aleph) (v2026.11.24.209)
+- Próximos combinados (avaliação do portal, 2026-11-24), na ordem: limpar o que o cliente vê (materiais recolhidos, linha do tempo sem "Materiais —", status de peça simples) -> tirar emojis/inglês e cabeçalho por divisão -> histórico como aba e link encurtado -> link seguro com código e função no banco (discutir antes)
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

@@ -51,8 +51,9 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Testado pelo Aleph no app ao vivo (2026-11-24): editar material não gera mais lançamento
 - [x] Aba Conta simplificada: "A pagar agora" no topo; resumo com total da OS, já pago e restante até a entrega; pagamentos e detalhamento recolhidos; saiu o comparativo "Investido até agora" e os textos de fórmula. Nomes do Pix/TED **não mexer** (pedido do Aleph) (v2026.11.24.209)
 - [x] Limpeza do que o cliente vê: materiais recolhidos por tarefa (`PvMatToggle`), linha do tempo do link sem eventos `materials` (continuam no banco e no app interno), status de pedido de peça: Pedido / A caminho / Chegou (v2026.11.24.210)
-- [ ] Achado: a linha do tempo do link mostra os pagamentos com valor ("Pagamento — R$ 34200,00", sem formatação) mesmo com "Valores ocultos"
-- Próximos combinados (avaliação do portal, 2026-11-24), na ordem: tirar emojis/inglês e cabeçalho por divisão -> histórico como aba e link encurtado -> link seguro com código e função no banco (discutir antes)
+- [x] Linha do tempo do link: materiais voltam consolidados, uma entrada por tarefa ("Peças e materiais — tarefa", N itens, 3 primeiros nomes, data do último lançamento), lidos da tarefa atual (`pvTimeline`); tarefa interna/renomeada não aparece. Pagamentos formatados e com valor oculto quando "Valores ocultos". Emojis trocados por ícones de traço (`PvIc`) no `?v=` e `?vh=`; cabeçalho `OscLockup div=` mostra só a divisão do carro (v2026.11.24.211)
+- [ ] Os títulos da linha do tempo ainda são gravados com emoji no banco (o link tira na exibição; o app interno continua mostrando)
+- Próximos combinados (avaliação do portal, 2026-11-24): histórico como aba e link encurtado -> link seguro com código e função no banco (discutir antes)
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

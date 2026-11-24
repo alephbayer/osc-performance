@@ -34,6 +34,11 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Registro do que já foi cobrado: tabela `partial_charges` (migration 060). Ao gerar, "Registrar e gerar" ou "Só gerar PDF"; itens registrados ficam travados (com aviso se o valor mudou depois), cobrança numerada, cancelar libera os itens, PDF pode ser gerado de novo. O PDF final da OS não muda (decisão do Aleph) (v2026.11.23.204)
 - [ ] Limite conhecido: a trava da peça usa tarefa + nome + marca. Renomear a peça depois de cobrada solta a trava; aumentar horas/quantidade só mostra aviso "valor mudou", não cobra a diferença
 
+## Ajustes nos PDFs (sessão dedicada, 2026-11-24)
+- PDFs existentes: orçamento Performance e Finishing (`renderElegantQuote`), cobrança parcial, conferência de entrega, peças importadas, pré-aprovação de agendamento, financeiro. `generateQuotePDFLegacy`/`generateFinishingPDFLegacy` não são chamados (código morto)
+- [x] Página "Investimento e condições" (serviço único em Ficha): nome longo do serviço passava por cima do total; agora quebra em linhas à esquerda do valor (v2026.11.24.205)
+- Sem poppler neste Mac: para ver PDFs, compilar um conversor PDFKit em Swift (ver nota da sessão) ou `brew install poppler`
+
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor
 - [ ] Subir o backup (zip de `backup-AAAA-MM-DD/`) para o local privado e confirmar

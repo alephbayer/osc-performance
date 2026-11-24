@@ -1388,6 +1388,12 @@ const taskHasValue=t=>{
   const mats=Array.isArray(t.materials)?t.materials:[];
   return Number(t.hours||0)>0||mats.some(m=>!m.noCharge&&Number(m.cost||0)>0)||mats.some(m=>Number(m.freight||0)>0);
 };
+// Materiais incluídos numa tarefa: só os itens acrescentados no fim da lista (é sempre assim que se inclui).
+// Editar nome, marca, quantidade ou valor de um material existente não conta como inclusão.
+const addedMaterials=(oldM,newM)=>{
+  const o=Array.isArray(oldM)?oldM:[], n=Array.isArray(newM)?newM:[];
+  return n.length>o.length?n.slice(o.length).filter(m=>m&&String(m.name||"").trim()):[];
+};
 const isInternalTask=t=>{
   if(!t||t.warranty) return false;
   if(t.internal===true) return true;
@@ -13628,7 +13634,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.207";
+const APP_VERSION = "2026.11.24.208";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17675,7 +17681,7 @@ function MainApp() {
       onAddTask={async(vid,lbl)=>{try{const div=liveEmp.division||"performance";const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:div==="finishing"?1:0,ratePerHour:null,completedAt:null,division:div,rateType:div==="finishing"?"qty":"hour"});setTsk(p=>[...p,row]);const v=vehicles.find(x=>x.id===vid);const vModel=v?.model||v?.plate||"Veículo";db.sendPushToAdmins(`Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});}catch(e){errToast(e);}}}
       onToggleTask={async id=>{const t=tasks.find(x=>x.id===id);const nowDone=!t.done;const completedAt=nowDone?new Date().toISOString():null;const completedByEmployeeId=nowDone?liveEmp.id:null;setTsk(p=>p.map(x=>x.id===id?{...x,done:nowDone,completedAt,completedByEmployeeId}:x));try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});const v=vehicles.find(x=>x.id===t.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(nowDone){db.sendPushToAdmins(`✅ ${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`✅ ${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}else{db.sendPushToAdmins(`↩ ${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`🔄 ${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}pushToVehicleMechs(t.vehicleId,nowDone?`✅ Tarefa concluída — ${vModel}`:`↩ Tarefa reaberta — ${vModel}`,t.label,t.division);}catch(e){errToast(e);}}}
       onDeleteTask={async id=>{const t=tasks.find(x=>x.id===id);setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(t)db.sendPushToAdmins(`🗑 ${vModel}`,`Tarefa removida: ${t.label}`,"/?").catch(()=>{});if(t&&v?.clientId)db.sendPushToClient(v.clientId,`🗑 ${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}catch(e){errToast(e);}}}
-      onUpdateTask={async(id,patch)=>{setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);if(patch.materials){const t=tasks.find(x=>x.id===id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";const matNames=(patch.materials||[]).filter(m=>m.name).map(m=>m.name).join(", ");if(matNames)db.sendPushToAdmins(`📦 Material — ${vModel}`,`Materiais atualizados: ${matNames}`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
+      onUpdateTask={async(id,patch)=>{const tOld=tasks.find(x=>x.id===id);setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);if(patch.materials){const v=vehicles.find(x=>x.id===tOld?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";const added=addedMaterials(tOld?.materials,patch.materials);if(added.length)db.sendPushToAdmins(`📦 Material — ${vModel}`,`Material incluído: ${added.map(m=>m.name).join(", ")}`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
       onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);if("photos" in patch||"photosFinishing" in patch){const v=vehicles.find(x=>x.id===id);const vModel=v?.model||v?.plate||"Veículo";const div="photosFinishing" in patch?"Finishing":"Performance";db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
       onLogout={doLogout}
       purchaseOrders={purchaseOrders}
@@ -18113,9 +18119,13 @@ function MainApp() {
     }catch(e){ console.error("timeline:",e); }
   };
   const postMaterialsTimeline=(vehicleId,taskId,taskLabel,mats,actor)=>{
-    clearTimeout(matDebounce.current[taskId]);
-    matDebounce.current[taskId]=setTimeout(()=>{
-      const names=mats.map(m=>`${m.name}${m.qty!=null&&Number(m.qty)!==1?` ×${m.qty}`:""}`).join(", ");
+    const pend=matDebounce.current[taskId]||{items:[]};
+    clearTimeout(pend.timer);
+    pend.items=[...pend.items,...mats];
+    matDebounce.current[taskId]=pend;
+    pend.timer=setTimeout(()=>{
+      const all=pend.items; delete matDebounce.current[taskId];
+      const names=all.map(m=>`${m.name}${m.qty!=null&&Number(m.qty)!==1?` ×${m.qty}`:""}`).join(", ");
       if(names) postTimeline(vehicleId,{type:"materials",title:`Materiais — ${taskLabel}`,body:names,actor,color:B.purple});
     },2500);
   };
@@ -18263,18 +18273,18 @@ function MainApp() {
         const t2=tasks.find(x=>x.id===id);
         const oldMats=t2?.materials||[];
         const newMats=patch.materials;
-        const added=newMats.filter(m=>!oldMats.find(o=>o.name===m.name));
+        const added=addedMaterials(oldMats,newMats);
         if(added.length>0&&t2){
           postMaterialsTimeline(t2.vehicleId,id,t2.label,added,null);
         }
       }
-      // Notify admins when mechanic adds/changes materials
+      // Notify admins only when materials are included (edits don't count as a new launch)
       if(patch.materials){
         const t=tasks.find(x=>x.id===id);
         const v=vehicles.find(x=>x.id===t?.vehicleId);
         const vModel=v?.model||v?.plate||"Veículo";
-        const matNames=(patch.materials||[]).filter(m=>m.name).map(m=>m.name).join(", ");
-        if(matNames) db.sendPushToAdmins(`📦 Material — ${vModel}`,`Materiais atualizados: ${matNames}`,"/?").catch(()=>{});
+        const matNames=addedMaterials(t?.materials,patch.materials).map(m=>m.name).join(", ");
+        if(matNames) db.sendPushToAdmins(`📦 Material — ${vModel}`,`Material incluído: ${matNames}`,"/?").catch(()=>{});
       }
     }catch(e){errToast(e);}
   };

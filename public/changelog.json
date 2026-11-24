@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Materiais da tarefa: editar nome, marca, quantidade ou valor não aparece mais como novo lançamento na linha do tempo nem gera aviso de inclusão; vários materiais incluídos em seguida entram juntos em um só registro"
+      },
+      {
+        "type": "fix",
         "text": "Link de acompanhamento e link do histórico do veículo: carregam só os dados daquele carro, mais rápido e sem trazer informações de outros clientes; o histórico deixa de mostrar tarefas internas"
       },
       {

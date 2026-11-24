@@ -13628,7 +13628,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.206";
+const APP_VERSION = "2026.11.24.207";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17306,7 +17306,36 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
   );
 }
 
+// Links públicos do veículo (?v= acompanhamento, ?vh= histórico): carregam só os dados desse veículo
+// (db.loadPublicVehicle), sem passar pelo loadAll/realtime do app interno.
+function PublicVehicleRoot({vehicleId,history}) {
+  const [data,setData]=useState(null);
+  const [err,setErr]=useState(null);
+  useEffect(()=>{
+    let alive=true;
+    const load=()=>db.loadPublicVehicle(vehicleId).then(d=>{if(alive){setData(d);setErr(null);}}).catch(e=>{if(alive) setErr(e?.message||"Erro ao carregar");});
+    load();
+    const iv=setInterval(()=>{ if(document.visibilityState==="visible") load(); },60000);
+    const onVis=()=>{ if(document.visibilityState==="visible") load(); };
+    document.addEventListener("visibilitychange",onVis);
+    return()=>{alive=false;clearInterval(iv);document.removeEventListener("visibilitychange",onVis);};
+  },[vehicleId]);
+  if(!data&&err) return <ErrorScreen msg={err}/>;
+  if(!data) return <LoadingScreen/>;
+  const pubTasks=data.tasks.filter(t=>!isInternalTask(t));
+  if(history) return <div style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={vehicleId} vehicles={data.vehicles} tasks={pubTasks} employees={data.employees} osHistory={data.osHistory}/></ErrorBoundary></div>;
+  return <ErrorBoundary><PublicVehicleView vehicleId={vehicleId} vehicles={data.vehicles} tasks={pubTasks} employees={data.employees} clients={data.clients} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} purchaseOrders={data.purchaseOrders} stock={data.stock}/></ErrorBoundary>;
+}
+
 export default function App() {
+  const params=new URLSearchParams(window.location.search);
+  const pv=params.get("v"), pvh=params.get("vh");
+  if(pv) return <PublicVehicleRoot vehicleId={pv}/>;
+  if(pvh) return <PublicVehicleRoot vehicleId={pvh} history/>;
+  return <MainApp/>;
+}
+
+function MainApp() {
   // Inject responsive styles once
   useEffect(()=>{
     if(document.getElementById("osc-responsive-styles")) return;
@@ -17337,9 +17366,7 @@ export default function App() {
 
   // Check for public vehicle link
   const params=new URLSearchParams(window.location.search);
-  const publicVehicleId=params.get("v");
   const publicQuoteId=params.get("q");
-  const publicHistoryId=params.get("vh");
   const isMechanicPortal=params.get("portal")==="mecanico";
   const isClientPortal=params.get("portal")==="cliente";
 
@@ -17634,14 +17661,6 @@ export default function App() {
       await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});
       setQuotes(p=>p.map(x=>x.id===qid?{...x,status:"rejected"}:x));
     }}/></ErrorBoundary></>;
-  }
-  if(publicVehicleId){
-    if(loading) return <LoadingScreen/>;
-    return <><ErrorBoundary><PublicVehicleView vehicleId={publicVehicleId} vehicles={vehicles} tasks={tasks.filter(t=>!isInternalTask(t))} employees={employees} clients={clients} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock}/></ErrorBoundary></>;
-  }
-  if(publicHistoryId){
-    if(loading) return <LoadingScreen/>;
-    return <div key={theme} style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={publicHistoryId} vehicles={vehicles} tasks={tasks} employees={employees} osHistory={osHistory}/></ErrorBoundary></div>;
   }
   if(loading) return <LoadingScreen/>;
   if(loadError) return <ErrorScreen msg={loadError}/>;

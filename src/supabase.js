@@ -305,6 +305,51 @@ export const db = {
     };
   },
 
+  // Link público do veículo (?v= / ?vh=): carrega só o que esse veículo precisa,
+  // nunca a lista de clientes, pagamentos ou estoque da oficina inteira.
+  async loadPublicVehicle(vehicleId) {
+    const empty = { vehicles: [], tasks: [], employees: [], clients: [], payments: [], osHistory: [], purchaseOrders: [], stock: [], defaultRate: 0 };
+    if (!/^[0-9a-f-]{36}$/i.test(String(vehicleId || ""))) return empty;
+    const { data: veh, error: vErr } = await supabase.from("vehicles").select("*").eq("id", vehicleId).maybeSingle();
+    if (vErr) throw vErr;
+    if (!veh) return empty;
+    const [vmec, vown, tsk, pay, osh, po, set] = await Promise.all([
+      supabase.from("vehicle_mechanics").select("vehicle_id,employee_id").eq("vehicle_id", vehicleId),
+      supabase.from("vehicle_owners").select("client_id,is_current").eq("vehicle_id", vehicleId).eq("is_current", true),
+      supabase.from("tasks").select("*").eq("vehicle_id", vehicleId).order("created_at"),
+      supabase.from("payments").select("*").eq("vehicle_id", vehicleId).order("paid_at"),
+      supabase.from("os_history").select("*").eq("vehicle_id", vehicleId).order("delivered_at", { ascending: false }),
+      supabase.from("purchase_orders").select("id,vehicle_id,task_id,part_name,description,photo_url,quantity,status,created_at,ready_at,bought_at,received_at,consumed_at").eq("vehicle_id", vehicleId).order("created_at", { ascending: false }),
+      supabase.from("settings").select("default_rate").eq("id", 1).single(),
+    ]);
+    for (const r of [vmec, vown, tsk, pay, osh]) if (r.error) throw r.error;
+    const vehicle = mapVehicleIn(veh);
+    const mechIds = (vmec.data || []).map(r => r.employee_id);
+    vehicle.mechanicIds = mechIds.length ? mechIds : (veh.employee_id ? [veh.employee_id] : []);
+    vehicle.clientId = (vown.data || [])[0]?.client_id ?? veh.client_id;
+    vehicle.currentClientId = vehicle.clientId;
+    const tasks = (tsk.data || []).map(mapTaskIn);
+    const empIds = [...new Set([...vehicle.mechanicIds, ...tasks.map(t => t.completedByEmployeeId)].filter(Boolean))];
+    const purchaseOrders = (po.data || []).map(o => this._mapOrder(o));
+    const partNames = [...(vehicle.partsList || []), ...(vehicle.partsListFinishing || [])].map(p => p?.name).filter(Boolean);
+    const [emp, cli, stk] = await Promise.all([
+      empIds.length ? supabase.from("employees").select("id,name,division").in("id", empIds) : { data: [] },
+      vehicle.clientId ? supabase.from("clients").select("id,name").eq("id", vehicle.clientId) : { data: [] },
+      partNames.length ? supabase.from("stock").select("name,photo").in("name", partNames) : { data: [] },
+    ]);
+    return {
+      vehicles: [vehicle],
+      tasks,
+      employees: emp.data || [],
+      clients: cli.data || [],
+      payments: (pay.data || []).map(mapPaymentIn),
+      osHistory: osh.data || [],
+      purchaseOrders,
+      stock: (stk.data || []).map(s => ({ name: s.name, photo: s.photo || "" })),
+      defaultRate: set.data?.default_rate || 0,
+    };
+  },
+
   // Employees
   async addEmployee(name, phone, division="performance") {
     const { data, error } = await supabase.from("employees").insert({ name, phone, division }).select().single();

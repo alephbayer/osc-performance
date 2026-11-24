@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Link de acompanhamento e link do histórico do veículo: carregam só os dados daquele carro, mais rápido e sem trazer informações de outros clientes; o histórico deixa de mostrar tarefas internas"
+      },
+      {
+        "type": "fix",
         "text": "PDF de orçamento: sem ponto duplo no resumo, CNPJ formatado no cabeçalho, prazo uma vez só na capa, título cortado por palavra nas páginas de continuação e página de investimento mais compacta"
       },
       {

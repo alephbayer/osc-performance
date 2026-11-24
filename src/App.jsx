@@ -3427,7 +3427,7 @@ const IX     =({s=14,c="currentColor"})=><Svg d="M18 6L6 18M6 6l12 12" s={s} c={
 function pushNewPurchaseItem(item) {
   try{
     const qty=item?.quantity>1?` · ${item.quantity}x`:"";
-    db.sendPushToAdmins("🛒 Novo pedido de compra",`${item?.name||"Item"}${qty}`,"/?").catch(()=>{});
+    db.sendPushToAdmins("Novo pedido de compra",`${item?.name||"Item"}${qty}`,"/?").catch(()=>{});
   }catch(e){}
 }
 
@@ -3546,7 +3546,7 @@ const IKey=({k,s=12,c="currentColor"})=>{
   if(k==="cart")  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>;
   if(k==="box")   return <IBox s={s} c={c}/>;
   if(k==="gear")  return <IGear s={s} c={c}/>;
-  return null;
+  return PV_IC[k]?<Ic n={k} s={s} c={c}/>:null;
 };
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
@@ -8048,7 +8048,7 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
           {sp.cnpj&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{sp.cnpj}</span>}
           {sp.phone&&<a href={wa?`https://wa.me/${wa.length<=11?"55"+wa:wa}`:undefined} target="_blank" rel="noreferrer" style={{background:B.gray700,borderRadius:5,padding:"1px 7px",color:B.green,textDecoration:"none"}}><Ic n="phone"/> {sp.phone}</a>}
           {sp.contact&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}><Ic n="user"/> {sp.contact}</span>}
-          {sp.email&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>✉ {sp.email}</span>}
+          {sp.email&&<span style={{background:B.gray700,borderRadius:5,padding:"1px 7px"}}>{sp.email}</span>}
         </div>
         {sp.address&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{sp.address}</div>}
         {sp.notes&&<div style={{fontSize:11,color:B.gray500,marginTop:4,fontStyle:"italic",whiteSpace:"pre-wrap"}}>{sp.notes}</div>}
@@ -8371,7 +8371,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
               <div style={{fontWeight:700,fontSize:14,color:B.white}}>{cli.name}</div>
               <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:2}}>
                 {cli.phone&&<span style={{fontSize:11,color:B.wa}}><Ic n="phone"/> {cli.phone}</span>}
-                {cli.email&&<span style={{fontSize:11,color:B.gray400}}>✉ {cli.email}</span>}
+                {cli.email&&<span style={{fontSize:11,color:B.gray400}}>{cli.email}</span>}
               </div>
             </div>
             <div style={{textAlign:"right",flexShrink:0,marginRight:6}}>
@@ -9666,7 +9666,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
           <div style={{padding:"8px 14px",borderTop:`1px solid ${B.gray800}`,display:"flex",gap:6,flexWrap:"wrap"}}>
             {isEditable&&<button onClick={()=>{setShowNew(true);setForm({...q,_editing:q.id});setExpandedQuotes(p=>({...p,[q.id]:false}));}}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.orange}18`,border:`1px solid ${B.orange}33`,color:B.orange,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              ✏️ Editar
+              <Ic n="note"/> Editar
             </button>}
             {!isConverted&&<button onClick={()=>copyLink(q.id)}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.blue}18`,border:`1px solid ${B.blue}33`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
@@ -10948,10 +10948,10 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 const PRIORITY_LABELS = ["","Urgente","Alta","Média","Baixa","Futura"];
 const PRIORITY_COLORS = ["","#ef4444","#f97316","#eab308","#22c55e","#6b7280"];
 const INV_STATUS = {
-  pending:  {label:"Pendente",  color:"#f59e0b", icon:"⏳", next:"approved",  nextLabel:"Aprovar"},
+  pending:  {label:"Pendente",  color:"#f59e0b", icon:"hourglass", next:"approved",  nextLabel:"Aprovar"},
   approved: {label:"Aprovado",  color:"#3b82f6", icon:"check", next:"bought",    nextLabel:"Marcar comprado"},
   bought:   {label:"Comprado",  color:"#8b5cf6", icon:"cart", next:"received",  nextLabel:"Marcar recebido"},
-  received: {label:"Recebido",  color:"#22c55e", icon:"🎉", next:null,        nextLabel:null},
+  received: {label:"Recebido",  color:"#22c55e", icon:"ready", next:null,        nextLabel:null},
 };
 
 // ─── Investment Form Panel (top-level to avoid keyboard dismissal) ────────────
@@ -11439,7 +11439,7 @@ function PurchaseOrderPanel({vehicleId,tasks,onAdd,orders=[],stock=[],onConsumeS
 
 // ─── Purchase Orders Tab ──────────────────────────────────────────────────────
 const PO_STATUS = {
-  pending:       { label:"Aguardando aprovação", color:"#f59e0b", icon:"⏳",   next:"approved",      nextLabel:"Aprovar pedido"    },
+  pending:       { label:"Aguardando aprovação", color:"#f59e0b", icon:"hourglass", next:"approved",      nextLabel:"Aprovar pedido"    },
   approved:      { label:"Aprovado",             color:"#3b82f6", icon:"check", next:"ready_to_buy",  nextLabel:"Pronto p/ compra"  },
   ready_to_buy:  { label:"Pronto p/ compra",     color:"#6366f1", icon:"cart",  next:"bought",        nextLabel:"Marcar comprado"   },
   bought:        { label:"Comprado",             color:"#8b5cf6", icon:"box",   next:"received",      nextLabel:"Marcar recebido"   },
@@ -11910,7 +11910,7 @@ function ExpensesPanel({expenses=[],onAdd,onUpdate,onDelete}) {
             </div>
           </div>
           <div style={{fontSize:13,fontWeight:800,color:B.red,flexShrink:0}}>{fmtBRL(e.amount)}</div>
-          <button onClick={()=>startEdit(e)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,fontSize:12}} title="Editar">✏️</button>
+          <button onClick={()=>startEdit(e)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,fontSize:12}} title="Editar"><Ic n="note"/></button>
           <button onClick={()=>onDelete(e.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4}} title="Remover">
             <ITrash s={14}/>
           </button>
@@ -13751,7 +13751,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.217";
+const APP_VERSION = "2026.11.24.218";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14283,7 +14283,7 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
     <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",border:`2px solid ${B.green}55`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
       {/* Header */}
       <div style={{background:B.gray900,borderBottom:`2px solid ${B.green}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:36,height:36,borderRadius:9,background:`${B.green}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>✚</div>
+        <div style={{width:36,height:36,borderRadius:9,background:`${B.green}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>+</div>
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:15,color:B.white}}>Tarefa rápida</div>
           <div style={{fontSize:11,color:B.gray400}}>Adicione sem precisar abrir o veículo</div>
@@ -14343,7 +14343,7 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
         {/* Save */}
         <button onClick={save} disabled={!selectedId||!label.trim()||saving}
           style={{width:"100%",padding:"13px 0",borderRadius:10,background:selectedId&&label.trim()?B.green:B.gray700,border:"none",color:selectedId&&label.trim()?B.white:B.gray500,fontWeight:800,fontSize:15,cursor:selectedId&&label.trim()?"pointer":"not-allowed"}}>
-          {saving?"Salvando…":"✚ Adicionar tarefa"}
+          {saving?"Salvando…":"+ Adicionar tarefa"}
         </button>
         <div style={{fontSize:11,color:B.gray500,textAlign:"center",marginTop:-8}}>Pressione Enter para salvar e adicionar outra</div>
       </div>
@@ -14760,7 +14760,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         {qn&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{vts.length} resultado{vts.length!==1?"s":""} de {allVts.length} tarefa{allVts.length!==1?"s":""}</div>}
       </div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-        {tabBtn("board","▦ Quadro")}{tabBtn("lanes","☰ Categorias")}{tabBtn("cats","▥ Blocos")}{tabBtn("full","OS completa")}
+        {tabBtn("board","Quadro")}{tabBtn("lanes","Categorias")}{tabBtn("cats","Blocos")}{tabBtn("full","OS completa")}
         {managerMode&&onAddTask&&view!=="full"&&<button onClick={()=>setNewTaskOpen(true)} style={{marginLeft:"auto",padding:"7px 14px",borderRadius:8,border:"none",background:accent,color:B.white,fontWeight:800,fontSize:12,cursor:"pointer"}}>+ Nova tarefa</button>}
       </div>
       {newTaskOpen&&<NewTaskModal isFD={isFD} defaultRate={defaultRate} onClose={()=>setNewTaskOpen(false)} onSave={(label,cat,extra)=>onAddTask(vehicle.id,label,cat,div,extra)}/>}
@@ -15456,7 +15456,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
           {/* Mode toggle */}
           <div style={{display:"flex",gap:6}}>
             <button onClick={()=>setMatMode("manual")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${matMode==="manual"?B.blue:B.gray600}`,background:matMode==="manual"?`${B.blue}22`:"none",color:matMode==="manual"?B.blue:B.gray400,fontWeight:700,fontSize:12,cursor:"pointer"}}>
-              ✏️ Manual
+              <Ic n="note"/> Manual
             </button>
             <button onClick={()=>setMatMode("stock")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${matMode==="stock"?B.purple:B.gray600}`,background:matMode==="stock"?`${B.purple}22`:"none",color:matMode==="stock"?B.purple:B.gray400,fontWeight:700,fontSize:12,cursor:"pointer"}}>
               <Ic n="store"/> Do estoque
@@ -17122,7 +17122,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
             <div style={{fontWeight:700,fontSize:14,color:B.white}}>{item.name}</div>
             <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{item.category} · {fmtBRL(Number(item.price))}</div>
           </div>
-          <button onClick={()=>openShelfForm(item)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:13}}>✏️</button>
+          <button onClick={()=>openShelfForm(item)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:13}}><Ic n="note"/></button>
           <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}><Ic n="trash"/></button>
         </div>
       ))}
@@ -17876,13 +17876,13 @@ function MainApp() {
     if(!liveEmp) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><MechanicLoginScreen employees={employees} onLogin={doLogin}/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
     return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><MechanicPortal employee={liveEmp} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} stock={stock}
       onAddTask={async(vid,lbl)=>{try{const div=liveEmp.division||"performance";const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:div==="finishing"?1:0,ratePerHour:null,completedAt:null,division:div,rateType:div==="finishing"?"qty":"hour"});setTsk(p=>[...p,row]);const v=vehicles.find(x=>x.id===vid);const vModel=v?.model||v?.plate||"Veículo";db.sendPushToAdmins(`Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});}catch(e){errToast(e);}}}
-      onToggleTask={async id=>{const t=tasks.find(x=>x.id===id);const nowDone=!t.done;const completedAt=nowDone?new Date().toISOString():null;const completedByEmployeeId=nowDone?liveEmp.id:null;setTsk(p=>p.map(x=>x.id===id?{...x,done:nowDone,completedAt,completedByEmployeeId}:x));try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});const v=vehicles.find(x=>x.id===t.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(nowDone){db.sendPushToAdmins(`✅ ${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`✅ ${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}else{db.sendPushToAdmins(`↩ ${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`🔄 ${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}pushToVehicleMechs(t.vehicleId,nowDone?`✅ Tarefa concluída — ${vModel}`:`↩ Tarefa reaberta — ${vModel}`,t.label,t.division);}catch(e){errToast(e);}}}
-      onDeleteTask={async id=>{const t=tasks.find(x=>x.id===id);setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(t)db.sendPushToAdmins(`🗑 ${vModel}`,`Tarefa removida: ${t.label}`,"/?").catch(()=>{});if(t&&v?.clientId)db.sendPushToClient(v.clientId,`🗑 ${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}catch(e){errToast(e);}}}
-      onUpdateTask={async(id,patch)=>{const tOld=tasks.find(x=>x.id===id);setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);if(patch.materials){const v=vehicles.find(x=>x.id===tOld?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";const added=addedMaterials(tOld?.materials,patch.materials);if(added.length)db.sendPushToAdmins(`📦 Material — ${vModel}`,`Material incluído: ${added.map(m=>m.name).join(", ")}`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
-      onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);if("photos" in patch||"photosFinishing" in patch){const v=vehicles.find(x=>x.id===id);const vModel=v?.model||v?.plate||"Veículo";const div="photosFinishing" in patch?"Finishing":"Performance";db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
+      onToggleTask={async id=>{const t=tasks.find(x=>x.id===id);const nowDone=!t.done;const completedAt=nowDone?new Date().toISOString():null;const completedByEmployeeId=nowDone?liveEmp.id:null;setTsk(p=>p.map(x=>x.id===id?{...x,done:nowDone,completedAt,completedByEmployeeId}:x));try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});const v=vehicles.find(x=>x.id===t.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(nowDone){db.sendPushToAdmins(`${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}else{db.sendPushToAdmins(`${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}pushToVehicleMechs(t.vehicleId,nowDone?`Tarefa concluída — ${vModel}`:`Tarefa reaberta — ${vModel}`,t.label,t.division);}catch(e){errToast(e);}}}
+      onDeleteTask={async id=>{const t=tasks.find(x=>x.id===id);setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(t)db.sendPushToAdmins(`${vModel}`,`Tarefa removida: ${t.label}`,"/?").catch(()=>{});if(t&&v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}catch(e){errToast(e);}}}
+      onUpdateTask={async(id,patch)=>{const tOld=tasks.find(x=>x.id===id);setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);if(patch.materials){const v=vehicles.find(x=>x.id===tOld?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";const added=addedMaterials(tOld?.materials,patch.materials);if(added.length)db.sendPushToAdmins(`Material — ${vModel}`,`Material incluído: ${added.map(m=>m.name).join(", ")}`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
+      onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);if("photos" in patch||"photosFinishing" in patch){const v=vehicles.find(x=>x.id===id);const vModel=v?.model||v?.plate||"Veículo";const div="photosFinishing" in patch?"Finishing":"Performance";db.sendPushToAdmins(`Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
       onLogout={doLogout}
       purchaseOrders={purchaseOrders}
-      onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(e){errToast(e);}}}
+      onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(e){errToast(e);}}}
       /></ErrorBoundary><GlobalErrorDisplay/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>
   }
 
@@ -17991,7 +17991,7 @@ function MainApp() {
         const v=vehicles.find(x=>x.id===id);
         const vModel=v?.model||v?.plate||"Veículo";
         const div="photosFinishing" in patch?"Finishing":"Performance";
-        db.sendPushToAdmins(`📷 Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});
+        db.sendPushToAdmins(`Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});
         postTimeline(id,{type:"photo",title:"Fotos adicionadas",body:div,actor:null,color:"#6366f1"});
       }
       // Notify mechanics when vehicle is marked urgent
@@ -17999,7 +17999,7 @@ function MainApp() {
         const v=vehicles.find(x=>x.id===id);
         const vModel=v?.model||v?.plate||"Veículo";
         (v?.mechanicIds||[]).forEach(eid=>{
-          db.sendPushToEmployee(eid,`⚡ Prioridade — ${vModel}`,"Este veículo foi marcado como urgente.","/?portal=mecanico").catch(()=>{});
+          db.sendPushToEmployee(eid,`Prioridade — ${vModel}`,"Este veículo foi marcado como urgente.","/?portal=mecanico").catch(()=>{});
         });
       }
       toast_(("photos" in patch||"photosFinishing" in patch)?"Foto salva ✓":"Salvo ✓");
@@ -18063,8 +18063,8 @@ function MainApp() {
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
       if(newStatus==="ready"){
-        db.sendPushToAdmins(`✅ Pronto — ${vModel}`,"Veículo concluiu todos os serviços e está pronto para entrega.","/?").catch(()=>{});
-        if(v?.clientId) db.sendPushToClient(v.clientId,`✅ ${vModel} — Pronto!`,"Seu veículo concluiu todos os serviços e está pronto para retirada!",`/?v=${vid}`).catch(()=>{});
+        db.sendPushToAdmins(`Pronto — ${vModel}`,"Veículo concluiu todos os serviços e está pronto para entrega.","/?").catch(()=>{});
+        if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — Pronto!`,"Seu veículo concluiu todos os serviços e está pronto para retirada!",`/?v=${vid}`).catch(()=>{});
       } else {
         const statusLabel=newStatus==="paused"?"pausado (Performance)":"▶ retomado (Performance)";
         const statusMsg=newStatus==="paused"?"O serviço de performance foi pausado.":"O serviço de performance foi retomado.";
@@ -18176,8 +18176,8 @@ function MainApp() {
       setPay(d.payments||[]);
       toast_("Veículo entregue e OS arquivada ✓");
       const vModel=v?.model||v?.plate||"Veículo";
-      pushToVehicleMechs(vid,`🏁 OS encerrada — ${vModel}`,"O veículo foi entregue ao cliente.","performance");
-      if(v?.clientId) db.sendPushToClient(v.clientId,`🏁 ${vModel} pronto!`,"Seu veículo foi entregue. Obrigado pela preferência!",`/?portal=cliente`).catch(()=>{});
+      pushToVehicleMechs(vid,`OS encerrada — ${vModel}`,"O veículo foi entregue ao cliente.","performance");
+      if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} pronto!`,"Seu veículo foi entregue. Obrigado pela preferência!",`/?portal=cliente`).catch(()=>{});
     }catch(e){
       errToast(e);
       // Reload from DB to restore correct state
@@ -18203,8 +18203,8 @@ function MainApp() {
       toast_(`OS ${fmtOS(osNumber)} aberta ✓`);
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
-      if(employeeId) db.sendPushToEmployee(employeeId,`🔧 Nova OS — ${vModel}`,`${fmtOS(osNumber)} foi aberta para você.`,"/?portal=mecanico").catch(()=>{});
-      db.sendPushToAdmins(`🔧 OS aberta — ${vModel}`,`${fmtOS(osNumber)} iniciada.`,"/?").catch(()=>{});
+      if(employeeId) db.sendPushToEmployee(employeeId,`Nova OS — ${vModel}`,`${fmtOS(osNumber)} foi aberta para você.`,"/?portal=mecanico").catch(()=>{});
+      db.sendPushToAdmins(`OS aberta — ${vModel}`,`${fmtOS(osNumber)} iniciada.`,"/?").catch(()=>{});
     }catch(e){ errToast(e); }
   };
 
@@ -18225,8 +18225,8 @@ function MainApp() {
       toast_(`${fmtOSFD(osNumber)} Finishing aberta ✓`);
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
-      if(employeeId) db.sendPushToEmployee(employeeId,`🎨 Nova OS Finishing — ${vModel}`,`${fmtOSFD(osNumber)} foi aberta para você.`,"/?portal=mecanico").catch(()=>{});
-      db.sendPushToAdmins(`🎨 OS Finishing aberta — ${vModel}`,`${fmtOSFD(osNumber)} iniciada.`,"/?").catch(()=>{});
+      if(employeeId) db.sendPushToEmployee(employeeId,`Nova OS Finishing — ${vModel}`,`${fmtOSFD(osNumber)} foi aberta para você.`,"/?portal=mecanico").catch(()=>{});
+      db.sendPushToAdmins(`OS Finishing aberta — ${vModel}`,`${fmtOSFD(osNumber)} iniciada.`,"/?").catch(()=>{});
     }catch(e){ errToast(e); }
   };
 
@@ -18258,7 +18258,7 @@ function MainApp() {
       toast_("Finishing encerrada e OS arquivada ✓");
       const vFin=vehicles.find(x=>x.id===vid);
       const vModelFin=vFin?.model||vFin?.plate||"Veículo";
-      pushToVehicleMechs(vid,`🏁 OS Finishing encerrada — ${vModelFin}`,"O veículo foi entregue ao cliente.","finishing");
+      pushToVehicleMechs(vid,`OS Finishing encerrada — ${vModelFin}`,"O veículo foi entregue ao cliente.","finishing");
     }catch(e){
       errToast(e);
       // Reload from DB to restore correct state
@@ -18277,8 +18277,8 @@ function MainApp() {
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
       pushToVehicleMechs(vid,`Nova tarefa — ${vModel}`,lbl,division);
-      db.sendPushToAdmins(`🔧 Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});
-      if(v?.clientId) db.sendPushToClient(v.clientId,`🔧 Novo serviço — ${vModel}`,lbl,`/?v=${vid}`).catch(()=>{});
+      db.sendPushToAdmins(`Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});
+      if(v?.clientId) db.sendPushToClient(v.clientId,`Novo serviço — ${vModel}`,lbl,`/?v=${vid}`).catch(()=>{});
       // Timeline: task added
       const catColor=category?(CAT_MAP?.[category]||B.blue):B.blue;
       postTimeline(vid,{type:"task_added",title:`${lbl}`,body:"Serviço incluído na OS",actor:adminRole==="owner"?"Gestor":"Admin",category:category||null,color:catColor});
@@ -18296,7 +18296,7 @@ function MainApp() {
         if(v?.clientId){
           const vModel=v.model||v.plate||"Veículo";
           const body=event.body?.slice(0,80)+(event.body?.length>80?"…":"");
-          db.sendPushToClient(v.clientId,`💬 ${vModel}`,body,`/?v=${vehicleId}`).catch(()=>{});
+          db.sendPushToClient(v.clientId,`${vModel}`,body,`/?v=${vehicleId}`).catch(()=>{});
         }
       }
     }catch(e){ console.error("timeline:",e); }
@@ -18324,10 +18324,10 @@ function MainApp() {
       const v=vehicles.find(x=>x.id===t.vehicleId);
       const vModel=v?.model||v?.plate||"Veículo";
       if(nowDone) {
-        pushToVehicleMechs(t.vehicleId,`✅ Tarefa concluída — ${vModel}`,t.label,t.division);
-        db.sendPushToAdmins(`✅ ${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});
+        pushToVehicleMechs(t.vehicleId,`Tarefa concluída — ${vModel}`,t.label,t.division);
+        db.sendPushToAdmins(`${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});
         const v2=vehicles.find(x=>x.id===t.vehicleId);
-        if(v2?.clientId) db.sendPushToClient(v2.clientId,`✅ ${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
+        if(v2?.clientId) db.sendPushToClient(v2.clientId,`${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
         // Timeline: task completed
         const actor=employees.find(e=>e.id===signerEmployeeId)?.name||null;
         const catColor=t.category?(CAT_MAP?.[t.category]||B.green):B.green;
@@ -18348,12 +18348,12 @@ function MainApp() {
           }
         }
       } else {
-        pushToVehicleMechs(t.vehicleId,`↩ Tarefa reaberta — ${vModel}`,t.label,t.division);
-        db.sendPushToAdmins(`↩ ${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});
+        pushToVehicleMechs(t.vehicleId,`Tarefa reaberta — ${vModel}`,t.label,t.division);
+        db.sendPushToAdmins(`${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});
         const catColor=t.category?(CAT_MAP?.[t.category]||B.amber):B.amber;
         postTimeline(t.vehicleId,{type:"task_update",title:`↩ ${t.label}`,body:"Serviço reaberto",actor:null,category:t.category||null,color:catColor});
         const v2=vehicles.find(x=>x.id===t.vehicleId);
-        if(v2?.clientId) db.sendPushToClient(v2.clientId,`🔄 ${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
+        if(v2?.clientId) db.sendPushToClient(v2.clientId,`${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
       }
     }catch(e){errToast(e);}
   };
@@ -18373,9 +18373,9 @@ function MainApp() {
       await db.deleteTask(id);
       const v=vehicles.find(x=>x.id===t?.vehicleId);
       const vModel=v?.model||v?.plate||"Veículo";
-      if(t) pushToVehicleMechs(t.vehicleId,`🗑 Tarefa removida — ${vModel}`,t.label,t.division);
-      if(t) db.sendPushToAdmins(`🗑 Tarefa removida — ${vModel}`,t.label,"/?").catch(()=>{});
-      if(t&&v?.clientId) db.sendPushToClient(v.clientId,`🗑 ${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
+      if(t) pushToVehicleMechs(t.vehicleId,`Tarefa removida — ${vModel}`,t.label,t.division);
+      if(t) db.sendPushToAdmins(`Tarefa removida — ${vModel}`,t.label,"/?").catch(()=>{});
+      if(t&&v?.clientId) db.sendPushToClient(v.clientId,`${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
     }catch(e){errToast(e);}
   };
   const updTask=async(id,patch)=>{
@@ -18467,7 +18467,7 @@ function MainApp() {
         const v=vehicles.find(x=>x.id===t?.vehicleId);
         const vModel=v?.model||v?.plate||"Veículo";
         const matNames=addedMaterials(t?.materials,patch.materials).map(m=>m.name).join(", ");
-        if(matNames) db.sendPushToAdmins(`📦 Material — ${vModel}`,`Material incluído: ${matNames}`,"/?").catch(()=>{});
+        if(matNames) db.sendPushToAdmins(`Material — ${vModel}`,`Material incluído: ${matNames}`,"/?").catch(()=>{});
       }
     }catch(e){errToast(e);}
   };
@@ -18761,7 +18761,7 @@ function MainApp() {
                 const o=purchaseOrders.find(x=>x.id===id);
                 const v=vehicles.find(x=>x.id===o?.vehicleId);
                 const st=PO_STATUS[patch.status]||{icon:"↩",label:"Devolvido"};
-                if(o?.employeeId) db.sendPushToEmployee(o.employeeId,`${st.icon} Pedido atualizado — ${v?.model||"Veículo"}`,`${o.partName}: ${patch.status==="pending"?"Item devolvido — pedido reiniciado":st.label}`,"/?portal=mecanico").catch(()=>{});
+                if(o?.employeeId) db.sendPushToEmployee(o.employeeId,`Pedido atualizado — ${v?.model||"Veículo"}`,`${o.partName}: ${patch.status==="pending"?"Item devolvido — pedido reiniciado":st.label}`,"/?portal=mecanico").catch(()=>{});
               }
             }catch(err){errToast(err);}
           };
@@ -18820,7 +18820,7 @@ function MainApp() {
               const u=await db.updatePurchaseOrder(po.id,{status:"received",costPrice:unit});
               setPurchaseOrders(p=>p.map(o=>o.id===po.id?u:o));
               const v=vehicles.find(x=>x.id===po.vehicleId);
-              if(po.employeeId) db.sendPushToEmployee(po.employeeId,`✅ Pedido atualizado — ${v?.model||"Veículo"}`,`${po.partName}: ${PO_STATUS.received.label}`,"/?portal=mecanico").catch(()=>{});
+              if(po.employeeId) db.sendPushToEmployee(po.employeeId,`Pedido atualizado — ${v?.model||"Veículo"}`,`${po.partName}: ${PO_STATUS.received.label}`,"/?portal=mecanico").catch(()=>{});
               await poReserve({...po,status:"received",costPrice:unit},"Na oficina — a definir");
               toast_(`"${po.partName}" recebido — entrega confirmada no Mercado Livre ✓`);
             }
@@ -18898,7 +18898,7 @@ function MainApp() {
       await insertPayment(p);
       toast_(`Pagamento de ${fmtBRL(p.amount)} registrado ✓`);
       const v=vehicles.find(x=>x.id===p.vehicleId);
-      if(v?.clientId) db.sendPushToClient(v.clientId,`💰 Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${p.method}`,`/?portal=cliente`).catch(()=>{});
+      if(v?.clientId) db.sendPushToClient(v.clientId,`Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${p.method}`,`/?portal=cliente`).catch(()=>{});
       postTimeline(p.vehicleId,{type:"payment",title:`Pagamento — ${fmtBRL(p.amount)}`,body:p.method||"",actor:null,color:B.green});
     }
     catch(e){errToast(e);}
@@ -19574,7 +19574,7 @@ function MainApp() {
                 onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}
                 onDelete={delEmp} onSendWA={sendMechWA} onUpdatePhone={updEmpP} onUpdateName={updEmpN} onUpdateDivision={updEmpDiv}
                 onUpdateSpecialty={async(id,specialty)=>{try{await db.updateEmployee(id,{specialty});setEmp(p=>p.map(e=>e.id===id?{...e,specialty}:e));toast_("Especialidade atualizada ✓");}catch(err){errToast(err);}}}
-                purchaseOrders={purchaseOrders} onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}/>)}
+                purchaseOrders={purchaseOrders} onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}/>)}
           </>}
       </>}
 
@@ -19772,7 +19772,7 @@ function MainApp() {
             setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} deliverVehicleFinishing={deliverVehicleFinishing} adminRole={adminRole}
             searching={!!osSearch} purchaseOrders={purchaseOrders} onOpenOS={openNewOS}
             onPostTimeline={postTimeline}
-            onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}
+            onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}
             />}</>;
         })()}
       </>}
@@ -19824,7 +19824,7 @@ function MainApp() {
               onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
               onDeliver={deliverVehicleFinishing} onDeliverFinishing={deliverVehicleFinishing}
               isOwner={adminRole==="owner"} division="finishing"
-              onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders} onPostTimeline={postTimeline}/>)}
+              onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders} onPostTimeline={postTimeline}/>)}
           </div>;
         })()}
       </>}
@@ -20182,7 +20182,7 @@ function MainApp() {
             const r=await db.addPurchaseOrder({vehicleId,taskId:form.taskId||null,partName:form.partName.trim(),description:form.description.trim(),quantity:parseInt(form.quantity)||1,photoUrl:""});
             setPurchaseOrders(prev=>[r,...prev]);
             const v=vehicles.find(x=>x.id===vehicleId);
-            db.sendPushToAdmins(`🛒 Pedido — ${v?.model||"Veículo"}`,form.partName,"/?").catch(()=>{});
+            db.sendPushToAdmins(`Pedido — ${v?.model||"Veículo"}`,form.partName,"/?").catch(()=>{});
             toast_(`Pedido "${form.partName}" criado ✓`);
             setShowQuickPedidoOS(false);
           }catch(e){errToast(e);}

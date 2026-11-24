@@ -222,11 +222,11 @@ function ClientLoginScreen({onLogin}) {
             Seu número de WhatsApp
           </label>
           <input value={phone} onChange={e=>{setPhone(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&tryPhone()}
-            placeholder="Ex: 5511999998888" autoFocus
+            placeholder="Ex: (21) 99999-8888" inputMode="tel" autoFocus
             style={{width:"100%",minHeight:48,padding:"0 14px",borderRadius:12,border:`1px solid ${err?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:15,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
           {err&&<div style={{color:B.red,fontSize:12,marginTop:8}}>{err}</div>}
           <button onClick={tryPhone} disabled={busy} style={{opacity:busy?.6:1,width:"100%",marginTop:16,minHeight:46,borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>Continuar</button>
-          <div style={{marginTop:14,fontSize:11.5,color:B.gray500,textAlign:"center",lineHeight:1.5}}>Use o mesmo número cadastrado pela oficina, com DDI e DDD (ex: 55119...)</div>
+          <div style={{marginTop:14,fontSize:11.5,color:B.gray500,textAlign:"center",lineHeight:1.5}}>Use o mesmo número cadastrado pela oficina, com DDD</div>
         </>}
 
         {step==="pin"&&<>
@@ -506,11 +506,12 @@ function ClientNotesTab({client, vehicles}) {
   </>);
 }
 
+const OSC_WA="5521966816241"; // WhatsApp da oficina (portal do cliente)
 // ─── Client Portal ────────────────────────────────────────────────────────────
 function PixPaymentBox() {
   const [copied,setCopied]=useState(false);
   const pix="23783927000140";
-  const wa="5521966816241";
+  const wa=OSC_WA;
   const copy=()=>{navigator.clipboard?.writeText(pix).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});};
   return(
     <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:16,padding:"18px",marginBottom:16}}>
@@ -533,6 +534,7 @@ function PixPaymentBox() {
   );
 }
 
+const PUSH_DISMISS_KEY="osc_portal_push_dismissed";
 function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[],clients=[],purchaseOrders=[],stock=[],onVehiclePhoto}) {
   const [openVid,setOpenVid]=useState(null);
   const [tab,setTab]=useState("active");
@@ -544,10 +546,15 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   useEffect(()=>{
     if(!VAPID_PUBLIC_KEY) return;
     navigator.serviceWorker?.register("/sw.js",{scope:"/"}).catch(()=>{});
+    const dismissed=(()=>{ try{ return Date.now()-Number(localStorage.getItem(PUSH_DISMISS_KEY)||0)<30*86400000; }catch{ return false; } })();
+    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent||"");
+    const standalone=window.navigator.standalone===true||window.matchMedia?.("(display-mode: standalone)").matches;
     getPushSubscription().then(sub=>{
       if(sub) setPushStatus("granted");
       else if("Notification" in window && Notification.permission==="denied") setPushStatus("denied");
+      else if(dismissed) setPushStatus("denied");
       else if("PushManager" in window) setPushStatus("asking");
+      else if(ios&&!standalone) setPushStatus("ios"); // no iPhone, notificação só funciona com o portal na Tela de Início
     });
   },[]);
 
@@ -561,6 +568,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
     // aviso de saldo em aberto agora aparece como cartão na tela inicial
   },[]);
 
+  const dismissPush=()=>{ try{ localStorage.setItem(PUSH_DISMISS_KEY,String(Date.now())); }catch{} setPushStatus("denied"); };
   const requestPush=async()=>{
     const perm=await Notification.requestPermission();
     if(perm!=="granted"){ setPushStatus("denied"); return; }
@@ -660,7 +668,11 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 :<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>}
           </button>}
-          <button onClick={onLogout} title="Sair" aria-label="Sair" style={{width:34,height:34,borderRadius:99,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <a href={`https://wa.me/${OSC_WA}?text=${encodeURIComponent(`Olá! Aqui é ${client.name||""}.`)}`} target="_blank" rel="noreferrer" title="Falar com a oficina" aria-label="Falar com a oficina"
+            style={{width:34,height:34,borderRadius:99,border:`1px solid ${B.gray700}`,color:B.gray400,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,textDecoration:"none"}}>
+            <Ic n="chat" s={15}/>
+          </a>
+          <button onClick={()=>{ if(window.confirm("Sair do portal? Para entrar de novo será preciso o PIN.")) onLogout(); }} title="Sair" aria-label="Sair" style={{width:34,height:34,borderRadius:99,background:"none",border:`1px solid ${B.gray700}`,color:B.gray400,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <ILogout s={14} c={B.gray400}/>
           </button>
         </div>
@@ -678,7 +690,15 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           <div style={{fontSize:11,color:B.gray400}}>Receba alertas sobre seus veículos em tempo real.</div>
         </div>
         <button onClick={requestPush} style={{padding:"6px 14px",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer",flexShrink:0}}>Ativar</button>
-        <button onClick={()=>setPushStatus("denied")} style={{padding:"6px 10px",borderRadius:7,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontSize:11,cursor:"pointer",flexShrink:0}}>Agora não</button>
+        <button onClick={dismissPush} style={{padding:"6px 10px",borderRadius:7,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontSize:11,cursor:"pointer",flexShrink:0}}>Agora não</button>
+      </div>}
+      {pushStatus==="ios"&&VAPID_PUBLIC_KEY&&<div style={{marginBottom:14,padding:"12px 14px",background:`${B.blue}12`,border:`1px solid ${B.blue}33`,borderRadius:10,display:"flex",alignItems:"flex-start",gap:10}}>
+        <span style={{color:B.blue,flexShrink:0,marginTop:1,display:"flex"}}><Ic n="bell" s={18}/></span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12,fontWeight:700,color:B.white}}>Receber avisos no iPhone</div>
+          <div style={{fontSize:11,color:B.gray400,lineHeight:1.55,marginTop:2}}>No Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início". Abra o portal pelo ícone criado, entre com seu PIN e ative as notificações.</div>
+        </div>
+        <button onClick={dismissPush} aria-label="Fechar" style={{background:"none",border:"none",color:B.gray500,cursor:"pointer",padding:2,flexShrink:0,display:"flex"}}><Ic n="xc" s={16}/></button>
       </div>}
 
       {/* ── Active OS ── */}
@@ -722,6 +742,15 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
             })}
           </>);
         })()}
+        {(cliAppts.length>0||cliParts.length>0)&&<div style={{display:"flex",flexDirection:"column",gap:8,marginTop:26}}>
+          {[...(cliAppts.length>0?[{k:"appts",ic:"cal",t:"Agendamentos",n:cliAppts.length}]:[]),...(cliParts.length>0?[{k:"parts",ic:"pkg",t:"Peças reservadas",n:cliParts.length}]:[])].map(r=>(
+            <button key={r.k} onClick={()=>{setTab(r.k);try{window.scrollTo({top:0});}catch{}}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",textAlign:"left",padding:"12px 14px",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,cursor:"pointer",fontFamily:"inherit",color:B.white}}>
+              <span style={{color:B.gray400,display:"flex"}}><Ic n={r.ic} s={18}/></span>
+              <span style={{flex:1,fontSize:13,fontWeight:700}}>{r.t}</span>
+              <span style={{fontSize:11,color:B.gray500}}>{r.n}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
+            </button>))}
+        </div>}
       </>}
 
       {/* ── History ── */}
@@ -855,6 +884,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       </>}
 
       {tab==="appts"&&<>
+        <button onClick={()=>setTab("active")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:B.gray400,fontSize:12,fontWeight:700,cursor:"pointer",padding:"0 2px",marginBottom:14,fontFamily:"inherit"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Início</button>
         <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"0 2px 12px"}}>Agendamentos · {cliAppts.length}</div>
         {cliAppts.length===0&&<div style={{textAlign:"center",padding:"48px 0",color:B.gray500,fontSize:13}}>Nenhum agendamento em aberto.</div>}
         {cliAppts.map(a=>{
@@ -907,6 +937,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
       {tab==="notes"&&<ClientNotesTab client={client} vehicles={cliVehicles}/>}
 
       {tab==="parts"&&<div>
+        <button onClick={()=>setTab("active")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:B.gray400,fontSize:12,fontWeight:700,cursor:"pointer",padding:"0 2px",marginBottom:14,fontFamily:"inherit"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Início</button>
         <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"0 2px 12px"}}>
           {cliParts.length} peça{cliParts.length!==1?"s":""} reservada{cliParts.length!==1?"s":""}
         </div>
@@ -1029,12 +1060,10 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           {id:"active",  label:"Início",     icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>},
           {id:"history", label:"Histórico",     icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>},
           {id:"account", label:"Conta",         icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>},
-          ...(cliAppts.length>0?[{id:"appts",  label:"Agenda",       icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}]:[]),
-          ...(cliParts.length>0?[{id:"parts",  label:"Peças",        icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>}]:[]),
           ...(activeQuotes.length>0?[{id:"quotes",label:"Orçamentos",icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,badge:pendingQuotes.length}]:[]),
           {id:"notes",   label:"Anotações",    icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>},
         ].map(n=>{
-          const on=tab===n.id;
+          const on=tab===n.id||(n.id==="active"&&(tab==="appts"||tab==="parts"));
           return(<button key={n.id} onClick={()=>{setTab(n.id);try{window.scrollTo({top:0});}catch{}}} aria-current={on?"page":undefined}
             style={{flex:"1 0 auto",minWidth:56,minHeight:52,padding:"0 8px",background:on?`${B.orange}22`:"none",border:"none",borderRadius:99,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,color:on?B.orange:B.gray400,fontFamily:"inherit",position:"relative"}}>
             {n.icon}
@@ -13796,7 +13825,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.220";
+const APP_VERSION = "2026.11.24.221";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

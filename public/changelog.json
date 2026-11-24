@@ -4,6 +4,22 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Portal do cliente: botão no topo para falar com a oficina pelo WhatsApp"
+      },
+      {
+        "type": "feat",
+        "text": "Portal do cliente: no iPhone, explica como receber notificações (Adicionar à Tela de Início); \"Agora não\" fica lembrado por 30 dias"
+      },
+      {
+        "type": "feat",
+        "text": "Portal do cliente: barra de baixo com no máximo 5 abas; Agendamentos e Peças reservadas viraram atalhos na tela inicial"
+      },
+      {
+        "type": "fix",
+        "text": "Portal do cliente: login pede o celular com DDD (o 55 não é mais necessário) e sair pede confirmação"
+      },
+      {
+        "type": "feat",
         "text": "Portal do cliente e link de orçamento: aprovar ou recusar pede confirmação, mostrando quantos serviços e o valor"
       },
       {

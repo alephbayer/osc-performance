@@ -98,27 +98,16 @@ function elapsedTime(enteredAt, endMs) {
 const cleanPhone=(p="")=>p.replace(/\D/g,"");
 const samePhone=(a,b)=>cleanPhone(a)===cleanPhone(b)&&cleanPhone(a).length>0;
 const LOGIN_KEY="osc_mech_session";
-const CLIENT_LOGIN_KEY="osc_client_session";
+const CLIENT_TOKEN_KEY="osc_client_token"; // sessão do portal do cliente (token criado no banco)
 
 // ─── Client Login Screen ──────────────────────────────────────────────────────
+// PIN antigo, que ficava só neste aparelho. Usado uma única vez para migrar o PIN para o banco.
 const CLIENT_PIN_KEY = "osc_client_pins"; // { [clientId]: sha256hash }
-
-async function getClientPinHash(clientId) {
+function legacyClientPinHash(clientId) {
   try { const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}"); return pins[clientId]||null; } catch { return null; }
 }
-async function saveClientPin(clientId, pin) {
-  try {
-    const h = await sha256(pin);
-    const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
-    pins[clientId]=h;
-    localStorage.setItem(CLIENT_PIN_KEY, JSON.stringify(pins));
-  } catch {}
-}
-async function checkClientPin(clientId, pin) {
-  const stored = await getClientPinHash(clientId);
-  if (!stored) return null; // no pin set
-  const h = await sha256(pin);
-  return h === stored;
+function clearLegacyClientPins() {
+  try { localStorage.removeItem(CLIENT_PIN_KEY); localStorage.removeItem("osc_client_session"); } catch {}
 }
 
 function PinInput({label, onSubmit, error, submitLabel="Confirmar", autoFocus=true}) {
@@ -154,31 +143,50 @@ function PinInput({label, onSubmit, error, submitLabel="Confirmar", autoFocus=tr
   </div>);
 }
 
-function ClientLoginScreen({clients,onLogin}) {
+function ClientLoginScreen({onLogin}) {
   const [phone,setPhone]=useState("");
   const [err,setErr]=useState("");
+  const [busy,setBusy]=useState(false);
   const [step,setStep]=useState("phone"); // phone | pin | create_pin | confirm_pin
   const [found,setFound]=useState(null);
   const [newPin,setNewPin]=useState("");
+  const [pinKey,setPinKey]=useState(0); // recria o campo de PIN (limpa) após erro
+  const fail=(m)=>{ setErr(m); setPinKey(k=>k+1); };
+  const loginErr=(r)=>r?.error==="bloqueado"
+    ?`Muitas tentativas. Tente de novo depois das ${new Date(r.until).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}.`
+    :r?.error==="pin"?`PIN incorreto.${r.left>0?` ${r.left} tentativa${r.left!==1?"s":""} antes do bloqueio.`:""}`
+    :"Não foi possível entrar. Tente novamente.";
 
-  const tryPhone=()=>{
-    const cli=clients.find(c=>samePhone(c.phone,phone));
-    if(!cli){ setErr("Número não encontrado. Entre em contato com a oficina."); return; }
-    setFound(cli);
-    setErr("");
-    const hasPin=getClientPinHash(cli.id);
-    // Check synchronously from localStorage
-    try {
-      const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
-      if(pins[cli.id]) setStep("pin");
-      else setStep("create_pin");
-    } catch { setStep("create_pin"); }
+  const tryPhone=async()=>{
+    if(busy) return;
+    setBusy(true); setErr("");
+    try{
+      const cli=await db.portalFindClient(phone);
+      if(!cli){ setErr("Número não encontrado. Entre em contato com a oficina."); return; }
+      setFound(cli);
+      // sem PIN no banco, mas com PIN antigo salvo neste aparelho: pede esse PIN e o leva para o banco
+      setStep(cli.has_pin||legacyClientPinHash(cli.id)?"pin":"create_pin");
+    }catch(e){ setErr("Sem conexão. Tente novamente."); }
+    finally{ setBusy(false); }
   };
 
   const tryPin=async(pin)=>{
-    const ok=await checkClientPin(found.id, pin);
-    if(ok) onLogin(found);
-    else setErr("PIN incorreto. Tente novamente.");
+    if(busy) return;
+    setBusy(true); setErr("");
+    try{
+      if(!found.has_pin){
+        const legacy=legacyClientPinHash(found.id);
+        if(!legacy||legacy!==await sha256(pin)){ fail("PIN incorreto. Tente novamente."); return; }
+        const r=await db.portalCreatePin(found.id,pin);
+        if(r?.ok){ clearLegacyClientPins(); onLogin(r.token); return; }
+        if(r?.error==="existe"){ setFound({...found,has_pin:true}); fail("Este acesso já tem PIN. Digite o PIN atual."); return; }
+        fail("Não foi possível entrar. Tente novamente."); return;
+      }
+      const r=await db.portalLogin(found.id,pin);
+      if(r?.ok){ clearLegacyClientPins(); onLogin(r.token); }
+      else fail(loginErr(r));
+    }catch(e){ fail("Sem conexão. Tente novamente."); }
+    finally{ setBusy(false); }
   };
 
   const createPin=async(pin)=>{
@@ -188,9 +196,16 @@ function ClientLoginScreen({clients,onLogin}) {
   };
 
   const confirmPin=async(pin)=>{
+    if(busy) return;
     if(pin!==newPin){ setErr("Os PINs não coincidem. Tente novamente."); setStep("create_pin"); setNewPin(""); return; }
-    await saveClientPin(found.id, pin);
-    onLogin(found);
+    setBusy(true); setErr("");
+    try{
+      const r=await db.portalCreatePin(found.id,pin);
+      if(r?.ok){ clearLegacyClientPins(); onLogin(r.token); return; }
+      if(r?.error==="existe"){ setFound({...found,has_pin:true}); setStep("pin"); setErr("Este acesso já tem PIN. Digite o PIN atual ou peça o reset à oficina."); return; }
+      setErr("Não foi possível criar o PIN. Tente novamente."); setStep("create_pin");
+    }catch(e){ setErr("Sem conexão. Tente novamente."); setStep("create_pin"); }
+    finally{ setBusy(false); }
   };
 
   return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",padding:20}}>
@@ -210,7 +225,7 @@ function ClientLoginScreen({clients,onLogin}) {
             placeholder="Ex: 5511999998888" autoFocus
             style={{width:"100%",minHeight:48,padding:"0 14px",borderRadius:12,border:`1px solid ${err?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:15,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
           {err&&<div style={{color:B.red,fontSize:12,marginTop:8}}>{err}</div>}
-          <button onClick={tryPhone} style={{width:"100%",marginTop:16,minHeight:46,borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>Continuar</button>
+          <button onClick={tryPhone} disabled={busy} style={{opacity:busy?.6:1,width:"100%",marginTop:16,minHeight:46,borderRadius:12,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>Continuar</button>
           <div style={{marginTop:14,fontSize:11.5,color:B.gray500,textAlign:"center",lineHeight:1.5}}>Use o mesmo número cadastrado pela oficina, com DDI e DDD (ex: 55119...)</div>
         </>}
 
@@ -222,7 +237,7 @@ function ClientLoginScreen({clients,onLogin}) {
               <div style={{fontSize:11,color:B.gray500}}>Digite seu PIN de acesso</div>
             </div>
           </div>
-          <PinInput label="PIN de 4 dígitos" onSubmit={tryPin} error={err} submitLabel="Entrar"/>
+          <PinInput key={pinKey} label="PIN de 4 dígitos" onSubmit={tryPin} error={err} submitLabel="Entrar"/>
           <div style={{marginTop:12,fontSize:11,color:B.gray500,textAlign:"center",lineHeight:1.6}}>
             Esqueceu o PIN? Entre em contato com a oficina para fazer o reset.
           </div>
@@ -8422,13 +8437,10 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
               {cli.phone&&<button onClick={()=>{}} style={{padding:"7px 14px",borderRadius:8,background:B.wa,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                 <IPhone s={13} c={B.white}/>WhatsApp
               </button>}
-              {isOwner&&<button onClick={()=>{
-                try{
-                  const pins=JSON.parse(localStorage.getItem(CLIENT_PIN_KEY)||"{}");
-                  delete pins[cli.id];
-                  localStorage.setItem(CLIENT_PIN_KEY,JSON.stringify(pins));
-                  toast_(`PIN de ${cli.name} resetado ✓`);
-                }catch(e){}
+              {isOwner&&<button onClick={async()=>{
+                if(!window.confirm(`Resetar o PIN do portal de ${cli.name}? O cliente sai do portal em todos os aparelhos e cria um PIN novo no próximo acesso.`)) return;
+                try{ await db.portalResetPin(cli.id); toast_(`PIN de ${cli.name} resetado`); }
+                catch(e){ toast_("Erro ao resetar o PIN: "+(e?.message||"falha de conexão")); }
               }} style={{padding:"7px 12px",borderRadius:8,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
                 <Ic n="key"/> Resetar PIN do portal
               </button>}
@@ -13738,7 +13750,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.214";
+const APP_VERSION = "2026.11.24.215";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17452,11 +17464,68 @@ function PublicVehicleRoot({vehicleId,history}) {
   return <ErrorBoundary><PublicVehicleView initialTab={aba==="historico"&&data.osHistory.length?"historico":undefined} vehicleId={vid} vehicles={data.vehicles} tasks={pubTasks} employees={data.employees} clients={data.clients} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} purchaseOrders={data.purchaseOrders} stock={data.stock}/></ErrorBoundary>;
 }
 
+// Portal do cliente (?portal=cliente): login por celular + PIN validado no banco, sessão por token
+// e carga só dos dados desse cliente (db.loadClientPortal). Não carrega o app interno.
+function ClientPortalRoot() {
+  const [token,setToken]=useState(()=>{ try{ return localStorage.getItem(CLIENT_TOKEN_KEY)||null; }catch{ return null; } });
+  const [data,setData]=useState(null);
+  const [err,setErr]=useState(null);
+  const [toast,setTst]=useState(null);
+  const toast_=m=>{setTst(null);setTimeout(()=>setTst(m),10);};
+  const errToast=e=>{console.error(e);toast_(errMsg(e).startsWith("Sem internet")?errMsg(e):"Erro: "+(errMsg(e)||"falha de conexão"));};
+  const [theme,setTheme]=useState(getTheme);
+  const [themePref,setThemePref]=useState(getThemePref);
+  const paintBg=resolved=>{
+    const bg=resolved==="light"?"#f0f2f5":"#0a0a0a";
+    try{ document.getElementById("osc-body").style.background=bg;document.documentElement.style.background=bg;document.getElementById("theme-color-meta")?.setAttribute("content",bg); }catch(e){}
+  };
+  useEffect(()=>{
+    if(themePref!=="auto") return;
+    const mq=window.matchMedia("(prefers-color-scheme: dark)");
+    const h=()=>{ const r=getSystemTheme(); setTheme(r); paintBg(r); };
+    mq.addEventListener("change",h);
+    return()=>mq.removeEventListener("change",h);
+  },[themePref]);
+  const toggleTheme=()=>{
+    const next=themePref==="auto"?"dark":themePref==="dark"?"light":"auto";
+    setThemeStorage(next); setThemePref(next);
+    const r=next==="auto"?getSystemTheme():next; setTheme(r); paintBg(r);
+  };
+  const doLogin=t=>{ try{ localStorage.setItem(CLIENT_TOKEN_KEY,t); }catch{} setData(null); setErr(null); setToken(t); };
+  const doLogout=()=>{ const t=token; try{ localStorage.removeItem(CLIENT_TOKEN_KEY); }catch{} setToken(null); setData(null); if(t) db.portalLogout(t).catch(()=>{}); };
+  useEffect(()=>{
+    if(!token) return;
+    let alive=true;
+    const load=()=>db.loadClientPortal(token).then(d=>{
+      if(!alive) return;
+      if(!d){ try{ localStorage.removeItem(CLIENT_TOKEN_KEY); }catch{} setToken(null); setData(null); return; } // sessão expirada ou PIN resetado
+      setData(d); setErr(null);
+    }).catch(e=>{ if(alive) setErr(e?.message||"Erro ao carregar"); });
+    load();
+    const iv=setInterval(()=>{ if(document.visibilityState==="visible") load(); },60000);
+    const onVis=()=>{ if(document.visibilityState==="visible") load(); };
+    document.addEventListener("visibilitychange",onVis);
+    return()=>{alive=false;clearInterval(iv);document.removeEventListener("visibilitychange",onVis);};
+  },[token]);
+  const shell={height:"100%",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white};
+  if(!token) return <div key={theme} style={{...shell,overflow:"auto",WebkitOverflowScrolling:"touch"}}><ErrorBoundary><ClientLoginScreen onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
+  if(!data&&err) return <ErrorScreen msg={err}/>;
+  if(!data) return <LoadingScreen/>;
+  const cli=data.client;
+  const setQuote=(qid,patch)=>setData(d=>({...d,quotes:d.quotes.map(q=>q.id===qid?{...q,...patch}:q)}));
+  return <div key={theme} style={{...shell,display:"flex",flexDirection:"column"}}><ErrorBoundary><ClientPortal client={cli} vehicles={data.vehicles} tasks={data.tasks.filter(t=>!isInternalTask(t))} employees={data.employees} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} onLogout={doLogout} appointments={data.appointments} quotes={data.quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={data.clientCredits} clients={[cli]} purchaseOrders={data.purchaseOrders} stock={data.stock}
+    onVehiclePhoto={async(vid,url)=>{const vv=data.vehicles.find(x=>x.id===vid);if(!vv) return; setData(d=>({...d,vehicles:d.vehicles.map(x=>x.id===vid?{...x,photo:url}:x)})); try{ await db.updateVehicle(vid,{photo:url}); }catch(e){ errToast(e); return; } db.sendPushToAdmins(`Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${cli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}}
+    onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuote(qid,{status:"approved",approvedItems:items});toast_("Orçamento aprovado");}catch(e){errToast(e);}}}
+    onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuote(qid,{status:"rejected"});toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary>
+    {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}</div>;
+}
+
 export default function App() {
   const params=new URLSearchParams(window.location.search);
   const pv=params.get("v"), pvh=params.get("vh");
   if(pv) return <PublicVehicleRoot vehicleId={pv}/>;
   if(pvh) return <PublicVehicleRoot vehicleId={pvh} history/>;
+  if(params.get("portal")==="cliente") return <ClientPortalRoot/>;
   return <MainApp/>;
 }
 
@@ -17493,7 +17562,6 @@ function MainApp() {
   const params=new URLSearchParams(window.location.search);
   const publicQuoteId=params.get("q");
   const isMechanicPortal=params.get("portal")==="mecanico";
-  const isClientPortal=params.get("portal")==="cliente";
 
   const [employees,setEmp]=useState([]);
   const [clients,  setCli]=useState([]);
@@ -17586,9 +17654,6 @@ function MainApp() {
   const [loadError,setLE]=useState(null);
   const [mechSession,setMechSession]=useState(()=>{
     try{ return JSON.parse(localStorage.getItem(LOGIN_KEY)||"null"); }catch{ return null; }
-  });
-  const [clientSession,setClientSession]=useState(()=>{
-    try{ return localStorage.getItem(CLIENT_LOGIN_KEY)||null; }catch{ return null; }
   });
   const [adminRole,setAdminRole]=useState(()=>{
     try{ return sessionStorage.getItem(ADMIN_SESSION_KEY)||null; }catch{ return null; }
@@ -17806,20 +17871,6 @@ function MainApp() {
       purchaseOrders={purchaseOrders}
       onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`🛒 ${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(e){errToast(e);}}}
       /></ErrorBoundary><GlobalErrorDisplay/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>
-  }
-
-  if(isClientPortal){
-    if(loading) return <LoadingScreen/>;
-    const doLogin=(cli)=>{ setClientSession(cli); localStorage.setItem(CLIENT_LOGIN_KEY, cli.id); };
-    const doLogout=()=>{ setClientSession(null); localStorage.removeItem(CLIENT_LOGIN_KEY); };
-    // Resolve clientSession: if it's just an ID string (new format), find full object from clients
-    const liveCli = clientSession
-      ? (typeof clientSession === "string"
-          ? clients.find(c=>c.id===clientSession)
-          : clients.find(c=>c.id===clientSession.id)||clientSession)
-      : null;
-    if(!liveCli) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientLoginScreen clients={clients} onLogin={doLogin}/></ErrorBoundary><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
-    return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><ClientPortal client={liveCli} vehicles={vehicles} tasks={tasks.filter(t=>!isInternalTask(t))} employees={employees} payments={payments} osHistory={osHistory} defaultRate={defaultRate} onLogout={doLogout} appointments={appointments} quotes={quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={clientCredits} clients={clients} purchaseOrders={purchaseOrders} stock={stock} onVehiclePhoto={async(vid,url)=>{const vv=vehicles.find(x=>x.id===vid);if(!vv||vv.clientId!==liveCli.id) return; setVeh(p=>p.map(x=>x.id===vid?{...x,photo:url}:x)); await db.updateVehicle(vid,{photo:url}); db.sendPushToAdmins(`📷 Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${liveCli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}} onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"approved",approvedItems:items}:q));toast_("Orçamento aprovado ✓");}catch(e){errToast(e);}}} onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuotes(p=>p.map(q=>q.id===qid?{...q,status:"rejected"}:q));toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary></div>;
   }
 
   // ── Admin gate: everything below requires the admin password ──

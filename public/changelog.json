@@ -3,6 +3,22 @@
     "date": "2026-11-24",
     "changes": [
       {
+        "type": "fix",
+        "text": "Portal do cliente: o PIN agora fica guardado na oficina e vale em qualquer aparelho; antes, em outro celular, dava para criar um PIN novo para o número de outro cliente"
+      },
+      {
+        "type": "fix",
+        "text": "Portal do cliente: \"Resetar PIN do portal\" no cadastro do cliente passou a funcionar de verdade e tira o cliente do portal em todos os aparelhos"
+      },
+      {
+        "type": "feat",
+        "text": "Portal do cliente: 5 PINs errados seguidos bloqueiam o acesso por 15 minutos"
+      },
+      {
+        "type": "fix",
+        "text": "Portal do cliente: carrega só os dados do próprio cliente, não mais o sistema inteiro, e abre mais rápido"
+      },
+      {
         "type": "feat",
         "text": "App inteiro: emojis trocados por ícones de traço, no mesmo padrão do link de acompanhamento"
       },

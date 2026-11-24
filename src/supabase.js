@@ -361,6 +361,46 @@ export const db = {
     };
   },
 
+  // Portal do cliente (?portal=cliente): PIN e sessão ficam no banco (migration 060);
+  // a carga traz só os dados do cliente da sessão, nunca o banco inteiro.
+  async _portalRpc(fn, args) {
+    const { data, error } = await supabase.rpc(fn, args);
+    if (error) throw error;
+    return data;
+  },
+  portalFindClient(phone) { return this._portalRpc("portal_find_client", { p_phone: phone }); },
+  portalCreatePin(clientId, pin) { return this._portalRpc("portal_create_pin", { p_client_id: clientId, p_pin: pin }); },
+  portalLogin(clientId, pin) { return this._portalRpc("portal_login", { p_client_id: clientId, p_pin: pin }); },
+  portalLogout(token) { return this._portalRpc("portal_logout", { p_token: token }); },
+  portalResetPin(clientId) { return this._portalRpc("portal_reset_pin", { p_client_id: clientId }); },
+  async loadClientPortal(token) {
+    const d = await this._portalRpc("portal_load", { p_token: token });
+    if (!d || !d.client) return null;
+    const mechMap = {};
+    (d.mechanics || []).forEach(r => { (mechMap[r.vehicle_id] = mechMap[r.vehicle_id] || []).push(r.employee_id); });
+    const vehicles = (d.vehicles || []).map(v => {
+      const m = mapVehicleIn(v);
+      m.mechanicIds = mechMap[v.id] || (v.employee_id ? [v.employee_id] : []);
+      m.clientId = d.client.id;
+      m.currentClientId = d.client.id;
+      return m;
+    });
+    return {
+      client: d.client,
+      vehicles,
+      tasks: (d.tasks || []).map(mapTaskIn),
+      employees: d.employees || [],
+      payments: (d.payments || []).map(mapPaymentIn),
+      osHistory: d.os_history || [],
+      purchaseOrders: (d.purchase_orders || []).map(o => this._mapOrder(o)),
+      appointments: this._mapAppointments(d.appointments, d.appointment_services, d.appointment_payments),
+      quotes: (d.quotes || []).map(q => this._mapQuote(q)),
+      clientCredits: (d.client_credits || []).map(r => ({ id: r.id, clientId: r.client_id, amount: Number(r.amount), note: r.note || "", createdAt: r.created_at, createdBy: r.created_by })),
+      stock: d.stock || [],
+      defaultRate: Number(d.default_rate || 0),
+    };
+  },
+
   // Employees
   async addEmployee(name, phone, division="performance") {
     const { data, error } = await supabase.from("employees").insert({ name, phone, division }).select().single();
@@ -1494,20 +1534,23 @@ export const db = {
       supabase.from("appointment_payments").select("*").order("paid_at"),
     ]);
     if(appt.error) throw appt.error;
-    return (appt.data||[]).map(a=>({
+    return this._mapAppointments(appt.data,svcs.data,pays.data);
+  },
+  _mapAppointments(appts,svcs,pays) {
+    return (appts||[]).map(a=>({
       id:a.id, vehicleId:a.vehicle_id, clientId:a.client_id,
       title:a.title, notes:a.notes, status:a.status,
       estimatedValue:Number(a.estimated_value||0),
       scheduledDate:a.scheduled_date||null,
       createdAt:a.created_at, convertedAt:a.converted_at,
-      services:(svcs.data||[]).filter(s=>s.appointment_id===a.id).map(s=>({
+      services:(svcs||[]).filter(s=>s.appointment_id===a.id).map(s=>({
         id:s.id, appointmentId:s.appointment_id, label:s.label,
         estimatedValue:Number(s.estimated_value||0),
         division:s.division||"performance", done:s.done, createdAt:s.created_at,
         materials:s.materials||[], category:s.category||null,
         hours:Number(s.hours||0), rate:Number(s.rate||0),
       })),
-      payments:(pays.data||[]).filter(p=>p.appointment_id===a.id).map(p=>({
+      payments:(pays||[]).filter(p=>p.appointment_id===a.id).map(p=>({
         id:p.id, appointmentId:p.appointment_id, amount:Number(p.amount||0),
         method:p.method, note:p.note, paidAt:p.paid_at,
       })),
@@ -1683,7 +1726,10 @@ export const db = {
   async loadQuotes() {
     const {data,error}=await supabase.from("quotes").select("*").order("created_at",{ascending:false});
     if(error) throw error;
-    return (data||[]).map(q=>({
+    return (data||[]).map(q=>this._mapQuote(q));
+  },
+  _mapQuote(q) {
+    return ({
       id:q.id, createdAt:q.created_at, updatedAt:q.updated_at,
       clientId:q.client_id, vehicleId:q.vehicle_id,
       tempName:q.temp_name||"", tempPhone:q.temp_phone||"", tempEmail:q.temp_email||"",
@@ -1693,7 +1739,7 @@ export const db = {
       items:q.items||[], approvedItems:q.approved_items||[],
       approvedAt:q.approved_at, rejectedAt:q.rejected_at,
       appointmentId:q.appointment_id,
-    }));
+    });
   },
   async getQuote(id) {
     const {data,error}=await supabase.from("quotes").select("*").eq("id",id).single();

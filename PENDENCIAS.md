@@ -37,6 +37,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 ## Ajustes nos PDFs (sessão dedicada, 2026-11-24)
 - PDFs existentes: orçamento Performance e Finishing (`renderElegantQuote`), cobrança parcial, conferência de entrega, peças importadas, pré-aprovação de agendamento, financeiro. `generateQuotePDFLegacy`/`generateFinishingPDFLegacy` não são chamados (código morto)
 - [x] Página "Investimento e condições" (serviço único em Ficha): nome longo do serviço passava por cima do total; agora quebra em linhas à esquerda do valor (v2026.11.24.205)
+- [x] Revisão do orçamento QUW2C12: ponto duplo no escopo resumido, CNPJ formatado no cabeçalho, prazo só na tabela da capa quando há 1 serviço em Ficha, título da continuação cortado por palavra, página de investimento sem espaço vazio (v2026.11.24.206)
+- [ ] Observado no teste (antigo, não mexido): quando há despesas adicionais na página de investimento, as formas de pagamento e o aceite podem ir sozinhos para uma página nova
 - Sem poppler neste Mac: para ver PDFs, compilar um conversor PDFKit em Swift (ver nota da sessão) ou `brew install poppler`
 
 ## Para o Aleph validar

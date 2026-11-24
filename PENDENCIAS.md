@@ -63,7 +63,11 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] **Aleph:** entrar no portal com um número de cliente seu (ou de teste) e conferir login, criação de PIN e a tela logada. Testado por Claude só com respostas simuladas no navegador local e leituras no banco; as funções `portal_create_pin`/`portal_login`/`portal_load` não rodaram com uma sessão real
 - [ ] Limites que continuam: quem tem a chave pública ainda lê as tabelas direto e pode chamar `portal_reset_pin` (o app interno usa a mesma chave); quem souber o celular de um cliente que ainda não criou PIN pode criar antes dele. Resolve junto com o link seguro / fechar o banco (seção Link de acompanhamento)
 - [ ] 2 pares de clientes têm o mesmo celular: o portal entra no cadastro mais antigo. Conferir/unificar
-- [ ] Achados ainda não tratados: aprovar/recusar orçamento não avisa a oficina (sem push); orçamentos em rascunho aparecem ao cliente e podem ser aprovados; emojis nos títulos das notificações push (cliente e oficina); "Nova versão disponível" aparece já na primeira visita; botão WhatsApp no cadastro do cliente não faz nada; os 4 quadrinhos do PIN às vezes não pulam sozinhos para o próximo dígito (automação; conferir no celular)
+- [x] Aprovar/recusar orçamento (portal e link `?q=`) manda push à oficina, sem valores porque chega também aos chefes (v2026.11.24.216)
+- [x] Rascunho fica interno: o portal não mostra nem carrega orçamento `draft` (migration 061). O push "Orçamento disponível" saiu da criação e foi para o botão "Enviar"; "Orçamento atualizado" só vai se o orçamento já foi enviado. **Aleph:** o rascunho que já existe para um cliente só volta a aparecer para ele depois de "Enviar". Não testado no app interno (precisa da senha): o push do "Enviar"
+- [ ] O link público de orçamento `?q=` ainda carrega o banco inteiro (roda dentro do app interno, como o portal antes). Mesmo conserto do portal
+- [ ] Emojis que sobraram no app: "✏️ Editar" e "✓ Copiado" na lista de orçamentos, títulos de push (🗑, 📦, 📷, 🛒, 🏁, 💰...), avisos "✓"
+- [ ] Achados ainda não tratados: emojis nos títulos das notificações push (cliente e oficina); "Nova versão disponível" aparece já na primeira visita; botão WhatsApp no cadastro do cliente não faz nada; os 4 quadrinhos do PIN às vezes não pulam sozinhos para o próximo dígito (automação; conferir no celular)
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

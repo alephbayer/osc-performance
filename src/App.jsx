@@ -561,7 +561,8 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
   const activeVehicles=cliVehicles.filter(v=>v.enteredAt||v.enteredAtFinishing||tasks.some(t=>t.vehicleId===v.id&&!t.done));
   const cliVehicleIds=new Set(cliVehicles.map(v=>v.id));
   const cliAppts=appointments.filter(a=>cliVehicleIds.has(a.vehicleId)&&a.status==="open");
-  const cliQuotes=quotes.filter(q=>q.clientId===client.id||cliVehicleIds.has(q.vehicleId));
+  // rascunho é interno da oficina: o cliente só vê o orçamento depois de "Enviar"
+  const cliQuotes=quotes.filter(q=>q.status!=="draft"&&(q.clientId===client.id||cliVehicleIds.has(q.vehicleId)));
   const pendingQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent");
   const activeQuotes=cliQuotes.filter(q=>q.status==="draft"||q.status==="sent"||(q.status==="approved"&&!q.appointmentId));
   // Peças reservadas de todos os veículos do cliente que tenham peças
@@ -13750,7 +13751,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.215";
+const APP_VERSION = "2026.11.24.216";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17464,6 +17465,13 @@ function PublicVehicleRoot({vehicleId,history}) {
   return <ErrorBoundary><PublicVehicleView initialTab={aba==="historico"&&data.osHistory.length?"historico":undefined} vehicleId={vid} vehicles={data.vehicles} tasks={pubTasks} employees={data.employees} clients={data.clients} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} purchaseOrders={data.purchaseOrders} stock={data.stock}/></ErrorBoundary>;
 }
 
+// Avisa a oficina (todos os perfis, por isso sem valores) quando o cliente aprova ou recusa um orçamento
+function pushQuoteDecision(q,approved,model,clientName){
+  if(!q) return;
+  const who=clientName||q.tempName||"O cliente";
+  db.sendPushToAdmins(`Orçamento ${approved?"aprovado":"recusado"} — ${model||q.tempModel||"Veículo"}`,`${who} ${approved?"aprovou":"recusou"} o orçamento${approved?". Falta converter em agendamento.":"."}`,"/?").catch(()=>{});
+}
+
 // Portal do cliente (?portal=cliente): login por celular + PIN validado no banco, sessão por token
 // e carga só dos dados desse cliente (db.loadClientPortal). Não carrega o app interno.
 function ClientPortalRoot() {
@@ -17513,10 +17521,11 @@ function ClientPortalRoot() {
   if(!data) return <LoadingScreen/>;
   const cli=data.client;
   const setQuote=(qid,patch)=>setData(d=>({...d,quotes:d.quotes.map(q=>q.id===qid?{...q,...patch}:q)}));
+  const quoteModel=qid=>{const q=data.quotes.find(x=>x.id===qid);return q?.vehicleId?data.vehicles.find(v=>v.id===q.vehicleId)?.model:q?.tempModel;};
   return <div key={theme} style={{...shell,display:"flex",flexDirection:"column"}}><ErrorBoundary><ClientPortal client={cli} vehicles={data.vehicles} tasks={data.tasks.filter(t=>!isInternalTask(t))} employees={data.employees} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} onLogout={doLogout} appointments={data.appointments} quotes={data.quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={data.clientCredits} clients={[cli]} purchaseOrders={data.purchaseOrders} stock={data.stock}
     onVehiclePhoto={async(vid,url)=>{const vv=data.vehicles.find(x=>x.id===vid);if(!vv) return; setData(d=>({...d,vehicles:d.vehicles.map(x=>x.id===vid?{...x,photo:url}:x)})); try{ await db.updateVehicle(vid,{photo:url}); }catch(e){ errToast(e); return; } db.sendPushToAdmins(`Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${cli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}}
-    onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuote(qid,{status:"approved",approvedItems:items});toast_("Orçamento aprovado");}catch(e){errToast(e);}}}
-    onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuote(qid,{status:"rejected"});toast_("Orçamento recusado");}catch(e){errToast(e);}}}/></ErrorBoundary>
+    onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuote(qid,{status:"approved",approvedItems:items});toast_("Orçamento aprovado");pushQuoteDecision(data.quotes.find(q=>q.id===qid),true,quoteModel(qid),cli.name);}catch(e){errToast(e);}}}
+    onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuote(qid,{status:"rejected"});toast_("Orçamento recusado");pushQuoteDecision(data.quotes.find(q=>q.id===qid),false,quoteModel(qid),cli.name);}catch(e){errToast(e);}}}/></ErrorBoundary>
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}</div>;
 }
 
@@ -17846,10 +17855,13 @@ function MainApp() {
         // Update quote status
         await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems,clientId});
         setQuotes(p=>p.map(x=>x.id===qid?{...x,status:"approved",approvedItems,clientId}:x));
+        pushQuoteDecision(q,true,q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel,clients.find(c=>c.id===clientId)?.name);
       }catch(e){console.error(e);}
     }} onReject={async(qid)=>{
+      const q=quotes.find(x=>x.id===qid)||await db.getQuote(qid).catch(()=>null);
       await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});
       setQuotes(p=>p.map(x=>x.id===qid?{...x,status:"rejected"}:x));
+      pushQuoteDecision(q,false,q?.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q?.tempModel,clients.find(c=>c.id===q?.clientId)?.name);
     }}/></ErrorBoundary></>;
   }
   if(loading) return <LoadingScreen/>;
@@ -19873,25 +19885,22 @@ function MainApp() {
           onAddQuote={async q=>{try{
             const r=await db.addQuote(q);
             setQuotes(p=>[r,...p]);
-            // Notify client
-            const clientId=q.clientId||null;
-            const vModel=q.tempModel||(q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:"seu veículo")||"seu veículo";
-            const total=quoteTotal(q.items);
-            if(clientId){
-              db.sendPushToClient(clientId,`📋 Orçamento disponível — ${vModel}`,`Um orçamento de ${fmtBRL(total)} está aguardando sua aprovação.`,"/?portal=cliente").catch(()=>{});
-            }
+            // criado como rascunho: o cliente só é avisado ao tocar em "Enviar"
             toast_("Orçamento criado ✓");return r;
           }catch(e){errToast(e);}}}
           onUpdateQuote={async(id,patch)=>{try{
             await db.updateQuote(id,patch);
             setQuotes(p=>p.map(q=>q.id===id?{...q,...patch}:q));
-            // Reenviar push ao cliente se alterou itens ou descrição
-            if(patch.items||patch.description){
-              const q=quotes.find(x=>x.id===id);
-              const clientId=patch.clientId||q?.clientId;
-              const vModel=q?.tempModel||(q?.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:null)||"seu veículo";
-              const total=quoteTotal(patch.items||q?.items||[]);
-              if(clientId) db.sendPushToClient(clientId,`📋 Orçamento atualizado — ${vModel}`,`O orçamento foi revisado${total>0?` · ${fmtBRL(total)}`:""}. Confira as alterações.`,"/?portal=cliente").catch(()=>{});
+            const q=quotes.find(x=>x.id===id);
+            const clientId=patch.clientId||q?.clientId;
+            const vModel=q?.tempModel||(q?.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:null)||"seu veículo";
+            const total=quoteTotal(patch.items||q?.items||[]);
+            if(clientId&&patch.status==="sent"&&q?.status!=="sent"){
+              // "Enviar": a partir daqui o orçamento aparece no portal do cliente
+              db.sendPushToClient(clientId,`Orçamento disponível — ${vModel}`,`Um orçamento de ${fmtBRL(total)} está aguardando sua aprovação.`,"/?portal=cliente").catch(()=>{});
+            } else if(clientId&&(patch.items||patch.description)&&q?.status==="sent"){
+              // Reenviar push ao cliente se alterou itens ou descrição de um orçamento já enviado
+              db.sendPushToClient(clientId,`Orçamento atualizado — ${vModel}`,`O orçamento foi revisado${total>0?` · ${fmtBRL(total)}`:""}. Confira as alterações.`,"/?portal=cliente").catch(()=>{});
             }
           }catch(e){errToast(e);}}}
           onDeleteQuote={async id=>{try{await db.deleteQuote(id);setQuotes(p=>p.filter(q=>q.id!==id));toast_("Orçamento removido ✓");}catch(e){errToast(e);}}}

@@ -68,7 +68,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] O link público de orçamento `?q=` tem raiz própria (`PublicQuoteRoot`) e lê só aquele orçamento; antes carregava o banco inteiro (v2026.11.24.217)
 - [ ] Link `?q=`: orçamento ligado a um veículo cadastrado mostra "Veículo" no título (só usa o modelo digitado à mão)
 - [x] Emojis restantes: títulos de push, botões de editar, status de pedidos/investimentos (antes o push de pedido saía com "check"/"cart" escrito no título) e abas do quadro (v2026.11.24.218). Ficaram de propósito os símbolos de texto ✓ ✕ → ← ⌘
-- [ ] **Aleph decidir:** as mensagens de WhatsApp montadas pelo app (resumo para mecânico e cliente, atualização de linha do tempo) ainda usam emojis (🔧 🚗 ✅ ⬜ 🔩 💰 👋). Tirar ou manter?
+- [x] Decidido (Aleph, 2026-11-24): as mensagens de WhatsApp montadas pelo app **mantêm** os emojis; a regra "sem emojis" vale para a interface e as notificações
 - [ ] Achados ainda não tratados: emojis nos títulos das notificações push (cliente e oficina); "Nova versão disponível" aparece já na primeira visita; botão WhatsApp no cadastro do cliente não faz nada; os 4 quadrinhos do PIN às vezes não pulam sozinhos para o próximo dígito (automação; conferir no celular)
 
 ## Para o Aleph validar

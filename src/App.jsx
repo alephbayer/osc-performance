@@ -12464,6 +12464,19 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
 }
 
 // ─── Public Vehicle View ──────────────────────────────────────────────────────
+// Link público: lista de peças/materiais de uma tarefa, recolhida por padrão (o cliente abre se quiser).
+function PvMatToggle({count,children}) {
+  const [open,setOpen]=useState(false);
+  if(!count) return null;
+  return (<div style={{marginTop:6}}>
+    <button onClick={()=>setOpen(o=>!o)} aria-expanded={open} style={{display:"inline-flex",alignItems:"center",gap:5,background:"none",border:"none",padding:"4px 0",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600,color:B.gray400}}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/></svg>
+      {count===1?"1 peça ou material":`${count} peças e materiais`}
+      {open?<IChevU s={11} c={B.gray400}/>:<IChevD s={11} c={B.gray400}/>}
+    </button>
+    {open&&<div style={{paddingLeft:16}}>{children}</div>}
+  </div>);
+}
 function PayMethodsBox() {
   return (
               <div style={{marginTop:10,background:`#6366f115`,border:`1px solid #6366f144`,borderRadius:10,padding:"12px 14px"}}>
@@ -12529,7 +12542,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const [lb,setLB]=useState(null);
   useEffect(()=>{
     if(!v?.id) return;
-    db.loadTimeline(v.id).then(evs=>{setTimeline(evs);setTlLoaded(true);}).catch(()=>setTlLoaded(true));
+    db.loadTimeline(v.id).then(evs=>{setTimeline(evs.filter(e=>e.type!=="materials"));setTlLoaded(true);}).catch(()=>setTlLoaded(true));
   },[v?.id]);
   if(!v) return (<div style={{minHeight:"100vh",background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
     <div style={{textAlign:"center",color:B.gray400}}><div style={{fontSize:48,marginBottom:12}}>🔍</div><div style={{fontSize:16,color:B.gray200,fontWeight:700}}>Veículo não encontrado</div></div>
@@ -12729,7 +12742,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         <div onClick={()=>setTlOpen(o=>!o)} style={{padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span style={{fontWeight:800,fontSize:15,color:B.white,flex:1}}>Últimas atualizações</span>
-          <span style={{fontSize:11,color:B.gray500}}>{timeline.length} update{timeline.length!==1?"s":""}</span>
+          <span style={{fontSize:11,color:B.gray500}}>{timeline.length} {timeline.length!==1?"registros":"registro"}</span>
           {tlOpen?<IChevU s={13} c={B.gray500}/>:<IChevD s={13} c={B.gray500}/>}
         </div>
         {tlOpen&&<div style={{...S.pad,paddingTop:4}}>
@@ -12869,15 +12882,14 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                           {t.outsourced&&<span style={{fontSize:10,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
                         </div>
                         {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
-                        {(t.materials||[]).filter(m=>m.name).map((m,i)=>(
+                        <PvMatToggle count={(t.materials||[]).filter(m=>m.name).length}>{(t.materials||[]).filter(m=>m.name).map((m,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
-                            <span style={{fontSize:11,color:m.imported?"#60a5fa":B.gray500}}>🔩</span>
                             <span style={{fontSize:11,color:m.imported?"#60a5fa":B.gray500,fontWeight:m.imported?700:400}}>{m.name}</span>
                             {m.brand&&<span style={{fontSize:10,color:B.gray600}}>· {m.brand}</span>}
                             {m.qty!=null&&Number(m.qty)!==1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
                             {m.imported&&<span style={{fontSize:9,fontWeight:800,color:"#60a5fa",background:"#60a5fa12",border:"1px solid #60a5fa33",borderRadius:4,padding:"0px 5px",whiteSpace:"nowrap"}}>✈ Importado</span>}
                           </div>
-                        ))}
+                        ))}</PvMatToggle>
                         {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
                         {/* Updates feed */}
                         {(t.updates||[]).length>0&&<div style={{marginTop:8,borderTop:`1px solid ${B.gray700}`,paddingTop:8}}>
@@ -12951,14 +12963,13 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     <div style={{flex:1,minWidth:0}}>
                       <span style={{fontSize:14,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600,textDecoration:t.done?"line-through":"none"}}>{t.label}</span>
                       {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
-                      {(t.materials||[]).filter(m=>m.name).map((m,i)=>(
+                      <PvMatToggle count={(t.materials||[]).filter(m=>m.name).length}>{(t.materials||[]).filter(m=>m.name).map((m,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
-                          <span style={{fontSize:11,color:B.gray500}}>🔩</span>
                           <span style={{fontSize:11,color:B.gray500}}>{m.name}</span>
                           {m.brand&&<span style={{fontSize:10,color:B.gray600}}>· {m.brand}</span>}
                           {m.qty!=null&&Number(m.qty)!==1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
                         </div>
-                      ))}
+                      ))}</PvMatToggle>
                       {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
                       {tPhotos.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
                         {tPhotos.map((p,pi)=><div key={pi} style={{width:72,height:72,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${FD.border}`,flexShrink:0}} onClick={()=>setLB(p)}>
@@ -12992,11 +13003,11 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         const vInst=purchaseOrders.filter(p=>p.vehicleId===v.id&&isInst(p)).sort((a,b)=>new Date(b.consumedAt||b.receivedAt||0)-new Date(a.consumedAt||a.receivedAt||0));
         if(!vPOs.length&&!vInst.length) return null;
         const statusCfgPO={
-          pending:      {label:"Aguardando aprovação", color:B.gray400,  bg:B.gray800},
-          approved:     {label:"Aprovado — link em análise", color:B.blue,     bg:`${B.blue}15`},
-          ready_to_buy: {label:"Pronto para compra",   color:"#6366f1",  bg:"#6366f118"},
-          bought:       {label:"Comprado",              color:B.purple,   bg:`${B.purple}15`},
-          received:     {label:"Recebido",              color:B.green,    bg:B.greenBg},
+          pending:      {label:"Pedido", color:B.gray400,  bg:B.gray800},
+          approved:     {label:"Pedido", color:B.gray400,     bg:B.gray800},
+          ready_to_buy: {label:"Pedido",   color:B.gray400,  bg:B.gray800},
+          bought:       {label:"A caminho",              color:B.purple,   bg:`${B.purple}15`},
+          received:     {label:"Chegou",              color:B.green,    bg:B.greenBg},
         };
         return(<div style={{...S.card,marginBottom:20}}>
           <div style={{...S.pad,borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
@@ -13034,7 +13045,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
           <div style={{...S.pad,borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
             <span style={{fontWeight:800,fontSize:13,color:B.white}}>Peças reservadas</span>
-            <span style={{fontSize:11,color:B.gray400}}>{parts.length} item{parts.length!==1?"s":""}</span>
+            <span style={{fontSize:11,color:B.gray400}}>{parts.length} {parts.length!==1?"itens":"item"}</span>
             {usedCount>0&&<span style={{fontSize:10,fontWeight:700,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",marginLeft:"auto"}}>{usedCount} utilizada{usedCount!==1?"s":""}</span>}
           </div>
           <div style={{...S.pad,display:"flex",flexDirection:"column",gap:6}}>
@@ -13152,12 +13163,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:14,color:B.gray100,fontWeight:600}}>{t.label}</div>
                       {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
-                      {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
+                      <PvMatToggle count={(t.materials||[]).filter(m=>m.name).length}>{(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
                         <div key={mi} style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginTop:3}}>
                           <span style={{fontSize:11,color:m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
                           {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px",whiteSpace:"nowrap"}}>SEM COBRANÇA</span>}
                         </div>
-                      ))}
+                      ))}</PvMatToggle>
                     </div>
                   </div>
                 </div>
@@ -13628,7 +13639,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.209";
+const APP_VERSION = "2026.11.24.210";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Link de acompanhamento: peças e materiais de cada serviço ficam recolhidos (o cliente abre se quiser), a linha do tempo não mostra mais os lançamentos de material e o status das peças ficou simples: Pedido, A caminho, Chegou"
+      },
+      {
+        "type": "feat",
         "text": "Link de acompanhamento, aba Conta: valor \"A pagar agora\" no topo e resumo simples com total da OS, já pago e restante até a entrega; pagamentos recebidos e detalhamento ficam recolhidos; saem o comparativo e os textos de fórmula"
       },
       {

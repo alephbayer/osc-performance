@@ -48,7 +48,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] Limite: foto de peça vinda do estoque agora casa o nome exato (antes ignorava maiúsculas/minúsculas)
 - [x] Linha do tempo "Materiais — tarefa": editar nome/marca/qtd/valor de um material contava como novo lançamento (comparava por nome) e o aviso "Materiais atualizados" saía a cada mudança. Agora só itens acrescentados contam (`addedMaterials`), o aviso diz "Material incluído" e inclusões seguidas viram um registro só (v2026.11.24.208)
 - [x] Apagados 12 registros repetidos antigos (nome antigo de material renomeado), em 2026-11-24, com o ok do Aleph; cópia em `~/OSC/backups/timeline-materiais-apagados-2026-11-24.json` (13 linhas: inclui "Bronzina de biela 010", que o Aleph decidiu manter no banco)
-- [ ] Não testei incluindo/editando material no app ao vivo (só a regra isolada e o build)
+- [x] Testado pelo Aleph no app ao vivo (2026-11-24): editar material não gera mais lançamento
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

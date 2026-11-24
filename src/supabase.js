@@ -1741,6 +1741,14 @@ export const db = {
       appointmentId:q.appointment_id,
     });
   },
+  // Modelo do veículo e nome do cliente de um orçamento (para o aviso à oficina no link ?q=)
+  async getQuoteContext(q) {
+    const [v, c] = await Promise.all([
+      q?.vehicleId ? supabase.from("vehicles").select("model").eq("id", q.vehicleId).maybeSingle() : { data: null },
+      q?.clientId ? supabase.from("clients").select("name").eq("id", q.clientId).maybeSingle() : { data: null },
+    ]);
+    return { model: v.data?.model || q?.tempModel || "", clientName: c.data?.name || q?.tempName || "" };
+  },
   async getQuote(id) {
     const {data,error}=await supabase.from("quotes").select("*").eq("id",id).single();
     if(error) throw error;

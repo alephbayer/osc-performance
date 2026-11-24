@@ -13751,7 +13751,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.216";
+const APP_VERSION = "2026.11.24.217";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17529,12 +17529,38 @@ function ClientPortalRoot() {
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}</div>;
 }
 
+// Link público do orçamento (?q=): carrega só aquele orçamento, nunca o banco inteiro.
+function PublicQuoteRoot({quoteId}) {
+  const ctx=async q=>{ try{ return await db.getQuoteContext(q); }catch{ return {}; } };
+  return <ErrorBoundary><PublicQuoteView quoteId={quoteId} onApprove={async(qid,approvedItems)=>{
+    try{
+      const q=await db.getQuote(qid);
+      if(!q) return;
+      // cliente ainda sem cadastro: cria a partir dos dados do orçamento
+      let clientId=q.clientId;
+      if(!clientId&&q.tempName){
+        const newCli=await db.addClient(q.tempName,q.tempPhone||"",q.tempEmail||"");
+        clientId=newCli.id;
+      }
+      await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems,clientId});
+      const c=await ctx({...q,clientId});
+      pushQuoteDecision(q,true,c.model,c.clientName);
+    }catch(e){console.error(e);}
+  }} onReject={async(qid)=>{
+    const q=await db.getQuote(qid).catch(()=>null);
+    await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});
+    const c=await ctx(q||{});
+    pushQuoteDecision(q,false,c.model,c.clientName);
+  }}/></ErrorBoundary>;
+}
+
 export default function App() {
   const params=new URLSearchParams(window.location.search);
   const pv=params.get("v"), pvh=params.get("vh");
   if(pv) return <PublicVehicleRoot vehicleId={pv}/>;
   if(pvh) return <PublicVehicleRoot vehicleId={pvh} history/>;
   if(params.get("portal")==="cliente") return <ClientPortalRoot/>;
+  if(params.get("q")) return <PublicQuoteRoot quoteId={params.get("q")}/>;
   return <MainApp/>;
 }
 
@@ -17569,7 +17595,6 @@ function MainApp() {
 
   // Check for public vehicle link
   const params=new URLSearchParams(window.location.search);
-  const publicQuoteId=params.get("q");
   const isMechanicPortal=params.get("portal")==="mecanico";
 
   const [employees,setEmp]=useState([]);
@@ -17840,30 +17865,6 @@ function MainApp() {
     return unsub;
   },[]);
 
-  // If public view (still needs data loaded)
-  if(publicQuoteId){
-    return <><ErrorBoundary><PublicQuoteView quoteId={publicQuoteId} onApprove={async(qid,approvedItems)=>{
-      try{
-        const q=quotes.find(x=>x.id===qid)||await db.getQuote(qid);
-        if(!q) return;
-        // Create client if temp
-        let clientId=q.clientId;
-        if(!clientId&&q.tempName){
-          const newCli=await db.addClient(q.tempName,q.tempPhone||"",q.tempEmail||"");
-          clientId=newCli.id;
-        }
-        // Update quote status
-        await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems,clientId});
-        setQuotes(p=>p.map(x=>x.id===qid?{...x,status:"approved",approvedItems,clientId}:x));
-        pushQuoteDecision(q,true,q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel,clients.find(c=>c.id===clientId)?.name);
-      }catch(e){console.error(e);}
-    }} onReject={async(qid)=>{
-      const q=quotes.find(x=>x.id===qid)||await db.getQuote(qid).catch(()=>null);
-      await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});
-      setQuotes(p=>p.map(x=>x.id===qid?{...x,status:"rejected"}:x));
-      pushQuoteDecision(q,false,q?.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q?.tempModel,clients.find(c=>c.id===q?.clientId)?.name);
-    }}/></ErrorBoundary></>;
-  }
   if(loading) return <LoadingScreen/>;
   if(loadError) return <ErrorScreen msg={loadError}/>;
 

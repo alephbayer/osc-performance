@@ -65,7 +65,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] 2 pares de clientes têm o mesmo celular: o portal entra no cadastro mais antigo. Conferir/unificar
 - [x] Aprovar/recusar orçamento (portal e link `?q=`) manda push à oficina, sem valores porque chega também aos chefes (v2026.11.24.216)
 - [x] Rascunho fica interno: o portal não mostra nem carrega orçamento `draft` (migration 061). O push "Orçamento disponível" saiu da criação e foi para o botão "Enviar"; "Orçamento atualizado" só vai se o orçamento já foi enviado. **Aleph:** o rascunho que já existe para um cliente só volta a aparecer para ele depois de "Enviar". Não testado no app interno (precisa da senha): o push do "Enviar"
-- [ ] O link público de orçamento `?q=` ainda carrega o banco inteiro (roda dentro do app interno, como o portal antes). Mesmo conserto do portal
+- [x] O link público de orçamento `?q=` tem raiz própria (`PublicQuoteRoot`) e lê só aquele orçamento; antes carregava o banco inteiro (v2026.11.24.217)
+- [ ] Link `?q=`: orçamento ligado a um veículo cadastrado mostra "Veículo" no título (só usa o modelo digitado à mão)
 - [ ] Emojis que sobraram no app: "✏️ Editar" e "✓ Copiado" na lista de orçamentos, títulos de push (🗑, 📦, 📷, 🛒, 🏁, 💰...), avisos "✓"
 - [ ] Achados ainda não tratados: emojis nos títulos das notificações push (cliente e oficina); "Nova versão disponível" aparece já na primeira visita; botão WhatsApp no cadastro do cliente não faz nada; os 4 quadrinhos do PIN às vezes não pulam sozinhos para o próximo dígito (automação; conferir no celular)
 

@@ -3,6 +3,10 @@
     "date": "2026-11-24",
     "changes": [
       {
+        "type": "fix",
+        "text": "Link de orçamento enviado ao cliente: carrega só aquele orçamento, não mais o sistema inteiro, e abre mais rápido"
+      },
+      {
         "type": "feat",
         "text": "Orçamentos: quando o cliente aprova ou recusa (pelo portal ou pelo link), a oficina recebe uma notificação"
       },

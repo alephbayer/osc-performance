@@ -41,6 +41,12 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] Observado no teste (antigo, não mexido): quando há despesas adicionais na página de investimento, as formas de pagamento e o aceite podem ir sozinhos para uma página nova
 - Sem poppler neste Mac: para ver PDFs, compilar um conversor PDFKit em Swift (ver nota da sessão) ou `brew install poppler`
 
+## Link de acompanhamento do veículo (sessão dedicada, 2026-11-24)
+- Links: `?v=<id>` (acompanhamento, `PublicVehicleView`), `?vh=<id>` (histórico, `PublicVehicleHistoryView`); `?portal=cliente` usa a mesma `PublicVehicleView` com login. Encurtador `shorten-url` só é usado no Portfólio
+- [x] `?v=` e `?vh=` carregam só os dados daquele veículo (`db.loadPublicVehicle` em `supabase.js`, componente `PublicVehicleRoot`): antes baixavam o banco inteiro (todos os clientes, pagamentos, estoque) para o navegador de quem abrisse. Pedidos de peça sem custo/link; funcionário e cliente só id e nome; atualiza a cada 60 s e ao voltar para a aba (antes era realtime). `?vh=` passou a esconder tarefas internas/sem valor, como o `?v=` (v2026.11.24.207)
+- [ ] Limite: com a chave pública e policies `using (true)`, quem souber usar a API ainda lê qualquer tabela (ver Segurança). A correção acima tira os dados da página, não do banco
+- [ ] Limite: foto de peça vinda do estoque agora casa o nome exato (antes ignorava maiúsculas/minúsculas)
+
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor
 - [ ] Subir o backup (zip de `backup-AAAA-MM-DD/`) para o local privado e confirmar

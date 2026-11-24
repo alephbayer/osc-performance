@@ -1447,8 +1447,9 @@ async function uploadImg(file, folder) {
 }
 
 // ─── Public link ─────────────────────────────────────────────────────────────
-function getPublicLink(vehicleId) {
-  return `${window.location.href.split("?")[0]}?v=${vehicleId}`;
+// Link público curto: ?v= com os 8 primeiros caracteres do id do veículo (o link resolve o prefixo; links antigos com o id inteiro continuam valendo)
+function getPublicLink(vehicleId,aba) {
+  return `${window.location.origin}/?v=${String(vehicleId).slice(0,8)}${aba?`&aba=${aba}`:""}`;
 }
 function getMechanicPortalLink() {
   return `${window.location.href.split("?")[0]}?portal=mecanico`;
@@ -6503,7 +6504,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             const cli=clients.find(c=>c.id===vehicle.clientId);
             if(cli?.phone){
               const vModel=vehicle.model||vehicle.plate||"seu veículo";
-              const waMsg=`Olá${cli.name?`, ${cli.name.split(" ")[0]}`:""}! 👋\n\nAtualização sobre o *${vModel}*:\n\n_${tlNoteText.trim()}_\n\nAcompanhe o progresso completo em: ${window.location.origin}/?v=${vehicle.id}`;
+              const waMsg=`Olá${cli.name?`, ${cli.name.split(" ")[0]}`:""}! 👋\n\nAtualização sobre o *${vModel}*:\n\n_${tlNoteText.trim()}_\n\nAcompanhe o progresso completo em: ${getPublicLink(vehicle.id)}`;
               openWhatsApp(cli.phone, waMsg);
             }
             setTLNoteText(""); setShowTLNote(false);
@@ -8492,7 +8493,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
       // Open WhatsApp if toggled and client has phone
       if(sendWA&&hasPhone){
         const vModel=selV.model||selV.plate||"seu veículo";
-        const waMsg=`Olá${selCli?.name?`, ${selCli.name.split(" ")[0]}`:""}! 👋\n\nAtualização sobre o *${vModel}*:\n\n_${note.trim()}_\n\nAcompanhe o progresso completo em: ${window.location.origin}/?v=${selV.id}`;
+        const waMsg=`Olá${selCli?.name?`, ${selCli.name.split(" ")[0]}`:""}! 👋\n\nAtualização sobre o *${vModel}*:\n\n_${note.trim()}_\n\nAcompanhe o progresso completo em: ${getPublicLink(selV.id)}`;
         openWhatsApp(selCli.phone, waMsg);
       }
       onClose();
@@ -10767,7 +10768,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
               </button>
             :<div style={{flex:1,fontSize:10,color:B.gray500,fontWeight:600,textTransform:"uppercase",letterSpacing:.5}}>📋 Primeira OS deste veículo</div>}
           <button onClick={()=>{
-            const url=`${window.location.origin}${window.location.pathname}?vh=${vehicle.id}`;
+            const url=getPublicLink(vehicle.id,"historico");
             navigator.clipboard?.writeText(url);
             toast_("Link do histórico copiado ✓");
           }} title="Copiar link do histórico para o cliente" style={{background:`${B.purple}18`,border:`1px solid ${B.purple}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.purple,fontSize:11,fontWeight:700,flexShrink:0,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
@@ -12503,7 +12504,8 @@ function pvTimeline(evs,tasks){
     const last=list.reduce((a,b)=>new Date(b.createdAt)>new Date(a.createdAt)?b:a);
     const cut=n=>n.length>42?n.slice(0,40).replace(/[\s,;:.-]+\S*$/,"")+"…":n;
     const shown=names.slice(0,3).map(cut).join(", ")+(names.length>3?` e mais ${names.length-3}`:"");
-    return {...last,id:"mat-"+last.id,title:`Peças e materiais — ${label}`,body:`${names.length} ${names.length===1?"item":"itens"}: ${shown}`};
+    const items=(t.materials||[]).filter(m=>String(m?.name||"").trim()).map(m=>({name:String(m.name).trim(),brand:m.brand||"",qty:m.qty}));
+    return {...last,id:"mat-"+last.id,title:`Peças e materiais — ${label}`,body:`${names.length} ${names.length===1?"item":"itens"}: ${shown}`,items};
   }).filter(Boolean);
   return [...rest,...merged].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 }
@@ -12566,9 +12568,10 @@ function publicFinInfo(v,perfTasks,finTasks,payments,defaultRate){
   const executed=total>0?Math.min(total,executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)):0;
   return {total,paid,executed,balance:Math.max(0,total-paid),pending:Math.max(0,executed-paid)};
 }
-function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[],onBack,onPhoto}) {
+function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,clients,payments=[],osHistory=[],defaultRate=0,purchaseOrders=[],stock=[],onBack,onPhoto}) {
   const [hideNum,setHideNum]=useState(true); // valores ocultos por padrão (olho para mostrar)
-  const [tab,setTab]=useState("resumo");
+  const [tab,setTab]=useState(initialTab||"resumo");
+  const [tlItemsOpen,setTlItemsOpen]=useState({});
   const [tlAll,setTlAll]=useState(false);
   const [openCats,setOpenCats]=useState({});
   const [taskFilter,setTaskFilter]=useState("all");
@@ -12634,6 +12637,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     ...(hasFotos?[{id:"fotos",label:"Fotos",icon:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>'}]:[]),
     ...(hasImport?[{id:"importacao",label:"Importação",icon:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>'}]:[]),
     ...(hasPecas?[{id:"pecas",label:"Peças",icon:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>'}]:[]),
+    ...(osHistory.some(h=>h.vehicle_id===v.id)?[{id:"historico",label:"Histórico",icon:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'}]:[]),
     {id:"conta",label:"Conta",dot:pendingNow>0.005,icon:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'},
   ];
 
@@ -12807,7 +12811,16 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 </div>
                 <div style={{flex:1,paddingTop:2}}>
                   <div style={{fontSize:13,fontWeight:700,color:B.white,lineHeight:1.3}}>{evTitle}</div>
-                  {ev.body&&<div style={{fontSize:12,color:B.gray300,marginTop:2,lineHeight:1.4,whiteSpace:"pre-wrap"}}>{ev.body}</div>}
+                  {ev.body&&(ev.items?<button onClick={()=>setTlItemsOpen(o=>({...o,[ev.id]:!o[ev.id]}))} aria-expanded={!!tlItemsOpen[ev.id]} style={{display:"flex",alignItems:"flex-start",gap:6,width:"100%",textAlign:"left",background:"none",border:"none",padding:0,marginTop:2,cursor:"pointer",fontFamily:"inherit",fontSize:12,color:B.gray300,lineHeight:1.4}}>
+                    <span style={{flex:1}}>{tlItemsOpen[ev.id]?`${ev.items.length} ${ev.items.length===1?"item":"itens"}`:ev.body}</span>
+                    <span style={{marginTop:2}}>{tlItemsOpen[ev.id]?<IChevU s={12} c={B.gray400}/>:<IChevD s={12} c={B.gray400}/>}</span>
+                  </button>:<div style={{fontSize:12,color:B.gray300,marginTop:2,lineHeight:1.4,whiteSpace:"pre-wrap"}}>{ev.body}</div>)}
+                  {ev.items&&tlItemsOpen[ev.id]&&<div style={{marginTop:6,display:"flex",flexDirection:"column",gap:3}}>
+                    {ev.items.map((it,ii)=>(<div key={ii} style={{fontSize:12,color:B.gray300,display:"flex",gap:6,alignItems:"baseline"}}>
+                      <span style={{width:4,height:4,borderRadius:99,background:B.gray500,flexShrink:0,transform:"translateY(-2px)"}}/>
+                      <span>{it.name}{it.brand?<span style={{color:B.gray500}}> · {it.brand}</span>:null}{it.qty!=null&&Number(it.qty)!==1?<span style={{color:B.gray500}}> ×{it.qty}</span>:null}</span>
+                    </div>))}
+                  </div>}
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4,alignItems:"center"}}>
                     {ev.category&&<span style={{fontSize:9,fontWeight:700,color:evColor,background:`${evColor}18`,borderRadius:4,padding:"1px 5px"}}>{ev.category}</span>}
                     {ev.actor&&<span style={{fontSize:10,color:B.gray500}}>por {ev.actor}</span>}
@@ -13226,6 +13239,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
       </div>}
 
       </>}
+      {tab==="historico"&&<PublicVehicleHistoryView embedded vehicleId={v.id} vehicles={vehicles} tasks={[]} employees={employees} osHistory={osHistory}/>}
       {tab==="conta"&&<>
       <button onClick={()=>setHideNum(h=>!h)} aria-pressed={!hideNum}
         style={{width:"100%",display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"12px 14px",borderRadius:12,cursor:"pointer",fontFamily:"inherit",textAlign:"left",background:hideNum?`${B.orange}14`:B.gray800,border:`1px solid ${hideNum?B.orange+"66":B.gray700}`,color:hideNum?B.orange:B.gray300}}>
@@ -13686,7 +13700,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.211";
+const APP_VERSION = "2026.11.24.212";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13880,7 +13894,7 @@ function AdminLoginScreen({onLogin}) {
 }
 
 // ─── Public Vehicle History View ─────────────────────────────────────────────
-function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=[]}) {
+function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=[],embedded=false}) {
   const v=vehicles.find(x=>x.id===vehicleId);
   const [lb,setLB]=useState(null);
   if(!v) return (<div style={{background:B.black,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter','Segoe UI',sans-serif",minHeight:"60vh"}}>
@@ -13915,11 +13929,11 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,color:t.done?B.gray400:B.gray100,fontWeight:t.done?400:600}}>{t.label}</div>
                 {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
-                {(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
+                <PvMatToggle count={(t.materials||[]).filter(m=>m.name).length}>{(t.materials||[]).filter(m=>m.name).map((m,mi)=><div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
                   <span style={{color:m.estimated?"#eab308":m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{m.qty>1?` ×${m.qty}`:""}</span>
                   {m.estimated&&<span style={{fontSize:9,fontWeight:800,color:"#eab308",background:"#eab30820",border:"1px solid #eab30844",borderRadius:4,padding:"1px 5px",letterSpacing:.3}}>ESTIMADO</span>}
                   {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px"}}>SEM COBRANÇA</span>}
-                </div>)}
+                </div>)}</PvMatToggle>
                 {tPhotos.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
                   {tPhotos.map((p,pi)=><div key={pi} onClick={()=>setLB(p.url||p)} style={{width:60,height:60,borderRadius:6,overflow:"hidden",cursor:"pointer",flexShrink:0}}>
                     <img src={p.url||p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -13933,6 +13947,34 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
     });
   };
 
+  const historyCards=sortedHistory.map((h,hi)=>{
+        const hTasks=(Array.isArray(h.tasks_snapshot)?h.tasks_snapshot:(h.tasksSnapshot||[])).filter(t=>!isInternalTask(t));
+        const entryDate=h.entered_at?new Date(h.entered_at).toLocaleDateString("pt-BR"):null;
+        const delivDate=h.delivered_at?new Date(h.delivered_at).toLocaleDateString("pt-BR"):null;
+        const mechs=(h.mechanic_ids||h.mechanicIds||[]).map(id=>employees.find(e=>e.id===id)?.name).filter(Boolean);
+        return (<div key={hi} style={S.card}>
+          <div style={S.pad}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+              {h.os_number&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:6,padding:"2px 10px",fontWeight:800,fontSize:13}}>{fmtOS(h.os_number)}</span>}
+              <div style={{fontSize:11,color:B.gray400}}>
+                {entryDate&&<span>Entrada {entryDate}</span>}
+                {delivDate&&<span style={{marginLeft:10}}>Entregue {delivDate}</span>}
+              </div>
+              {mechs.length>0&&<div style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>{mechs.join(", ")}</div>}
+            </div>
+            {renderTaskList(hTasks)}
+            {hTasks.length===0&&<div style={{fontSize:13,color:B.gray500}}>Nenhuma tarefa registrada.</div>}
+          </div>
+        </div>);
+      });
+  if(embedded) return (<div>
+    {sortedHistory.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray500,fontSize:13}}>Nenhuma OS anterior.</div>}
+    {historyCards}
+    {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
+      <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
+      <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
+    </div>}
+  </div>);
   return (<div style={{minHeight:"100svh",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
     {/* Header */}
     <div style={{background:B.gray900,borderBottom:`2px solid ${B.purple}`,padding:"12px 20px",position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",gap:12}}>
@@ -14020,12 +14062,12 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:13,color:B.gray100,fontWeight:600}}>{t.label}</div>
                           {t.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{t.description}</div>}
-                          {(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
+                          <PvMatToggle count={(t.materials||[]).filter(m=>m.name).length}>{(t.materials||[]).filter(m=>m.name).map((m,mi)=>(
                             <div key={mi} style={{fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>
                               <span style={{color:m.noCharge?B.red:B.gray500}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{m.name}{m.brand?` · ${m.brand}`:""}{(m.qty||1)>1?` ×${m.qty}`:""}</span>
                               {m.noCharge&&<span style={{fontSize:9,fontWeight:800,color:B.red,background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:4,padding:"1px 5px"}}>SEM COBRANÇA</span>}
                             </div>
-                          ))}
+                          ))}</PvMatToggle>
                         </div>
                       </div>
                     </div>
@@ -14043,26 +14085,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
         <div style={{fontSize:15,color:B.gray200,fontWeight:700}}>Nenhum histórico ainda</div>
       </div>}
 
-      {sortedHistory.map((h,hi)=>{
-        const hTasks=(Array.isArray(h.tasks_snapshot)?h.tasks_snapshot:(h.tasksSnapshot||[])).filter(t=>!isInternalTask(t));
-        const entryDate=h.entered_at?new Date(h.entered_at).toLocaleDateString("pt-BR"):null;
-        const delivDate=h.delivered_at?new Date(h.delivered_at).toLocaleDateString("pt-BR"):null;
-        const mechs=(h.mechanic_ids||h.mechanicIds||[]).map(id=>employees.find(e=>e.id===id)?.name).filter(Boolean);
-        return (<div key={hi} style={S.card}>
-          <div style={S.pad}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-              {h.os_number&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:6,padding:"2px 10px",fontWeight:800,fontSize:13}}>{fmtOS(h.os_number)}</span>}
-              <div style={{fontSize:11,color:B.gray400}}>
-                {entryDate&&<span>Entrada {entryDate}</span>}
-                {delivDate&&<span style={{marginLeft:10}}>Entregue {delivDate}</span>}
-              </div>
-              {mechs.length>0&&<div style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>{mechs.join(", ")}</div>}
-            </div>
-            {renderTaskList(hTasks)}
-            {hTasks.length===0&&<div style={{fontSize:13,color:B.gray500}}>Nenhuma tarefa registrada.</div>}
-          </div>
-        </div>);
-      })}
+      {historyCards}
 
       <div style={{textAlign:"center",fontSize:12,color:B.gray500,marginTop:8,paddingBottom:24}}>
         OSC Performance · Histórico gerado em {fmtD()}
@@ -17381,8 +17404,14 @@ function PublicVehicleRoot({vehicleId,history}) {
   if(!data&&err) return <ErrorScreen msg={err}/>;
   if(!data) return <LoadingScreen/>;
   const pubTasks=data.tasks.filter(t=>!isInternalTask(t));
+  if(history&&data.vehicles[0]){ // links antigos ?vh= abrem a página nova na aba Histórico
+    try{ window.history.replaceState(null,"",`/?v=${String(data.vehicles[0].id).slice(0,8)}&aba=historico`); }catch{}
+    return <ErrorBoundary><PublicVehicleView initialTab={data.osHistory.length?"historico":undefined} vehicleId={data.vehicles[0].id} vehicles={data.vehicles} tasks={pubTasks} employees={data.employees} clients={data.clients} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} purchaseOrders={data.purchaseOrders} stock={data.stock}/></ErrorBoundary>;
+  }
   if(history) return <div style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><PublicVehicleHistoryView vehicleId={vehicleId} vehicles={data.vehicles} tasks={pubTasks} employees={data.employees} osHistory={data.osHistory}/></ErrorBoundary></div>;
-  return <ErrorBoundary><PublicVehicleView vehicleId={vehicleId} vehicles={data.vehicles} tasks={pubTasks} employees={data.employees} clients={data.clients} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} purchaseOrders={data.purchaseOrders} stock={data.stock}/></ErrorBoundary>;
+  const vid=data.vehicles[0]?.id||vehicleId;
+  const aba=new URLSearchParams(window.location.search).get("aba");
+  return <ErrorBoundary><PublicVehicleView initialTab={aba==="historico"&&data.osHistory.length?"historico":undefined} vehicleId={vid} vehicles={data.vehicles} tasks={pubTasks} employees={data.employees} clients={data.clients} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} purchaseOrders={data.purchaseOrders} stock={data.stock}/></ErrorBoundary>;
 }
 
 export default function App() {

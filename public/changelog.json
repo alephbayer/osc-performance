@@ -4,6 +4,18 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Link de acompanhamento: na linha do tempo, peças e materiais de cada serviço começam resumidos e abrem com a lista item a item"
+      },
+      {
+        "type": "feat",
+        "text": "Link de acompanhamento: histórico de OS anteriores virou a aba Histórico; o botão \"Link histórico\" e os links antigos abrem direto nela"
+      },
+      {
+        "type": "feat",
+        "text": "Link de acompanhamento mais curto (ex.: /?v=750bea76) no botão de copiar e nas mensagens de WhatsApp; links antigos continuam funcionando"
+      },
+      {
+        "type": "feat",
         "text": "Link de acompanhamento: a linha do tempo volta a mostrar as peças e materiais, agora numa entrada só por serviço, com a quantidade de itens e os primeiros nomes"
       },
       {

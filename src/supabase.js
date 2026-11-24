@@ -309,10 +309,21 @@ export const db = {
   // nunca a lista de clientes, pagamentos ou estoque da oficina inteira.
   async loadPublicVehicle(vehicleId) {
     const empty = { vehicles: [], tasks: [], employees: [], clients: [], payments: [], osHistory: [], purchaseOrders: [], stock: [], defaultRate: 0 };
-    if (!/^[0-9a-f-]{36}$/i.test(String(vehicleId || ""))) return empty;
-    const { data: veh, error: vErr } = await supabase.from("vehicles").select("*").eq("id", vehicleId).maybeSingle();
-    if (vErr) throw vErr;
+    const raw = String(vehicleId || "").toLowerCase();
+    let veh = null;
+    if (/^[0-9a-f-]{36}$/.test(raw)) {
+      const { data, error } = await supabase.from("vehicles").select("*").eq("id", raw).maybeSingle();
+      if (error) throw error;
+      veh = data;
+    } else if (/^[0-9a-f]{8}$/.test(raw)) {
+      // link curto: 8 primeiros caracteres do id (só vale se apontar para um único veículo)
+      const { data, error } = await supabase.from("vehicles").select("*")
+        .gte("id", `${raw}-0000-0000-0000-000000000000`).lte("id", `${raw}-ffff-ffff-ffff-ffffffffffff`).limit(2);
+      if (error) throw error;
+      if ((data || []).length === 1) veh = data[0];
+    }
     if (!veh) return empty;
+    vehicleId = veh.id;
     const [vmec, vown, tsk, pay, osh, po, set] = await Promise.all([
       supabase.from("vehicle_mechanics").select("vehicle_id,employee_id").eq("vehicle_id", vehicleId),
       supabase.from("vehicle_owners").select("client_id,is_current").eq("vehicle_id", vehicleId).eq("is_current", true),

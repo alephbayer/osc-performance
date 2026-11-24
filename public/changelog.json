@@ -3,6 +3,10 @@
     "date": "2026-11-24",
     "changes": [
       {
+        "type": "fix",
+        "text": "Link de acompanhamento: na linha do tempo, o traço vertical não passa mais por dentro dos ícones"
+      },
+      {
         "type": "feat",
         "text": "Link de acompanhamento: na linha do tempo, peças e materiais de cada serviço começam resumidos e abrem com a lista item a item"
       },

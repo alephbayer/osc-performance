@@ -12806,7 +12806,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
               const payN=payM?Number(payM[1].replace(/\./g,"").replace(",",".")):null;
               const evTitle=payM&&isFinite(payN)?`Pagamento recebido · ${fmtBRL(payN)}`:pvStripEmoji(ev.title);
               return(<div key={ev.id} style={{display:"flex",gap:12,marginBottom:i<shownTl.length-1?16:0,position:"relative"}}>
-                <div style={{width:28,height:28,borderRadius:99,background:`${evColor}22`,border:`2px solid ${evColor}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1,fontSize:11,marginTop:1}}>
+                <div style={{width:28,height:28,borderRadius:99,background:`linear-gradient(${evColor}22,${evColor}22),${B.gray800}`,border:`2px solid ${evColor}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1,fontSize:11,marginTop:1}}>
                   <PvIc n={typeIcon} s={13} c={evColor}/>
                 </div>
                 <div style={{flex:1,paddingTop:2}}>
@@ -13700,7 +13700,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.212";
+const APP_VERSION = "2026.11.24.213";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

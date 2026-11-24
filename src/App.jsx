@@ -10908,7 +10908,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                   try{
                     const rawFuels=Array.isArray(h.fuels)?h.fuels:(h.fuels?JSON.parse(JSON.stringify(h.fuels)):[]);
                     const rawTows=Array.isArray(h.tows)?h.tows:(h.tows?JSON.parse(JSON.stringify(h.tows)):[]);
-                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model,fuelCost:Number(h.fuel_cost||0),fuels:rawFuels,tows:rawTows,osDiscountPct:Number(h.os_discount_pct||0)};
+                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model,fuelCost:Number(h.fuel_cost||0),fuels:rawFuels,tows:rawTows,freights:Array.isArray(h.freights)?h.freights:[],importParts:Array.isArray(h.import_parts)?h.import_parts:[],osDiscountPct:Number(h.os_discount_pct||0)};
                     const hEmployee=employees.find(e=>(h.mechanic_ids||[]).includes(e.id))||null;
                     await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks,payments.filter(p=>p.osHistoryId===h.id),{total:h.total_value!=null?Number(h.total_value):undefined,note:h.discount_note||""});
                   }catch(err){alert("Erro ao gerar PDF: "+err.message);}
@@ -13825,7 +13825,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.221";
+const APP_VERSION = "2026.11.24.222";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -18208,7 +18208,9 @@ function MainApp() {
     const fuelTotal=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0);
     const laborSum=vTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
     const osDiscountAmt=laborSum*Number(v.osDiscountPct||0)/100;
-    const totalValue=tasksValue+Number(v.fuelCost||0)+fuelTotal+towTotal-osDiscountAmt;
+    const freightTotal=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
+    const importTot=importTotal(v);
+    const totalValue=tasksValue+Number(v.fuelCost||0)+fuelTotal+towTotal+freightTotal+importTot-osDiscountAmt;
 
     const historyRecord={
       osNumber: v.osNumber,
@@ -18221,6 +18223,8 @@ function MainApp() {
       fuelCost: v.fuelCost||0,
       fuels: v.fuels||[],
       tows: v.tows||[],
+      freights: v.freights||[],
+      importParts: v.importParts||[],
       osDiscountPct: v.osDiscountPct||0,
       totalValue,
       photos: v.photos||[],

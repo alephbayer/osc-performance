@@ -558,6 +558,7 @@ export const db = {
       fuels: historyRecord.fuels || [],
       tows: historyRecord.tows || [],
       freights: historyRecord.freights || [],
+      import_parts: historyRecord.importParts || [],
       os_discount_pct: historyRecord.osDiscountPct || 0,
       total_value: historyRecord.totalValue || 0,
       photos: historyRecord.photos || [],
@@ -601,6 +602,8 @@ export const db = {
       photos: [],
       os_discount_pct: 0,
       tows: [],
+      freights: [],
+      import_parts: [],
       notes: '',
     }).eq("id", vehicleId);
     if (vErr) throw vErr;

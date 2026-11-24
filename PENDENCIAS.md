@@ -89,6 +89,10 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] `index.html`: removido o script do `<head>` que dava erro de `classList` desde 03/08 (e por isso nunca rodou: trava de rolagem e ajuste de altura do iPhone) e o CSS que dependia dele; nenhuma mudança no uso (v2026.11.23.202)
 - [ ] Changelog: faltam as entradas entre 2026-08-19 e 2026-11-18 (`public/changelog.json`)
 
+## Correções de dados
+- [x] Fechar OS (Performance) não somava fretes do veículo nem peças importadas no total gravado, não os guardava no histórico e não os zerava no veículo (migration 062: `os_history.import_parts`). OS-127 (ASZ0D70) corrigida de R$ 11.897,80 para R$ 12.923,74 em 2026-11-24
+- [ ] LDM0202: frete de R$ 63,29 ficou no veículo depois do fechamento; conferir se pertence à última OS fechada e corrigir o total dela (só com OK do Aleph)
+
 ## Segurança (sem urgência, discutir antes de mexer)
 - [ ] Repositório `alephbayer/osc-performance` está público no GitHub; avaliar deixar privado
 - [ ] Muitas tabelas aceitam acesso pela chave pública (`anon`) com policy `using (true)`; correção real exige Supabase Auth (mudança grande)

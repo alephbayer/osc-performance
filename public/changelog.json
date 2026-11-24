@@ -3,6 +3,10 @@
     "date": "2026-11-24",
     "changes": [
       {
+        "type": "fix",
+        "text": "Fechar OS: o total gravado agora inclui fretes do veículo e peças importadas, e eles não passam mais para a próxima OS do carro; o PDF da OS fechada mostra os fretes dela"
+      },
+      {
         "type": "feat",
         "text": "Portal do cliente: botão no topo para falar com a oficina pelo WhatsApp"
       },

@@ -12518,6 +12518,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const [taskFilter,setTaskFilter]=useState("all");
   const [detOpen,setDetOpen]=useState(false);
   const [payOpen,setPayOpen]=useState(false);
+  const [paysOpen,setPaysOpen]=useState(false);
   const [pixCopied,setPixCopied]=useState(false);
   const goTab=id=>{setTab(id);try{window.scrollTo({top:0});}catch{}};
   const fmtBRL=n=>hideNum?"R$ ••••":fmtBRLReal(n);
@@ -12560,8 +12561,9 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
     const open=all.filter(t=>!t.done);
     const bought=boughtPendingValue(open,defaultRate,true)>0.005;
     const outs=open.some(t=>t.outsourced&&!t.warranty&&taskCost(t,defaultRate).labor>0);
-    const base=doneN===0?"Entrada do serviço · 50% da mão de obra":"Serviços concluídos + entrada dos em andamento";
-    return base+(bought?" + peças já adquiridas":"")+(outs?" + serviços terceirizados":"");
+    const extras=[bought&&"as peças já compradas",outs&&"os serviços terceirizados"].filter(Boolean);
+    const base=doneN===0?"Entrada: metade da mão de obra":"Serviços já feitos e entrada dos que estão em andamento";
+    return base+(extras.length?`, mais ${extras.join(" e ")}`:"");
   })();
   const shownTl=tlAll?timeline:timeline.slice(0,5);
   const hasPecas=purchaseOrders.some(o=>o.vehicleId===v.id)||[...(v.partsList||[]),...(v.partsListFinishing||[])].some(p=>p.name);
@@ -12603,12 +12605,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
   const payCardFn=(compact)=>(pubFin.total>0&&(pendingNow>0.005
         ?<div style={{...S.card,border:`1px solid ${B.amber}66`,background:`${B.amber}10`}}>
           <div style={S.pad}>
-            <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>Pagamento pendente</div>
+            <div style={{fontSize:11,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>A pagar agora</div>
             <div style={{fontSize:30,fontWeight:900,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{fmtBRLReal(pendingNow)}</div>
             <div style={{fontSize:12,color:B.gray400,marginTop:4}}>{pendNote}</div>
             {compact?<>
               <div style={{display:"flex",gap:8,marginTop:14}}>
-                <button onClick={copyPix} style={{flex:1,minHeight:46,border:"none",borderRadius:10,background:B.amber,color:B.black,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>{pixCopied?"✓ Chave copiada":"Copiar chave Pix"}</button>
+                <button onClick={copyPix} style={{flex:1,minHeight:46,border:"none",borderRadius:10,background:B.amber,color:B.black,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>{pixCopied?"Chave copiada":"Copiar chave Pix"}</button>
                 <button onClick={()=>setPayOpen(o=>!o)} aria-expanded={payOpen} style={{flex:1,minHeight:46,borderRadius:10,border:`1px solid ${B.amber}88`,background:"none",color:B.amber,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>{payOpen?"Ocultar":"Outras formas"}</button>
               </div>
               {payOpen&&<PayMethodsBox/>}
@@ -12617,7 +12619,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         </div>
         :<div style={{...S.card,border:`1px solid ${B.green}44`,background:B.greenBg}}>
           <div style={{...S.pad,padding:"12px 20px",fontSize:13,fontWeight:800,color:B.green}}>
-            {pubFin.paid-pubFin.executed>1?"✅ Pagamento à frente do serviço":"✅ Pagamento em dia com o serviço"}
+            {pubFin.paid-pubFin.executed>1?"Pagamento adiantado. Nada a pagar agora":"Pagamento em dia. Nada a pagar agora"}
           </div>
         </div>));
 
@@ -13228,47 +13230,39 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
         });
         return (<div style={S.card}>
           <div style={S.pad}>
-            <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:14}}>💳 Conta</div>
+            <div style={{fontSize:11,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:.6,marginBottom:14}}>Resumo da conta</div>
             {hasActive&&<div style={{marginBottom:totalOwedPast>0?16:0}}>
-              {/* Grand total */}
-              {activeTotal>0&&<div style={{background:B.gray900,border:`1px solid ${B.gray600}`,borderRadius:10,padding:"12px 14px",marginBottom:10}}>
-                {origTotal-activeTotal>=0.5&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
-                  <span style={{fontSize:10,letterSpacing:".16em",textTransform:"uppercase",color:B.gray500}}>Valor original</span>
-                  <span style={{fontSize:12,color:B.gray500,textDecoration:"line-through"}}>{fmtBRL(origTotal)}</span>
-                </div>}
-                <div style={{display:"flex",justifyContent:"space-between"}}>
-                  <span style={{fontSize:14,fontWeight:800,color:B.white}}>Total geral</span>
-                  <span style={{fontSize:18,fontWeight:900,color:B.amber}}>{fmtBRL(activeTotal)}</span>
-                </div>
-              </div>}
-              {activeTotal>0&&<ExecutedStrip style={{marginBottom:10}}
-                executed={executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)}
-                total={activeTotal}
-                done={[...perfTasks,...finTasks].filter(t=>t.done).length}
-                count={perfTasks.length+finTasks.length}
-                boughtValue={boughtPendingValue([...perfTasks,...finTasks],defaultRate)}
-                outsourcedValue={outsourcedOpenValue([...perfTasks,...finTasks],defaultRate)}
-                advance={!!(v.enteredAt||v.enteredAtFinishing)} paid={activePaid} hide={hideNum}/>}
-              {activePaid>0&&<div style={{background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
-                <div style={{fontSize:10,color:B.gray400,marginBottom:6}}>Pagamentos recebidos</div>
-                <div style={{display:"flex",flexDirection:"column"}}>
-                  {groupPaymentsForClient(payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId)).map((p,pi,arr)=>{
-                    return (<div key={p.id}>
-                      <div style={{display:"flex",alignItems:"center",gap:3,flexWrap:"wrap",padding:"10px 0"}}>
-                        <span style={{fontSize:12,color:B.green,fontWeight:700}}>💰 {fmtBRL(p.amount)}</span>
-                        <span style={{fontSize:11,color:B.gray400,marginLeft:2}}>·</span>
-                        <span style={{fontSize:11,color:B.gray300,marginRight:"auto"}}>{p.method}</span>
-                        <span style={{fontSize:11,color:B.gray500,width:"100%",marginTop:2}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</span>
-                      </div>
-                      {pi<arr.length-1&&<div style={{height:1,background:`${B.green}22`}}/>}
-                    </div>);
-                  })}
-                </div>
-              </div>}
-              {activeTotal>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:activeBalance>0?`${B.red}15`:`${B.green}15`,border:`1px solid ${activeBalance>0?B.red+"33":B.green+"33"}`,borderRadius:10,padding:"10px 14px"}}>
-                <span style={{fontSize:13,fontWeight:700,color:activeBalance>0?B.red:B.green}}>{activeBalance>0?"⚠ Saldo em aberto":"✅ Quitado"}</span>
-                {activeBalance>0&&<span style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(activeBalance)}</span>}
-              </div>}
+              {activeTotal>0&&(()=>{
+                const pctPaid=Math.max(0,Math.min(100,activeTotal>0?activePaid/activeTotal*100:0));
+                const row=(label,val,o={})=>(<div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"9px 0",borderTop:o.first?"none":`1px solid ${B.gray700}`}}>
+                  <span style={{fontSize:13,color:o.strong?B.white:B.gray300,fontWeight:o.strong?700:500}}>{label}</span>
+                  <span style={{textAlign:"right"}}>{o.strike&&<span style={{fontSize:11,color:B.gray500,textDecoration:"line-through",marginRight:8}}>{fmtBRL(o.strike)}</span>}<span style={{fontSize:o.strong?16:14,fontWeight:o.strong?800:700,color:o.color||B.white}}>{o.text||fmtBRL(val)}</span></span>
+                </div>);
+                return (<div style={{marginBottom:10}}>
+                  {row("Total da OS",activeTotal,{first:true,strike:origTotal-activeTotal>=0.5?origTotal:null})}
+                  {row("Já pago",activePaid,{color:B.green})}
+                  {row("Restante até a entrega",activeBalance,{strong:true,color:activeBalance>0?B.white:B.green,text:activeBalance>0?null:"Quitado"})}
+                  {!hideNum&&<div style={{height:4,borderRadius:2,background:B.gray700,overflow:"hidden",marginTop:6}}><div style={{width:`${pctPaid}%`,height:"100%",background:B.green}}/></div>}
+                  {activeBalance-Math.max(0,pendingNow)>0.5&&<div style={{fontSize:11,color:B.gray500,marginTop:8,lineHeight:1.5}}>O restante é pago conforme o serviço avança. {pendingNow>0.005?"O valor a pagar agora aparece no topo desta tela.":"No momento não há nada a pagar."}</div>}
+                </div>);
+              })()}
+              {activePaid>0&&(()=>{
+                const list=groupPaymentsForClient(payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId));
+                return (<div style={{marginTop:10}}>
+                  <button onClick={()=>setPaysOpen(o=>!o)} aria-expanded={paysOpen} style={{width:"100%",minHeight:48,display:"flex",alignItems:"center",gap:10,padding:"0 14px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:12,color:B.white,fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                    <span style={{flex:1,textAlign:"left"}}>Pagamentos recebidos ({list.length})</span>
+                    {paysOpen?<IChevU s={14} c={B.gray400}/>:<IChevD s={14} c={B.gray400}/>}
+                  </button>
+                  {paysOpen&&<div style={{padding:"4px 14px"}}>
+                    {list.map((p,pi,arr)=>(<div key={p.id} style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap",padding:"10px 0",borderBottom:pi<arr.length-1?`1px solid ${B.gray700}`:"none"}}>
+                      <span style={{fontSize:13,color:B.green,fontWeight:700}}>{fmtBRL(p.amount)}</span>
+                      <span style={{fontSize:11,color:B.gray400}}>{p.method}</span>
+                      <span style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
+                      {p.note&&<span style={{fontSize:11,color:B.gray500,width:"100%"}}>{p.note}</span>}
+                    </div>))}
+                  </div>}
+                </div>);
+              })()}
               {hasActive&&<div style={{marginTop:10}}>
                 <button onClick={()=>setDetOpen(o=>!o)} aria-expanded={detOpen} style={{width:"100%",minHeight:48,display:"flex",alignItems:"center",gap:10,padding:"0 14px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:12,color:B.white,fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                   <span style={{flex:1,textAlign:"left"}}>Detalhamento por categoria</span>
@@ -13277,12 +13271,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                 {detOpen&&<div style={{marginTop:10}}>
               {/* Performance */}
               {perfTotal>0&&<div style={{marginBottom:12}}>
-                <div style={{fontSize:11,color:B.orange,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>⚙️ OSC Performance</div>
+                <div style={{fontSize:11,color:B.orange,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OSC Performance</div>
                 <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"12px 14px",marginBottom:6}}>
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {renderBreakdown(perfTasks)}
-                    {fuelTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>⛽ Combustível</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(fuelTotal)}</span></div>}
-                    {vFreightTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>🚚 Frete</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(vFreightTotal)}</span></div>}
+                    {fuelTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>Combustível</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(fuelTotal)}</span></div>}
+                    {vFreightTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}>Frete</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(vFreightTotal)}</span></div>}
                     {towTotal>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.gray400}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Reboque</span><span style={{color:B.gray200,fontWeight:600}}>{fmtBRL(towTotal)}</span></div>}
                     {perfDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13}}><span style={{color:B.red}}>Desconto</span><span style={{color:B.red,fontWeight:600}}>-{fmtBRL(perfDiscount)}</span></div>}
                     <div style={{borderTop:`1px solid ${B.gray600}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
@@ -13294,7 +13288,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
               </div>}
               {/* Finishing */}
               {finTotal>0&&<div style={{marginBottom:12}}>
-                <div style={{fontSize:11,color:FD.primary,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>🎨 OSC Finishing Division</div>
+                <div style={{fontSize:11,color:FD.primary,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OSC Finishing Division</div>
                 <div style={{background:B.gray900,border:`1px solid ${FD.border}`,borderRadius:10,padding:"12px 14px",marginBottom:6}}>
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {renderBreakdown(finTasks,CAT_MAP_FINISHING)}
@@ -13322,12 +13316,12 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
                     <div>
                       <div style={{fontSize:11,color:B.gray400,marginBottom:2,display:"flex",alignItems:"center",gap:5}}>
-                        <span style={{fontSize:9,fontWeight:800,color:divColor}}>{(h.division||"performance")==="finishing"?"🎨":"⚙️"}</span>
+                        <span style={{fontSize:9,fontWeight:800,color:divColor}}>{(h.division||"performance")==="finishing"?"FD":"PERF"}</span>
                         {h.os_number?`OS ${String(h.os_number).padStart(4,"0")}`:""}{h.delivered_at?` · ${new Date(h.delivered_at).toLocaleDateString("pt-BR")}`:""}
                       </div>
                       <div style={{fontSize:13,color:B.gray300}}>Total: <b style={{color:B.white}}>{fmtBRL(h.total_value)}</b> · Pago: <b style={{color:B.green}}>{fmtBRL(paid)}</b></div>
                     </div>
-                    {settled?<span style={{fontSize:12,fontWeight:800,color:B.green}}>✅ Quitado</span>
+                    {settled?<span style={{fontSize:12,fontWeight:800,color:B.green}}>Quitado</span>
                       :<div style={{background:B.red,borderRadius:8,padding:"5px 12px"}}>
                         <div style={{fontSize:10,color:"#fca5a5",marginBottom:1}}>Em aberto</div>
                         <div style={{fontSize:16,fontWeight:900,color:B.white}}>{fmtBRL(owed)}</div>
@@ -13337,7 +13331,7 @@ function PublicVehicleView({vehicleId,vehicles,tasks,employees,clients,payments=
                     {payments.filter(p=>p.osHistoryId===h.id).map((p,pi,arr)=>(
                       <div key={p.id}>
                         <div style={{display:"flex",alignItems:"center",gap:3,flexWrap:"wrap",padding:"6px 0"}}>
-                          <span style={{fontSize:12,color:B.green,fontWeight:700,flexShrink:0}}>💰 {fmtBRL(p.amount)}</span>
+                          <span style={{fontSize:12,color:B.green,fontWeight:700,flexShrink:0}}>{fmtBRL(p.amount)}</span>
                           <span style={{fontSize:11,color:B.gray400,marginLeft:2,flexShrink:0}}>·</span>
                           <span style={{fontSize:11,color:B.gray300,flexShrink:0,marginRight:"auto"}}>{p.method}</span>
                           <span style={{fontSize:11,color:B.gray500,flexShrink:0}}>{payDate(p.paidAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>
@@ -13634,7 +13628,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.208";
+const APP_VERSION = "2026.11.24.209";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

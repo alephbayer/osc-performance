@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-11-25",
+    "changes": [
+      {
+        "type": "feat",
+        "text": "Tarefas da OS: nova aba Linha do tempo com as concluídas em ordem cronológica, agrupadas por dia, e botão para copiar o texto e mandar ao cliente"
+      }
+    ]
+  },
+  {
     "date": "2026-11-24",
     "changes": [
       {

@@ -13771,7 +13771,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.24.223";
+const APP_VERSION = "2026.11.25.224";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14657,6 +14657,8 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const [laneOpen,setLaneOpen]=useState({}); // override manual: chave da categoria -> aberta?
   const [openId,setOpenId]=useState(null);
   const [copied,setCopied]=useState(false);
+  const [tlCopied,setTlCopied]=useState(false);
+  const [tlInternal,setTlInternal]=useState(false);
   useEffect(()=>{
     const prev=document.body.style.overflow; document.body.style.overflow="hidden";
     const onKey=e=>{if(e.key==="Escape")onClose();};
@@ -14780,7 +14782,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         {qn&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{vts.length} resultado{vts.length!==1?"s":""} de {allVts.length} tarefa{allVts.length!==1?"s":""}</div>}
       </div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-        {tabBtn("board","Quadro")}{tabBtn("lanes","Categorias")}{tabBtn("cats","Blocos")}{tabBtn("full","OS completa")}
+        {tabBtn("board","Quadro")}{tabBtn("lanes","Categorias")}{tabBtn("cats","Blocos")}{tabBtn("chrono","Linha do tempo")}{tabBtn("full","OS completa")}
         {managerMode&&onAddTask&&view!=="full"&&<button onClick={()=>setNewTaskOpen(true)} style={{marginLeft:"auto",padding:"7px 14px",borderRadius:8,border:"none",background:accent,color:B.white,fontWeight:800,fontSize:12,cursor:"pointer"}}>+ Nova tarefa</button>}
       </div>
       {newTaskOpen&&<NewTaskModal isFD={isFD} defaultRate={defaultRate} onClose={()=>setNewTaskOpen(false)} onSave={(label,cat,extra)=>onAddTask(vehicle.id,label,cat,div,extra)}/>}
@@ -14794,6 +14796,45 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           <div style={{display:"flex",flexDirection:"column",gap:8}}>{done.map(renderCard)}{done.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nenhuma ainda.</div>}</div>
         </div>
       </div>}
+      {view==="chrono"&&(()=>{
+        // Concluídas em ordem cronológica (mais antiga primeiro), agrupadas por dia — para passar ao cliente
+        const ts=t=>{const x=t.completedAt?new Date(t.completedAt).getTime():NaN;return isNaN(x)?8.64e15:x;};
+        const list=vts.filter(t=>t.done).sort((a,b)=>ts(a)-ts(b));
+        const groups=[];
+        list.forEach(t=>{const k=ts(t)<8.64e15?new Date(ts(t)).toLocaleDateString("pt-BR"):"";const g=groups[groups.length-1];if(g&&g.k===k)g.items.push(t);else groups.push({k,items:[t],d:ts(t)});});
+        const nInternal=list.filter(isInternalTask).length;
+        const forText=t=>tlInternal||!isInternalTask(t);
+        const copyText=()=>{
+          const lines=[`Serviços concluídos — ${vehicle.model}${vehicle.plate?` (${vehicle.plate})`:""}`];
+          groups.forEach(g=>{const it=g.items.filter(forText);if(!it.length)return;lines.push("",g.k||"Sem data");it.forEach(t=>lines.push(`• ${t.label}`));});
+          try{navigator.clipboard.writeText(lines.join("\n"));setTlCopied(true);setTimeout(()=>setTlCopied(false),1800);}catch(e){}
+        };
+        const hm=t=>ts(t)<8.64e15?new Date(ts(t)).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"";
+        return (<div>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
+            <span style={{fontSize:12,color:B.gray300,flex:1,minWidth:180}}><b style={{color:B.green}}>{list.length}</b> concluída{list.length!==1?"s":""}, da mais antiga para a mais recente</span>
+            {nInternal>0&&<label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:B.gray400,cursor:"pointer"}}>
+              <input type="checkbox" checked={tlInternal} onChange={e=>setTlInternal(e.target.checked)}/>Incluir {nInternal} interna{nInternal!==1?"s":""} no texto
+            </label>}
+            <button onClick={copyText} disabled={!list.length} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${tlCopied?B.green:B.gray600}`,background:"none",color:tlCopied?B.green:B.gray200,fontWeight:700,fontSize:12,cursor:list.length?"pointer":"default"}}>{tlCopied?"✓ Texto copiado":<><Ic n="list"/> Copiar texto</>}</button>
+          </div>
+          {list.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nenhuma tarefa concluída ainda.</div>}
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {groups.map(g=>(<div key={g.k||"__sem"} style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:12,overflow:"hidden"}}>
+              <div style={{padding:"9px 14px",borderBottom:`1px solid ${B.gray700}`,fontSize:10,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:1.2}}>
+                {g.k?new Date(g.d).toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}):"Sem data de conclusão"}
+                <span style={{float:"right",color:B.gray500}}>{g.items.length}</span>
+              </div>
+              {g.items.map(t=>(<div key={t.id} style={{display:"flex",alignItems:"stretch"}}>
+                <div style={{width:52,flexShrink:0,padding:"10px 0 0 12px",fontSize:11,color:B.gray400,fontVariantNumeric:"tabular-nums",borderBottom:`1px solid ${B.gray800}`}}>
+                  {hm(t)}{isInternalTask(t)&&<div style={{fontSize:9,color:B.gray500,marginTop:2}}>interna</div>}
+                </div>
+                <div style={{flex:1,minWidth:0}}>{renderRow(t)}</div>
+              </div>))}
+            </div>))}
+          </div>
+        </div>);
+      })()}
       {view==="lanes"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
         {managerMode&&grand>1&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px"}}>
           <div style={{fontSize:10,fontWeight:800,color:B.gray400,textTransform:"uppercase",letterSpacing:.6,marginBottom:8}}>Onde está o dinheiro</div>

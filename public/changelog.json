@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Linha do tempo das tarefas: escolher ordem crescente ou decrescente (o texto copiado segue a ordem escolhida)"
+      },
+      {
+        "type": "feat",
         "text": "Tarefas da OS: nova aba Linha do tempo com as concluídas em ordem cronológica, agrupadas por dia, e botão para copiar o texto e mandar ao cliente"
       }
     ]

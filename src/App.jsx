@@ -13771,7 +13771,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.25.224";
+const APP_VERSION = "2026.11.25.225";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14659,6 +14659,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const [copied,setCopied]=useState(false);
   const [tlCopied,setTlCopied]=useState(false);
   const [tlInternal,setTlInternal]=useState(false);
+  const [tlAsc,setTlAsc]=useState(true);
   useEffect(()=>{
     const prev=document.body.style.overflow; document.body.style.overflow="hidden";
     const onKey=e=>{if(e.key==="Escape")onClose();};
@@ -14799,7 +14800,8 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
       {view==="chrono"&&(()=>{
         // Concluídas em ordem cronológica (mais antiga primeiro), agrupadas por dia — para passar ao cliente
         const ts=t=>{const x=t.completedAt?new Date(t.completedAt).getTime():NaN;return isNaN(x)?8.64e15:x;};
-        const list=vts.filter(t=>t.done).sort((a,b)=>ts(a)-ts(b));
+        const NO=8.64e15;
+        const list=vts.filter(t=>t.done).sort((a,b)=>{const x=ts(a),y=ts(b);if(x===NO||y===NO)return (x===NO)-(y===NO);return tlAsc?x-y:y-x;});
         const groups=[];
         list.forEach(t=>{const k=ts(t)<8.64e15?new Date(ts(t)).toLocaleDateString("pt-BR"):"";const g=groups[groups.length-1];if(g&&g.k===k)g.items.push(t);else groups.push({k,items:[t],d:ts(t)});});
         const nInternal=list.filter(isInternalTask).length;
@@ -14812,7 +14814,10 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         const hm=t=>ts(t)<8.64e15?new Date(ts(t)).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"";
         return (<div>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
-            <span style={{fontSize:12,color:B.gray300,flex:1,minWidth:180}}><b style={{color:B.green}}>{list.length}</b> concluída{list.length!==1?"s":""}, da mais antiga para a mais recente</span>
+            <span style={{fontSize:12,color:B.gray300,flex:1,minWidth:180}}><b style={{color:B.green}}>{list.length}</b> concluída{list.length!==1?"s":""}, da mais {tlAsc?"antiga para a mais recente":"recente para a mais antiga"}</span>
+            <div style={{display:"flex",border:`1px solid ${B.gray600}`,borderRadius:8,overflow:"hidden"}}>
+              {[[true,"Crescente"],[false,"Decrescente"]].map(([v,l])=><button key={l} onClick={()=>setTlAsc(v)} style={{padding:"6px 11px",border:"none",background:tlAsc===v?`${accent}22`:"none",color:tlAsc===v?accent:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{l}</button>)}
+            </div>
             {nInternal>0&&<label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:B.gray400,cursor:"pointer"}}>
               <input type="checkbox" checked={tlInternal} onChange={e=>setTlInternal(e.target.checked)}/>Incluir {nInternal} interna{nInternal!==1?"s":""} no texto
             </label>}

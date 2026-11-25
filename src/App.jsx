@@ -13771,7 +13771,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.25.225";
+const APP_VERSION = "2026.11.25.226";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14660,6 +14660,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const [tlCopied,setTlCopied]=useState(false);
   const [tlInternal,setTlInternal]=useState(false);
   const [tlAsc,setTlAsc]=useState(true);
+  const [tlReview,setTlReview]=useState(false);
   useEffect(()=>{
     const prev=document.body.style.overflow; document.body.style.overflow="hidden";
     const onKey=e=>{if(e.key==="Escape")onClose();};
@@ -14718,8 +14719,8 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
     </div>);
   };
   const cats=buildCatOrder(vts);
-  const renderRow=(t)=>{
-    const c=taskCost(t,defaultRate), isOpen=openId===t.id, warn=noLabor(t);
+  const renderRow=(t,force)=>{
+    const c=taskCost(t,defaultRate), isOpen=force===true||openId===t.id, warn=noLabor(t);
     const mats=t.materials||[];
     return (<div key={t.id} style={{borderBottom:`1px solid ${B.gray800}`,background:isOpen?`${accent}08`:"none"}}>
       <div onClick={()=>setOpenId(isOpen?null:t.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",cursor:"pointer",opacity:t.done&&!isOpen?.72:1}}>
@@ -14821,6 +14822,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
             {nInternal>0&&<label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:B.gray400,cursor:"pointer"}}>
               <input type="checkbox" checked={tlInternal} onChange={e=>setTlInternal(e.target.checked)}/>Incluir {nInternal} interna{nInternal!==1?"s":""} no texto
             </label>}
+            {managerMode&&list.length>0&&<button onClick={()=>{setTlReview(r=>!r);setOpenId(null);}} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${tlReview?accent:B.gray600}`,background:tlReview?`${accent}22`:"none",color:tlReview?accent:B.gray200,fontWeight:700,fontSize:12,cursor:"pointer"}}><Ic n="note"/> {tlReview?"Fechar revisão":"Revisar todas"}</button>}
             <button onClick={copyText} disabled={!list.length} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${tlCopied?B.green:B.gray600}`,background:"none",color:tlCopied?B.green:B.gray200,fontWeight:700,fontSize:12,cursor:list.length?"pointer":"default"}}>{tlCopied?"✓ Texto copiado":<><Ic n="list"/> Copiar texto</>}</button>
           </div>
           {list.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nenhuma tarefa concluída ainda.</div>}
@@ -14834,7 +14836,20 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
                 <div style={{width:52,flexShrink:0,padding:"10px 0 0 12px",fontSize:11,color:B.gray400,fontVariantNumeric:"tabular-nums",borderBottom:`1px solid ${B.gray800}`}}>
                   {hm(t)}{isInternalTask(t)&&<div style={{fontSize:9,color:B.gray500,marginTop:2}}>interna</div>}
                 </div>
-                <div style={{flex:1,minWidth:0}}>{renderRow(t)}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  {renderRow(t,tlReview)}
+                  {managerMode&&!tlReview&&openId!==t.id&&(()=>{
+                    const c=taskCost(t,defaultRate), mats=(t.materials||[]).filter(m=>m&&m.name);
+                    const rate=t.ratePerHour!=null?Number(t.ratePerHour):Number(defaultRate||0), un=(t.rateType==="qty"||isFD)?"un":"h";
+                    const fmtN=n=>Number(n||0).toLocaleString("pt-BR",{maximumFractionDigits:2});
+                    return (<div onClick={()=>setOpenId(t.id)} style={{padding:"0 14px 9px 14px",marginTop:-4,fontSize:11,color:B.gray400,cursor:"pointer",lineHeight:1.5,borderBottom:`1px solid ${B.gray800}`}}>
+                      <span>{Number(t.hours)>0?`M.O. ${fmtN(t.hours)} ${un} × ${fmtBRL(rate)} = ${fmtBRL(c.labor)}`:<span style={{color:B.amber}}>M.O. sem {un==="h"?"horas":"quantidade"}</span>}</span>
+                      <span style={{color:B.gray600}}> · </span>
+                      <span>{mats.length?`${mats.length} material${mats.length!==1?"is":""} ${fmtBRL(c.mat+c.freight)}`:"sem materiais"}</span>
+                      {mats.length>0&&<div style={{color:B.gray500,marginTop:1}}>{mats.map(m=>`${m.name}${Number(m.qty||1)!==1?` ×${fmtN(m.qty)}`:""}`).join(", ")}</div>}
+                    </div>);
+                  })()}
+                </div>
               </div>))}
             </div>))}
           </div>

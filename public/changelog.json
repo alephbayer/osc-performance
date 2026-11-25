@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Linha do tempo das tarefas: resumo de mão de obra e materiais em cada tarefa e botão Revisar todas, que abre a edição de horas, valores e materiais de todas de uma vez"
+      },
+      {
+        "type": "feat",
         "text": "Linha do tempo das tarefas: escolher ordem crescente ou decrescente (o texto copiado segue a ordem escolhida)"
       },
       {

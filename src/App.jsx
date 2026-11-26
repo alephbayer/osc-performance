@@ -823,6 +823,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
                   <div key={p.id} style={{display:"flex",alignItems:"baseline",gap:8,padding:"5px 0",fontSize:12}}>
                     <span style={{flex:1,color:B.gray200}}>{payMethodLabel(p.method)}{p.note?` · ${p.note}`:""}</span>
                     <span style={{color:B.gray500}}>{p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"—"}</span>
+                    <span style={{fontWeight:700,color:p.amount<0?B.gray400:B.green}}>{p.amount<0?`- ${fmtBRL(-p.amount)}`:fmtBRL(p.amount)}</span>
                     {p.amount>0&&<PortalReceiptBtn onClick={()=>paymentReceipt({payment:p.items[0],pays:p.items,vehicle:v,client,company,account:{total:totalDue,paid:totalPaid}})}/>}
                   </div>
                 ))}
@@ -13976,7 +13977,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.238";
+const APP_VERSION = "2026.11.26.239";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

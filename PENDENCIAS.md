@@ -102,7 +102,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Contas de saldo unificadas em `openOsAccount` (Conta Corrente, pagamento rápido, A receber, Financeiro, portal, link `?v=`), mesma regra do fechamento; `vehicleTotal` passa a somar `fuelCost` antigo (hoje 0 em todos); cartão e página de etapas da Finishing não somam mais reboque/frete do veículo; `vehicleBalance` (sem uso) removida. Comparado com os dados reais (56 OSs abertas): portal, Conta Corrente e painel A receber sem mudança; só a aba Financeiro mudou em 15 veículos (antes ignorava extras e desconto da OS; soma +R$ 12.598,80) (v2026.11.26.233)
 - [ ] Ainda com conta própria (de propósito, não é saldo): cobrança parcial (`partialChargeBuild`) e PDFs (`renderElegantQuote`); "executado/investido" (`executedValue`) segue separado
 - [x] Recibo de pagamento em PDF (`generatePaymentReceiptPDF`, `paymentReceipt`, `extensoBRL`): botão em cada pagamento da Conta Corrente e da OS fechada; pagamento dividido sai num recibo só com as duas partes; situação da OS no dia (v2026.11.26.234). Testado com PDFs de exemplo; não testado no celular
-- [ ] Ideia: mandar o recibo pelo WhatsApp / no portal do cliente
+- [x] Recibo pelo WhatsApp (v2026.11.26.235): celular compartilha o PDF (Web Share); sem suporte, abre wa.me do cliente com o texto (`receiptWaText`) e baixa o PDF. **Aleph:** testar no iPhone (o compartilhamento pode ser bloqueado se o PDF demorar; aí cai no plano B)
+- [ ] Ideia: recibos no portal do cliente
 - [ ] Melhorias levantadas e ainda não feitas: botão "Quitar tudo"; filtro em Pagamentos do cliente
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar

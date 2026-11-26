@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Recibo pelo WhatsApp: ícone de mensagem ao lado do recibo. No celular abre o compartilhamento com o PDF (escolha o WhatsApp e o contato); no computador abre a conversa do cliente com o texto do recibo e baixa o PDF para anexar"
+      },
+      {
+        "type": "feat",
         "text": "Recibo de pagamento em PDF: ícone de documento em cada pagamento (Conta Corrente e OS fechada), com valor por extenso, forma, data, parte de cada empresa quando dividido e situação da OS (total, pago e saldo)"
       },
       {

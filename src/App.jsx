@@ -2420,15 +2420,42 @@ async function generatePaymentReceiptPDF({pays,vehicle,client,company,osLabel,ac
 }
 
 // Recibo de um pagamento (junta as partes de um pagamento dividido). OS aberta: osH vazio; OS fechada: osH = registro do histórico
-async function paymentReceipt({payment,payments,vehicle,client,company,account,osH}){
+// Texto do recibo para o WhatsApp (as mensagens do WhatsApp podem ter emoji, decisão do Aleph)
+function receiptWaText({pays,vehicle,client,osLabel,account}){
+  const amt=pays.reduce((a,x)=>a+Number(x.amount),0);
+  const d=pays[0]?.paidAt?payDate(pays[0].paidAt):null;
+  const nome=String(client?.name||"").trim().split(/\s+/)[0];
+  const veic=[vehicle?.model,vehicle?.plate].filter(Boolean).join(" · ");
+  const bal=account?Math.round((Number(account.total)-Number(account.paid))*100)/100:null;
+  const sit=bal==null?"":bal>=0.01?`Saldo em aberto: *${fmtBRL(bal)}*`:bal<=-0.01?`Crédito a seu favor: *${fmtBRL(-bal)}*`:"OS quitada ✅";
+  return [`Olá${nome?`, ${nome}`:""}! 🧾`,"",`Recebemos seu pagamento de *${fmtBRL(amt)}* (${payMethodLabel(pays[0]?.method)})${d&&!isNaN(d)?` em ${d.toLocaleDateString("pt-BR")}`:""}${osLabel?`, referente à ${osLabel}`:""}${veic?` — ${veic}`:""}.`,sit?"":null,sit||null,"","Segue o recibo. Obrigado!","OSC Group"].filter(x=>x!==null).join("\n");
+}
+async function paymentReceipt({payment,payments,vehicle,client,company,account,osH,wa=false}){
   const pays=payment.groupId?(payments||[]).filter(x=>x.groupId===payment.groupId):[payment];
   const divs=[...new Set(pays.map(x=>x.division||"performance"))];
   let osLabel="";
   if(osH){ const n=osH.os_number??osH.osNumber; osLabel=n!=null?((osH.division||"performance")==="finishing"?fmtOSFD(n):fmtOS(n)):""; }
   else { const lp=vehicle?.osNumber!=null?fmtOS(vehicle.osNumber):"", lf=vehicle?.osNumberFinishing!=null?fmtOSFD(vehicle.osNumberFinishing):"";
     osLabel=divs.length>1?[lp,lf].filter(Boolean).join(" e "):divs[0]==="finishing"?lf:lp; }
-  try{ await generatePaymentReceiptPDF({pays,vehicle,client,company,osLabel,account,closed:!!osH}); }
-  catch(e){ console.error(e); alert("Não foi possível gerar o recibo."); }
+  if(!wa){
+    try{ await generatePaymentReceiptPDF({pays,vehicle,client,company,osLabel,account,closed:!!osH}); }
+    catch(e){ console.error(e); alert("Não foi possível gerar o recibo."); }
+    return;
+  }
+  // WhatsApp: no celular, compartilha o PDF (escolher WhatsApp e o contato); senão abre a conversa do cliente com o texto e baixa o PDF
+  const text=receiptWaText({pays,vehicle,client,osLabel,account});
+  const plate=(vehicle?.plate||"").replace(/\s/g,"");
+  const fileName=`recibo-${plate||"pagamento"}-${String(pays[0]?.paidAt||"").slice(0,10)||new Date().toISOString().slice(0,10)}.pdf`;
+  let doc=null;
+  try{ doc=await generatePaymentReceiptPDF({pays,vehicle,client,company,osLabel,account,closed:!!osH,noSave:true}); }
+  catch(e){ console.error(e); alert("Não foi possível gerar o recibo."); return; }
+  try{
+    const file=new File([doc.output("blob")],fileName,{type:"application/pdf"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],text}); return; }
+  }catch(e){ if(e&&e.name==="AbortError") return; }
+  doc.save(fileName);
+  const d=cleanPhone(client?.phone||"");
+  window.open(`https://wa.me/${d?(d.length<=11?"55"+d:d):""}?text=${encodeURIComponent(text)}`,"_blank");
 }
 
 // Layout anterior (backup) — não é mais usado pelo app
@@ -7009,6 +7036,9 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
               {Number(p.amount)>0&&<button title="Recibo" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total,paid}})}
                 style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
                 onMouseEnter={e=>e.currentTarget.style.color=B.green} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IFileText s={14}/></button>}
+              {Number(p.amount)>0&&<button title="Enviar recibo pelo WhatsApp" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total,paid},wa:true})}
+                style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.color=B.wa} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><Ic n="chat" s={14}/></button>}
               <button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
                 style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:4,display:"flex",flexShrink:0}}
                 onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}>
@@ -10617,6 +10647,9 @@ function OsHistoryPaymentPanel({h,vehicle,client,company,payments=[],onAddPaymen
             {Number(p.amount)>0&&<button title="Recibo" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total:totalValue,paid},osH:h})}
               style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
               onMouseEnter={e=>e.currentTarget.style.color=B.green} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IFileText s={11}/></button>}
+            {Number(p.amount)>0&&<button title="Enviar recibo pelo WhatsApp" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total:totalValue,paid},osH:h,wa:true})}
+              style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
+              onMouseEnter={e=>e.currentTarget.style.color=B.wa} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><Ic n="chat" s={11}/></button>}
             {onUpdatePayment&&<button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
               style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:0,display:"flex"}}
               onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}><IEdit s={11}/></button>}
@@ -13914,7 +13947,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.234";
+const APP_VERSION = "2026.11.26.235";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

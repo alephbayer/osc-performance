@@ -4,10 +4,6 @@
     "changes": [
       {
         "type": "fix",
-        "text": "Correção da versão anterior: cores dos botões de material e total da categoria agora aplicados de fato"
-      },
-      {
-        "type": "fix",
         "text": "Botões de material (estoque, Mercado Livre, link) voltaram às cores; total da categoria em negrito na cor da categoria"
       },
       {

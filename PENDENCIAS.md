@@ -30,6 +30,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] `InlineEdit`: lápis colado ao texto, some em campo vazio, prop `bare` sem lápis; nome da tarefa edita ao tocar; 16 `style` duplicados juntados (títulos de seções voltaram a ter cor/tamanho, sem caixa-alta) (v.252)
 - [x] Cabeçalho de categoria sem caixa-alta, total cinza, chevron de traço; card do mecânico sem sombra, borda fina, etiquetas normais, ações só ícone (v.253)
 - Conferido no preview local (build de produção, perfil Gestor, celular, tema claro): card do veículo e lista de mecânicos. **Não conferido:** tema escuro, Finishing, tarefa com valor/desconto, portal do mecânico
+- [x] Aleph preferiu: botões de material (estoque, Mercado Livre, link) de volta às cores; total da categoria em negrito na cor da categoria (v.255; a v.254 subiu só o changelog por erro de script)
 - [ ] Depois, se o Aleph quiser: mesmo tratamento nos botões do topo do card (Link/PDF/Estimados/Conta e a grade de ações coloridas), que ainda pesam
 
 ## Entregas 99 (99Entrega)

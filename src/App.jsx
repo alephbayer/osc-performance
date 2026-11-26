@@ -3731,10 +3731,16 @@ const IKey=({k,s=12,c="currentColor"})=>{
 };
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
-function ProgressBar({value,max}) {
+// Tela estreita (celular): layout em faixas
+function useNarrow(bp=600){
+  const [n,setN]=useState(()=>typeof window!=="undefined"&&window.innerWidth<bp);
+  useEffect(()=>{const f=()=>setN(window.innerWidth<bp);window.addEventListener("resize",f);return()=>window.removeEventListener("resize",f);},[bp]);
+  return n;
+}
+function ProgressBar({value,max,track}) {
   const p=max===0?0:Math.round(value/max*100);
   return (<div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
-    <div style={{flex:1,height:5,borderRadius:99,background:B.gray700,overflow:"hidden"}}>
+    <div style={{flex:1,height:5,borderRadius:99,background:track||B.gray700,overflow:"hidden"}}>
       <div style={{width:`${p}%`,height:"100%",background:p===100?B.green:B.orange,borderRadius:99,transition:"width .4s"}}/>
     </div>
     <span style={{fontSize:11,color:p===100?B.green:B.gray400,minWidth:30,textAlign:"right",fontWeight:700}}>{p}%</span>
@@ -5910,6 +5916,7 @@ function StockImportModal({ stock, onClose, onImport }) {
 function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageOnMount=false,vehicle,tasks,employees,clients,stock,defaultRate,managerMode,onAddTask,onToggleTask:_onToggleTask,onDeleteTask,onUpdateTask:_onUpdateTask,onDeleteVehicle,onTransferMechanic,onTransferOwner,onUpdateVehicle,onConsumeStock,onReturnStock,hideManagerButtons=false,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,company,onAddMechanic,onRemoveMechanic,onSetStatus,onDeliver,onDeliverFinishing,isOwner=false,division="performance",onAddPurchaseOrder,purchaseOrders=[],onOpenOS=null,currentMechanic=null,onCreateAppointment=null,onPostTimeline=null}=props;
   const [clientNotes,setClientNotes]=useState([]);
   const [showClientNotes,setShowClientNotes]=useState(false);
+  const [openNotes,setOpenNotes]=useState({});
   useEffect(()=>{
     if(!managerMode) return;
     db.getClientVehicleNotes(vehicle.id).then(n=>{
@@ -5990,6 +5997,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const pubLink=getPublicLink(vehicle.id);
   const statusColors = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Perf.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
   const statusColorsFD = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Fin.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
+  const narrow=useNarrow();
   const sc = division==="finishing" ? (statusColorsFD[vehicle.statusFinishing||"active"]) : (statusColors[vehicle.status||"active"]);
 
   const addT=()=>{if(!newT.trim())return;const h=parseFloat(String(newH).replace(",","."));
@@ -6029,14 +6037,14 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       onClose={()=>{setShowPage(false);try{const u=new URL(window.location.href);if(u.searchParams.has("carro")){u.searchParams.delete("carro");window.history.replaceState({},"",u.toString());}}catch(e){}}}/>,document.body)}
     <div style={{background:B.gray800,borderRadius:10,border:`1px solid ${vehicle.urgent?B.red+"66":B.gray700}`,overflow:"hidden",marginBottom:10,boxShadow:vehicle.urgent?`0 0 0 1px ${B.red}44,0 2px 12px ${B.red}22`:"none"}}>
       {/* header */}
-      <div style={{display:"flex",alignItems:"center",gap:10,background:B.gray700,padding:"10px 14px",cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
+      <div style={{display:"flex",alignItems:narrow?"flex-start":"center",flexWrap:narrow?"wrap":"nowrap",gap:10,background:B.gray700,padding:"10px 14px",cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
         {/* Car photo thumb */}
         {vehicle.photo
           ?<img src={vehicle.photo} alt="" style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>
           :<div style={{width:44,height:44,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.orange}/></div>}
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehicle.model}</div>
-          <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={narrow?{fontWeight:600,fontSize:14,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehicle.model}</div>
+          <div style={{fontSize:11,color:B.gray400,display:"flex",gap:narrow?"3px 8px":8,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>
             {isFD
               ?(vehicle.osNumberFinishing&&<span style={{background:`${FD.primary}22`,color:FD.primary,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOSFD(vehicle.osNumberFinishing)}</span>)
@@ -6053,18 +6061,25 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               URGENTE
             </span>}
           </div>
-          {vts.length>0&&<ProgressBar value={done} max={vts.length}/>}
+          {vts.length>0&&<ProgressBar value={done} max={vts.length} track={B.gray600}/>}
         </div>
-        {managerMode&&total>0&&<div style={{textAlign:"right",flexShrink:0,marginRight:4}}>
-          <div style={{fontSize:11,color:B.gray400}}>Total OS</div>
-          <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>
-          {executed>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}><Ic n="done"/> {fmtBRL(executed)} investido</div>}
-          {(()=>{const bal=total-vehiclePaid(vehicle.id,payments,isFD?"finishing":"performance"); return bal>0
+        {managerMode&&total>0&&(()=>{const bal=total-vehiclePaid(vehicle.id,payments,isFD?"finishing":"performance");
+          const inv=executed>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}><Ic n="done"/> {fmtBRL(executed)} investido</div>;
+          const owe=bal>0
             ?<div style={{fontSize:10,color:B.red,fontWeight:700}}>Deve {fmtBRL(bal)}</div>
-            :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;})()}
-        </div>}
+            :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;
+          return narrow
+          ?<div style={{order:3,flexBasis:"100%",marginLeft:54,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:10,paddingTop:6,borderTop:`1px solid ${B.gray600}`}}>
+            <div><div style={{fontSize:10,color:B.gray400}}>Total OS</div><div style={{fontSize:15,fontWeight:800,color:B.amber,lineHeight:1.2}}>{fmtBRL(total)}</div></div>
+            <div style={{textAlign:"right"}}>{inv}{owe}</div>
+          </div>
+          :<div style={{textAlign:"right",flexShrink:0,marginRight:4}}>
+            <div style={{fontSize:11,color:B.gray400}}>Total OS</div>
+            <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>
+            {inv}{owe}
+          </div>;})()}
         {/* action buttons — wrapped grid of 4 per row, outside the header */}
-        <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",gap:5,flexShrink:0,order:2}} onClick={e=>e.stopPropagation()}>
           <div style={{color:B.gray400}}>{open?<IChevU s={15}/>:<IChevD s={15}/>}</div>
         </div>
       </div>
@@ -6249,10 +6264,11 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         {clientNotes.map(n=>(
           <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderBottom:`1px solid ${B.amber}22`}}>
             <div style={{flex:1}}>
-              <div style={{fontSize:13,color:B.white,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{n.note}</div>
+              <div style={{fontSize:12,color:B.white,lineHeight:1.5,whiteSpace:"pre-wrap",...(openNotes[n.id]?{}:{display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"})}}>{n.note}</div>
+              {String(n.note||"").length>160&&<button onClick={()=>setOpenNotes(p=>({...p,[n.id]:!p[n.id]}))} style={{background:"none",border:"none",padding:0,marginTop:2,cursor:"pointer",color:B.amber,fontSize:11}}>{openNotes[n.id]?"ver menos":"ver mais"}</button>}
               <div style={{fontSize:10,color:B.gray500,marginTop:2}}>{new Date(n.created_at).toLocaleDateString("pt-BR")}</div>
             </div>
-            <button onClick={()=>{db.resolveClientVehicleNote(n.id).then(()=>setClientNotes(p=>p.filter(x=>x.id!==n.id)));}} style={{padding:"4px 10px",borderRadius:6,background:B.greenBg,border:`1px solid ${B.green}44`,color:B.green,cursor:"pointer",fontSize:11,fontWeight:700,flexShrink:0}} style={{display:"flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Recebido</button>
+            <button onClick={()=>{db.resolveClientVehicleNote(n.id).then(()=>setClientNotes(p=>p.filter(x=>x.id!==n.id)));}} style={{padding:"2px 8px",borderRadius:6,background:"none",border:`1px solid ${B.green}55`,color:B.green,cursor:"pointer",fontSize:10,fontWeight:600,flexShrink:0,display:"flex",alignItems:"center",gap:4}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Recebido</button>
           </div>
         ))}
       </div>}
@@ -6288,8 +6304,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       {/* body */}
       {open&&<div style={{padding:"12px 14px"}}>
         {!hidePageBtn&&managerMode&&<button onClick={()=>{setShowPage(true);try{const u=new URL(window.location.href);u.searchParams.set("carro",vehicle.id);window.history.replaceState({},"",u.toString());}catch(e){}}}
-          style={{width:"100%",marginBottom:10,padding:"9px 12px",borderRadius:9,background:`${B.blue}14`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:800,fontSize:12,cursor:"pointer"}}>
-          ⤢ Abrir página do carro — vista das etapas
+          style={{display:"flex",width:"fit-content",alignItems:"center",gap:4,marginLeft:"auto",marginBottom:8,padding:"2px 0",background:"none",border:"none",color:B.blue,fontWeight:400,fontSize:12,cursor:"pointer"}}>
+          Abrir página do carro <span style={{display:"flex",transform:"rotate(-90deg)"}}><IChevD s={12} c={B.blue}/></span>
         </button>}
         {/* Paused banner */}
         {vehicle.status==="paused"&&<div style={{marginBottom:10,padding:"8px 12px",background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:8,display:"flex",alignItems:"center",gap:8}}>
@@ -6330,8 +6346,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             key={vehicle.id+(isFD?"fd":"")}
             onBlur={e=>{const field=isFD?"notesFinishing":"notes";if(e.target.value!==(isFD?(vehicle.notesFinishing||""):(vehicle.notes||"")))onUpdateVehicle(vehicle.id,{[field]:e.target.value});}}
             placeholder={isFD?"Observações da Finishing...":"Observações sobre o veículo ou a OS... (visível para mecânicos e gestores)"}
-            rows={3}
-            style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12.5,outline:"none",resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.5}}
+            rows={2}
+            ref={el=>{if(el&&!el.dataset.fit){el.dataset.fit="1";el.style.height="auto";el.style.height=el.scrollHeight+2+"px";}}}
+            onInput={e=>{e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+2+"px";}}
+            style={{width:"100%",padding:"6px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12.5,outline:"none",resize:"none",overflow:"hidden",boxSizing:"border-box",fontFamily:"inherit",lineHeight:1.4}}
           />
         </div>
         {/* Vehicle data — inline editable (manager only) */}
@@ -13965,7 +13983,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.255";
+const APP_VERSION = "2026.11.26.256";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

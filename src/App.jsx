@@ -3744,10 +3744,10 @@ function Toast({msg,onDone}) {
   useEffect(()=>{const t=setTimeout(onDone,Math.min(6000,2500+Math.max(0,String(msg||"").length-40)*45));return()=>clearTimeout(t);},[onDone,msg]);
   return <div style={{position:"fixed",bottom:"calc(28px + env(safe-area-inset-bottom))",left:"50%",transform:"translateX(-50%)",width:"max-content",maxWidth:"calc(100vw - 32px)",boxSizing:"border-box",textAlign:"center",lineHeight:1.35,background:B.orange,color:B.white,padding:"10px 20px",borderRadius:String(msg||"").length>38?18:99,fontWeight:700,fontSize:14,zIndex:999,boxShadow:"0 4px 24px rgba(255,107,0,.4)",pointerEvents:"none",whiteSpace:"normal",overflowWrap:"anywhere"}}>{msg}</div>;
 }
-function InlineEdit({value,onSave,placeholder,type="text",multiline=false,textStyle={}}) {
+function InlineEdit({value,onSave,placeholder,type="text",multiline=false,textStyle={},bare=false}) {
   const [e,sE]=useState(false); const [v,sV]=useState(value||"");
   if(!e) return (<button onClick={()=>{sV(value||"");sE(true);}} style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"flex-start",gap:4,width:"100%",textAlign:"left"}}>
-    <span style={{color:value?B.white:B.gray400,fontSize:13,textAlign:"left",wordBreak:"break-word",flex:1,whiteSpace:"pre-wrap",...textStyle}}>{value||placeholder}</span><IEdit s={10} c={B.gray500} style={{flexShrink:0,marginTop:2}}/></button>);
+    <span style={{color:value?B.white:B.gray400,fontSize:13,textAlign:"left",wordBreak:"break-word",flex:"0 1 auto",whiteSpace:"pre-wrap",...textStyle}}>{value||placeholder}</span>{value&&!bare&&<IEdit s={10} c={B.gray600} style={{flexShrink:0,marginTop:2}}/>}</button>);
   if(multiline) return (<div style={{width:"100%"}}>
     <textarea autoFocus value={v} onChange={ev=>sV(ev.target.value)}
       onKeyDown={ev=>{if(ev.key==="Escape")sE(false); if(ev.key==="Enter"&&ev.metaKey){onSave(v);sE(false);}}}
@@ -3939,7 +3939,7 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
             </button>}
             {/* Badges */}
             {(p.caption||linkedTask)&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.65)",padding:"3px 5px"}}>
-              {linkedTask&&<div style={{fontSize:9,color:B.purple,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} style={{display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>{linkedTask.label}</div>}
+              {linkedTask&&<div style={{fontSize:9,color:B.purple,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>{linkedTask.label}</div>}
               {p.caption&&<div style={{fontSize:9,color:B.gray200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.caption}</div>}
             </div>}
           </div>
@@ -3976,7 +3976,7 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
       <div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
         <ZoomImg src={lightbox.url} style={{maxWidth:"95vw",maxHeight:"min(85vh, 100%)",objectFit:"contain",borderRadius:8}}/>
         {(lightbox.caption||tasks.find(t=>t.id===lightbox.taskId))&&<div style={{textAlign:"center",color:B.gray200,fontSize:13}}>
-          {tasks.find(t=>t.id===lightbox.taskId)&&<div style={{color:B.purple,fontWeight:700,marginBottom:2}} style={{display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>{tasks.find(t=>t.id===lightbox.taskId).label}</div>}
+          {tasks.find(t=>t.id===lightbox.taskId)&&<div style={{color:B.purple,fontWeight:600,marginBottom:2,display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>{tasks.find(t=>t.id===lightbox.taskId).label}</div>}
           {lightbox.caption&&<div>{lightbox.caption}</div>}
         </div>}
         <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
@@ -4587,9 +4587,7 @@ function TaskLabel({task,onUpdate}) {
   );
   return (
     <div style={{flex:1,display:"flex",alignItems:"center",gap:6,paddingTop:1}}>
-      <span style={{fontSize:13,color:task.done?B.gray400:B.gray200,textDecoration:task.done?"line-through":"none"}}>{task.label}</span>
-      <button onClick={()=>{setV(task.label);setEditing(true);}} title="Editar nome do serviço" style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:1,display:"flex",flexShrink:0}}
-        onMouseEnter={e=>e.currentTarget.style.color=B.orange} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IEdit s={11}/></button>
+      <span onClick={()=>{setV(task.label);setEditing(true);}} title="Toque para editar o nome do serviço" style={{fontSize:13,color:task.done?B.gray400:B.gray200,textDecoration:task.done?"line-through":"none",cursor:"text"}}>{task.label}</span>
     </div>
   );
 }
@@ -4873,11 +4871,11 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       {/* ── Row 3: Hours/Qty + Rate + Toggle — hidden for warranty ── */}
       {!task.warranty&&<div style={{marginLeft:30,marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",fontSize:12,color:B.gray400}}>
         {task.rateType==="qty"?<IBox s={12} c={B.gray500}/>:<IClock s={12} c={B.gray500}/>}
-        <span style={{display:"inline-flex",minWidth:28}}><InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"qtd":"horas"} type="number" textStyle={{fontSize:12}}/></span>
+        <span style={{display:"inline-flex",minWidth:28}}><InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"qtd":"horas"} type="number" textStyle={{fontSize:12}} bare/></span>
         <span>{task.rateType==="qty"?"un":"h"}</span>
         <span style={{color:B.gray600}}>×</span>
         <span>R$</span>
-        <span style={{display:"inline-flex",minWidth:40}} title={task.ratePerHour==null&&task.rateType!=="qty"?"Valor padrão da hora":undefined}><InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={task.rateType==="qty"?"0,00":fmtR2(defaultRate)} type="number" textStyle={{fontSize:12}}/></span>
+        <span style={{display:"inline-flex",minWidth:40}} title={task.ratePerHour==null&&task.rateType!=="qty"?"Valor padrão da hora":undefined}><InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={task.rateType==="qty"?"0,00":fmtR2(defaultRate)} type="number" textStyle={{fontSize:12}} bare/></span>
         <span>{task.rateType==="qty"?"/un":"/h"}</span>
         <button onClick={()=>onUpdate(task.id,{rateType:task.rateType==="qty"?"hour":"qty",ratePerHour:null,hours:0})}
           title={task.rateType==="qty"?"Cobrar por hora":"Cobrar por quantidade"}
@@ -6245,7 +6243,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       }}/>}
       {showPOForm&&<PurchaseOrderPanel vehicleId={vehicle.id} tasks={vts} stock={stock} onConsumeStock={onConsumeStock} onAdd={onAddPurchaseOrder} orders={purchaseOrders.filter(p=>p.vehicleId===vehicle.id)}/>}
       {showClientNotes&&clientNotes.length>0&&<div style={{padding:"12px 16px",background:`${B.amber}08`,borderBottom:`1px solid ${B.amber}33`}}>
-        <div style={{fontSize:11,fontWeight:700,color:B.amber,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anotações do cliente</div>
+        <div style={{fontSize:11,fontWeight:600,color:B.amber,marginBottom:8,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anotações do cliente</div>
         {clientNotes.map(n=>(
           <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderBottom:`1px solid ${B.amber}22`}}>
             <div style={{flex:1}}>
@@ -6276,7 +6274,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           }}
           onUpdate={updated=>onUpdateVehicle(vehicle.id,{[isFD?"photosFinishing":"photos"]:updated})}/>
         <div style={{marginTop:10,borderTop:`1px solid ${B.gray700}`,paddingTop:10}}>
-          <div style={{fontSize:11,color:B.orange,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Foto de identificação</div>
+          <div style={{fontSize:11,color:B.orange,fontWeight:600,marginBottom:4,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Foto de identificação</div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             {vehicle.photo?<img src={vehicle.photo} alt="" style={{width:80,height:60,objectFit:"cover",borderRadius:8,border:`1px solid ${B.gray600}`}}/>:null}
             <UploadBtn onFile={src=>onUpdateVehicle(vehicle.id,{photo:src})} folder="vehicles" label={vehicle.photo?"Trocar foto":"+ Adicionar foto do carro"}/>
@@ -6299,7 +6297,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
 
         {/* Mechanic chips with add/remove — manager only */}
         {managerMode&&<div style={{marginBottom:10}}>
-          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Mecânicos</div>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:600,marginBottom:4,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Mecânicos</div>
           <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
             {mechs.map(m=>(
               <div key={m.id} style={{display:"flex",alignItems:"center",gap:4,background:`${B.orange}18`,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"3px 8px"}}>
@@ -6324,7 +6322,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
 
         {/* Notes — visible and editable by both mechanic and manager */}
         <div style={{marginBottom:10}}>
-          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Observações</div>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:600,marginBottom:4,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Observações</div>
           <textarea
             defaultValue={isFD?(vehicle.notesFinishing||""):(vehicle.notes||"")}
             key={vehicle.id+(isFD?"fd":"")}
@@ -6336,7 +6334,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         </div>
         {/* Vehicle data — inline editable (manager only) */}
         {managerMode&&<div style={{marginBottom:10,padding:"8px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8}}>
-          <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Dados do veículo</div>
+          <div style={{fontSize:10,color:B.gray400,fontWeight:600,marginBottom:6,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Dados do veículo</div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <div style={{flex:"2 1 150px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Modelo</div>
@@ -6419,7 +6417,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           })}</>;
         })()}
         {aiS.length>0&&<div style={{marginTop:10,marginBottom:4}}>
-          <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/><circle cx="12" cy="12" r="4"/></svg>Sugestões IA</div>
+          <div style={{fontSize:10,color:B.orange,fontWeight:600,marginBottom:6,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/><circle cx="12" cy="12" r="4"/></svg>Sugestões IA</div>
           {aiS.map((sg,i)=>(<button key={i} onClick={()=>{onAddTask(vehicle.id,sg);setAiS(p=>p.filter((_,j)=>j!==i));}}
             style={{display:"flex",alignItems:"center",gap:6,width:"100%",textAlign:"left",padding:"6px 10px",marginBottom:4,borderRadius:6,background:`${B.orange}15`,border:`1px dashed ${B.orange}66`,color:B.orangeL,fontSize:12.5,cursor:"pointer"}}>
             <IPlus s={12} c={B.orange}/>{sg}</button>))}
@@ -10865,7 +10863,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
       {/* Vehicle data — inline editable — always visible */}
       <div style={{marginBottom:14,padding:"8px 12px",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8}}>
-        <div style={{fontSize:10,color:B.gray400,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Dados do veículo</div>
+        <div style={{fontSize:10,color:B.gray400,fontWeight:600,marginBottom:6,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Dados do veículo</div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           <div style={{flex:"2 1 150px"}}>
             <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Modelo</div>
@@ -11103,7 +11101,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
               })()}
               {/* Photos from this OS */}
               {(h.photos||[]).filter(p=>p).length>0&&<div style={{marginTop:8}}>
-                <div style={{fontSize:10,color:B.gray500,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos da OS</div>
+                <div style={{fontSize:10,color:B.gray500,fontWeight:600,marginBottom:6,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos da OS</div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {(h.photos||[]).filter(p=>p).map((photo,pi)=>{
                     const url=typeof photo==="string"?photo:photo?.url;
@@ -11127,7 +11125,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
       </div>
       {/* Client notes panel */}
       {showClientNotes&&clientNotes.length>0&&<div style={{padding:"12px 16px",background:`${B.amber}08`,borderTop:`1px solid ${B.amber}33`,marginTop:12}}>
-        <div style={{fontSize:11,fontWeight:700,color:B.amber,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anotações do cliente</div>
+        <div style={{fontSize:11,fontWeight:600,color:B.amber,marginBottom:8,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anotações do cliente</div>
         {clientNotes.map(n=>(
           <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderBottom:`1px solid ${B.amber}22`}}>
             <div style={{flex:1}}>
@@ -13027,7 +13025,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
           </div>}
           {/* Notes */}
           {v.notes&&v.notes.trim()&&<div style={{marginTop:12,padding:"10px 12px",background:`${B.amber}10`,border:`1px solid ${B.amber}33`,borderRadius:8}}>
-            <div style={{fontSize:10,color:B.amber,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Observações</div>
+            <div style={{fontSize:10,color:B.amber,fontWeight:600,marginBottom:4,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Observações</div>
             <div style={{fontSize:13,color:B.gray200,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{v.notes}</div>
           </div>}
         </div>
@@ -13113,7 +13111,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
         const doneN=progTasks.length-openN;
         return(<div style={S.card}>
         <div style={S.pad}>
-          <div style={{fontWeight:800,fontSize:13,color:B.white,marginBottom:12}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Progresso do serviço</div>
+          <div style={{fontWeight:600,fontSize:13,color:B.white,marginBottom:12,display:"flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Progresso do serviço</div>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:progPct===100?14:6}}>
             <div style={{flex:1,height:12,borderRadius:99,background:B.gray700,overflow:"hidden"}}>
               <div style={{width:`${progPct}%`,height:"100%",background:progPct===100?B.green:B.orange,borderRadius:99,transition:"width .5s"}}/>
@@ -13311,7 +13309,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
         </div>
         {/* Finishing photos not linked to tasks */}
         {photosF.filter(p=>!p.taskId).length>0&&<div style={{padding:"0 16px 14px"}}>
-          <div style={{fontSize:11,color:FD.primary,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos da Finishing</div>
+          <div style={{fontSize:11,color:FD.primary,fontWeight:600,marginBottom:6,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos da Finishing</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             {photosF.filter(p=>!p.taskId).map((p,i)=><div key={i} onClick={()=>setLB(p.url||p)} style={{width:80,height:80,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${FD.border}`}}>
               <img src={p.url||p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -13451,7 +13449,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
               </div>
               {/* Entry photos */}
               {(cl.find(c=>c.id==="__photos")?.urls||[]).length>0&&<div style={{padding:"10px 14px",borderTop:`1px solid ${B.gray800}`}}>
-                <div style={{fontSize:11,color:B.gray500,marginBottom:8}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de entrada</div>
+                <div style={{fontSize:11,color:B.gray500,marginBottom:8,display:"flex",alignItems:"center",gap:5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de entrada</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {(cl.find(c=>c.id==="__photos")?.urls||[]).map((url,i)=>(
                     <div key={i} style={{width:80,height:80,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${B.gray700}`,flexShrink:0}} onClick={()=>setLB({url})}>
@@ -13965,7 +13963,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.251";
+const APP_VERSION = "2026.11.26.252";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15725,7 +15723,7 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
     {/* Photos section */}
     <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${B.gray700}`}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-        <span style={{fontSize:12,fontWeight:700,color:B.gray300}} style={{display:"flex",alignItems:"center",gap:5}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de entrada do veículo</span>
+        <span style={{fontSize:12,fontWeight:600,color:B.gray300,display:"flex",alignItems:"center",gap:5}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Fotos de entrada do veículo</span>
         <span style={{fontSize:10,color:B.gray500}}>{clPhotos.length} foto{clPhotos.length!==1?"s":""}</span>
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8}}>

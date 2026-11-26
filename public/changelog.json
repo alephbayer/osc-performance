@@ -4,7 +4,7 @@
     "changes": [
       {
         "type": "fix",
-        "text": "Veículos: marca do mesmo tamanho do modelo, em âmbar e traço fino"
+        "text": "Veículos: marca em maiúsculas âmbar, agora do mesmo tamanho do modelo"
       },
       {
         "type": "feat",

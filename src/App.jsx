@@ -64,7 +64,7 @@ function VehName({v,stack=false}){
   const b=String(v?.brand||"").trim(), m=vehModelOnly(v);
   if(!b) return <>{m}</>;
   // stack: marca em linha própria acima do modelo (títulos)
-  if(stack) return <><span style={{display:"block",color:B.amber,fontSize:".70em",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.25,marginBottom:".1em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b}</span>{m}</>;
+  if(stack) return <><span style={{display:"block",color:B.amber,fontSize:"min(.70em, 12px)",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.25,marginBottom:".1em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b}</span>{m}</>;
   return <><span style={{whiteSpace:"nowrap"}}><span style={{color:B.amber,fontSize:".82em",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase"}}>{b}</span><span style={{display:"inline-block",width:".26em",height:".26em",borderRadius:99,background:B.gray500,margin:"0 .45em",verticalAlign:"middle"}}/></span>{m}</>;
 }
 
@@ -14221,7 +14221,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.277";
+const APP_VERSION = "2026.11.26.278";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

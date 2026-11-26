@@ -3,6 +3,26 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "fix",
+        "text": "Pagamento dividido entre Performance e Finishing: excluir remove as duas partes; mudar forma, data ou observação vale para as duas"
+      },
+      {
+        "type": "fix",
+        "text": "Excluir pagamento na OS fechada e no agendamento pede confirmação"
+      },
+      {
+        "type": "fix",
+        "text": "Pagamento lançado pelo atalho rápido avisa o cliente e entra na linha do tempo, como na Conta Corrente; pagamento de OS fechada não entra mais na linha do tempo da OS atual"
+      },
+      {
+        "type": "fix",
+        "text": "PDF: excedente convertido em crédito do cliente aparece como dedução no total pago"
+      },
+      {
+        "type": "fix",
+        "text": "PDF da OS Performance: o pago e o saldo contavam também os pagamentos da Finishing; agora só os da Performance"
+      },
+      {
         "type": "feat",
         "text": "Pagamento dividido: quando o valor cobre o saldo de uma das empresas, aparece embaixo do campo dela a sugestão para quitar (um toque preenche o valor)"
       },

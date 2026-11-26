@@ -1277,6 +1277,13 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
 // ─── Pagamento dividido entre Performance e Finishing ─────────────────────────
 const newUuid=()=>{try{if(typeof crypto!=="undefined"&&crypto.randomUUID) return crypto.randomUUID();}catch{} return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==="x"?r:(r&0x3|0x8)).toString(16);});};
 // Para o cliente: um pagamento só (lançamentos ligados por group_id; antigos sem grupo = mesmo dia + mesma forma)
+// Texto de confirmação ao excluir: avisa quando o pagamento foi dividido entre Performance e Finishing
+function payDeleteMsg(id,payments){
+  const p=(payments||[]).find(x=>x.id===id);
+  const g=p?.groupId?(payments||[]).filter(x=>x.groupId===p.groupId):[];
+  if(g.length>1) return `Este pagamento foi dividido entre Performance e Finishing. As ${g.length} partes (${g.map(x=>fmtBRL(x.amount)).join(" + ")}) serão removidas.`;
+  return "Este pagamento será removido permanentemente do histórico desta OS.";
+}
 function groupPaymentsForClient(list){
   const map=new Map(), order=[];
   (list||[]).forEach(p=>{
@@ -2218,11 +2225,12 @@ async function renderElegantQuote(o) {
   if(closingDisc>=0.01){ const nl=doc.splitTextToSize(`Desconto concedido após o fechamento da OS: ${o.closingNote}`,80); need(nl.length*3.6+4); doc.setFont("helvetica","italic"); doc.setFontSize(7.5); doc.setTextColor(...gray); nl.forEach(l=>{ doc.text(l,W-mx,y-3,{align:"right"}); y+=3.6; }); y+=2; }
 
   // Pagamentos
-  const paid=(payments||[]).filter(p=>Number(p.amount)>0);
-  if(paid.length){
+  // Lançamentos negativos (excedente convertido em crédito do cliente) aparecem como dedução do total pago
+  const paid=(payments||[]).filter(p=>Math.abs(Number(p.amount))>=0.005);
+  if(paid.some(p=>Number(p.amount)>0)){
     const totalPaid=paid.reduce((s,p)=>s+Number(p.amount),0), balance=grandTotal-totalPaid;
     need(40); y+=6; cap("Pagamentos recebidos",mx,y,6.5,gray); y+=3; hair(y); y+=5.5;
-    paid.forEach(p=>{ need(7); const d=p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):""; txt(d,mx+4,y,{s:9}); txt([payMethodLabel(p.method),p.note].filter(Boolean).join(" · "),mx+34,y,{s:9}); txt(R(p.amount),cT,y,{s:9,c:green,al:"right"}); y+=6; });
+    paid.forEach(p=>{ need(7); const d=p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):""; txt(d,mx+4,y,{s:9}); const neg=Number(p.amount)<0; txt(neg?"Excedente convertido em crédito do cliente":[payMethodLabel(p.method),p.note].filter(Boolean).join(" · "),mx+34,y,{s:9,c:neg?gray:undefined}); txt(neg?`- ${R(-Number(p.amount))}`:R(p.amount),cT,y,{s:9,c:neg?gray:green,al:"right"}); y+=6; });
     y+=1; hair(y); y+=7; need(24);
     txt("Total pago",bx,y,{s:9}); txt(R(totalPaid),cT,y,{s:9,al:"right"}); y+=7;
     if(balance>0.005){ cap("Saldo em aberto",bx,y,7,accentText); serif(R(balance),cT,y+0.5,15,{align:"right"}); }
@@ -5847,7 +5855,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         const finPayments=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId&&p.division==="finishing");
         await generateFinishingPDF(vehicle,tasks,cli,mech,defaultRate,finPayments,company);
       } else {
-        await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate,undefined,payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId));
+        await generateQuotePDF(vehicle,tasks,cli,mech,company,defaultRate,undefined,payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId&&(p.division||"performance")==="performance"));
       }
     }
     catch(err){ alert("Erro ao gerar PDF: "+err.message); }
@@ -6906,7 +6914,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
           </div>))}
       </div>
     </div>
-  {confirmDelPay&&<ConfirmModal title="Excluir pagamento?" message="Este pagamento será removido permanentemente do histórico desta OS." confirmLabel="Excluir pagamento" onConfirm={()=>{onDeletePayment(confirmDelPay);setConfirmDelPay(null);}} onCancel={()=>setConfirmDelPay(null)}/>}
+  {confirmDelPay&&<ConfirmModal title="Excluir pagamento?" message={payDeleteMsg(confirmDelPay,payments)} confirmLabel="Excluir pagamento" onConfirm={()=>{onDeletePayment(confirmDelPay);setConfirmDelPay(null);}} onCancel={()=>setConfirmDelPay(null)}/>}
   </div>,document.body);
 }
 
@@ -9751,6 +9759,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   const [showManualMat,setShowManualMat]=useState(false);
   const [convertPick,setConvertPick]=useState(null); // appointment awaiting mechanic pick
   const [payForm,setPayForm]=useState({amount:"",method:"Pix",note:""});
+  const [confirmDelApptPay,setConfirmDelApptPay]=useState(null);
   const [showPayForm,setShowPayForm]=useState(null);
   const [confirmConvert,setConfirmConvert]=useState(null);
   const [confirmDel,setConfirmDel]=useState(null);
@@ -9773,6 +9782,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
   };
 
   return(<div>
+    {confirmDelApptPay&&<ConfirmModal title="Excluir pagamento?" message="Este pagamento do agendamento será removido." confirmLabel="Excluir pagamento" onConfirm={()=>{onDeletePayment(confirmDelApptPay);setConfirmDelApptPay(null);}} onCancel={()=>setConfirmDelApptPay(null)}/>}
     {/* Sub-tabs */}
     <div style={{display:"flex",gap:6,marginBottom:16}}>
       {[["appointments","Agendamentos",appointments.length],["quotes","Orçamentos",quotes.length]].map(([id,label,count])=>(
@@ -10174,7 +10184,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                 <span style={{fontSize:11,color:B.gray400}}>{payMethodLabel(p.method)}</span>
                 {p.note&&<span style={{fontSize:11,color:B.gray400,flex:1}}>{p.note}</span>}
                 <span style={{fontSize:10,color:B.gray500,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
-                {canManage&&<button onClick={()=>onDeletePayment(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2}}><ITrash s={11}/></button>}
+                {canManage&&<button onClick={()=>setConfirmDelApptPay(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2}}><ITrash s={11}/></button>}
               </div>
             ))}
             {a.payments.length===0&&<div style={{fontSize:11,color:B.gray500,textAlign:"center",padding:"8px 0"}}>Nenhum pagamento registrado</div>}
@@ -10384,6 +10394,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
   const [discType,setDiscType]=useState("pct"); // pct | value
   const [discVal,setDiscVal]=useState("");
   const [creditApply,setCreditApply]=useState("");
+  const [confirmDel,setConfirmDel]=useState(null);
 
   const hPayments=payments.filter(p=>p.osHistoryId===h.id);
   const totalValue=Math.round(Number(h.total_value||0)*100)/100;
@@ -10414,6 +10425,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
   };
 
   return (<div style={{marginTop:8,borderTop:`1px solid ${B.gray600}`,paddingTop:8}}>
+    {confirmDel&&<ConfirmModal title="Excluir pagamento?" message={payDeleteMsg(confirmDel,payments)} confirmLabel="Excluir pagamento" onConfirm={()=>{onDeletePayment(confirmDel);setConfirmDel(null);}} onCancel={()=>setConfirmDel(null)}/>}
     {/* Balance summary */}
     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",flex:1}}>
@@ -10481,7 +10493,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
             {onUpdatePayment&&<button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
               style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:0,display:"flex"}}
               onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}><IEdit s={11}/></button>}
-            {onDeletePayment&&<button onClick={()=>onDeletePayment(p.id)}
+            {onDeletePayment&&<button onClick={()=>setConfirmDel(p.id)}
               style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
               onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={11}/></button>}
           </div>
@@ -13793,7 +13805,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.229";
+const APP_VERSION = "2026.11.26.230";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -18999,23 +19011,34 @@ function MainApp() {
     setPay(prev=>[...prev,row]);
     return Number(row.amount);
   };
+  // Push ao cliente e linha do tempo. Pagamento de OS fechada não entra na linha do tempo (ela é da OS aberta atual)
+  // e crédito interno (valor negativo / "Crédito") não gera push.
+  const notifyPayment=(p)=>{
+    if(!p?.vehicleId||!(Number(p.amount)>0)) return;
+    const v=vehicles.find(x=>x.id===p.vehicleId);
+    if(v?.clientId&&p.method!=="Crédito") db.sendPushToClient(v.clientId,`Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${payMethodLabel(p.method)}`,`/?portal=cliente`).catch(()=>{});
+    if(!p.osHistoryId) postTimeline(p.vehicleId,{type:"payment",title:`Pagamento — ${fmtBRL(p.amount)}`,body:payMethodLabel(p.method),actor:null,color:B.green});
+  };
   const addPayment=async(p)=>{
     try{
       await insertPayment(p);
       toast_(`Pagamento de ${fmtBRL(p.amount)} registrado ✓`);
-      const v=vehicles.find(x=>x.id===p.vehicleId);
-      if(v?.clientId) db.sendPushToClient(v.clientId,`Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${payMethodLabel(p.method)}`,`/?portal=cliente`).catch(()=>{});
-      postTimeline(p.vehicleId,{type:"payment",title:`Pagamento — ${fmtBRL(p.amount)}`,body:payMethodLabel(p.method),actor:null,color:B.green});
+      notifyPayment(p);
     }
     catch(e){errToast(e);}
   };
+  // Pagamento dividido (mesmo group_id): apagar remove as partes juntas; forma, data e observação valem para todas
+  const paymentGroup=(id)=>{ const p=payments.find(x=>x.id===id); return p?.groupId?payments.filter(x=>x.groupId===p.groupId):(p?[p]:[]); };
   const deletePayment=async(id)=>{
-    setPay(prev=>prev.filter(p=>p.id!==id));
-    try{ await db.deletePayment(id); toast_("Pagamento removido ✓"); }catch(e){errToast(e);}
+    const ids=paymentGroup(id).map(x=>x.id); if(!ids.length) ids.push(id);
+    setPay(prev=>prev.filter(p=>!ids.includes(p.id)));
+    try{ for(const x of ids) await db.deletePayment(x); toast_(ids.length>1?`Pagamento removido (${ids.length} partes) ✓`:"Pagamento removido ✓"); }catch(e){errToast(e);}
   };
   const updatePayment=async(id,patch)=>{
-    setPay(prev=>prev.map(p=>p.id===id?{...p,...patch}:p));
-    try{ await db.updatePayment(id,patch); toast_("Pagamento atualizado ✓"); }catch(e){errToast(e);}
+    const shared={}; ["method","paidAt","note"].forEach(k=>{ if(patch[k]!==undefined) shared[k]=patch[k]; });
+    const others=Object.keys(shared).length?paymentGroup(id).filter(x=>x.id!==id).map(x=>x.id):[];
+    setPay(prev=>prev.map(p=>p.id===id?{...p,...patch}:others.includes(p.id)?{...p,...shared}:p));
+    try{ await db.updatePayment(id,patch); for(const x of others) await db.updatePayment(x,shared); toast_("Pagamento atualizado ✓"); }catch(e){errToast(e);}
   };
 
   // ── WA
@@ -20232,7 +20255,8 @@ function MainApp() {
       try{ await db.updateTask(taskId,{materials:newMats}); toast_(`Material "${mat.name}" adicionado ✓`); }catch(e){errToast(e);}
     }}/>}
     {quickPayModal&&<QuickPayModal vehicles={vehicles} tasks={tasks} clients={clients} osHistory={osHistory} payments={payments} defaultRate={defaultRate} onClose={()=>setQuickPayModal(false)} onAddPayment={async(vehicleId,payment)=>{
-      try{ await insertPayment({vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance",osHistoryId:payment.osHistoryId||null,parts:payment.parts}); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); }catch(e){errToast(e);}
+      const pay={vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance",osHistoryId:payment.osHistoryId||null,parts:payment.parts};
+      try{ await insertPayment(pay); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); notifyPayment(pay); }catch(e){errToast(e);}
     }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
     

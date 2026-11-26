@@ -95,7 +95,9 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Nomes padronizados gravados no banco com o ok do Aleph (2026-11-26): 65 linhas em `payments`, 9 em `sales`; "Crédito" (crédito de cliente) mantido. Cópia dos valores antigos em `~/OSC/backups/formas-pagamento-antes-2026-11-26.json`
 - [x] Pagamento dividido: dá para digitar a parte da Finishing e a Performance fica com o restante (ou o contrário); a última digitada prevalece (v2026.11.26.228)
 - [x] Pagamento dividido: se o valor cobre o saldo de uma empresa, aparece "Quitar <empresa>: R$ X" embaixo do campo dela (v2026.11.26.229)
-- [ ] PDF ignora pagamentos negativos: depois de "Salvar crédito" mostra pago acima do total
+- [x] Correções (v2026.11.26.230): pagamento dividido apaga as 2 partes juntas e forma/data/observação valem para as duas (valor continua por parte); excluir pede confirmação também na OS fechada e no agendamento; atalho de pagamento rápido manda push e linha do tempo (`notifyPayment`); pagamento de OS fechada não vai para a linha do tempo da OS atual; crédito interno não manda push; PDF mostra excedente convertido em crédito como dedução
+- [x] Achado e corrigido junto: o PDF da OS Performance somava os pagamentos da Finishing no pago/saldo (v2026.11.26.230)
+- [ ] Melhorias levantadas e ainda não feitas: aviso quando o pagamento passa do saldo; usar crédito do cliente na OS aberta; unificar as contas de saldo; recibo do pagamento; botão "Quitar tudo"; filtro em Pagamentos do cliente
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar
 - [ ] Data do pagamento: OS aberta grava só o dia, OS fechada grava dia e hora

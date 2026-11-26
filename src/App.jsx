@@ -6969,8 +6969,9 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   };
   const owedSel=payDiv==="performance"&&hasFinishing?perfTotal-perfPaid:payDiv==="finishing"?finTotal-finPaid:balance;
 
-  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9500,padding:16,overscrollBehavior:"contain",touchAction:"none"}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:16,maxWidth:520,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,boxShadow:"0 24px 80px rgba(0,0,0,.7)",maxHeight:"88dvh",display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={e=>e.stopPropagation()}>
+  // Margem de cima/baixo respeita a barra de status e o indicador do iPhone (mesmo padrão dos outros modais)
+  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9500,padding:"calc(env(safe-area-inset-top) + 56px) 12px calc(env(safe-area-inset-bottom) + 20px)",boxSizing:"border-box",overscrollBehavior:"contain",touchAction:"none"}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:520,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,boxShadow:"0 24px 80px rgba(0,0,0,.7)",maxHeight:"100%",display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 16px 12px",background:B.gray900,borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
         <IBank s={18} c={B.green}/>
         <div style={{flex:1,minWidth:0}}>
@@ -13951,7 +13952,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.242";
+const APP_VERSION = "2026.11.26.243";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

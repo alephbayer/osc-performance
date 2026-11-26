@@ -3,6 +3,10 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "fix",
+        "text": "Conta Corrente no iPhone: o topo da janela não fica mais embaixo da barra de status"
+      },
+      {
         "type": "feat",
         "text": "OS fechada: pagamentos no mesmo visual da Conta Corrente (tocar mostra Recibo, WhatsApp, Editar e Excluir) e formulário de pagamento em grade, com botão Quitar"
       },

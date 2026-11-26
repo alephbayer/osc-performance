@@ -3,6 +3,10 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "feat",
+        "text": "Pagamento dividido entre Performance e Finishing: agora dá para digitar o valor da Finishing, e a Performance fica com o restante (ou o contrário)"
+      },
+      {
         "type": "fix",
         "text": "Formas de pagamento: a mesma lista em todas as telas (Pix, Dinheiro, Cartão de débito, Cartão de crédito, Transferência, Boleto, Outro); lançamentos antigos com nomes diferentes (PIX, pix, Cartão Crédito, TED / DOC) aparecem com o nome padrão"
       }

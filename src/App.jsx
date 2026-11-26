@@ -1301,33 +1301,37 @@ function divisionBalances(vehicle,tasks,payments,defaultRate){
   const finPaid=vp.filter(p=>p.division==="finishing").reduce((s,p)=>s+Number(p.amount),0);
   return {perfTotal,finTotal,perfPaid,finPaid,hasBoth:perfTasks.length>0&&finTasks.length>0};
 }
-// Sugestão proporcional ao saldo de cada divisão; o que o gestor digitar em Performance prevalece
+// Sugestão proporcional ao saldo de cada divisão. O gestor pode digitar a parte da Performance (string)
+// ou a da Finishing ({fin:"..."}); a outra parte é o restante do total.
 function resolveSplit(total,perfStr,perfBal,finBal){
   const r2=n=>Math.round(n*100)/100;
   const pb=Math.max(0,perfBal), fb=Math.max(0,finBal), sum=pb+fb;
   const auto=sum>0?r2(total*pb/sum):r2(total/2);
-  const typed=(perfStr!==""&&perfStr!=null)?parseFloat(String(perfStr).replace(",",".")):NaN;
-  const perf=Number.isFinite(typed)?typed:auto;
+  const num=v=>(v!==""&&v!=null)?parseFloat(String(v).replace(",",".")):NaN;
+  const finSide=perfStr&&typeof perfStr==="object";
+  const typed=num(finSide?perfStr.fin:perfStr);
+  const perf=Number.isFinite(typed)?(finSide?r2(total-typed):typed):auto;
   const fin=r2(total-perf);
   return {perf:r2(perf),fin,auto,valid:total>0&&perf>=0&&fin>=0};
 }
 function SplitBox({total,perfStr,setPerfStr,perfBal,finBal}){
   const r=resolveSplit(total,perfStr,perfBal,finBal);
+  const finSide=perfStr&&typeof perfStr==="object";
+  const inp={width:"100%",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"};
   return (<div style={{marginTop:8,background:`${B.green}0d`,border:`1px solid ${B.green}33`,borderRadius:9,padding:"10px 12px"}}>
     <div style={{fontSize:10,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Divisão do valor entre as empresas</div>
     <div style={{display:"flex",gap:8}}>
       <div style={{flex:1}}>
         <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:3}}><Ic n="gear"/> Performance (R$)</div>
-        <input value={perfStr} onChange={e=>setPerfStr(e.target.value)} placeholder={fmtR2(r.auto)} type="number" step="0.01"
-          style={{width:"100%",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        <input value={finSide?"":(perfStr||"")} onChange={e=>setPerfStr(e.target.value)} placeholder={fmtR2(Math.max(0,r.perf))} type="number" step="0.01" style={inp}/>
       </div>
       <div style={{flex:1}}>
         <div style={{fontSize:10,color:FD.primary,fontWeight:700,marginBottom:3}}><Ic n="brush"/> Finishing (R$)</div>
-        <div style={{padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray700}`,background:B.gray900,color:B.white,fontSize:13,fontWeight:700}}>{fmtR2(Math.max(0,r.fin))}</div>
+        <input value={finSide?perfStr.fin:""} onChange={e=>setPerfStr(e.target.value===""?"":{fin:e.target.value})} placeholder={fmtR2(Math.max(0,r.fin))} type="number" step="0.01" style={inp}/>
       </div>
     </div>
-    <div style={{fontSize:10,color:B.gray500,marginTop:6,lineHeight:1.4}}>{total>0?"Sugestão proporcional ao saldo de cada empresa; edite o valor da Performance se precisar. ":"Informe o valor total acima. "}O cliente vê um pagamento só.</div>
-    {total>0&&!r.valid&&<div style={{fontSize:11,color:B.red,fontWeight:700,marginTop:4}}>O valor da Performance não pode passar do total.</div>}
+    <div style={{fontSize:10,color:B.gray500,marginTop:6,lineHeight:1.4}}>{total>0?"Sugestão proporcional ao saldo de cada empresa; edite o valor de uma delas e a outra fica com o restante. ":"Informe o valor total acima. "}O cliente vê um pagamento só.</div>
+    {total>0&&!r.valid&&<div style={{fontSize:11,color:B.red,fontWeight:700,marginTop:4}}>A parte de uma empresa não pode passar do total.</div>}
   </div>);
 }
 function vehiclePaid(vehicleId,payments,division=null) {
@@ -13781,7 +13785,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.227";
+const APP_VERSION = "2026.11.26.228";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

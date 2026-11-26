@@ -2324,6 +2324,113 @@ async function generatePartialChargePDF({vehicle, isFD, ts, warrantyTs, client, 
   });
 }
 
+// ─── Recibo de pagamento ──────────────────────────────────────────────────────
+// Valor por extenso em reais (até bilhões), ex.: 1250.5 -> "mil duzentos e cinquenta reais e cinquenta centavos"
+function extensoBRL(v){
+  const U=["","um","dois","três","quatro","cinco","seis","sete","oito","nove","dez","onze","doze","treze","quatorze","quinze","dezesseis","dezessete","dezoito","dezenove"];
+  const D=["","","vinte","trinta","quarenta","cinquenta","sessenta","setenta","oitenta","noventa"];
+  const C=["","cento","duzentos","trezentos","quatrocentos","quinhentos","seiscentos","setecentos","oitocentos","novecentos"];
+  const tri=n=>{ if(n===0) return ""; if(n===100) return "cem"; const c=Math.floor(n/100), r=n%100, p=[];
+    if(c) p.push(C[c]); if(r){ if(r<20) p.push(U[r]); else { const d=Math.floor(r/10), u=r%10; p.push(u?`${D[d]} e ${U[u]}`:D[d]); } } return p.join(" e "); };
+  const inteiro=n=>{ if(n===0) return "zero"; const g=[]; let x=n; while(x>0){ g.push(x%1000); x=Math.floor(x/1000); }
+    const nm=[["",""],["mil","mil"],["milhão","milhões"],["bilhão","bilhões"]]; const parts=[];
+    for(let i=g.length-1;i>=0;i--){ const q=g[i]; if(!q) continue; let t=(i===1&&q===1)?"mil":tri(q)+(i?" "+(q===1?nm[i][0]:nm[i][1]):""); parts.push({t,q,i}); }
+    return parts.map((p,k)=>{ if(k===0) return p.t; const last=k===parts.length-1; const sep=(last&&(p.q<100||p.q%100===0))?" e ":" "; return sep+p.t; }).join(""); };
+  const cents=Math.round(Math.abs(Number(v)||0)*100), r=Math.floor(cents/100), c=cents%100;
+  const big=r>=1000000&&r%1000000===0;
+  const rs=r?`${inteiro(r)}${big?" de":""} ${r===1?"real":"reais"}`:"";
+  const cs=c?`${inteiro(c)} ${c===1?"centavo":"centavos"}`:"";
+  return rs&&cs?`${rs} e ${cs}`:(rs||cs||"zero real");
+}
+// pays: lançamentos do mesmo pagamento (1, ou 2 se dividido). account: {total,paid,balance} da OS no momento.
+async function generatePaymentReceiptPDF({pays,vehicle,client,company,osLabel,account,closed=false,fileName,noSave=false}){
+  const jsPDFCtor=await loadJsPDF();
+  const doc=new jsPDFCtor({unit:"mm",format:"a4"});
+  const W=210, H=297, mx=20, cw=W-mx*2;
+  const ink=[28,28,30], body=[70,70,75], gray=[130,130,135], line=[224,224,226], green=[22,140,70];
+  const list=(pays||[]).filter(p=>Number(p.amount)>0);
+  const divs=[...new Set(list.map(p=>p.division||"performance"))];
+  const isFD=divs.length===1&&divs[0]==="finishing";
+  const accent=isFD?[168,85,247]:[221,139,52], accentText=isFD?[130,60,200]:[190,105,25];
+  const divisionName=divs.length>1?(company?.name||"OSC Group"):isFD?"OSC Finishing Division":(company?.name||"OSC Group");
+  const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const R=n=>"R$ "+nf(n);
+  const cap=(t,x,yy,size,color,op={})=>{doc.setFont("helvetica","normal");doc.setFontSize(size);doc.setTextColor(...color);const tx=String(t).toUpperCase();const cs=op.cs||0.8;let px=x;if(op.align==="right")px=x-doc.getTextWidth(tx)-cs*(tx.length-1);doc.text(tx,px,yy,{charSpace:cs});};
+  const hair=(yy,c=line,w=0.2,x1=mx,x2=W-mx)=>{doc.setDrawColor(...c);doc.setLineWidth(w);doc.line(x1,yy,x2,yy);};
+  const serif=(t,x,yy,sz,op={},color=ink)=>{doc.setFont("times","normal");doc.setFontSize(sz);doc.setTextColor(...color);doc.text(t,x,yy,op);};
+  const txt=(t,x,yy,{b=false,i=false,s=9,c=body,al}={})=>{doc.setFont("helvetica",b?"bold":i?"italic":"normal");doc.setFontSize(s);doc.setTextColor(...c);doc.text(t,x,yy,al?{align:al}:undefined);};
+  const fmtPh=v=>{ const d=String(v||"").replace(/\D/g,""); const n=(d.length>=12&&d.startsWith("55"))?d.slice(2):d; return n.length===11?`(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`:n.length===10?`(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`:String(v||""); };
+  const doc14=d=>d.length===14?`${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`:d;
+  const cnpj=company?.document?doc14(String(company.document).replace(/\D/g,"")):"";
+  const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,cnpj&&`CNPJ: ${cnpj}`].filter(Boolean).join("  ·  ");
+  const amount=Math.round(list.reduce((a,p)=>a+Number(p.amount),0)*100)/100;
+  const first=list[0]||{};
+  const dt=first.paidAt?payDate(first.paidAt):new Date();
+  const dStr=isNaN(dt)?"":dt.toLocaleDateString("pt-BR");
+  const num=String(first.groupId||first.id||"").replace(/-/g,"").slice(0,8).toUpperCase();
+  // Cabeçalho
+  doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
+  cap(divisionName,mx,30,7.5,ink);
+  cap(`Emitido em ${fmtD()}`,W-mx,30,7,gray,{align:"right"});
+  if(contact) txt(doc.splitTextToSize(contact,cw)[0],mx,35,{s:7,c:gray});
+  serif("Recibo de pagamento",mx,54,28);
+  if(num) cap(`Nº ${num}`,W-mx,54,8,gray,{align:"right"});
+  let y=66; hair(y,ink,0.35); y+=10;
+  // Valor
+  cap("Valor recebido",mx,y,6.5,gray); y+=12;
+  serif(R(amount),mx,y,30); y+=8;
+  doc.setFont("times","italic"); doc.setFontSize(12); doc.setTextColor(...body);
+  const ext=doc.splitTextToSize(`(${extensoBRL(amount)})`,cw); doc.text(ext,mx,y); y+=ext.length*5.2+8;
+  // Texto do recibo
+  const veic=[vehicle?.model,vehicle?.plate].filter(Boolean).join(" · ");
+  const ref=`referente aos serviços${osLabel?` da ${osLabel}`:""}${veic?` no veículo ${veic}`:""}`;
+  const para=`Recebemos de ${client?.name||"cliente"} a importância de ${R(amount)} (${extensoBRL(amount)}), ${ref}${closed?" (OS já entregue)":""}.`;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...body);
+  const pl=doc.splitTextToSize(para,cw); doc.text(pl,mx,y,{lineHeightFactor:1.5}); y+=pl.length*5.3+8;
+  // Detalhes
+  hair(y); y+=8;
+  const row=(k,v,opt={})=>{ cap(k,mx,y,6.5,gray); txt(v,W-mx,y,{s:9.5,c:opt.c||ink,b:!!opt.b,al:"right"}); y+=8; };
+  row("Data do pagamento",dStr);
+  row("Forma de pagamento",payMethodLabel(first.method)||"—");
+  if(list.length>1) list.forEach(p=>row((p.division||"performance")==="finishing"?"Parte OSC Finishing":"Parte OSC Performance",R(p.amount)));
+  const notes=[...new Set(list.map(p=>p.note).filter(Boolean))].join(" · ");
+  if(notes){ cap("Observação",mx,y,6.5,gray); const nl=doc.splitTextToSize(notes,cw-50); txt(nl,W-mx,y,{s:9,al:"right"}); y+=nl.length*4.4+4; }
+  hair(y); y+=12;
+  // Situação da OS
+  if(account){
+    cap(`Situação da OS em ${fmtD()}`,mx,y,6.5,accentText); y+=9;
+    row("Total da OS",R(account.total));
+    row("Total pago",R(account.paid),{c:green});
+    const bal=Math.round((Number(account.total)-Number(account.paid))*100)/100;
+    if(bal>=0.01) row("Saldo em aberto",R(bal),{b:true});
+    else if(bal<=-0.01) row("Crédito a favor do cliente",R(-bal),{c:green,b:true});
+    else row("Situação","Quitado",{c:green,b:true});
+    y+=4;
+  }
+  // Assinatura
+  y=Math.max(y+18,H-70);
+  const sx=W/2;
+  hair(y,ink,0.3,sx-45,sx+45);
+  doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(...ink); doc.text(divisionName,sx,y+6,{align:"center"});
+  if(cnpj){ doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray); doc.text(`CNPJ ${cnpj}`,sx,y+11,{align:"center"}); }
+  hair(H-16); cap(divisionName,mx,H-10,6.5,gray); cap("Recibo de pagamento",W-mx,H-10,6.5,gray,{align:"right"});
+  const plate=(vehicle?.plate||"").replace(/\s/g,"");
+  if(!noSave) doc.save(fileName||`recibo-${plate||"pagamento"}-${(first.paidAt||"").slice(0,10)||new Date().toISOString().slice(0,10)}.pdf`);
+  return doc;
+}
+
+// Recibo de um pagamento (junta as partes de um pagamento dividido). OS aberta: osH vazio; OS fechada: osH = registro do histórico
+async function paymentReceipt({payment,payments,vehicle,client,company,account,osH}){
+  const pays=payment.groupId?(payments||[]).filter(x=>x.groupId===payment.groupId):[payment];
+  const divs=[...new Set(pays.map(x=>x.division||"performance"))];
+  let osLabel="";
+  if(osH){ const n=osH.os_number??osH.osNumber; osLabel=n!=null?((osH.division||"performance")==="finishing"?fmtOSFD(n):fmtOS(n)):""; }
+  else { const lp=vehicle?.osNumber!=null?fmtOS(vehicle.osNumber):"", lf=vehicle?.osNumberFinishing!=null?fmtOSFD(vehicle.osNumberFinishing):"";
+    osLabel=divs.length>1?[lp,lf].filter(Boolean).join(" e "):divs[0]==="finishing"?lf:lp; }
+  try{ await generatePaymentReceiptPDF({pays,vehicle,client,company,osLabel,account,closed:!!osH}); }
+  catch(e){ console.error(e); alert("Não foi possível gerar o recibo."); }
+}
+
 // Layout anterior (backup) — não é mais usado pelo app
 async function generateQuotePDFLegacy(vehicle, tasks, client, employee, company, defaultRate, tasksOverride, payments=[]) {
   const jsPDFCtor = await loadJsPDF();
@@ -6518,7 +6625,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     {xfO&&<TransferModal title="Vincular / Transferir Cliente" subtitle={`${vehicle.model} — ${vehicle.plate}`}
       items={clients.filter(c=>c.id!==vehicle.clientId).map(c=>({id:c.id,label:c.name,sub:c.phone,icon:<IUser s={15} c={B.blue}/>}))}
       onPick={id=>{onTransferOwner(vehicle.id,id);setXfO(false);}} onClose={()=>setXfO(false)}/>}
-    {showAccount&&<AccountModal vehicle={vehicle} tasks={tasks} payments={payments} defaultRate={defaultRate}
+    {showAccount&&<AccountModal vehicle={vehicle} tasks={tasks} payments={payments} defaultRate={defaultRate} client={cli} company={company}
       onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} onClose={()=>setSA(false)}/>}
     {confirmDelV&&<ConfirmModal title="Excluir OS?" message={<>Deseja excluir a OS de <b style={{color:B.white}}>{vehicle.model}</b>? As tarefas desta {isFD?"Finishing":"Performance"} serão removidas, mas o veículo e seus dados continuam no sistema.</>} confirmLabel="Excluir OS" onConfirm={async()=>{
       // Remove tasks for this division only
@@ -6764,7 +6871,7 @@ function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
 
 // ─── StockTab ─────────────────────────────────────────────────────────────────
 // ─── Account Current Modal (conta corrente da OS) ─────────────────────────────
-function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeletePayment,onUpdatePayment,onClose}) {
+function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeletePayment,onUpdatePayment,onClose,client,company}) {
   const perfTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(t.division||"performance")==="performance");
   const finTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&t.division==="finishing");
   const hasBoth=perfTasks.length>0&&finTasks.length>0;
@@ -6899,6 +7006,9 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
                 </div>
                 <div style={{fontSize:11,color:B.gray400}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</div>
               </div>
+              {Number(p.amount)>0&&<button title="Recibo" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total,paid}})}
+                style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.color=B.green} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IFileText s={14}/></button>}
               <button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
                 style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:4,display:"flex",flexShrink:0}}
                 onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}>
@@ -10397,7 +10507,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
 }
 
 // ─── OS History Payment Panel ─────────────────────────────────────────────────
-function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,onUpdateHistory,clientCredits=[],onAddClientCredit,onDeleteClientCredit}) {
+function OsHistoryPaymentPanel({h,vehicle,client,company,payments=[],onAddPayment,onDeletePayment,onUpdatePayment,onUpdateHistory,clientCredits=[],onAddClientCredit,onDeleteClientCredit}) {
   const [showForm,setShowForm]=useState(false);
   const [showDiscount,setShowDiscount]=useState(false);
   const [amount,setAmount]=useState("");
@@ -10504,6 +10614,9 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
             <span style={{fontSize:10,color:B.gray400,flexShrink:0}}>{payMethodLabel(p.method)}</span>
             {p.note&&<span style={{fontSize:10,color:B.gray400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.note}</span>}
             <span style={{fontSize:10,color:B.gray500,flexShrink:0,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
+            {Number(p.amount)>0&&<button title="Recibo" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total:totalValue,paid},osH:h})}
+              style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
+              onMouseEnter={e=>e.currentTarget.style.color=B.green} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IFileText s={11}/></button>}
             {onUpdatePayment&&<button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
               style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:0,display:"flex"}}
               onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}><IEdit s={11}/></button>}
@@ -10954,7 +11067,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 </div>
               </div>}
               {/* Financial panel */}
-              <OsHistoryPaymentPanel h={h} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment}
+              <OsHistoryPaymentPanel h={h} vehicle={vehicle} client={clients.find(c=>c.id===(h.client_id||h.clientId))||clients.find(c=>c.id===vehicle.clientId)} company={company} payments={payments} onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment}
                 clientCredits={clientCredits||[]}
                 onAddClientCredit={onAddClientCredit}
                 onDeleteClientCredit={onDeleteClientCredit}
@@ -13801,7 +13914,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.233";
+const APP_VERSION = "2026.11.26.234";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

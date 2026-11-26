@@ -3,6 +3,10 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "feat",
+        "text": "Recibo de pagamento em PDF: ícone de documento em cada pagamento (Conta Corrente e OS fechada), com valor por extenso, forma, data, parte de cada empresa quando dividido e situação da OS (total, pago e saldo)"
+      },
+      {
         "type": "fix",
         "text": "Saldo da OS aberta calculado num lugar só (Conta Corrente, pagamento rápido, A receber, Financeiro, portal e link); na Finishing, reboque e frete do veículo deixam de entrar no total (ficam na Performance)"
       },

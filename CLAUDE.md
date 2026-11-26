@@ -28,7 +28,7 @@ Sistema da oficina OSC Group (OSC Performance + OSC Finishing Division). A empre
 - **A cada mudança visível ao usuário, acrescente uma linha em `public/changelog.json`** (mais recente primeiro; agrupe por data de hoje; `type`: `feat` ou `fix`; texto curto em português, sem emoji, do ponto de vista de quem usa o app). O Aleph pediu para manter isso a cada mudança. Última atualização completa: 2026-11-19.
 
 ## Banco de dados
-- Mudanças de schema: migration via Supabase (`apply_migration`) **e** arquivo `migration_NNN_nome.sql` na raiz do repositório (a última é a 057). Migrations antigas (até ~039) nem todas refletem o banco real: a fonte de verdade é o banco.
+- Mudanças de schema: migration via Supabase (`apply_migration`) **e** arquivo `migration_NNN_nome.sql` na raiz do repositório (a última é a 069). Migrations antigas (até ~039) nem todas refletem o banco real: a fonte de verdade é o banco.
 - RLS está ativo, mas muitas policies são permissivas (`using (true)`). Não depender de RLS para esconder dados: a ocultação de valores por perfil é feita **na interface**.
 - Edge functions: ao redeployar, enviar o arquivo **completo**. `ml-sync` e a maioria exigem JWT; confira antes de mudar.
 - A tabela `admin_push_subscriptions` tem check de `role` (owner, admin, supervisor, painter). Novo perfil exige atualizar o check.

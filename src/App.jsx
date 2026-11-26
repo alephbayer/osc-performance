@@ -81,6 +81,11 @@ function Plate({plate,black=false,fs=10.5,style}){
     <span style={{color:fg,fontFamily:"'Arial Narrow','Roboto Condensed','Helvetica Neue',Arial,sans-serif",fontStretch:"condensed",fontWeight:600,fontSize:fs,letterSpacing:".09em",padding:`${k==="mercosul"?2:3}px 5px 2px 6px`,whiteSpace:"nowrap"}}>{txt}</span>
   </span>;
 }
+// Placa depois do nome do carro: bolinha + mini-placa, com respiro
+function PlateTag({v,fs=9.5,sep=true}){
+  if(!v?.plate) return null;
+  return <span style={{display:"inline-flex",alignItems:"center",gap:9,marginLeft:9,verticalAlign:"middle",position:"relative",top:-1}}>{sep&&<span style={{width:3,height:3,borderRadius:99,background:B.gray500,flexShrink:0}}/>}<Plate plate={v.plate} black={v.blackPlate} fs={fs}/></span>;
+}
 // Opção "Placa preta" ao lado do campo Placa
 const BlackPlateToggle=({vehicle,onUpdateVehicle})=><button onClick={()=>onUpdateVehicle(vehicle.id,{blackPlate:!vehicle.blackPlate})} title="Veículo de coleção com placa preta" style={{marginTop:4,display:"inline-flex",alignItems:"center",gap:4,background:"none",border:`1px solid ${vehicle.blackPlate?B.gray300:B.gray700}`,borderRadius:6,padding:"1px 7px",cursor:"pointer",color:vehicle.blackPlate?B.gray200:B.gray500,fontSize:10,fontWeight:vehicle.blackPlate?600:400}}>{vehicle.blackPlate&&<Ic n="done"/>}Placa preta</button>;
 
@@ -318,7 +323,7 @@ function CollapsibleVehicleGroup({vehicle,count,children}) {
         :<div style={{width:36,height:36,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={18} c={B.blue}/></div>}
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/></div>
-        <div style={{fontSize:11,color:B.gray400}}>{vehicle.plate}{vehicle.color?` · ${vehicle.color}`:""}</div>
+        <div style={{fontSize:11,color:B.gray400}}><Plate plate={vehicle.plate} black={vehicle.blackPlate} fs={9.5}/>{vehicle.color?` · ${vehicle.color}`:""}</div>
       </div>
       {count&&<span style={{fontSize:10,color:B.gray500,flexShrink:0}}>{count}</span>}
       <span style={{color:B.gray400,fontSize:12,flexShrink:0,marginLeft:4}}>{open?"▲":"▼"}</span>
@@ -458,7 +463,7 @@ function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen,onPhoto}) {
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:800,fontSize:16,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
-          <div style={{fontSize:11,color:B.gray400,marginTop:2,letterSpacing:.3}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
+          <div style={{fontSize:11,color:B.gray400,marginTop:2,letterSpacing:.3}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>{v.color?` · ${v.color}`:""}</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
       </div>
@@ -756,7 +761,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
                 {v.photo?<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>:<div style={{width:44,height:44,borderRadius:10,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.gray400}/></div>}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
-                  <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{v.plate}{v.color?` · ${v.color}`:""}{ld?` · última visita ${new Date(ld).toLocaleDateString("pt-BR")}`:""}</div>
+                  <div style={{fontSize:11,color:B.gray500,marginTop:2}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>{v.color?` · ${v.color}`:""}{ld?` · última visita ${new Date(ld).toLocaleDateString("pt-BR")}`:""}</div>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
               </button>
@@ -829,7 +834,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
               {v.photo?<img src={v.photo} alt="" style={{width:30,height:30,borderRadius:8,objectFit:"cover"}}/>:<div style={{width:30,height:30,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={15} c={B.gray400}/></div>}
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
-                <div style={{fontSize:11,color:B.gray500}}>{v.plate}</div>
+                <div style={{fontSize:11,color:B.gray500}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/></div>
               </div>
             </div>
             <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,overflow:"hidden"}}>
@@ -956,7 +961,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
           return(<div key={v.id} style={{marginBottom:18}}>
             <div style={{display:"flex",alignItems:"baseline",gap:8,margin:"0 2px 8px"}}>
               <span style={{fontWeight:800,fontSize:14,color:B.white}}><VehName v={v} stack/></span>
-              {v.plate&&<span style={{fontSize:11,color:B.gray500}}>{v.plate}</span>}
+              <PlateTag v={v} sep={false}/>
             </div>
             <div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
               {vParts.map((p,i)=>{
@@ -4163,7 +4168,7 @@ function VehiclePickerModal({vehicles,employees,clients,employeeId,onPickExistin
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v} stack/></div>
               <div style={{fontSize:11,color:B.gray400,display:"flex",gap:6,flexWrap:"wrap"}}>
-                <span style={{fontFamily:"monospace"}}>{v.plate}</span>
+                <Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>
                 {v.osNumber&&<span style={{color:B.orange}}>{fmtOS(v.osNumber)}</span>}
                 {cli&&<span style={{display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
                 {hasOS&&<span style={{color:B.amber}}>● OS aberta</span>}
@@ -4194,7 +4199,7 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose,title="Abrir nova OS",
         <div style={{width:34,height:34,borderRadius:8,background:`${accentColor}18`,display:"flex",alignItems:"center",justifyContent:"center"}}><IFileText s={16} c={accentColor}/></div>
         <div>
           <div style={{fontWeight:700,fontSize:14,color:B.white}}>{title}</div>
-          <div style={{fontSize:12,color:B.gray400}}><VehName v={vehicle}/> · {vehicle.plate}</div>
+          <div style={{fontSize:12,color:B.gray400}}><VehName v={vehicle}/><PlateTag v={vehicle}/></div>
         </div>
         <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
       </div>
@@ -5169,7 +5174,7 @@ function NewOSModal({division,vehicles,clients,employees,onClose,onConfirm}) {
             style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:selV?.id===v.id?`${color}22`:"none"}}
             onMouseEnter={e=>e.currentTarget.style.background=B.gray800}
             onMouseLeave={e=>e.currentTarget.style.background=selV?.id===v.id?`${color}22`:"none"}>
-            <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
+            <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v} stack/><PlateTag v={v}/></div>
             {cli&&<div style={{fontSize:11,color:B.blue}}>{cli.name}</div>}
           </div>);
         })}
@@ -5245,7 +5250,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:14,color:B.white}}>Próxima visita</div>
-          <div style={{fontSize:11,color:B.gray400}}><VehName v={vehicle}/>{vehicle.plate?` · ${vehicle.plate}`:""}</div>
+          <div style={{fontSize:11,color:B.gray400}}><VehName v={vehicle}/><PlateTag v={vehicle}/></div>
         </div>
         <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:18,padding:4}}>×</button>
       </div>
@@ -5701,7 +5706,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
       <div style={{ background: B.gray900, borderBottom: `2px solid ${B.orange}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF ou foto)</div>
-          <div style={{ fontSize: 11, color: B.gray400 }}><VehName v={vehicle} stack/> · {vehicle.plate}</div>
+          <div style={{ fontSize: 11, color: B.gray400 }}><VehName v={vehicle} stack/><PlateTag v={vehicle}/></div>
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
       </div>
@@ -6218,9 +6223,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         <div style={{flex:1,minWidth:0}}>
           {/* Marca acima (âmbar, caixa-alta espaçada) e modelo em escrita normal */}
           {String(vehicle.brand||"").trim()&&<div style={{color:B.amber,fontSize:9.5,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.2,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(vehicle.brand).trim()}</div>}
-          <div style={narrow?{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehModelOnly(vehicle)||vehicle.model}</div>
+          <div style={narrow?{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehModelOnly(vehicle)||vehicle.model}<PlateTag v={vehicle} fs={10}/></div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:narrow?"3px 8px":8,flexWrap:"wrap",alignItems:"center"}}>
-            <Plate plate={vehicle.plate} black={vehicle.blackPlate}/>
             {isFD
               ?(vehicle.osNumberFinishing&&<span style={{background:`${FD.primary}22`,color:FD.primary,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOSFD(vehicle.osNumberFinishing)}</span>)
               :(vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>)}
@@ -7114,7 +7118,7 @@ function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
           <div onClick={()=>setOpenV(x=>({...x,[v.id]:!x[v.id]}))} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",cursor:"pointer"}}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:700,color:B.white}}><VehName v={v} stack/></div>
-              <div style={{fontSize:10.5,color:B.gray500,fontFamily:"monospace"}}>{v.plate}</div>
+              <div style={{fontSize:10.5,color:B.gray500,fontFamily:"monospace"}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/></div>
             </div>
             <span style={{fontSize:14,fontWeight:300,letterSpacing:".04em",color:B.green}}>{fmtBRL(vt)}</span>
             <span style={{fontSize:11,color:B.gray500,display:"inline-block",transform:o?"rotate(90deg)":"none",transition:"transform .2s"}}>▸</span>
@@ -7194,7 +7198,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
         <IBank s={18} c={B.green}/>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:9.5,letterSpacing:".18em",textTransform:"uppercase",color:B.gray500,fontWeight:600}}>Conta corrente</div>
-          <div style={{fontSize:14,fontWeight:600,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}><VehName v={vehicle} stack/><span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate?`  ·  ${vehicle.plate}`:""}</span></div>
+          <div style={{fontSize:14,fontWeight:600,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}><VehName v={vehicle} stack/><PlateTag v={vehicle}/></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,padding:6,display:"flex"}}><IX s={18}/></button>
       </div>
@@ -8841,7 +8845,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                       <span style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v} stack/></span>
-                      <span style={{fontFamily:"monospace",fontSize:11,color:B.gray400}}>{v.plate}</span>
+                      <Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>
                       {v.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(v.osNumber)}</span>}
                     </div>
                     <div style={{fontSize:11,color:B.gray400,marginTop:2}}>
@@ -8963,7 +8967,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
               style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
               onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/><PlateTag v={v}/></div>
               {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
             </div>);
           })}
@@ -9034,7 +9038,7 @@ function ReminderVehicleSearch({value,onChange,vehicles,clients}){
           style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
           onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
           onMouseLeave={e=>e.currentTarget.style.background="none"}>
-          <div style={{fontSize:11,fontWeight:600,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
+          <div style={{fontSize:11,fontWeight:600,color:B.white}}><VehName v={v} stack/><PlateTag v={v}/></div>
           {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
         </div>);
       })}
@@ -9200,7 +9204,7 @@ function CalVehicleSearch({value,onChange,vehicles=[],clients=[],filterActive=fa
           style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
           onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
           onMouseLeave={e=>e.currentTarget.style.background=value===v.id?`${B.purple}22`:"none"}>
-          <div style={{fontSize:11,color:B.white,fontWeight:600}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
+          <div style={{fontSize:11,color:B.white,fontWeight:600}}><VehName v={v} stack/><PlateTag v={v}/></div>
           {c&&<div style={{fontSize:10,color:B.blue}}>{c.name}</div>}
         </div>);
       })}
@@ -9906,7 +9910,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
               style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
               onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/><PlateTag v={v}/></div>
             </div>)}
           </div>}
         </div>:<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -10218,7 +10222,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   onMouseLeave={e=>e.currentTarget.style.background="none"}>
                   {v.photo&&<img src={v.photo} alt="" style={{width:28,height:28,borderRadius:5,objectFit:"cover",flexShrink:0}}/>}
                   <div>
-                    <div style={{fontSize:12,fontWeight:700,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
+                    <div style={{fontSize:12,fontWeight:700,color:B.white}}><VehName v={v} stack/><PlateTag v={v}/></div>
                     {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                   </div>
                 </div>);
@@ -10291,7 +10295,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
           {v?.photo&&<img src={v.photo} alt="" style={{width:38,height:38,borderRadius:8,objectFit:"cover",flexShrink:0}}/>}
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontWeight:900,fontSize:14,color:B.white,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-              {v&&<span><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</span>}
+              {v&&<span><VehName v={v}/><PlateTag v={v}/></span>}
               {cli&&<span style={{color:B.blue,fontWeight:700}}>{cli.name}</span>}
             </div>
             <div style={{fontSize:11,color:B.gray500,marginTop:2,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
@@ -12099,7 +12103,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
                 <span style={{fontSize:12,fontWeight:800,color:B.green}}><Ic n="done"/></span>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13,color:B.white}}>{o.partName}</div>
-                  <div style={{fontSize:11,color:B.gray400}}><VehName v={v}/> {v?.plate?`· ${v.plate}`:""}{emp?` · ${emp.name}`:""}</div>
+                  <div style={{fontSize:11,color:B.gray400}}><VehName v={v}/>{v&&<PlateTag v={v} fs={9}/>}{emp?` · ${emp.name}`:""}</div>
                   {o.costPrice&&<div style={{fontSize:11,color:B.green}}>R$ {Number(o.costPrice).toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>}
                 </div>
                 {isInstalled&&<span style={{fontSize:10,color:B.blue,fontWeight:700,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}><Ic n="done"/> Instalada</span>}
@@ -12464,7 +12468,7 @@ function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[
                     style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:form.vehicleId===v.id?`${B.purple}22`:"none"}}
                     onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
                     onMouseLeave={e=>e.currentTarget.style.background=form.vehicleId===v.id?`${B.purple}22`:"none"}>
-                    <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</div>
+                    <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/><PlateTag v={v}/>{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</div>
                     {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
                   </div>);
                 })}
@@ -12815,7 +12819,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
       :<div style={{display:"flex",flexDirection:"column",gap:8}}>
         {vehicleRows.map(r=>(<div key={r.v.id} style={{background:B.gray800,borderRadius:11,border:`1px solid ${B.gray700}`,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <div style={{flex:"1 1 160px",minWidth:0}}>
-            <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={r.v} stack/> <span style={{color:B.gray400,fontFamily:"monospace",fontSize:11}}>{r.v.plate}</span></div>
+            <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={r.v} stack/><PlateTag v={r.v}/></div>
             <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap"}}>
               {r.cli&&<span><Ic n="user"/> {r.cli.name}</span>}{r.mech&&<span><Ic n="wrench"/> {r.mech.name}</span>}
             </div>
@@ -14197,7 +14201,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.271";
+const APP_VERSION = "2026.11.26.272";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14491,7 +14495,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <div style={{background:B.gray700,borderRadius:7,padding:"6px 12px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Placa</div>
-              <div style={{fontSize:14,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:1}}>{v.plate}</div>
+              <div style={{fontSize:14,fontWeight:800,color:B.white,fontFamily:"monospace",letterSpacing:1}}><Plate plate={v.plate} black={v.blackPlate} fs={13}/></div>
             </div>
             {v.year&&<div style={{background:B.gray700,borderRadius:7,padding:"6px 12px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Ano</div>
@@ -14654,7 +14658,7 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
                     <span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/></div>
-                      <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
+                      <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>{v.color?` · ${v.color}`:""}</div>
                     </div>
                     {selectedId===v.id&&<span style={{color:"#f59e0b",fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
                   </button>
@@ -14754,7 +14758,7 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
                 <span style={{fontSize:16,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/></div>
-                  <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
+                  <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>{v.color?` · ${v.color}`:""}</div>
                 </div>
                 {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
               </button>
@@ -15698,7 +15702,7 @@ function PartialChargeModal({vehicle,tasks,isFD,defaultRate,client,employee,comp
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:10,fontWeight:700,color:accent,textTransform:"uppercase",letterSpacing:1.4}}>Cobrança parcial</div>
-          <div style={{fontSize:16,fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/> <span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate}</span></div>
+          <div style={{fontSize:16,fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/><PlateTag v={vehicle} fs={10.5}/></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{width:40,height:40,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={16} c={B.white}/></button>
       </div>
@@ -15778,7 +15782,7 @@ function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,ma
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:10,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:1.2}}>Conferência de entrega</div>
-          <div style={{fontSize:17,fontWeight:900,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/> <span style={{fontWeight:600,color:B.gray400,fontSize:13}}>{vehicle.plate}</span></div>
+          <div style={{fontSize:17,fontWeight:900,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/><PlateTag v={vehicle} fs={11}/></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{width:44,height:44,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={18} c={B.white}/></button>
       </div>
@@ -16065,7 +16069,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
                 <span style={{fontSize:15,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:selectedVid===v.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/></div>
-                  <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
+                  <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>{v.color?` · ${v.color}`:""}</div>
                 </div>
                 {selectedVid===v.id&&<span style={{color:B.blue,fontWeight:800}}><Ic n="done"/></span>}
               </button>
@@ -16305,7 +16309,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
                 <span style={{fontSize:16,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/></div>
-                  <div style={{fontSize:11,color:B.gray400}}>{v.plate}{cli?` · ${cli.name}`:""}</div>
+                  <div style={{fontSize:11,color:B.gray400}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>{cli?` · ${cli.name}`:""}</div>
                 </div>
                 {(()=>{const b=divisionBalances(v,tasks,payments,defaultRate);const ow=(b.perfTotal-b.perfPaid)+(b.finTotal-b.finPaid);
                   return ow>=0.01?<div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:12,fontWeight:800,color:B.amber}}>{fmtBRL(ow)}</div><div style={{fontSize:9,color:B.gray500}}>saldo</div></div>
@@ -17966,7 +17970,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
               return <div key={v.id} onClick={()=>selectExistingVehicle(v)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:rowBg,borderRadius:12,marginBottom:6,border:rowBorder,cursor:"pointer"}}>
                 <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}><Ic n="car"/></div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v} stack/> <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
+                  <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v} stack/><PlateTag v={v}/></div>
                   {c&&<div style={{fontSize:11,color:subColor}}>{c.name}</div>}
                 </div>
                 <span style={{color:subColor2,fontSize:16}}>›</span>
@@ -18022,7 +18026,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
               <div key={v.id} onClick={()=>{setSelectedVehicle(v);setStep(3);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:selectedVehicle?.id===v.id?`${B.orange}18`:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${selectedVehicle?.id===v.id?B.orange+"55":B.gray700}`,cursor:"pointer"}}>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v} stack/></div>
-                  <div style={{fontSize:11,color:subColor,fontFamily:"monospace"}}>{v.plate}</div>
+                  <div style={{fontSize:11,color:subColor,fontFamily:"monospace"}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/></div>
                 </div>
                 {selectedVehicle?.id===v.id&&<span style={{color:B.orange}}><Ic n="done"/></span>}
               </div>
@@ -20365,7 +20369,7 @@ function MainApp() {
                       {/* Left: badges and info */}
                       <div style={{flex:"1 1 200px",display:"flex",flexDirection:"column",gap:6}}>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
-                          {v.plate&&<span style={{fontSize:11,color:B.gray400,background:B.gray800,borderRadius:5,padding:"1px 7px"}}>{v.plate}</span>}
+                          <PlateTag v={v} sep={false}/>
                           {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,background:`${B.orange}18`,borderRadius:5,padding:"1px 7px"}}>{fmtOS(v.osNumber)}</span>}
                           <span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:5,padding:"1px 7px",display:"flex",alignItems:"center",gap:3}}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -20887,7 +20891,7 @@ function MainApp() {
                       return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.amber}22`:B.gray800,border:`1px solid ${sel?B.amber:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                         {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>}
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
+                          <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/><PlateTag v={v}/></div>
                           {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                         </div>
                         {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,flexShrink:0}}>{fmtOS(v.osNumber)}</span>}
@@ -20968,7 +20972,7 @@ function MainApp() {
                     return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.purple}22`:B.gray800,border:`1px solid ${sel?B.purple:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>}
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
+                        <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/><PlateTag v={v}/></div>
                         {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                       </div>
                       {parts>0&&<span style={{fontSize:10,fontWeight:800,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"1px 6px",flexShrink:0}}>{parts}<Ic n="nut"/></span>}

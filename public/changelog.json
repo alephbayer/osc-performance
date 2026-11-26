@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Mini-placa em todas as telas com veículo (listas, seletores, agenda, compras, portal); no card do carro a placa fica na linha do modelo, depois de uma bolinha"
+      },
+      {
+        "type": "fix",
         "text": "Placa do carro em miniatura: Mercosul com faixa azul, modelo antigo em cinza e opção Placa preta para carros de coleção (em Dados do veículo, abaixo da placa)"
       },
       {

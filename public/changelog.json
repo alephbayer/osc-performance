@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Página do carro: faixa do topo um pouco maior, o conteúdo não encosta na barra de status ao rolar"
+      },
+      {
+        "type": "fix",
         "text": "Página do carro no iPhone: o topo não fica mais atrás da barra de status (hora, bateria), nem ao rolar"
       },
       {

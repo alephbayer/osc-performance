@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Marca do carro em cima do modelo também nas listas, páginas e seletores de veículo, e um pouco menor"
+      },
+      {
+        "type": "fix",
         "text": "Card do carro: marca em cima do modelo, menor e em âmbar; modelo logo abaixo, em escrita normal"
       },
       {

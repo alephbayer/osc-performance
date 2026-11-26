@@ -60,9 +60,11 @@ const B = {
 const vehModelOnly=v=>{const b=String(v?.brand||"").trim(),m=String(v?.model||"").trim();return b&&m.toUpperCase().startsWith(b.toUpperCase()+" ")?m.slice(b.length+1):m;};
 const vehTitle=v=>{const b=String(v?.brand||"").trim(),m=vehModelOnly(v);return b?(m?`${b} ${m}`:b):m;};
 // VehName = marca em âmbar, maiúsculas espaçadas em 82% (compensação óptica da caixa alta) + ponto + modelo
-function VehName({v}){
+function VehName({v,stack=false}){
   const b=String(v?.brand||"").trim(), m=vehModelOnly(v);
   if(!b) return <>{m}</>;
+  // stack: marca em linha própria acima do modelo (títulos)
+  if(stack) return <><span style={{display:"block",color:B.amber,fontSize:".70em",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.25,marginBottom:".1em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b}</span>{m}</>;
   return <><span style={{whiteSpace:"nowrap"}}><span style={{color:B.amber,fontSize:".82em",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase"}}>{b}</span><span style={{display:"inline-block",width:".26em",height:".26em",borderRadius:99,background:B.gray500,margin:"0 .45em",verticalAlign:"middle"}}/></span>{m}</>;
 }
 
@@ -299,7 +301,7 @@ function CollapsibleVehicleGroup({vehicle,count,children}) {
         ?<img src={vehicle.photo} alt="" style={{width:36,height:36,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>
         :<div style={{width:36,height:36,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={18} c={B.blue}/></div>}
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle}/></div>
+        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/></div>
         <div style={{fontSize:11,color:B.gray400}}>{vehicle.plate}{vehicle.color?` · ${vehicle.color}`:""}</div>
       </div>
       {count&&<span style={{fontSize:10,color:B.gray500,flexShrink:0}}>{count}</span>}
@@ -363,7 +365,7 @@ function PortalHistoryCard({h,v,payments,client,company}) {
   return (<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,marginBottom:10,overflow:"hidden"}}>
     <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left",fontFamily:"inherit",color:B.white}}>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v}/></div>
+        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4,flexWrap:"wrap"}}>
           <span style={{fontSize:10,fontWeight:800,color:divColor,border:`1px solid ${divColor}44`,borderRadius:99,padding:"1px 8px"}}>{osLabel}</span>
           <span style={{fontSize:11,color:B.gray500}}>{deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
@@ -439,7 +441,7 @@ function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen,onPhoto}) {
     <div style={{padding:"14px 16px 16px"}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:800,fontSize:16,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v}/></div>
+          <div style={{fontWeight:800,fontSize:16,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
           <div style={{fontSize:11,color:B.gray400,marginTop:2,letterSpacing:.3}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
@@ -737,7 +739,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
               <button onClick={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}} style={{display:"flex",alignItems:"center",gap:12,flex:1,minWidth:0,textAlign:"left",padding:"10px 14px",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,cursor:"pointer",fontFamily:"inherit",color:B.white}}>
                 {v.photo?<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>:<div style={{width:44,height:44,borderRadius:10,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.gray400}/></div>}
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v}/></div>
+                  <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
                   <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{v.plate}{v.color?` · ${v.color}`:""}{ld?` · última visita ${new Date(ld).toLocaleDateString("pt-BR")}`:""}</div>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
@@ -810,7 +812,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
             <div style={{display:"flex",alignItems:"center",gap:10,margin:"0 2px 10px"}}>
               {v.photo?<img src={v.photo} alt="" style={{width:30,height:30,borderRadius:8,objectFit:"cover"}}/>:<div style={{width:30,height:30,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={15} c={B.gray400}/></div>}
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v}/></div>
+                <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
                 <div style={{fontSize:11,color:B.gray500}}>{v.plate}</div>
               </div>
             </div>
@@ -937,7 +939,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
           const isUsed=(p)=>partIsUsed(p,v.id,tasks);
           return(<div key={v.id} style={{marginBottom:18}}>
             <div style={{display:"flex",alignItems:"baseline",gap:8,margin:"0 2px 8px"}}>
-              <span style={{fontWeight:800,fontSize:14,color:B.white}}><VehName v={v}/></span>
+              <span style={{fontWeight:800,fontSize:14,color:B.white}}><VehName v={v} stack/></span>
               {v.plate&&<span style={{fontSize:11,color:B.gray500}}>{v.plate}</span>}
             </div>
             <div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
@@ -4143,7 +4145,7 @@ function VehiclePickerModal({vehicles,employees,clients,employeeId,onPickExistin
               {v.photo?<img src={v.photo} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:7}}/>:<ICar s={17} c={B.orange}/>}
             </div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v}/></div>
+              <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v} stack/></div>
               <div style={{fontSize:11,color:B.gray400,display:"flex",gap:6,flexWrap:"wrap"}}>
                 <span style={{fontFamily:"monospace"}}>{v.plate}</span>
                 {v.osNumber&&<span style={{color:B.orange}}>{fmtOS(v.osNumber)}</span>}
@@ -5151,7 +5153,7 @@ function NewOSModal({division,vehicles,clients,employees,onClose,onConfirm}) {
             style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:selV?.id===v.id?`${color}22`:"none"}}
             onMouseEnter={e=>e.currentTarget.style.background=B.gray800}
             onMouseLeave={e=>e.currentTarget.style.background=selV?.id===v.id?`${color}22`:"none"}>
-            <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
+            <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
             {cli&&<div style={{fontSize:11,color:B.blue}}>{cli.name}</div>}
           </div>);
         })}
@@ -5683,7 +5685,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
       <div style={{ background: B.gray900, borderBottom: `2px solid ${B.orange}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF ou foto)</div>
-          <div style={{ fontSize: 11, color: B.gray400 }}><VehName v={vehicle}/> · {vehicle.plate}</div>
+          <div style={{ fontSize: 11, color: B.gray400 }}><VehName v={vehicle} stack/> · {vehicle.plate}</div>
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
       </div>
@@ -6199,7 +6201,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           :<div style={{width:44,height:44,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.orange}/></div>}
         <div style={{flex:1,minWidth:0}}>
           {/* Marca acima (âmbar, caixa-alta espaçada) e modelo em escrita normal */}
-          {String(vehicle.brand||"").trim()&&<div style={{color:B.amber,fontSize:11,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.2,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(vehicle.brand).trim()}</div>}
+          {String(vehicle.brand||"").trim()&&<div style={{color:B.amber,fontSize:9.5,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.2,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(vehicle.brand).trim()}</div>}
           <div style={narrow?{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehModelOnly(vehicle)||vehicle.model}</div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:narrow?"3px 8px":8,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>
@@ -7094,7 +7096,7 @@ function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
         return (<div key={v.id} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10}}>
           <div onClick={()=>setOpenV(x=>({...x,[v.id]:!x[v.id]}))} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",cursor:"pointer"}}>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700,color:B.white}}><VehName v={v}/></div>
+              <div style={{fontSize:13,fontWeight:700,color:B.white}}><VehName v={v} stack/></div>
               <div style={{fontSize:10.5,color:B.gray500,fontFamily:"monospace"}}>{v.plate}</div>
             </div>
             <span style={{fontSize:14,fontWeight:300,letterSpacing:".04em",color:B.green}}>{fmtBRL(vt)}</span>
@@ -7175,7 +7177,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
         <IBank s={18} c={B.green}/>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:9.5,letterSpacing:".18em",textTransform:"uppercase",color:B.gray500,fontWeight:600}}>Conta corrente</div>
-          <div style={{fontSize:14,fontWeight:600,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}><VehName v={vehicle}/><span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate?`  ·  ${vehicle.plate}`:""}</span></div>
+          <div style={{fontSize:14,fontWeight:600,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}><VehName v={vehicle} stack/><span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate?`  ·  ${vehicle.plate}`:""}</span></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,padding:6,display:"flex"}}><IX s={18}/></button>
       </div>
@@ -8821,7 +8823,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
                     :<div style={{width:38,height:38,borderRadius:7,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={17} c={B.orange}/></div>}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                      <span style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v}/></span>
+                      <span style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v} stack/></span>
                       <span style={{fontFamily:"monospace",fontSize:11,color:B.gray400}}>{v.plate}</span>
                       {v.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(v.osNumber)}</span>}
                     </div>
@@ -8944,7 +8946,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
               style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
               onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
               {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
             </div>);
           })}
@@ -9015,7 +9017,7 @@ function ReminderVehicleSearch({value,onChange,vehicles,clients}){
           style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
           onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
           onMouseLeave={e=>e.currentTarget.style.background="none"}>
-          <div style={{fontSize:11,fontWeight:600,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
+          <div style={{fontSize:11,fontWeight:600,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
           {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
         </div>);
       })}
@@ -9181,7 +9183,7 @@ function CalVehicleSearch({value,onChange,vehicles=[],clients=[],filterActive=fa
           style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
           onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
           onMouseLeave={e=>e.currentTarget.style.background=value===v.id?`${B.purple}22`:"none"}>
-          <div style={{fontSize:11,color:B.white,fontWeight:600}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
+          <div style={{fontSize:11,color:B.white,fontWeight:600}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
           {c&&<div style={{fontSize:10,color:B.blue}}>{c.name}</div>}
         </div>);
       })}
@@ -9887,7 +9889,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
               style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
               onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
             </div>)}
           </div>}
         </div>:<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -10199,7 +10201,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   onMouseLeave={e=>e.currentTarget.style.background="none"}>
                   {v.photo&&<img src={v.photo} alt="" style={{width:28,height:28,borderRadius:5,objectFit:"cover",flexShrink:0}}/>}
                   <div>
-                    <div style={{fontSize:12,fontWeight:700,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
+                    <div style={{fontSize:12,fontWeight:700,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
                     {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                   </div>
                 </div>);
@@ -10987,7 +10989,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
           :<div style={{width:42,height:42,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={19} c={B.orange}/></div>}
 
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={vehicle}/></div>
+          <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={vehicle} stack/></div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
             <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
             {vehicle.year&&<span style={{color:B.gray400}}>{vehicle.year}</span>}
@@ -12444,7 +12446,7 @@ function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[
                     style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:form.vehicleId===v.id?`${B.purple}22`:"none"}}
                     onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
                     onMouseLeave={e=>e.currentTarget.style.background=form.vehicleId===v.id?`${B.purple}22`:"none"}>
-                    <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</div>
+                    <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</div>
                     {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
                   </div>);
                 })}
@@ -12795,7 +12797,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
       :<div style={{display:"flex",flexDirection:"column",gap:8}}>
         {vehicleRows.map(r=>(<div key={r.v.id} style={{background:B.gray800,borderRadius:11,border:`1px solid ${B.gray700}`,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <div style={{flex:"1 1 160px",minWidth:0}}>
-            <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={r.v}/> <span style={{color:B.gray400,fontFamily:"monospace",fontSize:11}}>{r.v.plate}</span></div>
+            <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={r.v} stack/> <span style={{color:B.gray400,fontFamily:"monospace",fontSize:11}}>{r.v.plate}</span></div>
             <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap"}}>
               {r.cli&&<span><Ic n="user"/> {r.cli.name}</span>}{r.mech&&<span><Ic n="wrench"/> {r.mech.name}</span>}
             </div>
@@ -13228,7 +13230,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
             {hasPerf&&v.osNumber&&<span style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{fmtOS(v.osNumber)}</span>}
             {hasFin&&v.osNumberFinishing&&<span style={{fontSize:11,color:FD.primary,fontFamily:"monospace"}}>{fmtOSFD(v.osNumberFinishing)}</span>}
           </div>
-          <div style={{fontWeight:900,fontSize:26,color:B.white,letterSpacing:-.5,lineHeight:1.1}}><VehName v={v}/></div>
+          <div style={{fontWeight:900,fontSize:26,color:B.white,letterSpacing:-.5,lineHeight:1.1}}><VehName v={v} stack/></div>
           <div style={{fontSize:13,color:B.gray400,marginTop:5}}>{[v.year,v.color,v.plate&&("Placa "+v.plate)].filter(Boolean).join(" · ")}</div>
           {ts.length>0&&<div style={{marginTop:16}}>
             <div style={{height:8,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/></div>
@@ -14177,7 +14179,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.269";
+const APP_VERSION = "2026.11.26.270";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14467,7 +14469,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:180,objectFit:"cover"}}/>}
         <div style={S.pad}>
-          <div style={{fontWeight:900,fontSize:22,color:B.white,marginBottom:8}}><VehName v={v}/></div>
+          <div style={{fontWeight:900,fontSize:22,color:B.white,marginBottom:8}}><VehName v={v} stack/></div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <div style={{background:B.gray700,borderRadius:7,padding:"6px 12px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Placa</div>
@@ -14633,7 +14635,7 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
                     style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:`2px solid ${selectedId===v.id?"#f59e0b":B.gray600}`,background:selectedId===v.id?"#f59e0b15":B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                     <span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/></div>
+                      <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/></div>
                       <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                     </div>
                     {selectedId===v.id&&<span style={{color:"#f59e0b",fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
@@ -14733,7 +14735,7 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
                 style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${selectedId===v.id?B.green:B.gray600}`,background:selectedId===v.id?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                 <span style={{fontSize:16,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/></div>
+                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/></div>
                   <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                 </div>
                 {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
@@ -15292,7 +15294,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         <button onClick={onClose} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:B.gray200,fontWeight:700,fontSize:12,cursor:"pointer"}}>← Voltar</button>
         {vehicle.photo&&<img src={vehicle.photo} alt="" style={{width:42,height:42,borderRadius:8,objectFit:"cover"}}/>}
         <div style={{flex:1,minWidth:160}}>
-          <div style={{fontSize:18,fontWeight:900,color:B.white,lineHeight:1.15}}><VehName v={vehicle}/></div>
+          <div style={{fontSize:18,fontWeight:900,color:B.white,lineHeight:1.15}}><VehName v={vehicle} stack/></div>
           <div style={{fontSize:12,color:B.gray400}}><span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>{(isFD?vehicle.osNumberFinishing:vehicle.osNumber)?` · ${isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber)}`:""}</div>
         </div>
         <button onClick={()=>{try{navigator.clipboard.writeText(`${window.location.origin}/?carro=${vehicle.id}`);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch(e){}}}
@@ -15678,7 +15680,7 @@ function PartialChargeModal({vehicle,tasks,isFD,defaultRate,client,employee,comp
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:10,fontWeight:700,color:accent,textTransform:"uppercase",letterSpacing:1.4}}>Cobrança parcial</div>
-          <div style={{fontSize:16,fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle}/> <span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate}</span></div>
+          <div style={{fontSize:16,fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/> <span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate}</span></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{width:40,height:40,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={16} c={B.white}/></button>
       </div>
@@ -15758,7 +15760,7 @@ function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,ma
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:10,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:1.2}}>Conferência de entrega</div>
-          <div style={{fontSize:17,fontWeight:900,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle}/> <span style={{fontWeight:600,color:B.gray400,fontSize:13}}>{vehicle.plate}</span></div>
+          <div style={{fontSize:17,fontWeight:900,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/> <span style={{fontWeight:600,color:B.gray400,fontSize:13}}>{vehicle.plate}</span></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{width:44,height:44,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={18} c={B.white}/></button>
       </div>
@@ -16044,7 +16046,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
                 style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:9,border:`2px solid ${selectedVid===v.id?B.blue:B.gray600}`,background:selectedVid===v.id?`${B.blue}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                 <span style={{fontSize:15,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:selectedVid===v.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/></div>
+                  <div style={{fontSize:13,fontWeight:700,color:selectedVid===v.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/></div>
                   <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                 </div>
                 {selectedVid===v.id&&<span style={{color:B.blue,fontWeight:800}}><Ic n="done"/></span>}
@@ -16284,7 +16286,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
                 style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${selectedId===v.id?B.green:B.gray600}`,background:selectedId===v.id?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                 <span style={{fontSize:16,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/></div>
+                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/></div>
                   <div style={{fontSize:11,color:B.gray400}}>{v.plate}{cli?` · ${cli.name}`:""}</div>
                 </div>
                 {(()=>{const b=divisionBalances(v,tasks,payments,defaultRate);const ow=(b.perfTotal-b.perfPaid)+(b.finTotal-b.finPaid);
@@ -17946,7 +17948,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
               return <div key={v.id} onClick={()=>selectExistingVehicle(v)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:rowBg,borderRadius:12,marginBottom:6,border:rowBorder,cursor:"pointer"}}>
                 <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}><Ic n="car"/></div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v}/> <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
+                  <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v} stack/> <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
                   {c&&<div style={{fontSize:11,color:subColor}}>{c.name}</div>}
                 </div>
                 <span style={{color:subColor2,fontSize:16}}>›</span>
@@ -18001,7 +18003,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
             {vehicles.filter(v=>v.clientId===selectedClient.id).map(v=>(
               <div key={v.id} onClick={()=>{setSelectedVehicle(v);setStep(3);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:selectedVehicle?.id===v.id?`${B.orange}18`:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${selectedVehicle?.id===v.id?B.orange+"55":B.gray700}`,cursor:"pointer"}}>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v}/></div>
+                  <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v} stack/></div>
                   <div style={{fontSize:11,color:subColor,fontFamily:"monospace"}}>{v.plate}</div>
                 </div>
                 {selectedVehicle?.id===v.id&&<span style={{color:B.orange}}><Ic n="done"/></span>}
@@ -20338,7 +20340,7 @@ function MainApp() {
                     {/* Row 1: photo + model name full width */}
                     <div style={{padding:"14px 16px 10px 20px",display:"flex",alignItems:"center",gap:12,borderBottom:`1px solid ${B.green}11`}}>
                       {v.photo&&<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:9,objectFit:"cover",border:`1px solid ${B.green}44`,flexShrink:0}}/>}
-                      <span style={{fontWeight:900,fontSize:17,color:B.white,flex:1,lineHeight:1.2}}><VehName v={v}/></span>
+                      <span style={{fontWeight:900,fontSize:17,color:B.white,flex:1,lineHeight:1.2}}><VehName v={v} stack/></span>
                     </div>
                     {/* Row 2: badges + info + date + button */}
                     <div style={{padding:"10px 16px 14px 20px",display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-start"}}>
@@ -20867,7 +20869,7 @@ function MainApp() {
                       return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.amber}22`:B.gray800,border:`1px solid ${sel?B.amber:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                         {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>}
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
+                          <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
                           {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                         </div>
                         {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,flexShrink:0}}>{fmtOS(v.osNumber)}</span>}
@@ -20948,7 +20950,7 @@ function MainApp() {
                     return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.purple}22`:B.gray800,border:`1px solid ${sel?B.purple:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>}
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
+                        <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v} stack/>{v.plate?` · ${v.plate}`:""}</div>
                         {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                       </div>
                       {parts>0&&<span style={{fontSize:10,fontWeight:800,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"1px 6px",flexShrink:0}}>{parts}<Ic n="nut"/></span>}

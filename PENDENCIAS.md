@@ -175,3 +175,5 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] **Aleph:** conferir no app ao vivo (Novo veículo e Dados do veículo), principalmente a escolha da versão
 - [ ] Limite: chassi e motor ficam em `vehicles`, legível pela chave pública (como o resto; ver Segurança). Renavam só no cache fechado, mostrado na consulta, não gravado no veículo
 - [ ] Outros cadastros de veículo (formulário rápido no card do mecânico, orçamento com veículo temporário, parceiros) ainda sem o botão
+- [x] Marca separada do modelo na exibição: `VehName` (marca âmbar em maiúsculas + ponto + modelo, como no estoque) nas telas; `vehTitle` ("BMW M3 Coupe") em PDFs, links, WhatsApp, push e buscas; não repete a marca quando o modelo antigo já começa com ela. Busca pela placa grava modelo sem a marca e converte siglas (VW, GM, M.BENZ...). Conferido no link `?v=` local (v2026.11.26.263)
+- [ ] Separar a marca dos 120 veículos antigos (tirar do modelo e pôr em `brand`): backup em `~/OSC/backups/veiculos-modelo-marca-antes-2026-11-26.json`; aguardando o ok do Aleph na lista

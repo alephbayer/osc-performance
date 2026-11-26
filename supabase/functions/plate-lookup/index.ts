@@ -39,6 +39,12 @@ function fuelLabel(s: string) {
   return colorTitle(s);
 }
 
+// Versão FIPE ("M3 Coupê 4.0 32V") -> nome ("M3 Coupê") + motorização ("4.0 32V"), cortando na 1ª cilindrada
+function splitVersion(full: string) {
+  const m = full.match(/^(.*?)\s+(\d\.\d\b.*)$/);
+  return m ? { name: m[1].trim(), engine: m[2].trim() } : { name: full.trim(), engine: "" };
+}
+
 // Converte a resposta do provedor no formato que o app usa
 function normalize(j: Record<string, any>) {
   const b = j?.basico?.dados || {};
@@ -49,7 +55,13 @@ function normalize(j: Record<string, any>) {
   if (brand && model.toUpperCase().startsWith(brand.toUpperCase() + " ")) model = model.slice(brand.length + 1);
   const ccRaw = clean(b.cilindradas).replace(/\D/g, "");
   const cc = ccRaw && Number(ccRaw) >= 50 && Number(ccRaw) <= 20000 ? Number(ccRaw) : null;
+  // A consulta completa traz candidatos FIPE com score (0-100) de semelhança; o maior vem primeiro
+  const versions = (Array.isArray(j?.fipe?.dados) ? j.fipe.dados : [])
+    .filter((f: any) => clean(f?.modelo))
+    .map((f: any) => ({ full: clean(f.modelo), ...splitVersion(clean(f.modelo)), score: Number(f.score) || 0, fipeCode: clean(f.codigo_fipe), fipeValue: clean(f.valor), year: Number(f.ano) || null }))
+    .sort((a: any, b: any) => b.score - a.score);
   return {
+    versions,
     brand: title(brand),
     model: title(model),
     year: parseInt(clean(b.ano)) || null,
@@ -81,9 +93,10 @@ Deno.serve(async (req) => {
     if (!PLATE_RE.test(plate)) return out({ error: "Placa inválida. Use o formato ABC1234 ou ABC1D23." }, 400);
 
     // 1) cache
-    const { data: hit, error: hitErr } = await sb.from("plate_lookups").select("data,fetched_at").eq("plate", plate).maybeSingle();
+    const { data: hit, error: hitErr } = await sb.from("plate_lookups").select("data,raw,fetched_at").eq("plate", plate).maybeSingle();
     if (hitErr) throw new Error(`Cache: ${hitErr.message}`);
-    if (hit) return out({ found: true, cached: true, plate, fetchedAt: hit.fetched_at, vehicle: hit.data });
+    // normaliza de novo a partir da resposta original: melhorias na conversão valem também para placas já pagas
+    if (hit) return out({ found: true, cached: true, plate, fetchedAt: hit.fetched_at, vehicle: hit.raw ? normalize(hit.raw) : hit.data });
 
     // 2) limite diário de consultas pagas
     const max = Number(Deno.env.get("PLATE_MAX_PER_DAY") || 30);

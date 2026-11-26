@@ -4205,10 +4205,11 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose,title="Abrir nova OS",
 
 // ─── Consulta pela placa (edge function plate-lookup, API Placas) ─────────────
 // Mostra o que veio da consulta ao lado do valor atual; nada é salvo até tocar em "Aplicar".
-const plateLookupModel=v=>[v.brand,v.model].filter(Boolean).join(" ");
-const plateLookupEngine=v=>[v.engineCc?(Math.round(v.engineCc/100)/10).toFixed(1):"",v.power&&/^\d+$/.test(String(v.power))?`${v.power} cv`:v.power].filter(Boolean).join(" · ");
-const plateLookupPatch=v=>{
-  const p={brand:v.brand||"",model:plateLookupModel(v),engine:plateLookupEngine(v),year:v.modelYear||v.year||null,color:v.color||"",fuelType:v.fuel||"",chassis:v.chassis||"",engineNumber:v.engineNumber||""};
+// ver = versão FIPE escolhida (nome + motorização); sem ela usa o modelo do Detran e a cilindrada
+const plateLookupModel=(v,ver)=>[v.brand,ver?.name||v.model].filter(Boolean).join(" ");
+const plateLookupEngine=(v,ver)=>ver?.engine||[v.engineCc?(Math.round(v.engineCc/100)/10).toFixed(1):"",v.power&&/^\d+$/.test(String(v.power))?`${v.power} cv`:v.power].filter(Boolean).join(" · ");
+const plateLookupPatch=(v,ver)=>{
+  const p={brand:v.brand||"",model:plateLookupModel(v,ver),engine:plateLookupEngine(v,ver),year:v.modelYear||v.year||null,color:v.color||"",fuelType:v.fuel||"",chassis:v.chassis||"",engineNumber:v.engineNumber||""};
   Object.keys(p).forEach(k=>{if(!p[k]) delete p[k];});
   return p;
 };
@@ -4220,6 +4221,7 @@ function PlateLookup({plate,current={},onApply}) {
   const [err,setErr]=useState("");
   const [res,setRes]=useState(null);
   const [sel,setSel]=useState({});
+  const [verIdx,setVerIdx]=useState(-1); // -1 = sem versão FIPE
   const norm=String(plate||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   const valid=/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(norm);
   const run=async()=>{
@@ -4230,14 +4232,17 @@ function PlateLookup({plate,current={},onApply}) {
       if(!r.found) setErr("Placa não encontrada na base. A consulta não foi cobrada.");
       else{
         // marca por padrão só os campos vazios; valor diferente já preenchido fica para o usuário marcar
-        const p=plateLookupPatch(r.vehicle),d={};
+        const vs=r.vehicle?.versions||[], vi=vs.length&&vs[0].score>=50?0:-1;
+        const p=plateLookupPatch(r.vehicle,vs[vi]),d={};
         Object.keys(p).forEach(k=>{const cur=String(current[k]??"").trim(); if(cur.toUpperCase()!==String(p[k]).trim().toUpperCase()) d[k]=!cur;});
-        setSel(d);setRes(r);
+        setVerIdx(vi);setSel(d);setRes(r);
       }
     }catch(e){setErr(e.message||"Erro na consulta");}
     setBusy(false);
   };
-  const patch=res?plateLookupPatch(res.vehicle):{};
+  const versions=res?.vehicle?.versions||[];
+  const patch=res?plateLookupPatch(res.vehicle,versions[verIdx]):{};
+  const pickVer=i=>{setVerIdx(i);setSel(o=>({...o,model:true,engine:true}));};
   const v=res?.vehicle||{};
   const info=res?[v.engineCc&&`${v.engineCc} cc`,v.fuelRaw&&v.fuelRaw!==v.fuel&&v.fuelRaw,v.renavam&&`Renavam ${v.renavam}`,(v.city||v.uf)&&[v.city,v.uf].filter(Boolean).join("/")].filter(Boolean).join(" · "):"";
   const same=(k)=>String(current[k]??"").trim().toUpperCase()===String(patch[k]??"").trim().toUpperCase();
@@ -4257,6 +4262,15 @@ function PlateLookup({plate,current={},onApply}) {
         <span style={{color:B.white,fontFamily:k==="chassis"||k==="engineNumber"?"monospace":"inherit",wordBreak:"break-all"}}>{String(patch[k])}</span>
         {current[k]&&!same(k)&&<span style={{color:B.gray500,fontSize:11,textDecoration:"line-through",wordBreak:"break-all"}}>{String(current[k])}</span>}
       </div>)}
+      {versions.length>0&&<div style={{marginTop:8}}>
+        <div style={{fontSize:10,color:B.gray500,letterSpacing:.6,textTransform:"uppercase",marginBottom:4}}>Versão (FIPE)</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+          {versions.slice(0,4).map((x,i)=><button key={i} type="button" onClick={()=>pickVer(i)}
+            style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${verIdx===i?B.orange:B.gray600}`,background:verIdx===i?`${B.orange}18`:"transparent",color:verIdx===i?B.orange:B.gray300,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{x.full}</button>)}
+          <button type="button" onClick={()=>pickVer(-1)}
+            style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${verIdx===-1?B.orange:B.gray600}`,background:verIdx===-1?`${B.orange}18`:"transparent",color:verIdx===-1?B.orange:B.gray400,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Nenhuma</button>
+        </div>
+      </div>}
       {info&&<div style={{fontSize:11,color:B.gray400,marginTop:6}}>{info}</div>}
       <div style={{display:"flex",gap:8,marginTop:10}}>
         <button type="button" onClick={()=>{onApply&&onApply(chosen);setRes(null);}} disabled={!hasChange}
@@ -7886,6 +7900,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
   const [pick,setPick]=useState(null);
   const [selMode,setSelMode]=useState(false);
   const [sel,setSel]=useState({});
+  const [verIdx,setVerIdx]=useState(-1); // -1 = sem versão FIPE
   const [bulkBusy,setBulkBusy]=useState("");
   const [bulkVeh,setBulkVeh]=useState(null);
   const assignRef=useRef(onAssign); assignRef.current=onAssign;
@@ -14127,7 +14142,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.261";
+const APP_VERSION = "2026.11.26.262";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

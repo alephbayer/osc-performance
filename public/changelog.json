@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Buscar pela placa: sugere a versão da tabela FIPE (ex.: M3 Coupê 4.0 32V) para o modelo e a motorização, com opção de escolher outra"
+      },
+      {
+        "type": "feat",
         "text": "Veículo: campos de marca e motorização no cadastro, na edição e no card; a busca pela placa também preenche esses campos"
       },
       {

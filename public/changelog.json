@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Pagamentos do cliente: filtro por período (este mês, 3 meses, este ano) e por forma de pagamento, com o total do filtro"
+      },
+      {
+        "type": "feat",
         "text": "Botão Quitar tudo: preenche o saldo da OS inteira e, quando há Performance e Finishing, já divide o valor para quitar as duas (Conta Corrente e pagamento rápido)"
       },
       {

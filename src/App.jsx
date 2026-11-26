@@ -6848,22 +6848,37 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
 // Histórico de pagamentos (aportes) do cliente: por carro e por OS, com datas
 function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
   const [open,setOpen]=useState(false); const [openV,setOpenV]=useState({});
+  const [per,setPer]=useState("all"); const [meth,setMeth]=useState("");
   const ids=new Set(cliV.map(v=>v.id));
-  const mine=(payments||[]).filter(p=>ids.has(p.vehicleId));
-  if(!mine.length) return null;
+  const all=(payments||[]).filter(p=>ids.has(p.vehicleId));
+  if(!all.length) return null;
+  // Filtros: período e forma de pagamento (nomes padronizados)
+  const now=new Date(), y=now.getFullYear(), m=now.getMonth();
+  const since={all:null,month:new Date(y,m,1),m3:new Date(y,m-2,1),year:new Date(y,0,1)}[per];
+  const methods=[...new Set(all.map(p=>payMethodLabel(p.method)).filter(Boolean))].sort();
+  const mine=all.filter(p=>(!since||payDate(p.paidAt)>=since)&&(!meth||payMethodLabel(p.method)===meth));
+  const filtered=per!=="all"||!!meth;
   const fd=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
-  const total=mine.reduce((s,p)=>s+(Number(p.amount)||0),0);
+  const total=all.reduce((s,p)=>s+(Number(p.amount)||0),0);
   const FDc=(typeof FD!=="undefined"&&FD.primary)||B.purple;
   const osOf=(v,p)=>p.osHistoryId?(()=>{ const h=(osHistory||[]).find(x=>x.id===p.osHistoryId); const n=h?(h.os_number??h.osNumber):null; const fin=h&&(h.division==="finishing"||h.os_division==="finishing"); return {k:"h"+p.osHistoryId,label:n!=null?`${fin?fmtOSFD(n):fmtOS(n)} · fechada`:"OS anterior (fechada)",color:B.gray400}; })():(p.division==="finishing"?{k:"f",label:v.osNumberFinishing!=null?fmtOSFD(v.osNumberFinishing):"OS Finishing",color:FDc}:{k:"p",label:v.osNumber!=null?fmtOS(v.osNumber):"OS Performance",color:B.orange});
   const lbl={fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500};
   return (<div style={{marginTop:10,border:`1px solid ${B.gray700}`,borderRadius:10,overflow:"hidden"}}>
     <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:B.gray900,border:"none",cursor:"pointer",textAlign:"left"}}>
       <span style={{...lbl,flex:1}}>Pagamentos do cliente</span>
-      <span style={{fontSize:11,color:B.gray500}}>{mine.length} {mine.length!==1?"aportes":"aporte"}</span>
+      <span style={{fontSize:11,color:B.gray500}}>{all.length} {all.length!==1?"aportes":"aporte"}</span>
       <span style={{fontSize:15,fontWeight:300,letterSpacing:".04em",color:B.green}}>{fmtBRL(total)}</span>
       <span style={{fontSize:11,color:B.gray500,display:"inline-block",transform:open?"rotate(90deg)":"none",transition:"transform .2s"}}>▸</span>
     </button>
     {open&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+        {[["all","Tudo"],["month","Este mês"],["m3","3 meses"],["year","Este ano"]].map(([k,l])=><button key={k} type="button" onClick={()=>setPer(k)} style={{padding:"4px 10px",borderRadius:99,border:`1px solid ${per===k?B.green:B.gray600}`,background:per===k?`${B.green}1c`:"none",color:per===k?B.green:B.gray400,fontSize:10.5,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>)}
+        {methods.length>1&&<select value={meth} onChange={e=>setMeth(e.target.value)} style={{padding:"4px 8px",borderRadius:99,border:`1px solid ${meth?B.green:B.gray600}`,background:B.gray800,color:meth?B.green:B.gray400,fontSize:10.5,outline:"none",fontFamily:"inherit"}}>
+          <option value="">Todas as formas</option>{methods.map(x=><option key={x} value={x}>{x}</option>)}
+        </select>}
+      </div>
+      {filtered&&<div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:B.gray400}}><span>{mine.length} {mine.length!==1?"pagamentos":"pagamento"} no filtro</span><b style={{color:B.green,fontWeight:600}}>{fmtBRL(mine.reduce((s,p)=>s+(Number(p.amount)||0),0))}</b></div>}
+      {!mine.length&&<div style={{fontSize:11,color:B.gray500,textAlign:"center",padding:"6px 0"}}>Nenhum pagamento neste filtro</div>}
       {cliV.map(v=>{ const ps=mine.filter(p=>p.vehicleId===v.id); if(!ps.length) return null;
         const vt=ps.reduce((s,p)=>s+(Number(p.amount)||0),0); const o=!!openV[v.id];
         const groups={}; ps.forEach(p=>{ const g=osOf(v,p); (groups[g.k]=groups[g.k]||{...g,items:[]}).items.push(p); });
@@ -13952,7 +13967,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.236";
+const APP_VERSION = "2026.11.26.237";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

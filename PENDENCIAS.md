@@ -105,7 +105,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Recibo pelo WhatsApp (v2026.11.26.235): celular compartilha o PDF (Web Share); sem suporte, abre wa.me do cliente com o texto (`receiptWaText`) e baixa o PDF. **Aleph:** testar no iPhone (o compartilhamento pode ser bloqueado se o PDF demorar; aí cai no plano B)
 - [ ] Ideia: recibos no portal do cliente
 - [x] Botão "Quitar tudo" na Conta Corrente e no pagamento rápido: saldo da OS inteira, dividido entre as empresas quando há as duas (v2026.11.26.236)
-- [ ] Melhorias levantadas e ainda não feitas: filtro em Pagamentos do cliente
+- [x] Filtro em Pagamentos do cliente (período e forma, total do filtro) (v2026.11.26.237). Todas as melhorias levantadas na revisão de 2026-11-26 foram feitas
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar
 - [ ] Data do pagamento: OS aberta grava só o dia, OS fechada grava dia e hora

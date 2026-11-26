@@ -6936,6 +6936,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const [note,setNote]=useState("");
   const [confirmDelPay,setConfirmDelPay]=useState(null);
   const [editingPay,setEditingPay]=useState(null); // {id, amount, method, note, paidAt}
+  const [openPay,setOpenPay]=useState(null); // pagamento com as ações abertas
   const [payDiv,setPayDiv]=useState(hasBoth?"split":hasPerformance?"performance":"finishing");
   const [perfStr,setPerfStr]=useState("");
   const cc=React.useContext(CreditCtx);
@@ -6970,45 +6971,36 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
 
   return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9500,padding:16,overscrollBehavior:"contain",touchAction:"none"}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:520,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,boxShadow:"0 24px 80px rgba(0,0,0,.7)",maxHeight:"88dvh",display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={e=>e.stopPropagation()}>
-      <div style={{padding:"16px 20px",background:B.gray900,borderBottom:`2px solid ${B.green}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-        <div style={{width:38,height:38,borderRadius:9,background:B.greenBg,display:"flex",alignItems:"center",justifyContent:"center"}}><IBank s={18} c={B.green}/></div>
-        <div><div style={{fontWeight:700,fontSize:15,color:B.white}}>Conta Corrente — {vehicle.model}</div><div style={{fontSize:12,color:B.gray400}}>{vehicle.plate}</div></div>
-        <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
+      <div style={{padding:"14px 16px 12px",background:B.gray900,borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+        <IBank s={18} c={B.green}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:9.5,letterSpacing:".18em",textTransform:"uppercase",color:B.gray500,fontWeight:600}}>Conta corrente</div>
+          <div style={{fontSize:14,fontWeight:600,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}>{vehicle.model}<span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate?`  ·  ${vehicle.plate}`:""}</span></div>
+        </div>
+        <button onClick={onClose} aria-label="Fechar" style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,padding:6,display:"flex"}}><IX s={18}/></button>
       </div>
 
-      <div style={{padding:"20px 20px 40px",overflowY:"auto",flex:1,minHeight:0,overscrollBehavior:"contain",touchAction:"pan-y",WebkitOverflowScrolling:"touch"}}>
-        {/* Summary */}
-        <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
-          {hasBoth?<>
-            <div style={{flex:"1 1 100px",background:B.gray700,borderRadius:10,padding:"10px 12px"}}>
-              <div style={{fontSize:10,color:B.orange,display:"flex",alignItems:"center",gap:3}}><IGear s={10} c={B.orange}/>Performance</div>
-              <div style={{fontSize:14,fontWeight:800,color:B.white}}>{fmtBRL(perfTotal)}</div>
-              <div style={{fontSize:10,color:B.green}}>Pago: {fmtBRL(perfPaid)}</div>
+      <div style={{padding:"14px 14px 32px",overflowY:"auto",flex:1,minHeight:0,overscrollBehavior:"contain",touchAction:"pan-y",WebkitOverflowScrolling:"touch"}}>
+        {/* Resumo: saldo em destaque; total e pago (por empresa quando há as duas) */}
+        {(()=>{ const owe=balance>0.005, cr=balance<-0.005, col=owe?B.red:B.green;
+          const lab={fontSize:9.5,letterSpacing:".16em",textTransform:"uppercase",color:B.gray500,fontWeight:600};
+          const line=(name,color,t,pd)=>(<div style={{display:"flex",alignItems:"baseline",gap:8,padding:"6px 0",borderTop:`1px solid ${B.gray700}`,fontSize:11.5}}>
+            <span style={{color,fontWeight:600,width:84,flexShrink:0}}>{name}</span>
+            <span style={{flex:1,color:B.gray400,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fmtBRL(t)} <span style={{color:B.gray500}}>·</span> <span style={{color:B.green}}>pago {fmtBRL(pd)}</span></span>
+          </div>);
+          return (<div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px 6px",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:10,paddingBottom:8}}>
+              <span style={{...lab,color:col}}>{owe?"Saldo devedor":cr?"Crédito do cliente":"Quitado"}</span>
+              <span style={{fontSize:20,fontWeight:600,color:col,fontVariantNumeric:"tabular-nums"}}>{fmtBRL(Math.abs(balance))}</span>
             </div>
-            <div style={{flex:"1 1 100px",background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:10,padding:"10px 12px"}}>
-              <div style={{fontSize:10,color:FD.primary,display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>Finishing</div>
-              <div style={{fontSize:14,fontWeight:800,color:B.white}}>{fmtBRL(finTotal)}</div>
-              <div style={{fontSize:10,color:B.green}}>Pago: {fmtBRL(finPaid)}</div>
-            </div>
-          </>:<>
-            <div style={{flex:"1 1 100px",background:B.gray700,borderRadius:10,padding:"10px 12px"}}>
-              <div style={{fontSize:11,color:B.gray400}}>Total da OS</div>
-              <div style={{fontSize:16,fontWeight:800,color:B.white}}>{fmtBRL(total)}</div>
-            </div>
-            <div style={{flex:"1 1 100px",background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:10,padding:"10px 12px"}}>
-              <div style={{fontSize:11,color:B.green}}>Pago</div>
-              <div style={{fontSize:16,fontWeight:800,color:B.green}}>{fmtBRL(paid)}</div>
-            </div>
-          </>}
-          <div style={{flex:"1 1 100px",background:balance>0?`${B.red}18`:B.greenBg,border:`1px solid ${balance>0?B.red:B.green}44`,borderRadius:10,padding:"10px 12px"}}>
-            <div style={{fontSize:11,color:balance>0?B.red:B.green}}>{balance>0?"Saldo devedor":"Saldo"}</div>
-            <div style={{fontSize:16,fontWeight:800,color:balance>0?B.red:B.green}}>{fmtBRL(Math.abs(balance))}</div>
-          </div>
-        </div>
+            {hasBoth?<>{line("Performance",B.orange,perfTotal,perfPaid)}{line("Finishing",FD.primary,finTotal,finPaid)}</>
+              :line("Total da OS",B.gray300,total,paid)}
+          </div>);
+        })()}
 
         {/* New payment form */}
         <div style={{background:B.gray900,borderRadius:12,padding:14,marginBottom:18,border:`1px solid ${B.gray700}`}}>
-          <div style={{fontSize:11,color:B.green,fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>+ Lançar pagamento</div>
+          <div style={{fontSize:9.5,color:B.green,fontWeight:600,marginBottom:10,textTransform:"uppercase",letterSpacing:".16em"}}>Lançar pagamento</div>
           {creditAvail>=0.01&&(useCredit
             ?<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10,padding:"8px 10px",borderRadius:8,background:`${B.blue}14`,border:`1px solid ${B.blue}55`,fontSize:12,color:B.blue}}>
               <span style={{flex:"1 1 160px",fontWeight:700}}><Ic n="pay"/> Pagando com crédito do cliente · disponível {fmtBRL(creditAvail)}</span>
@@ -7018,24 +7010,24 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
               <span style={{flex:"1 1 160px"}}>Cliente tem <b>{fmtBRL(creditAvail)}</b> de crédito</span>
               <button type="button" onClick={()=>{setUseCredit(true);setAmount(String(Math.round(Math.max(0,Math.min(creditAvail,owedSel>0.005?owedSel:creditAvail))*100)/100));}} style={{background:B.blue,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",color:B.white,fontSize:11,fontWeight:700,fontFamily:"inherit"}}>Usar crédito</button>
             </div>)}
-          <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-            <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Valor (R$)" type="number" step="0.01"
-              style={{flex:"1 1 110px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-            {!useCredit&&<select value={method} onChange={e=>setMethod(e.target.value)} style={{flex:"1 1 110px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
+          <div style={{display:"grid",gridTemplateColumns:useCredit?"1fr 1fr":"1.1fr 1fr",gap:7}}>
+            <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Valor (R$)" type="number" step="0.01" inputMode="decimal"
+              style={{minWidth:0,padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+            {!useCredit&&<select value={method} onChange={e=>setMethod(e.target.value)} style={{minWidth:0,padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
               <PayMethodOptions/>
             </select>}
             <input value={date} onChange={e=>setDate(e.target.value)} type="date"
-              style={{flex:"1 1 130px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+              style={{minWidth:0,padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",...(useCredit?{}:{gridColumn:"1 / -1"})}}/>
           </div>
           {!useCredit&&balance>=0.01&&(()=>{ const bal=Math.round(balance*100)/100; const on=Math.abs((parseFloat(String(amount).replace(",","."))||0)-bal)<0.005&&(!hasBoth||payDiv==="split");
             return <button type="button" onClick={()=>{ setAmount(String(bal)); setPerfStr(""); if(hasBoth) setPayDiv("split"); else setPayDiv(hasPerformance?"performance":"finishing"); }}
-              style={{marginTop:7,background:on?`${B.green}22`:`${B.amber}18`,border:`1px solid ${on?B.green:B.amber}55`,borderRadius:7,padding:"5px 11px",cursor:"pointer",color:on?B.green:B.amber,fontSize:11,fontWeight:800,fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:5}}>
-              {on?<><ICheck s={10} c={B.green}/>Quita a OS toda</>:<>Quitar tudo · {fmtBRL(bal)}{hasBoth?" (Performance + Finishing)":""}</>}
+              style={{marginTop:7,background:on?`${B.green}22`:`${B.amber}18`,border:`1px solid ${on?B.green:B.amber}55`,borderRadius:99,padding:"4px 11px",cursor:"pointer",color:on?B.green:B.amber,fontSize:11,fontWeight:600,fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:5}}>
+              {on?<><ICheck s={10} c={B.green}/>Quita a OS toda</>:<>Quitar tudo · {fmtBRL(bal)}</>}
             </button>; })()}
           <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
             style={{width:"100%",marginTop:7,padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           {hasFinishing&&<div style={{marginTop:8}}>
-            {hasBoth&&<div style={{fontSize:10,fontWeight:800,color:B.amber,textTransform:"uppercase",letterSpacing:.6,marginBottom:5}}><Ic n="alert"/> Para qual divisão é este pagamento?</div>}
+            {hasBoth&&<div style={{fontSize:9.5,fontWeight:600,color:B.gray500,textTransform:"uppercase",letterSpacing:".16em",marginBottom:6}}>Para qual empresa</div>}
             <div style={{display:"flex",gap:6}}>
               {hasBoth&&<button onClick={()=>setPayDiv("split")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="split"?B.green:B.gray600}`,background:payDiv==="split"?`${B.green}22`:"none",color:payDiv==="split"?B.green:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11}}>Dividir</button>}
               {hasPerformance&&<button onClick={()=>setPayDiv("performance")} style={{flex:1,padding:"7px 0",borderRadius:7,border:`2px solid ${payDiv==="performance"?B.orange:B.gray600}`,background:payDiv==="performance"?`${B.orange}22`:"none",color:payDiv==="performance"?B.orange:B.gray400,cursor:"pointer",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><IGear s={11} c={payDiv==="performance"?B.orange:B.gray400}/>Performance</button>}
@@ -7048,54 +7040,49 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
           <button onClick={submit} disabled={hasBoth&&!payDiv} style={{marginTop:10,width:"100%",padding:"9px 0",borderRadius:8,background:hasBoth&&!payDiv?B.gray700:B.green,border:"none",color:B.white,fontWeight:800,cursor:hasBoth&&!payDiv?"not-allowed":"pointer",fontSize:13}}>{hasBoth&&!payDiv?"Selecione a divisão":busy?"Aplicando…":useCredit?"Aplicar crédito":"Registrar pagamento"}</button>
         </div>
 
-        {/* History */}
-        <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Histórico de pagamentos</div>
-        {vPayments.length===0?<div style={{textAlign:"center",padding:"16px 0",color:B.gray500,fontSize:13}}>Nenhum pagamento registrado ainda.</div>
-          :vPayments.map(p=>(<div key={p.id}>
-            <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:editingPay?.id===p.id?`${B.blue}15`:B.gray700,borderRadius:editingPay?.id===p.id?"9px 9px 0 0":9,marginBottom:editingPay?.id===p.id?0:6,border:editingPay?.id===p.id?`1px solid ${B.blue}44`:"none"}}>
-              <div style={{width:34,height:34,borderRadius:8,background:B.greenBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ITrendUp s={15} c={B.green}/></div>
+        {/* Histórico: valor e empresa em cima, data/forma/observação embaixo; toque abre as ações */}
+        <div style={{fontSize:9.5,color:B.gray500,fontWeight:600,marginBottom:8,textTransform:"uppercase",letterSpacing:".16em"}}>Histórico de pagamentos</div>
+        {vPayments.length===0?<div style={{textAlign:"center",padding:"16px 0",color:B.gray500,fontSize:12}}>Nenhum pagamento registrado ainda.</div>
+          :vPayments.map(p=>{ const isOpen=openPay===p.id||editingPay?.id===p.id, neg=Number(p.amount)<0, fin=p.division==="finishing";
+            const act=(icon,label,color,onClick)=>(<button type="button" onClick={e=>{e.stopPropagation();onClick();}} style={{flex:"1 1 0",minWidth:0,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"7px 2px",borderRadius:8,background:B.gray800,border:`1px solid ${B.gray700}`,color,cursor:"pointer",fontSize:10,fontWeight:600,fontFamily:"inherit"}}>{icon}<span>{label}</span></button>);
+            return (<div key={p.id} style={{marginBottom:6,borderRadius:10,background:B.gray700,border:`1px solid ${isOpen?B.gray600:"transparent"}`,overflow:"hidden"}}>
+            <div onClick={()=>{ setOpenPay(isOpen?null:p.id); if(isOpen) setEditingPay(null); }} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",cursor:"pointer"}}>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:13,color:B.white,display:"flex",alignItems:"center",gap:6}}>
-                  {fmtBRL(p.amount)} <span style={{fontWeight:400,color:B.gray400,fontSize:11}}>· {payMethodLabel(p.method)}</span>
-                  {p.division==="finishing"
-                    ?<span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 5px"}}>FD</span>
-                    :<span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 5px"}}>OSC</span>}
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:14,fontWeight:600,color:neg?B.gray400:B.white,whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{neg?`- ${fmtBRL(-p.amount)}`:fmtBRL(p.amount)}</span>
+                  <span style={{fontSize:9,fontWeight:700,letterSpacing:".08em",color:fin?FD.primary:B.orange,border:`1px solid ${fin?FD.border:B.orange+"44"}`,borderRadius:4,padding:"0 5px",lineHeight:"15px"}}>{fin?"FD":"OSC"}</span>
                 </div>
-                <div style={{fontSize:11,color:B.gray400}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</div>
+                <div style={{fontSize:11,color:B.gray400,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")} · {payMethodLabel(p.method)}{p.note?` · ${p.note}`:""}</div>
               </div>
-              {Number(p.amount)>0&&<button title="Recibo" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total,paid}})}
-                style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
-                onMouseEnter={e=>e.currentTarget.style.color=B.green} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IFileText s={14}/></button>}
-              {Number(p.amount)>0&&<button title="Enviar recibo pelo WhatsApp" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total,paid},wa:true})}
-                style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
-                onMouseEnter={e=>e.currentTarget.style.color=B.wa} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><Ic n="chat" s={14}/></button>}
-              <button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
-                style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:4,display:"flex",flexShrink:0}}
-                onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}>
-                <IEdit s={14}/>
-              </button>
-              <button onClick={()=>setConfirmDelPay(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:4,display:"flex",flexShrink:0}}
-                onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><ITrash s={14}/></button>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,transform:isOpen?"rotate(90deg)":"none",transition:"transform .15s"}}><path d="M9 18l6-6-6-6"/></svg>
             </div>
-            {editingPay?.id===p.id&&<div style={{display:"flex",gap:7,flexWrap:"wrap",padding:"8px 12px",background:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderTop:"none",borderRadius:"0 0 9px 9px",marginBottom:6}}>
+            {isOpen&&!editingPay&&<div style={{display:"flex",gap:6,padding:"0 10px 10px"}}>
+              {!neg&&act(<IFileText s={15}/>,"Recibo",B.gray200,()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total,paid}}))}
+              {!neg&&act(<Ic n="chat" s={15}/>,"WhatsApp",B.gray200,()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total,paid},wa:true}))}
+              {act(<IEdit s={15}/>,"Editar",B.gray200,()=>setEditingPay({id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)}))}
+              {act(<ITrash s={15}/>,"Excluir",B.red,()=>setConfirmDelPay(p.id))}
+            </div>}
+            {editingPay?.id===p.id&&<div style={{display:"flex",gap:7,flexWrap:"wrap",padding:"4px 12px 12px"}}>
               <input value={editingPay.amount} onChange={e=>setEditingPay(ep=>({...ep,amount:e.target.value}))} type="number" step="0.01" placeholder="Valor R$"
-                style={{flex:"1 1 100px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+                style={{flex:"1 1 100px",padding:"7px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
               <select value={editingPay.method} onChange={e=>setEditingPay(ep=>({...ep,method:e.target.value}))}
-                style={{flex:"1 1 110px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
+                style={{flex:"1 1 110px",padding:"7px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
                 <PayMethodOptions value={editingPay.method}/>
               </select>
               <input type="date" value={editingPay.paidAt} onChange={e=>setEditingPay(ep=>({...ep,paidAt:e.target.value}))}
-                style={{flex:"1 1 120px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+                style={{flex:"1 1 120px",padding:"7px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
               <input value={editingPay.note} onChange={e=>setEditingPay(ep=>({...ep,note:e.target.value}))} placeholder="Observação"
-                style={{flex:"1 1 120px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-              <button onClick={()=>{
-                if(!editingPay.amount) return;
-                onUpdatePayment&&onUpdatePayment(p.id,{amount:parseFloat(editingPay.amount),method:editingPay.method,note:editingPay.note,paidAt:editingPay.paidAt?new Date(editingPay.paidAt+"T12:00:00").toISOString():p.paidAt});
-                setEditingPay(null);
-              }} style={{padding:"6px 14px",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
-              <button onClick={()=>setEditingPay(null)} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
+                style={{flex:"1 1 120px",padding:"7px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+              <div style={{display:"flex",gap:7,width:"100%"}}>
+                <button onClick={()=>{
+                  if(!editingPay.amount) return;
+                  onUpdatePayment&&onUpdatePayment(p.id,{amount:parseFloat(editingPay.amount),method:editingPay.method,note:editingPay.note,paidAt:editingPay.paidAt?new Date(editingPay.paidAt+"T12:00:00").toISOString():p.paidAt});
+                  setEditingPay(null);
+                }} style={{flex:1,padding:"8px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:600,fontSize:12,cursor:"pointer"}}>Salvar</button>
+                <button onClick={()=>setEditingPay(null)} style={{flex:1,padding:"8px 0",borderRadius:7,background:B.gray800,border:`1px solid ${B.gray600}`,color:B.gray200,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+              </div>
             </div>}
-          </div>))}
+          </div>); })}
       </div>
     </div>
   {confirmDelPay&&<ConfirmModal title="Excluir pagamento?" message={payDeleteMsg(confirmDelPay,payments)} confirmLabel="Excluir pagamento" onConfirm={()=>{onDeletePayment(confirmDelPay);setConfirmDelPay(null);}} onCancel={()=>setConfirmDelPay(null)}/>}
@@ -13977,7 +13964,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.240";
+const APP_VERSION = "2026.11.26.241";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

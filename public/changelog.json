@@ -3,6 +3,10 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "feat",
+        "text": "Conta Corrente redesenhada para o celular: saldo em destaque com total e pago de cada empresa, campos em duas linhas e pagamentos em lista limpa; tocar num pagamento mostra Recibo, WhatsApp, Editar e Excluir"
+      },
+      {
         "type": "fix",
         "text": "Entregar veículo sem OS aberta na Performance não cria mais uma OS vazia no histórico (o botão não aparece e, se acionado, avisa)"
       },

@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Conta Corrente da OS aberta: quando o cliente tem crédito, aparece \"Usar crédito\", que lança o pagamento com o crédito (também dá para dividir entre Performance e Finishing)"
+      },
+      {
+        "type": "feat",
         "text": "Lançar pagamento: aviso quando o valor passa do saldo devedor (da OS ou da empresa escolhida), com botão para usar o valor do saldo. Vale na Conta Corrente, no pagamento rápido e na OS fechada"
       },
       {

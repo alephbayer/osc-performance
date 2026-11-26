@@ -98,7 +98,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Correções (v2026.11.26.230): pagamento dividido apaga as 2 partes juntas e forma/data/observação valem para as duas (valor continua por parte); excluir pede confirmação também na OS fechada e no agendamento; atalho de pagamento rápido manda push e linha do tempo (`notifyPayment`); pagamento de OS fechada não vai para a linha do tempo da OS atual; crédito interno não manda push; PDF mostra excedente convertido em crédito como dedução
 - [x] Achado e corrigido junto: o PDF da OS Performance somava os pagamentos da Finishing no pago/saldo (v2026.11.26.230)
 - [x] Aviso quando o pagamento passa do saldo (`OverpayNote`), com "Usar R$ saldo"; só avisa, não bloqueia (v2026.11.26.231)
-- [ ] Melhorias levantadas e ainda não feitas: usar crédito do cliente na OS aberta; unificar as contas de saldo; recibo do pagamento; botão "Quitar tudo"; filtro em Pagamentos do cliente
+- [x] Usar crédito do cliente na OS aberta (Conta Corrente): lança crédito negativo "Usado em OS-..." + pagamento "Crédito"; contexto `CreditCtx` com `applyClientCredit`. Na OS fechada, usar crédito agora também lança um negativo só (antes apagava/abatia lançamentos um a um) (v2026.11.26.232)
+- [ ] Melhorias levantadas e ainda não feitas: unificar as contas de saldo; recibo do pagamento; botão "Quitar tudo"; filtro em Pagamentos do cliente
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar
 - [ ] Data do pagamento: OS aberta grava só o dia, OS fechada grava dia e hora

@@ -526,6 +526,8 @@ function ClientNotesTab({client, vehicles}) {
   </>);
 }
 
+// Crédito do cliente: lista e função de aplicar, disponíveis para a Conta Corrente sem passar props por todas as telas
+const CreditCtx=React.createContext(null);
 const OSC_WA="5521966816241"; // WhatsApp da oficina (portal do cliente)
 // ─── Client Portal ────────────────────────────────────────────────────────────
 function PixPaymentBox() {
@@ -6789,6 +6791,10 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const [editingPay,setEditingPay]=useState(null); // {id, amount, method, note, paidAt}
   const [payDiv,setPayDiv]=useState(hasBoth?"split":hasPerformance?"performance":"finishing");
   const [perfStr,setPerfStr]=useState("");
+  const cc=React.useContext(CreditCtx);
+  const creditAvail=Math.round(((cc?.clientCredits||[]).filter(c=>vehicle.clientId&&c.clientId===vehicle.clientId).reduce((s,c)=>s+Number(c.amount),0))*100)/100;
+  const [useCredit,setUseCredit]=useState(false);
+  const [busy,setBusy]=useState(false);
 
   const vPayments=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId).sort((a,b)=>a.paidAt<b.paidAt?1:-1);
   const perfPaid=vPayments.filter(p=>(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
@@ -6803,17 +6809,26 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const total=perfTotal+finTotal;
   const balance=total-paid;
 
-  const submit=()=>{
-    const val=parseFloat(String(amount).replace(",","."));
-    if(!val||val<=0)return;
+  const submit=async()=>{
+    const val=Math.round((parseFloat(String(amount).replace(",","."))||0)*100)/100;
+    if(!val||val<=0||busy)return;
+    let p;
     if(payDiv==="split"){
       const r=resolveSplit(val,perfStr,perfTotal-perfPaid,finTotal-finPaid);
       if(!r.valid) return;
       const parts=[{division:"performance",amount:r.perf},{division:"finishing",amount:r.fin}].filter(x=>x.amount>0);
-      onAddPayment({vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:parts[0]?.division||"performance",parts});
-    } else onAddPayment({vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:payDiv||"performance"});
+      p={vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:parts[0]?.division||"performance",parts};
+    } else p={vehicleId:vehicle.id,amount:val,method,paidAt:date,note,division:payDiv||"performance"};
+    if(useCredit){
+      if(!cc||val>creditAvail+0.005) return;
+      const osl=p.division==="finishing"&&payDiv!=="split"?(vehicle.osNumberFinishing!=null?fmtOSFD(vehicle.osNumberFinishing):"OS Finishing"):(vehicle.osNumber!=null?fmtOS(vehicle.osNumber):"OS aberta");
+      setBusy(true); const ok=await cc.applyClientCredit(vehicle.clientId,val,p,`Usado em ${osl} — ${vehicle.model||""} ${vehicle.plate||""}`.trim()); setBusy(false);
+      if(!ok) return;
+      setUseCredit(false);
+    } else onAddPayment(p);
     setAmount(""); setNote(""); setPerfStr("");
   };
+  const owedSel=payDiv==="performance"&&hasFinishing?perfTotal-perfPaid:payDiv==="finishing"?finTotal-finPaid:balance;
 
   return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9500,padding:16,overscrollBehavior:"contain",touchAction:"none"}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:520,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,boxShadow:"0 24px 80px rgba(0,0,0,.7)",maxHeight:"88dvh",display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={e=>e.stopPropagation()}>
@@ -6856,12 +6871,21 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
         {/* New payment form */}
         <div style={{background:B.gray900,borderRadius:12,padding:14,marginBottom:18,border:`1px solid ${B.gray700}`}}>
           <div style={{fontSize:11,color:B.green,fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>+ Lançar pagamento</div>
+          {creditAvail>=0.01&&(useCredit
+            ?<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10,padding:"8px 10px",borderRadius:8,background:`${B.blue}14`,border:`1px solid ${B.blue}55`,fontSize:12,color:B.blue}}>
+              <span style={{flex:"1 1 160px",fontWeight:700}}><Ic n="pay"/> Pagando com crédito do cliente · disponível {fmtBRL(creditAvail)}</span>
+              <button type="button" onClick={()=>{setUseCredit(false);setAmount("");}} style={{background:"none",border:`1px solid ${B.blue}66`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.blue,fontSize:11,fontWeight:700,fontFamily:"inherit"}}>Cancelar</button>
+            </div>
+            :<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10,padding:"8px 10px",borderRadius:8,background:`${B.blue}0d`,border:`1px solid ${B.blue}33`,fontSize:12,color:B.blue}}>
+              <span style={{flex:"1 1 160px"}}>Cliente tem <b>{fmtBRL(creditAvail)}</b> de crédito</span>
+              <button type="button" onClick={()=>{setUseCredit(true);setAmount(String(Math.round(Math.max(0,Math.min(creditAvail,owedSel>0.005?owedSel:creditAvail))*100)/100));}} style={{background:B.blue,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",color:B.white,fontSize:11,fontWeight:700,fontFamily:"inherit"}}>Usar crédito</button>
+            </div>)}
           <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
             <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Valor (R$)" type="number" step="0.01"
               style={{flex:"1 1 110px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-            <select value={method} onChange={e=>setMethod(e.target.value)} style={{flex:"1 1 110px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
+            {!useCredit&&<select value={method} onChange={e=>setMethod(e.target.value)} style={{flex:"1 1 110px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
               <PayMethodOptions/>
-            </select>
+            </select>}
             <input value={date} onChange={e=>setDate(e.target.value)} type="date"
               style={{flex:"1 1 130px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
           </div>
@@ -6876,8 +6900,9 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
             </div>
             {hasBoth&&payDiv==="split"&&<SplitBox total={parseFloat(String(amount).replace(",","."))||0} perfStr={perfStr} setPerfStr={setPerfStr} perfBal={perfTotal-perfPaid} finBal={finTotal-finPaid}/>}
           </div>}
-          <OverpayNote amount={parseFloat(String(amount).replace(",","."))} owed={payDiv==="performance"&&hasFinishing?perfTotal-perfPaid:payDiv==="finishing"?finTotal-finPaid:balance} what={payDiv==="performance"&&hasFinishing?" da Performance":payDiv==="finishing"&&hasPerformance?" da Finishing":""} onFix={setAmount} style={{marginTop:10}}/>
-          <button onClick={submit} disabled={hasBoth&&!payDiv} style={{marginTop:10,width:"100%",padding:"9px 0",borderRadius:8,background:hasBoth&&!payDiv?B.gray700:B.green,border:"none",color:B.white,fontWeight:800,cursor:hasBoth&&!payDiv?"not-allowed":"pointer",fontSize:13}}>{hasBoth&&!payDiv?"Selecione a divisão":"Registrar pagamento"}</button>
+          {useCredit&&(parseFloat(String(amount).replace(",","."))||0)>creditAvail+0.005&&<div style={{marginTop:10,fontSize:11,fontWeight:700,color:B.red}}>O valor passa do crédito disponível ({fmtBRL(creditAvail)}).</div>}
+          <OverpayNote amount={parseFloat(String(amount).replace(",","."))} owed={owedSel} what={payDiv==="performance"&&hasFinishing?" da Performance":payDiv==="finishing"&&hasPerformance?" da Finishing":""} onFix={setAmount} style={{marginTop:10}}/>
+          <button onClick={submit} disabled={hasBoth&&!payDiv} style={{marginTop:10,width:"100%",padding:"9px 0",borderRadius:8,background:hasBoth&&!payDiv?B.gray700:B.green,border:"none",color:B.white,fontWeight:800,cursor:hasBoth&&!payDiv?"not-allowed":"pointer",fontSize:13}}>{hasBoth&&!payDiv?"Selecione a divisão":busy?"Aplicando…":useCredit?"Aplicar crédito":"Registrar pagamento"}</button>
         </div>
 
         {/* History */}
@@ -10545,15 +10570,8 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
           <button onClick={async()=>{
             const val=Math.min(parseFloat(creditApply)||Math.min(totalCredit,owed),totalCredit,owed);
             if(val<=0) return;
-            // Consume credits oldest first
-            let remaining=val;
-            for(const cr of availableCredits){
-              if(remaining<=0) break;
-              const use=Math.min(cr.amount,remaining);
-              if(use>=cr.amount) await onDeleteClientCredit(cr.id);
-              else await onAddClientCredit(cr.clientId,-(use),`Usado em OS-${h.os_number||""}`);
-              remaining-=use;
-            }
+            // Lança um crédito negativo (o saldo do cliente é a soma dos lançamentos)
+            await onAddClientCredit(h.client_id,-val,`Usado em OS-${h.os_number||""}`);
             onAddPayment({vehicleId:h.vehicle_id,osHistoryId:h.id,amount:val,method:"Crédito",paidAt:new Date().toISOString(),note:"Crédito de cliente aplicado",division:h.division||"performance"});
             setCreditApply("");
           }} style={{padding:"5px 12px",borderRadius:6,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>
@@ -13816,7 +13834,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.231";
+const APP_VERSION = "2026.11.26.232";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -19593,7 +19611,22 @@ function MainApp() {
     ...(navItems.find(n=>n.id==="mais")     ?[{id:"mais",      label:"Mais",      icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>}]:[]),
   ];
 
-  return (<div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
+  // Usa crédito do cliente como pagamento: lança o crédito negativo ("Usado em ...") e o pagamento "Crédito" na OS
+  const applyClientCredit=async(clientId,val,pay,label)=>{
+    let cid=null;
+    try{
+      cid=await db.addClientCredit(clientId,-val,label,adminRole);
+      setClientCredits(p=>[...p,{id:cid,clientId,amount:-val,note:label,createdAt:new Date().toISOString()}]);
+      await insertPayment({...pay,amount:val,method:"Crédito",note:pay.note||"Crédito de cliente aplicado"});
+      toast_(`Crédito de ${fmtBRL(val)} aplicado ✓`);
+      return true;
+    }catch(e){
+      if(cid){ try{await db.deleteClientCredit(cid);}catch{} setClientCredits(p=>p.filter(c=>c.id!==cid)); }
+      errToast(e); return false;
+    }
+  };
+  const creditCtx={clientCredits,applyClientCredit};
+  return (<CreditCtx.Provider value={creditCtx}><div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
     {!online&&<div style={{position:"fixed",top:"calc(env(safe-area-inset-top) + 34px)",left:0,right:0,zIndex:2000,display:"flex",justifyContent:"center",pointerEvents:"none"}}><div style={{display:"inline-flex",alignItems:"center",gap:7,background:"#b91c1c",color:"#fff",fontSize:11,fontWeight:700,letterSpacing:.3,padding:"6px 13px",borderRadius:99,boxShadow:"0 4px 16px rgba(0,0,0,.28)"}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 015.17-2.39"/><path d="M10.71 5.05A16 16 0 0122.58 9"/><path d="M1.42 9a15.91 15.91 0 014.7-2.88"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Sem conexão · alterações não estão sendo salvas</div></div>}
 
     {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
@@ -20614,5 +20647,5 @@ function MainApp() {
         </div>);
       })()}
     </>}
-  </div>);
+  </div></CreditCtx.Provider>);
 }

@@ -12757,6 +12757,9 @@ const PV_IC={
   bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
   lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   folder:'<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  contrast:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
   dot:'<circle cx="12" cy="12" r="3"/>',
 };
 function PvIc({n,s=14,c="currentColor",style}) {
@@ -13962,7 +13965,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.247";
+const APP_VERSION = "2026.11.26.248";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -19840,7 +19843,7 @@ function MainApp() {
       {(adminRole==="owner"||adminRole==="admin")&&<Item icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>} label="Calendário" sub="Lembretes, tarefas, férias, manutenções e entregas" color={B.blue} onClick={()=>goSection("calendario")}/>}
       {(adminRole==="owner"||adminRole==="admin")&&<Item icon={<Ic n="list" s={18} c={B.orange}/>} label="Catálogo de serviços" sub={`Menu padrão: ${svcCatalog.filter(x=>x.active!==false).length} serviços, horas e valores`} color={B.orange} onClick={()=>setShowSvcCatalog(true)}/>}
       {/* Theme — available to all */}
-      <Item icon={themeLabel.split(" ")[0]} label="Tema do app" sub={themeLabel} color={B.gray400} onClick={toggleTheme} right={<span style={{fontSize:12,color:B.gray400,fontWeight:700}}>{themeLabel}</span>}/>
+      <Item icon={<Ic n={themePref==="auto"?"contrast":themePref==="dark"?"moon":"sun"} s={18} c={B.gray400} style={{color:B.gray400}}/>} label="Tema do app" sub={themeLabel} color={B.gray400} onClick={toggleTheme} right={<span style={{fontSize:12,color:B.gray400,fontWeight:700}}>{themeLabel}</span>}/>
       {/* Owner-only items */}
       {adminRole==="owner"&&<>
         <Item icon={<IGear s={14} c={B.orange}/>} label="Configurações" sub="Taxa padrão, empresa" color={B.orange} onClick={()=>setSCfg(true)}/>

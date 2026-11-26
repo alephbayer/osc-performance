@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Mais > Tema do app: ícone voltou a aparecer (sol, lua ou meio a meio no automático) em vez do nome do tema"
+      },
+      {
+        "type": "fix",
         "text": "Campo \"Nova tarefa\" do carro agora busca no catálogo de serviços: digite duas letras, escolha a sugestão e horas, categoria e valor já vêm preenchidos (chefes veem sem valores)"
       },
       {

@@ -330,7 +330,14 @@ function PortalPhotoBtn({onPick,hasPhoto,variant="pill",style={}}) {
   </>);
 }
 
-function PortalHistoryCard({h,v,payments}) {
+// Botão "Recibo" do portal do cliente (gera o mesmo PDF da oficina)
+function PortalReceiptBtn({onClick}){
+  const [busy,setBusy]=useState(false);
+  return <button type="button" disabled={busy} onClick={async()=>{setBusy(true);try{await onClick();}finally{setBusy(false);}}}
+    style={{display:"inline-flex",alignItems:"center",gap:4,background:"none",border:`1px solid ${B.gray600}`,borderRadius:99,padding:"2px 9px",cursor:busy?"wait":"pointer",color:B.gray300,fontSize:10.5,fontWeight:600,fontFamily:"inherit",flexShrink:0}}>
+    <IFileText s={11}/>{busy?"Gerando…":"Recibo"}</button>;
+}
+function PortalHistoryCard({h,v,payments,client,company}) {
   const [open,setOpen]=useState(false);
   const div=h.division||"performance";
   const divColor=div==="finishing"?FD.primary:B.orange;
@@ -372,6 +379,7 @@ function PortalHistoryCard({h,v,payments}) {
           <span style={{flex:1,color:B.gray200}}>{payMethodLabel(p.method)}{p.note?` · ${p.note}`:""}</span>
           <span style={{color:B.gray500}}>{p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):""}</span>
           <span style={{fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
+          {Number(p.amount)>0&&<PortalReceiptBtn onClick={()=>paymentReceipt({payment:p,pays:[p],vehicle:v,client,company,account:{total:totalValue,paid},osH:h})}/>}
         </div>)}
       </>}
     </div>}
@@ -567,7 +575,7 @@ function PixPaymentBox() {
 }
 
 const PUSH_DISMISS_KEY="osc_portal_push_dismissed";
-function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[],clients=[],purchaseOrders=[],stock=[],onVehiclePhoto}) {
+function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[],clients=[],purchaseOrders=[],stock=[],onVehiclePhoto}) {
   const [openVid,setOpenVid]=useState(null);
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
@@ -746,7 +754,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
           </div>
           :<>
             <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"0 2px 10px"}}>Serviços entregues · {cliHistory.length}</div>
-            {cliHistory.map(h=>{const v=cliVehicles.find(x=>x.id===(h.vehicle_id||h.vehicleId))||{model:"Veículo"};return <PortalHistoryCard key={h.id} h={h} v={v} payments={payments}/>;})}
+            {cliHistory.map(h=>{const v=cliVehicles.find(x=>x.id===(h.vehicle_id||h.vehicleId))||{model:"Veículo"};return <PortalHistoryCard key={h.id} h={h} v={v} payments={payments} client={client} company={company}/>;})}
           </>}
       </>}
 
@@ -815,6 +823,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                   <div key={p.id} style={{display:"flex",alignItems:"baseline",gap:8,padding:"5px 0",fontSize:12}}>
                     <span style={{flex:1,color:B.gray200}}>{payMethodLabel(p.method)}{p.note?` · ${p.note}`:""}</span>
                     <span style={{color:B.gray500}}>{p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"—"}</span>
+                    {p.amount>0&&<PortalReceiptBtn onClick={()=>paymentReceipt({payment:p.items[0],pays:p.items,vehicle:v,client,company,account:{total:totalDue,paid:totalPaid}})}/>}
                   </div>
                 ))}
               </div>}
@@ -1295,8 +1304,8 @@ function groupPaymentsForClient(list){
     const day=String(p.paidAt||"").slice(0,10);
     const key=p.groupId?`g:${p.groupId}`:`d:${p.vehicleId}|${day}|${payMethodLabel(p.method)}`;
     let g=map.get(key);
-    if(!g){g={id:key,amount:0,method:payMethodLabel(p.method),paidAt:p.paidAt,notes:[]};map.set(key,g);order.push(g);}
-    g.amount+=Number(p.amount);
+    if(!g){g={id:key,amount:0,method:payMethodLabel(p.method),paidAt:p.paidAt,notes:[],items:[]};map.set(key,g);order.push(g);}
+    g.amount+=Number(p.amount); g.items.push(p);
     if(p.note&&!g.notes.includes(p.note)) g.notes.push(p.note);
   });
   return order.map(g=>({...g,note:g.notes.join(" · ")}));
@@ -2430,8 +2439,8 @@ function receiptWaText({pays,vehicle,client,osLabel,account}){
   const sit=bal==null?"":bal>=0.01?`Saldo em aberto: *${fmtBRL(bal)}*`:bal<=-0.01?`Crédito a seu favor: *${fmtBRL(-bal)}*`:"OS quitada ✅";
   return [`Olá${nome?`, ${nome}`:""}! 🧾`,"",`Recebemos seu pagamento de *${fmtBRL(amt)}* (${payMethodLabel(pays[0]?.method)})${d&&!isNaN(d)?` em ${d.toLocaleDateString("pt-BR")}`:""}${osLabel?`, referente à ${osLabel}`:""}${veic?` — ${veic}`:""}.`,sit?"":null,sit||null,"","Segue o recibo. Obrigado!","OSC Group"].filter(x=>x!==null).join("\n");
 }
-async function paymentReceipt({payment,payments,vehicle,client,company,account,osH,wa=false}){
-  const pays=payment.groupId?(payments||[]).filter(x=>x.groupId===payment.groupId):[payment];
+async function paymentReceipt({payment,payments,vehicle,client,company,account,osH,wa=false,pays:paysIn}){
+  const pays=paysIn||(payment.groupId?(payments||[]).filter(x=>x.groupId===payment.groupId):[payment]);
   const divs=[...new Set(pays.map(x=>x.division||"performance"))];
   let osLabel="";
   if(osH){ const n=osH.os_number??osH.osNumber; osLabel=n!=null?((osH.division||"performance")==="finishing"?fmtOSFD(n):fmtOS(n)):""; }
@@ -13967,7 +13976,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.237";
+const APP_VERSION = "2026.11.26.238";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17802,7 +17811,7 @@ function ClientPortalRoot() {
   const cli=data.client;
   const setQuote=(qid,patch)=>setData(d=>({...d,quotes:d.quotes.map(q=>q.id===qid?{...q,...patch}:q)}));
   const quoteModel=qid=>{const q=data.quotes.find(x=>x.id===qid);return q?.vehicleId?data.vehicles.find(v=>v.id===q.vehicleId)?.model:q?.tempModel;};
-  return <div key={theme} style={{...shell,display:"flex",flexDirection:"column"}}><ErrorBoundary><ClientPortal client={cli} vehicles={data.vehicles} tasks={data.tasks.filter(t=>!isInternalTask(t))} employees={data.employees} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} onLogout={doLogout} appointments={data.appointments} quotes={data.quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={data.clientCredits} clients={[cli]} purchaseOrders={data.purchaseOrders} stock={data.stock}
+  return <div key={theme} style={{...shell,display:"flex",flexDirection:"column"}}><ErrorBoundary><ClientPortal client={cli} company={data.company} vehicles={data.vehicles} tasks={data.tasks.filter(t=>!isInternalTask(t))} employees={data.employees} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} onLogout={doLogout} appointments={data.appointments} quotes={data.quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={data.clientCredits} clients={[cli]} purchaseOrders={data.purchaseOrders} stock={data.stock}
     onVehiclePhoto={async(vid,url)=>{const vv=data.vehicles.find(x=>x.id===vid);if(!vv) return; setData(d=>({...d,vehicles:d.vehicles.map(x=>x.id===vid?{...x,photo:url}:x)})); try{ await db.updateVehicle(vid,{photo:url}); }catch(e){ errToast(e); return; } db.sendPushToAdmins(`Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${cli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}}
     onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuote(qid,{status:"approved",approvedItems:items});toast_("Orçamento aprovado");pushQuoteDecision(data.quotes.find(q=>q.id===qid),true,quoteModel(qid),cli.name);}catch(e){errToast(e);}}}
     onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuote(qid,{status:"rejected"});toast_("Orçamento recusado");pushQuoteDecision(data.quotes.find(q=>q.id===qid),false,quoteModel(qid),cli.name);}catch(e){errToast(e);}}}/></ErrorBoundary>

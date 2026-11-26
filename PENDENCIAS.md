@@ -103,7 +103,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] Ainda com conta própria (de propósito, não é saldo): cobrança parcial (`partialChargeBuild`) e PDFs (`renderElegantQuote`); "executado/investido" (`executedValue`) segue separado
 - [x] Recibo de pagamento em PDF (`generatePaymentReceiptPDF`, `paymentReceipt`, `extensoBRL`): botão em cada pagamento da Conta Corrente e da OS fechada; pagamento dividido sai num recibo só com as duas partes; situação da OS no dia (v2026.11.26.234). Testado com PDFs de exemplo; não testado no celular
 - [x] Recibo pelo WhatsApp (v2026.11.26.235): celular compartilha o PDF (Web Share); sem suporte, abre wa.me do cliente com o texto (`receiptWaText`) e baixa o PDF. **Aleph:** testar no iPhone (o compartilhamento pode ser bloqueado se o PDF demorar; aí cai no plano B)
-- [ ] Ideia: recibos no portal do cliente
+- [x] Recibos no portal do cliente: botão "Recibo" nos pagamentos da OS aberta (aba Conta) e das OSs anteriores; `portal_load` passou a devolver `company` (migration 063, aplicada em 2026-11-26; função conferida igual à 061 antes) (v2026.11.26.238). **Não testado com sessão real do portal**: Aleph, entrar no portal e baixar um recibo
+- [ ] Portal: a lista de pagamentos da OS aberta mostra forma e data, mas não o valor de cada pagamento (achado, não mexido)
 - [x] Botão "Quitar tudo" na Conta Corrente e no pagamento rápido: saldo da OS inteira, dividido entre as empresas quando há as duas (v2026.11.26.236)
 - [x] Filtro em Pagamentos do cliente (período e forma, total do filtro) (v2026.11.26.237). Todas as melhorias levantadas na revisão de 2026-11-26 foram feitas
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)

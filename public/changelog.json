@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Portal do cliente: botão Recibo em cada pagamento (OS em andamento e OSs anteriores), com o mesmo recibo em PDF da oficina"
+      },
+      {
+        "type": "feat",
         "text": "Pagamentos do cliente: filtro por período (este mês, 3 meses, este ano) e por forma de pagamento, com o total do filtro"
       },
       {

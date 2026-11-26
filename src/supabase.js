@@ -398,6 +398,7 @@ export const db = {
       clientCredits: (d.client_credits || []).map(r => ({ id: r.id, clientId: r.client_id, amount: Number(r.amount), note: r.note || "", createdAt: r.created_at, createdBy: r.created_by })),
       stock: d.stock || [],
       defaultRate: Number(d.default_rate || 0),
+      company: d.company || {},
     };
   },
 

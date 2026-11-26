@@ -86,6 +86,15 @@ function PlateTag({v,fs=9.5,sep=true}){
   if(!v?.plate) return null;
   return <span style={{display:"inline-flex",alignItems:"center",gap:9,marginLeft:9,verticalAlign:"middle",position:"relative",top:-1}}>{sep&&<span style={{width:3,height:3,borderRadius:99,background:B.gray500,flexShrink:0}}/>}<Plate plate={v.plate} black={v.blackPlate} fs={fs}/></span>;
 }
+// Foto do carro (64×44) com a mini-placa logo abaixo, mesma largura (cabeçalho dos cards)
+function CarIdBlock({vehicle}){
+  return <div style={{display:"flex",flexDirection:"column",alignItems:"stretch",gap:4,width:64,flexShrink:0}}>
+    {vehicle.photo
+      ?<img src={vehicle.photo} alt="" style={{width:64,height:44,borderRadius:7,objectFit:"cover",border:`1px solid ${B.gray600}`,display:"block"}}/>
+      :<div style={{width:64,height:44,borderRadius:7,background:`${B.orange}1c`,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={20} c={B.orange}/></div>}
+    {vehicle.plate&&<Plate plate={vehicle.plate} black={vehicle.blackPlate} fs={9.5} style={{textAlign:"center",fontSize:10,overflow:"hidden"}}/>}
+  </div>;
+}
 // Opção "Placa preta" ao lado do campo Placa
 const BlackPlateToggle=({vehicle,onUpdateVehicle})=><button onClick={()=>onUpdateVehicle(vehicle.id,{blackPlate:!vehicle.blackPlate})} title="Veículo de coleção com placa preta" style={{marginTop:4,display:"inline-flex",alignItems:"center",gap:4,background:"none",border:`1px solid ${vehicle.blackPlate?B.gray300:B.gray700}`,borderRadius:6,padding:"1px 7px",cursor:"pointer",color:vehicle.blackPlate?B.gray200:B.gray500,fontSize:10,fontWeight:vehicle.blackPlate?600:400}}>{vehicle.blackPlate&&<Ic n="done"/>}Placa preta</button>;
 
@@ -6216,14 +6225,12 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     <div style={{background:B.gray800,borderRadius:10,border:`1px solid ${vehicle.urgent?B.red+"66":B.gray700}`,overflow:"hidden",marginBottom:10,boxShadow:vehicle.urgent?`0 0 0 1px ${B.red}44,0 2px 12px ${B.red}22`:"none"}}>
       {/* header */}
       <div style={{display:"flex",alignItems:narrow?"flex-start":"center",flexWrap:narrow?"wrap":"nowrap",gap:10,background:B.gray700,padding:"10px 14px",cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
-        {/* Car photo thumb */}
-        {vehicle.photo
-          ?<img src={vehicle.photo} alt="" style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>
-          :<div style={{width:44,height:44,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.orange}/></div>}
+        {/* Foto do carro + placa */}
+        <CarIdBlock vehicle={vehicle}/>
         <div style={{flex:1,minWidth:0}}>
           {/* Marca acima (âmbar, caixa-alta espaçada) e modelo em escrita normal */}
           {String(vehicle.brand||"").trim()&&<div style={{color:B.amber,fontSize:9.5,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.2,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(vehicle.brand).trim()}</div>}
-          <div style={narrow?{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehModelOnly(vehicle)||vehicle.model}<PlateTag v={vehicle} fs={10}/></div>
+          <div style={narrow?{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehModelOnly(vehicle)||vehicle.model}</div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:narrow?"3px 8px":8,flexWrap:"wrap",alignItems:"center"}}>
             {isFD
               ?(vehicle.osNumberFinishing&&<span style={{background:`${FD.primary}22`,color:FD.primary,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOSFD(vehicle.osNumberFinishing)}</span>)
@@ -6249,9 +6256,9 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             ?<div style={{fontSize:10,color:B.red,fontWeight:700}}>Deve {fmtBRL(bal)}</div>
             :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;
           return narrow
-          ?<div style={{order:3,flexBasis:"100%",marginLeft:54,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:10,paddingTop:6,borderTop:`1px solid ${B.gray600}`}}>
-            <div><div style={{fontSize:10,color:B.gray400}}>Total OS</div><div style={{fontSize:15,fontWeight:800,color:B.amber,lineHeight:1.2}}>{fmtBRL(total)}</div></div>
-            <div style={{textAlign:"right"}}>{inv}{owe}</div>
+          ?<div style={{order:3,flexBasis:"100%",marginLeft:0,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:10,paddingTop:6,borderTop:`1px solid ${B.gray600}`}}>
+            <div><div style={{fontSize:10,color:B.gray400}}>Total OS</div><div style={{fontSize:15,fontWeight:800,color:B.amber,lineHeight:1.2,whiteSpace:"nowrap"}}>{fmtBRL(total)}</div></div>
+            <div style={{textAlign:"right",whiteSpace:"nowrap"}}>{inv}{owe}</div>
           </div>
           :<div style={{textAlign:"right",flexShrink:0,marginRight:4}}>
             <div style={{fontSize:11,color:B.gray400}}>Total OS</div>
@@ -11005,14 +11012,11 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
     {/* Header row */}
     <div className="osc-vhc-header" style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",cursor:"pointer",background:B.gray900}} onClick={()=>setOpen(o=>!o)}>
       <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
-        {vehicle.photo
-          ?<img src={vehicle.photo} alt="" style={{width:42,height:42,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray700}`}}/>
-          :<div style={{width:42,height:42,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={19} c={B.orange}/></div>}
+        <CarIdBlock vehicle={vehicle}/>
 
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={vehicle} stack/></div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
-            <Plate plate={vehicle.plate} black={vehicle.blackPlate}/>
             {vehicle.year&&<span style={{color:B.gray400}}>{vehicle.year}</span>}
             {vehicle.engine&&<span style={{color:B.gray400}}>{vehicle.engine}</span>}
             {(vehicle.color||vehicle.year)&&vehicle.color&&<span style={{color:B.gray300}}><Ic n="brush"/> {vehicle.color}</span>}
@@ -14201,7 +14205,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.272";
+const APP_VERSION = "2026.11.26.273";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

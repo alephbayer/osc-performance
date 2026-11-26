@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Cards do carro (Oficina e Veículos): foto mais larga com a placa logo abaixo; no celular o total da OS ocupa a largura do card"
+      },
+      {
+        "type": "fix",
         "text": "Mini-placa em todas as telas com veículo (listas, seletores, agenda, compras, portal); no card do carro a placa fica na linha do modelo, depois de uma bolinha"
       },
       {

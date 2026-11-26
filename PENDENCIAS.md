@@ -115,7 +115,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 ## Correções de dados
 - [x] Fechar OS (Performance) não somava fretes do veículo nem peças importadas no total gravado, não os guardava no histórico e não os zerava no veículo (migration 062: `os_history.import_parts`). OS-127 (ASZ0D70) corrigida de R$ 11.897,80 para R$ 12.923,74 em 2026-11-24
 - [x] LDM0202 OS-172: frete de R$ 63,29 (rolamentos, São Cristóvão > OSC) estava fora do total; corrigido de R$ 1.434,39 para R$ 1.497,68 (= pago, quitada) em 2026-11-24
-- [ ] **Aleph:** ETE8I22 OS-142 (20/10): pago R$ 6.060,95, total gravado R$ 5.988,86 (R$ 72,09 a mais). Provavelmente o mesmo erro do frete, mas o frete já não está no veículo; conferir se cobra algo extra ou se vira crédito
+- [x] ETE8I22 OS-142: total gravado (R$ 5.988,86) confere com as tarefas; o 2º Pix (19/10, R$ 3.115,95) foi calculado com a OS em R$ 6.060,95 e um item de R$ 72,09 saiu antes da entrega (sem registro do que era). Com o ok do Aleph (2026-11-26), virou crédito do cliente: `client_credits` +72,09 "Excedente OS-142" e pagamento -72,09 "Crédito" na OS (mesmo que o botão "Salvar crédito"). OS quitada; cliente com R$ 72,09 de crédito
 - [ ] **Aleph:** CAC8J62: OS sem número fechada em 02/09 com total R$ 0,00 e R$ 31.000,00 pagos; parece registro antigo ou manual, conferir
 
 ## Segurança (sem urgência, discutir antes de mexer)

@@ -3,6 +3,10 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "fix",
+        "text": "Veículos: marca do mesmo tamanho do modelo, em âmbar e traço fino"
+      },
+      {
         "type": "feat",
         "text": "Cadastros rápidos de veículo (card do mecânico, Nova OS e orçamento com veículo novo) com todos os campos: marca, modelo, placa, ano, cor, motorização, combustível, chassi e motor nº, e o botão Buscar pela placa"
       },

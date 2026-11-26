@@ -91,6 +91,9 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - Decidido (Aleph): pagamento entra como estiver na OS antiga; sem dado de pagamento, a OS fica em aberto (aparece no "A receber") e o Aleph lança à mão pelo extrato do banco
 - Plano: normalizar em `~/OSC/importacao/normalizado/` -> relatório de conferência (duplicados por placa e telefone, totais que não batem) -> migration 065 (origem e número antigo em `os_history`; números antigos colidem com 1-172) -> `scripts/importar-os.mjs` (simula por padrão, grava com limite, log para desfazer) -> teste com 3 a 5 OSs -> backup -> resto
 - [ ] **Aleph:** copiar planilhas e PDFs para `~/OSC/importacao/originais/` (pasta criada, fora do repositório)
+- [x] Teste 1 (2026-11-26): uma OS do Onmotor (PDF), carro ainda em trabalho -> gravada como **OS aberta OS-177** (número novo, decisão do Aleph; número antigo na observação do carro). Cliente e veículo novos, sem pagamento. Ids para desfazer em `~/OSC/importacao/log/`
+- [ ] **Aleph:** conferir a OS-177 no app (total R$ 14.760, saldo em aberto) e ver se o Onmotor exporta as OSs em planilha
+- Regra para as próximas: OS em andamento entra como OS aberta com número novo; OS entregue vai para `os_history` (aí precisa da migration de origem)
 
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor

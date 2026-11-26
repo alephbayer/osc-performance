@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Página do carro: faixa do topo maior para o conteúdo não ficar sob a barra de status"
+      },
+      {
+        "type": "fix",
         "text": "Página do carro: faixa do topo um pouco maior, o conteúdo não encosta na barra de status ao rolar"
       },
       {

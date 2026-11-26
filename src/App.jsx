@@ -13983,7 +13983,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.258";
+const APP_VERSION = "2026.11.26.259";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15092,7 +15092,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const tabBtn=(id,label)=><button onClick={()=>setView(id)} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${view===id?accent:B.gray600}`,background:view===id?`${accent}22`:"none",color:view===id?accent:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{label}</button>;
   return (<div style={{position:"fixed",inset:0,zIndex:9000,background:B.black,color:B.white,fontFamily:"'Inter','Segoe UI',sans-serif",overflowY:"auto"}}>
     {/* faixa da status bar do iPhone: o conteúdo não passa por baixo dela */}
-    <div style={{position:"sticky",top:0,height:"calc(env(safe-area-inset-top) + 10px)",background:B.black,zIndex:30}}/>
+    <div style={{position:"sticky",top:0,height:"calc(env(safe-area-inset-top) + 30px)",background:B.black,zIndex:30}}/>
     <div style={{maxWidth:1180,margin:"0 auto",padding:"14px 16px calc(60px + env(safe-area-inset-bottom))"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
         <button onClick={onClose} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:B.gray200,fontWeight:700,fontSize:12,cursor:"pointer"}}>← Voltar</button>

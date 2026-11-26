@@ -103,6 +103,8 @@ const mapVehicleIn = (v) => ({
   year: v.year || null,
   photo: v.photo,
   photos: v.photos || [],
+  brand: v.brand || '',
+  engine: v.engine || '',
   chassis: v.chassis || '',
   engineNumber: v.engine_number || '',
   fuelType: v.fuel_type || '',
@@ -159,6 +161,8 @@ const mapVehicleOut = (v) => ({
   photo: v.photo,
   photos: v.photos,
   entered_at: v.enteredAt || null,
+  ...(v.brand ? { brand: v.brand } : {}),
+  ...(v.engine ? { engine: v.engine } : {}),
   ...(v.chassis ? { chassis: v.chassis } : {}),
   ...(v.engineNumber ? { engine_number: v.engineNumber } : {}),
   ...(v.fuelType ? { fuel_type: v.fuelType } : {}),
@@ -486,6 +490,8 @@ export const db = {
     if ("plate"                  in patch) dbPatch.plate                    = patch.plate;
     if ("color"                  in patch) dbPatch.color                    = patch.color;
     if ("year"                   in patch) dbPatch.year                     = patch.year;
+    if ("brand"                  in patch) dbPatch.brand                    = patch.brand || null;
+    if ("engine"                 in patch) dbPatch.engine                   = patch.engine || null;
     if ("chassis"                in patch) dbPatch.chassis                  = patch.chassis || null;
     if ("engineNumber"           in patch) dbPatch.engine_number            = patch.engineNumber || null;
     if ("fuelType"               in patch) dbPatch.fuel_type                = patch.fuelType || null;

@@ -18,7 +18,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Carga inicial: 79 serviços do estudo (`~/OSC/orcamentos/dados/catalogo.json`, sem "Outros" e "Parafusos e consumíveis"), com horas medianas, categoria e observação (orçar caso a caso / candidato a preço de tabela). `source_key` = `estudo:<id>`
 - [ ] **Aleph:** revisar o catálogo no app: nomes, categorias, horas (ex.: "Diagnóstico e conferência" veio com 0,1 h; "Primeira partida e break-in" sem horas), e dar preço fechado aos candidatos a tabela
 - [x] Catálogo também no campo inline "Nova tarefa…" do carro (era o que o Aleph usa; antes só estava no modal da página de etapas). Lista de sugestões em portal, fixa na tela (v2026.11.26.247)
-- [ ] Conferir no app ao vivo: abrir o catálogo, criar/editar um serviço, escolher um na Nova tarefa (Performance e Finishing), no orçamento e no agendamento
+- [x] Aleph confirmou no app ao vivo (2026-11-26): lista do catálogo aparece no campo "Nova tarefa…" do carro
+- [ ] Ainda conferir ao vivo: criar/editar serviço na tela do catálogo, Finishing, orçamento e agendamento
 - [ ] Depois: padronizar nomes das tarefas antigas? (só com OK, mexe em dados de produção)
 - [x] Símbolos ✓/✕/✗ da interface trocados por `<Ic n="done"/>`, `<Ic n="x"/>` (novo) e `<Ic n="xc"/>`; ✓ removido dos avisos (toasts); PDF "Quitado" sem ✓ (v2026.11.26.246). Conferir no app ao vivo o alinhamento dos ícones
 

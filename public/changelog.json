@@ -3,6 +3,10 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "feat",
+        "text": "Veículo: botão \"Buscar pela placa\" preenche modelo, ano, cor, combustível, chassi e número do motor; você marca o que aplicar antes de salvar"
+      },
+      {
         "type": "fix",
         "text": "Página do carro: faixa do topo maior para o conteúdo não ficar sob a barra de status"
       },

@@ -4203,12 +4203,79 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose,title="Abrir nova OS",
 }
 
 
+// ─── Consulta pela placa (edge function plate-lookup, API Placas) ─────────────
+// Mostra o que veio da consulta ao lado do valor atual; nada é salvo até tocar em "Aplicar".
+const plateLookupModel=v=>{
+  const cc=v.engineCc?(Math.round(v.engineCc/100)/10).toFixed(1):"";
+  return [v.brand,v.model,cc].filter(Boolean).join(" ");
+};
+const plateLookupPatch=v=>{
+  const p={model:plateLookupModel(v),year:v.modelYear||v.year||null,color:v.color||"",fuelType:v.fuel||"",chassis:v.chassis||"",engineNumber:v.engineNumber||""};
+  Object.keys(p).forEach(k=>{if(!p[k]) delete p[k];});
+  return p;
+};
+const PLATE_LOOKUP_FIELDS=[["model","Modelo"],["year","Ano"],["color","Cor"],["fuelType","Combustível"],["chassis","Chassi"],["engineNumber","Motor (nº)"]];
+function PlateLookup({plate,current={},onApply}) {
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+  const [res,setRes]=useState(null);
+  const [sel,setSel]=useState({});
+  const norm=String(plate||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  const valid=/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(norm);
+  const run=async()=>{
+    if(!valid||busy) return;
+    setBusy(true);setErr("");setRes(null);
+    try{
+      const r=await db.lookupPlate(norm);
+      if(!r.found) setErr("Placa não encontrada na base. A consulta não foi cobrada.");
+      else{
+        // marca por padrão só os campos vazios; valor diferente já preenchido fica para o usuário marcar
+        const p=plateLookupPatch(r.vehicle),d={};
+        Object.keys(p).forEach(k=>{const cur=String(current[k]??"").trim(); if(cur.toUpperCase()!==String(p[k]).trim().toUpperCase()) d[k]=!cur;});
+        setSel(d);setRes(r);
+      }
+    }catch(e){setErr(e.message||"Erro na consulta");}
+    setBusy(false);
+  };
+  const patch=res?plateLookupPatch(res.vehicle):{};
+  const v=res?.vehicle||{};
+  const info=res?[v.engineCc&&`${v.engineCc} cc`,v.power&&`${v.power} cv`,v.fuelRaw&&v.fuelRaw!==v.fuel&&v.fuelRaw,v.renavam&&`Renavam ${v.renavam}`,(v.city||v.uf)&&[v.city,v.uf].filter(Boolean).join("/")].filter(Boolean).join(" · "):"";
+  const same=(k)=>String(current[k]??"").trim().toUpperCase()===String(patch[k]??"").trim().toUpperCase();
+  const chosen=Object.fromEntries(Object.entries(patch).filter(([k])=>sel[k]&&!same(k)));
+  const hasChange=Object.keys(chosen).length>0;
+  return <div style={{marginTop:6}}>
+    {!res&&<button type="button" onClick={run} disabled={!valid||busy}
+      style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 10px",borderRadius:7,border:`1px solid ${valid?B.gray500:B.gray700}`,background:"transparent",color:valid?B.gray200:B.gray500,cursor:valid&&!busy?"pointer":"default",fontSize:11,fontWeight:500,letterSpacing:.3,fontFamily:"inherit"}}>
+      <Ic n="search"/>{busy?"Consultando…":"Buscar pela placa"}
+    </button>}
+    {err&&<div style={{fontSize:11,color:B.gray400,marginTop:6,display:"flex",alignItems:"center",gap:5}}><Ic n="alert"/>{err}</div>}
+    {res&&<div style={{marginTop:4,padding:"10px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900}}>
+      <div style={{fontSize:10,color:B.gray400,letterSpacing:.8,textTransform:"uppercase",marginBottom:8}}>Dados da placa {res.plate}{res.cached?" · já consultada":""} · toque para marcar o que aplicar</div>
+      {PLATE_LOOKUP_FIELDS.filter(([k])=>patch[k]).map(([k,lbl])=><div key={k} onClick={()=>!same(k)&&setSel(o=>({...o,[k]:!o[k]}))} style={{display:"flex",gap:8,fontSize:12,padding:"3px 0",alignItems:"baseline",cursor:same(k)?"default":"pointer",opacity:same(k)||sel[k]?1:.55}}>
+        <span style={{width:14,flexShrink:0,color:same(k)?B.gray600:sel[k]?B.orange:B.gray500}}><Ic n={same(k)?"done":sel[k]?"done":"dot"}/></span>
+        <span style={{width:82,flexShrink:0,color:B.gray500,fontSize:11}}>{lbl}</span>
+        <span style={{color:B.white,fontFamily:k==="chassis"||k==="engineNumber"?"monospace":"inherit",wordBreak:"break-all"}}>{String(patch[k])}</span>
+        {current[k]&&!same(k)&&<span style={{color:B.gray500,fontSize:11,textDecoration:"line-through",wordBreak:"break-all"}}>{String(current[k])}</span>}
+      </div>)}
+      {info&&<div style={{fontSize:11,color:B.gray400,marginTop:6}}>{info}</div>}
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <button type="button" onClick={()=>{onApply&&onApply(chosen);setRes(null);}} disabled={!hasChange}
+          style={{padding:"6px 14px",borderRadius:7,border:"none",background:hasChange?B.orange:B.gray700,color:B.white,cursor:hasChange?"pointer":"default",fontSize:12,fontWeight:600,fontFamily:"inherit"}}>{hasChange?"Aplicar":"Nada a mudar"}</button>
+        <button type="button" onClick={()=>setRes(null)} style={{padding:"6px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:"transparent",color:B.gray300,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>Descartar</button>
+      </div>
+    </div>}
+  </div>;
+}
+
 // ─── Create Vehicle modal — from Vehicles tab ─────────────────────────────────
 function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
   const [model,setModel]=useState("");
   const [plate,setPlate]=useState("");
   const [color,setColor]=useState("");
   const [year,setYear]=useState("");
+  const [chassis,setChassis]=useState("");
+  const [engineNumber,setEngineNumber]=useState("");
+  const [fuelType,setFuelType]=useState("");
   const [clientMode,setClientMode]=useState("none");
   const [selectedClientId,setSelectedClientId]=useState("");
   const [clientSearch,setClientSearch]=useState("");
@@ -4234,7 +4301,7 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
     if(!canSave) return;
     if(plateConflict){setPlateErr(`Placa já cadastrada: ${plateConflict.model}`);return;}
     onConfirm({
-      model,plate,color,year:year?parseInt(year):null,
+      model,plate,color,year:year?parseInt(year):null,chassis:chassis.trim().toUpperCase(),engineNumber:engineNumber.trim().toUpperCase(),fuelType:fuelType.trim(),
       clientId:clientMode==="existing"?selectedClientId:null,
       newClient:clientMode==="new"?{name:newName,phone:newPhone,email:newEmail}:null,
     });
@@ -4264,6 +4331,8 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
           {plateConflict&&<div style={{fontSize:11,color:B.red,marginTop:5,display:"flex",alignItems:"center",gap:4}}>
             <Ic n="alert"/> Placa já cadastrada: <b>{plateConflict.model}</b>{plateConflict.plate&&` (${plateConflict.plate})`}
           </div>}
+          {!plateConflict&&<PlateLookup plate={plate} current={{model,year,color,fuelType,chassis,engineNumber}}
+            onApply={p=>{if(p.model)setModel(p.model);if(p.year)setYear(String(p.year));if(p.color)setColor(p.color);if(p.fuelType)setFuelType(p.fuelType);if(p.chassis)setChassis(p.chassis);if(p.engineNumber)setEngineNumber(p.engineNumber);}}/>}
         </div>
         <div style={{marginBottom:18}}>
           <FieldLabel>Cor (opcional)</FieldLabel>
@@ -4274,6 +4343,23 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
           <FieldLabel>Ano (opcional)</FieldLabel>
           <input value={year} onChange={e=>setYear(e.target.value)} placeholder="Ex: 2021" maxLength={4} type="number"
             style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
+          <div style={{flex:"2 1 180px"}}>
+            <FieldLabel>Chassi (opcional)</FieldLabel>
+            <input value={chassis} onChange={e=>setChassis(e.target.value.toUpperCase())} placeholder="17 caracteres" maxLength={17}
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:.5}}/>
+          </div>
+          <div style={{flex:"1 1 120px"}}>
+            <FieldLabel>Motor nº (opcional)</FieldLabel>
+            <input value={engineNumber} onChange={e=>setEngineNumber(e.target.value.toUpperCase())} placeholder="—"
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:.5}}/>
+          </div>
+          <div style={{flex:"1 1 100px"}}>
+            <FieldLabel>Combustível</FieldLabel>
+            <input value={fuelType} onChange={e=>setFuelType(e.target.value)} placeholder="Ex: Flex"
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+          </div>
         </div>
 
         {/* Client section */}
@@ -6372,7 +6458,20 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Cor</div>
               <InlineEdit value={vehicle.color||""} onSave={v=>onUpdateVehicle(vehicle.id,{color:v})} placeholder="—"/>
             </div>
+            <div style={{flex:"2 1 170px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Chassi</div>
+              <InlineEdit value={vehicle.chassis||""} onSave={v=>onUpdateVehicle(vehicle.id,{chassis:v.trim().toUpperCase()})} placeholder="—"/>
+            </div>
+            <div style={{flex:"1 1 110px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Motor nº</div>
+              <InlineEdit value={vehicle.engineNumber||""} onSave={v=>onUpdateVehicle(vehicle.id,{engineNumber:v.trim().toUpperCase()})} placeholder="—"/>
+            </div>
+            <div style={{flex:"1 1 80px"}}>
+              <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Combustível</div>
+              <InlineEdit value={vehicle.fuelType||""} onSave={v=>onUpdateVehicle(vehicle.id,{fuelType:v.trim()})} placeholder="—"/>
+            </div>
           </div>
+          <PlateLookup plate={vehicle.plate} current={{model:vehicle.model,year:vehicle.year,color:vehicle.color,fuelType:vehicle.fuelType,chassis:vehicle.chassis,engineNumber:vehicle.engineNumber}} onApply={p=>onUpdateVehicle(vehicle.id,p)}/>
         </div>}
         {vts.length>=4&&<div style={{display:"flex",alignItems:"center",gap:10,margin:"2px 0 6px"}}><div style={{position:"relative",flex:1,minWidth:0}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -10901,7 +11000,20 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Cor</div>
             <InlineEdit value={vehicle.color||""} onSave={v=>onUpdateVehicle(vehicle.id,{color:v})} placeholder="—"/>
           </div>
+          <div style={{flex:"2 1 170px"}}>
+            <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Chassi</div>
+            <InlineEdit value={vehicle.chassis||""} onSave={v=>onUpdateVehicle(vehicle.id,{chassis:v.trim().toUpperCase()})} placeholder="—"/>
+          </div>
+          <div style={{flex:"1 1 110px"}}>
+            <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Motor nº</div>
+            <InlineEdit value={vehicle.engineNumber||""} onSave={v=>onUpdateVehicle(vehicle.id,{engineNumber:v.trim().toUpperCase()})} placeholder="—"/>
+          </div>
+          <div style={{flex:"1 1 80px"}}>
+            <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Combustível</div>
+            <InlineEdit value={vehicle.fuelType||""} onSave={v=>onUpdateVehicle(vehicle.id,{fuelType:v.trim()})} placeholder="—"/>
+          </div>
         </div>
+        <PlateLookup plate={vehicle.plate} current={{model:vehicle.model,year:vehicle.year,color:vehicle.color,fuelType:vehicle.fuelType,chassis:vehicle.chassis,engineNumber:vehicle.engineNumber}} onApply={p=>onUpdateVehicle(vehicle.id,p)}/>
         {/* Identification photo */}
         <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
           {vehicle.photo
@@ -13983,7 +14095,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.259";
+const APP_VERSION = "2026.11.26.260";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -18395,7 +18507,7 @@ function MainApp() {
   };
 
   // Create vehicle from Vehicles tab — optionally link to existing or new client
-  const createVehicleFromTab=async({model,plate,color,year,clientId,newClient})=>{
+  const createVehicleFromTab=async({model,plate,color,year,chassis,engineNumber,fuelType,clientId,newClient})=>{
     try{
       let finalClientId=clientId||null;
       if(newClient?.name?.trim()){
@@ -18403,7 +18515,7 @@ function MainApp() {
         setCli(p=>[...p,row]);
         finalClientId=row.id;
       }
-      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),color:(color||"").trim(),year:year||null,photo:null,photos:[]});
+      const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),color:(color||"").trim(),year:year||null,chassis:chassis||"",engineNumber:engineNumber||"",fuelType:fuelType||"",photo:null,photos:[]});
       vRow.mechanicIds=[];
       setVeh(p=>[...p,vRow]);
       toast_("Veículo cadastrado");

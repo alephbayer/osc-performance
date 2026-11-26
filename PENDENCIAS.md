@@ -163,3 +163,13 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 
 ## Pitstop (depois)
 - [ ] A edge function `manual-ask` existe só no Supabase e o Pitstop (`manual-fueltech` no Vercel) não tem repositório; guardar o código em um repositório
+
+## Consulta de veículo pela placa (sessão dedicada, 2026-11-26)
+- Provedor escolhido pelo Aleph: **API Placas** (apiplacas.com.br, API em `wdapi2.com.br/v3`), só a consulta **completa** (R$ 0,20: marca, modelo, ano, cor, combustível, cilindrada, potência, chassi, número do motor, Renavam). Sem FIPE, então a versão não vem: o modelo sai como "Marca Modelo 1.6" (cilindrada quando vier). Placa não encontrada e erros não são cobrados. Comparação completa dos provedores nas notas da sessão
+- [x] Migration 066 (`migration_066_plate_lookup.sql`; a 065 fica reservada para a importação de OSs): colunas `chassis`, `engine_number`, `fuel_type` em `vehicles`; cache `plate_lookups` (RLS sem policies, só a função lê). Cada placa encontrada é paga uma vez só
+- [x] Edge function `plate-lookup` (JWT): cache -> limite `PLATE_MAX_PER_DAY` (padrão 30 consultas pagas em 24 h) -> API Placas. Testada no ar sem token (responde "não configurada"), placa inválida e sem JWT (401). Normalização testada com o JSON de exemplo da documentação
+- [x] App: "Buscar pela placa" no Novo veículo e em "Dados do veículo" (card e página do veículo). Mostra o que veio ao lado do valor atual; campos vazios vêm marcados, valor já preenchido diferente fica desmarcado; nada salva até "Aplicar". Campos novos Chassi, Motor nº e Combustível (v2026.11.26.260)
+- [ ] **Aleph:** criar conta em apiplacas.com.br, pôr saldo e gravar o token no secret `API_PLACAS_TOKEN` do Supabase (Edge Functions > Secrets). Opcional: `PLATE_MAX_PER_DAY`
+- [ ] Depois do token: conferir uma placa real no app ao vivo (Novo veículo e edição). Não testado com resposta real do provedor: os nomes dos campos vieram do exemplo da documentação; `cilindradas`/`potencia` podem vir vazios ou em outro formato
+- [ ] Limite: chassi e motor ficam em `vehicles`, legível pela chave pública (como o resto; ver Segurança). Renavam só no cache fechado, mostrado na consulta, não gravado no veículo
+- [ ] Outros cadastros de veículo (formulário rápido no card do mecânico, orçamento com veículo temporário, parceiros) ainda sem o botão

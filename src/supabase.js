@@ -103,6 +103,9 @@ const mapVehicleIn = (v) => ({
   year: v.year || null,
   photo: v.photo,
   photos: v.photos || [],
+  chassis: v.chassis || '',
+  engineNumber: v.engine_number || '',
+  fuelType: v.fuel_type || '',
   enteredAt: v.entered_at || null,
   deliveredAt: v.delivered_at || null,
   createdAt: v.created_at,
@@ -156,6 +159,9 @@ const mapVehicleOut = (v) => ({
   photo: v.photo,
   photos: v.photos,
   entered_at: v.enteredAt || null,
+  ...(v.chassis ? { chassis: v.chassis } : {}),
+  ...(v.engineNumber ? { engine_number: v.engineNumber } : {}),
+  ...(v.fuelType ? { fuel_type: v.fuelType } : {}),
 });
 const mapTaskIn = (t) => ({
   id: t.id,
@@ -480,6 +486,9 @@ export const db = {
     if ("plate"                  in patch) dbPatch.plate                    = patch.plate;
     if ("color"                  in patch) dbPatch.color                    = patch.color;
     if ("year"                   in patch) dbPatch.year                     = patch.year;
+    if ("chassis"                in patch) dbPatch.chassis                  = patch.chassis || null;
+    if ("engineNumber"           in patch) dbPatch.engine_number            = patch.engineNumber || null;
+    if ("fuelType"               in patch) dbPatch.fuel_type                = patch.fuelType || null;
     if ("photo"                  in patch) dbPatch.photo                    = patch.photo;
     if ("photos"                 in patch) dbPatch.photos                   = patch.photos;
     if ("enteredAt"              in patch) dbPatch.entered_at               = patch.enteredAt;
@@ -1416,6 +1425,17 @@ export const db = {
   async setDeliveryOrigin(origin) {
     const { error } = await supabase.from("settings").update({ delivery_origin: origin }).eq("id", 1);
     if (error) throw error;
+  },
+  // Consulta de veículo pela placa (edge function plate-lookup; cache por placa no banco)
+  async lookupPlate(plate) {
+    const { data, error } = await supabase.functions.invoke("plate-lookup", { body: { plate } });
+    if (error) {
+      let msg = error.message;
+      try { const j = await error.context?.json?.(); if (j?.error) msg = j.error; } catch {}
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data; // { found, cached, plate, vehicle }
   },
   // Uber Direct (edge function uber-direct): status | quote | create | refresh | cancel
   async uberDirect(action, body = {}) {

@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Card do carro no celular: cor (com bolinha da cor), ano e motor ao lado da placa"
+      },
+      {
+        "type": "fix",
         "text": "Card do carro no celular sem espaço vazio embaixo da placa: ao lado da foto ficam marca, modelo, OS e cliente; mecânicos, status, cor e progresso vão para a largura toda"
       },
       {

@@ -95,6 +95,15 @@ function CarIdBlock({vehicle}){
     {vehicle.plate&&<Plate plate={vehicle.plate} black={vehicle.blackPlate} fs={9.5} style={{textAlign:"center",fontSize:10,overflow:"hidden"}}/>}
   </div>;
 }
+// Cor do carro -> amostra (nomes comuns em português)
+const CAR_COLORS={preto:"#111",preta:"#111",branco:"#f5f5f5",branca:"#f5f5f5",prata:"#c0c4c9",cinza:"#8a8f96",grafite:"#4a4e54",chumbo:"#5a5e64",vermelho:"#c62828",vermelha:"#c62828",vinho:"#6d1a2a",bordo:"#6d1a2a","bordô":"#6d1a2a",azul:"#1f4fa3",marinho:"#1b2a4a",verde:"#2e6b3a",amarelo:"#e8c21a",amarela:"#e8c21a",laranja:"#e8731a",marrom:"#6b4226",bege:"#d8c7a1",dourado:"#c8a24a",dourada:"#c8a24a",roxo:"#5b2a86",rosa:"#e58fb0",champagne:"#d9c9a3"};
+const carColorHex=c=>{const w=String(c||"").toLowerCase().normalize("NFC").split(/[\s/-]+/);for(const x of w){if(CAR_COLORS[x])return CAR_COLORS[x];}return null;};
+// Dados do carro em uma linha: bolinha da cor · cor · ano · motor
+function CarSpecs({vehicle,style}){
+  const parts=[vehicle.color&&<span key="c" style={{display:"inline-flex",alignItems:"center",gap:5}}>{carColorHex(vehicle.color)&&<span style={{width:8,height:8,borderRadius:99,background:carColorHex(vehicle.color),border:`1px solid ${B.gray500}`,flexShrink:0}}/>}{vehicle.color}</span>,vehicle.year&&<span key="y">{vehicle.year}</span>,vehicle.engine&&<span key="e">{vehicle.engine}</span>].filter(Boolean);
+  if(!parts.length) return null;
+  return <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:"2px 0",fontSize:11,color:B.gray400,...style}}>{parts.map((x,i)=><React.Fragment key={i}>{i>0&&<span style={{width:2.5,height:2.5,borderRadius:99,background:B.gray500,margin:"0 7px"}}/>}{x}</React.Fragment>)}</div>;
+}
 // Opção "Placa preta" ao lado do campo Placa
 const BlackPlateToggle=({vehicle,onUpdateVehicle})=><button onClick={()=>onUpdateVehicle(vehicle.id,{blackPlate:!vehicle.blackPlate})} title="Veículo de coleção com placa preta" style={{marginTop:4,display:"inline-flex",alignItems:"center",gap:4,background:"none",border:`1px solid ${vehicle.blackPlate?B.gray300:B.gray700}`,borderRadius:6,padding:"1px 7px",cursor:"pointer",color:vehicle.blackPlate?B.gray200:B.gray500,fontSize:10,fontWeight:vehicle.blackPlate?600:400}}>{vehicle.blackPlate&&<Ic n="done"/>}Placa preta</button>;
 
@@ -6212,8 +6221,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const headMeta=(<>
             {mechs.length>0&&<span style={{color:B.orange,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}>{sc.icon}{sc.label}</span>
-            {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
-            {vehicle.engine&&<span style={{color:B.gray400}}>{vehicle.engine}</span>}
+            {!narrow&&(vehicle.color||vehicle.year)&&<span style={{color:B.gray300,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
+            {!narrow&&vehicle.engine&&<span style={{color:B.gray400}}>{vehicle.engine}</span>}
             {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Obs.</span>}
             {photos.length>0&&<span style={{color:B.purple,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>{photos.length}</span>}
             {managerMode&&clientNotes.length>0&&<span style={{color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""}</span>}
@@ -6241,7 +6250,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       <div style={{display:"flex",alignItems:narrow?"flex-start":"center",flexWrap:narrow?"wrap":"nowrap",gap:10,background:B.gray700,padding:"10px 14px",cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
         {/* Foto do carro + placa */}
         <CarIdBlock vehicle={vehicle}/>
-        <div style={{flex:1,minWidth:0}}>
+        <div style={narrow?{flex:1,minWidth:0,alignSelf:"stretch",display:"flex",flexDirection:"column"}:{flex:1,minWidth:0}}>
           {/* Marca acima (âmbar, caixa-alta espaçada) e modelo em escrita normal */}
           {String(vehicle.brand||"").trim()&&<div style={{color:B.amber,fontSize:9.5,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.2,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(vehicle.brand).trim()}</div>}
           <div style={narrow?{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehModelOnly(vehicle)||vehicle.model}</div>
@@ -6252,6 +6261,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             {cli&&<span style={{color:B.blue,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
             {!narrow&&headMeta}
           </div>
+          {narrow&&<CarSpecs vehicle={vehicle} style={{marginTop:"auto",paddingTop:6}}/>}
           {!narrow&&vts.length>0&&<ProgressBar value={done} max={vts.length} track={B.gray600}/>}
         </div>
         {/* Celular: demais informações e progresso na largura toda, abaixo da foto */}
@@ -14214,7 +14224,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.274";
+const APP_VERSION = "2026.11.26.275";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

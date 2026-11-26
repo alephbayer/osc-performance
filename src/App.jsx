@@ -6198,7 +6198,9 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           ?<img src={vehicle.photo} alt="" style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>
           :<div style={{width:44,height:44,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.orange}/></div>}
         <div style={{flex:1,minWidth:0}}>
-          <div style={narrow?{fontWeight:600,fontSize:14,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={vehicle}/></div>
+          {/* Marca acima (âmbar, caixa-alta espaçada) e modelo em escrita normal */}
+          {String(vehicle.brand||"").trim()&&<div style={{color:B.amber,fontSize:11,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.2,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(vehicle.brand).trim()}</div>}
+          <div style={narrow?{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehModelOnly(vehicle)||vehicle.model}</div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:narrow?"3px 8px":8,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>
             {isFD
@@ -14175,7 +14177,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.268";
+const APP_VERSION = "2026.11.26.269";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

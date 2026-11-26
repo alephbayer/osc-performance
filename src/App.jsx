@@ -1349,6 +1349,15 @@ function SplitBox({total,perfStr,setPerfStr,perfBal,finBal}){
     {total>0&&!r.valid&&<div style={{fontSize:11,color:B.red,fontWeight:700,marginTop:4}}>A parte de uma empresa não pode passar do total.</div>}
   </div>);
 }
+// Aviso quando o valor lançado passa do saldo devedor; oferece usar o valor do saldo
+function OverpayNote({amount,owed,what="",onFix,style}){
+  const a=Number(amount)||0, o=Math.round(Math.max(0,Number(owed)||0)*100)/100;
+  if(!(a>0)||a<=o+0.005) return null;
+  return (<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",fontSize:11,color:B.amber,background:`${B.amber}12`,border:`1px solid ${B.amber}44`,borderRadius:8,padding:"7px 10px",...style}}>
+    <span style={{flex:"1 1 180px",display:"inline-flex",alignItems:"center",gap:5,fontWeight:700}}><Ic n="alert"/>{o>=0.01?`Passa do saldo${what} em ${fmtBRL(a-o)}. O excedente fica como crédito.`:`Não há saldo em aberto${what}. O valor inteiro fica como crédito.`}</span>
+    {o>=0.01&&onFix&&<button type="button" onClick={()=>onFix(String(o))} style={{background:"none",border:`1px solid ${B.amber}66`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:700,fontFamily:"inherit"}}>Usar {fmtBRL(o)}</button>}
+  </div>);
+}
 function vehiclePaid(vehicleId,payments,division=null) {
   return payments.filter(p=>p.vehicleId===vehicleId&&!p.osHistoryId&&(division===null||(p.division||"performance")===division)).reduce((s,p)=>s+Number(p.amount),0);
 }
@@ -6867,6 +6876,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
             </div>
             {hasBoth&&payDiv==="split"&&<SplitBox total={parseFloat(String(amount).replace(",","."))||0} perfStr={perfStr} setPerfStr={setPerfStr} perfBal={perfTotal-perfPaid} finBal={finTotal-finPaid}/>}
           </div>}
+          <OverpayNote amount={parseFloat(String(amount).replace(",","."))} owed={payDiv==="performance"&&hasFinishing?perfTotal-perfPaid:payDiv==="finishing"?finTotal-finPaid:balance} what={payDiv==="performance"&&hasFinishing?" da Performance":payDiv==="finishing"&&hasPerformance?" da Finishing":""} onFix={setAmount} style={{marginTop:10}}/>
           <button onClick={submit} disabled={hasBoth&&!payDiv} style={{marginTop:10,width:"100%",padding:"9px 0",borderRadius:8,background:hasBoth&&!payDiv?B.gray700:B.green,border:"none",color:B.white,fontWeight:800,cursor:hasBoth&&!payDiv?"not-allowed":"pointer",fontSize:13}}>{hasBoth&&!payDiv?"Selecione a divisão":"Registrar pagamento"}</button>
         </div>
 
@@ -10569,6 +10579,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
         style={{flex:"0 1 130px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
       <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
         style={{flex:"1 1 120px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+      <OverpayNote amount={parseFloat(String(amount).replace(",","."))} owed={owed} what=" desta OS" onFix={setAmount} style={{flex:"1 1 100%"}}/>
       <button onClick={save} style={{padding:"5px 12px",borderRadius:6,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
       <button onClick={()=>{setShowForm(false);setAmount("");setNote("");setPaidAt(todayLocal());}} style={{padding:"5px 8px",borderRadius:6,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
     </div>}
@@ -13805,7 +13816,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.230";
+const APP_VERSION = "2026.11.26.231";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15847,6 +15858,8 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
             style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
         </div>
 
+        {target==="open"&&selBal&&<OverpayNote amount={amountNum} owed={openOwed} what={payDiv==="performance"&&selBal.hasBoth?" da Performance":payDiv==="finishing"&&selBal.hasBoth?" da Finishing":""} onFix={setAmount}/>}
+        {target==="closed"&&selHist&&<OverpayNote amount={amountNum} owed={selOwed} what=" desta OS" onFix={setAmount}/>}
         {/* Save */}
         <button onClick={save} disabled={!ready||saving}
           style={{width:"100%",padding:"13px 0",borderRadius:10,background:ready?B.green:B.gray700,border:"none",color:ready?B.white:B.gray500,fontWeight:800,fontSize:15,cursor:ready&&!saving?"pointer":"not-allowed"}}>

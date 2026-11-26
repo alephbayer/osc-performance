@@ -7002,6 +7002,11 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
             <input value={date} onChange={e=>setDate(e.target.value)} type="date"
               style={{flex:"1 1 130px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
           </div>
+          {!useCredit&&balance>=0.01&&(()=>{ const bal=Math.round(balance*100)/100; const on=Math.abs((parseFloat(String(amount).replace(",","."))||0)-bal)<0.005&&(!hasBoth||payDiv==="split");
+            return <button type="button" onClick={()=>{ setAmount(String(bal)); setPerfStr(""); if(hasBoth) setPayDiv("split"); else setPayDiv(hasPerformance?"performance":"finishing"); }}
+              style={{marginTop:7,background:on?`${B.green}22`:`${B.amber}18`,border:`1px solid ${on?B.green:B.amber}55`,borderRadius:7,padding:"5px 11px",cursor:"pointer",color:on?B.green:B.amber,fontSize:11,fontWeight:800,fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:5}}>
+              {on?<><ICheck s={10} c={B.green}/>Quita a OS toda</>:<>Quitar tudo · {fmtBRL(bal)}{hasBoth?" (Performance + Finishing)":""}</>}
+            </button>; })()}
           <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
             style={{width:"100%",marginTop:7,padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           {hasFinishing&&<div style={{marginTop:8}}>
@@ -13947,7 +13952,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.235";
+const APP_VERSION = "2026.11.26.236";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15973,6 +15978,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
             <label style={{fontSize:11,color:B.gray400,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginBottom:6,display:"block"}}>Valor R$</label>
             <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0,00" type="number"
               style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${amountNum>0?B.green:B.gray600}`,background:B.gray900,color:B.white,fontSize:18,fontWeight:700,outline:"none",boxSizing:"border-box"}}/>
+            {target==="open"&&selBal?.hasBoth&&payDiv!=="split"&&(selBal.perfTotal-selBal.perfPaid)+(selBal.finTotal-selBal.finPaid)>=0.01&&<button onClick={()=>{const t=Math.round(((selBal.perfTotal-selBal.perfPaid)+(selBal.finTotal-selBal.finPaid))*100)/100;setPayDiv("split");setPerfStr("");setAmount(String(t));}} style={{marginTop:6,marginRight:6,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:800}}>Quitar tudo · {fmtBRL((selBal.perfTotal-selBal.perfPaid)+(selBal.finTotal-selBal.finPaid))}</button>}
             {target==="open"&&openOwed>=0.01&&<button onClick={()=>setAmount(String(Math.round(openOwed*100)/100))} style={{marginTop:6,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:800}}>Quitar saldo · {fmtBRL(openOwed)}</button>}
             {target==="closed"&&selOwed>=0.01&&<button onClick={()=>setAmount(String(selOwed))} style={{marginTop:6,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:800}}>Quitar saldo · {fmtBRL(selOwed)}</button>}
           </div>

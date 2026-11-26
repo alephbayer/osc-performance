@@ -104,7 +104,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Recibo de pagamento em PDF (`generatePaymentReceiptPDF`, `paymentReceipt`, `extensoBRL`): botão em cada pagamento da Conta Corrente e da OS fechada; pagamento dividido sai num recibo só com as duas partes; situação da OS no dia (v2026.11.26.234). Testado com PDFs de exemplo; não testado no celular
 - [x] Recibo pelo WhatsApp (v2026.11.26.235): celular compartilha o PDF (Web Share); sem suporte, abre wa.me do cliente com o texto (`receiptWaText`) e baixa o PDF. **Aleph:** testar no iPhone (o compartilhamento pode ser bloqueado se o PDF demorar; aí cai no plano B)
 - [ ] Ideia: recibos no portal do cliente
-- [ ] Melhorias levantadas e ainda não feitas: botão "Quitar tudo"; filtro em Pagamentos do cliente
+- [x] Botão "Quitar tudo" na Conta Corrente e no pagamento rápido: saldo da OS inteira, dividido entre as empresas quando há as duas (v2026.11.26.236)
+- [ ] Melhorias levantadas e ainda não feitas: filtro em Pagamentos do cliente
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar
 - [ ] Data do pagamento: OS aberta grava só o dia, OS fechada grava dia e hora

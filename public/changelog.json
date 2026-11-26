@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Botão Quitar tudo: preenche o saldo da OS inteira e, quando há Performance e Finishing, já divide o valor para quitar as duas (Conta Corrente e pagamento rápido)"
+      },
+      {
+        "type": "feat",
         "text": "Recibo pelo WhatsApp: ícone de mensagem ao lado do recibo. No celular abre o compartilhamento com o PDF (escolha o WhatsApp e o contato); no computador abre a conversa do cliente com o texto do recibo e baixa o PDF para anexar"
       },
       {

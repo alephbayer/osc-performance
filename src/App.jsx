@@ -6208,6 +6208,20 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     setPdfLoading(false);
   };
 
+  // Informações do cabeçalho (mecânicos, status, cor, notas…): ao lado do nome no PC, abaixo da foto no celular
+  const headMeta=(<>
+            {mechs.length>0&&<span style={{color:B.orange,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
+            <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}>{sc.icon}{sc.label}</span>
+            {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
+            {vehicle.engine&&<span style={{color:B.gray400}}>{vehicle.engine}</span>}
+            {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Obs.</span>}
+            {photos.length>0&&<span style={{color:B.purple,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>{photos.length}</span>}
+            {managerMode&&clientNotes.length>0&&<span style={{color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""}</span>}
+            {vehicle.urgent&&<span style={{color:"#fff",background:B.red,borderRadius:5,padding:"0px 7px",fontWeight:800,fontSize:10,display:"inline-flex",alignItems:"center",gap:3,animation:"pulse 1.5s infinite"}}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              URGENTE
+            </span>}
+  </>);
   const renderTaskEditor=(t)=>managerMode
     ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} onOrderPart={orderPart} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
     :<TaskItemMechanic key={t.id} task={t} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} currentEmployee={currentMechanic}/>;
@@ -6236,27 +6250,22 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               ?(vehicle.osNumberFinishing&&<span style={{background:`${FD.primary}22`,color:FD.primary,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOSFD(vehicle.osNumberFinishing)}</span>)
               :(vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>)}
             {cli&&<span style={{color:B.blue,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{cli.name}</span>}
-            {mechs.length>0&&<span style={{color:B.orange,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
-            <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}>{sc.icon}{sc.label}</span>
-            {(vehicle.color||vehicle.year)&&<span style={{color:B.gray300,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>{vehicle.color?` ${vehicle.color}`:""}{vehicle.year?` ${vehicle.year}`:""}</span>}
-            {vehicle.engine&&<span style={{color:B.gray400}}>{vehicle.engine}</span>}
-            {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Obs.</span>}
-            {photos.length>0&&<span style={{color:B.purple,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>{photos.length}</span>}
-            {managerMode&&clientNotes.length>0&&<span style={{color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""}</span>}
-            {vehicle.urgent&&<span style={{color:"#fff",background:B.red,borderRadius:5,padding:"0px 7px",fontWeight:800,fontSize:10,display:"inline-flex",alignItems:"center",gap:3,animation:"pulse 1.5s infinite"}}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              URGENTE
-            </span>}
+            {!narrow&&headMeta}
           </div>
-          {vts.length>0&&<ProgressBar value={done} max={vts.length} track={B.gray600}/>}
+          {!narrow&&vts.length>0&&<ProgressBar value={done} max={vts.length} track={B.gray600}/>}
         </div>
+        {/* Celular: demais informações e progresso na largura toda, abaixo da foto */}
+        {narrow&&<div style={{order:3,flexBasis:"100%",minWidth:0}}>
+          <div style={{fontSize:11,color:B.gray400,display:"flex",gap:"4px 10px",flexWrap:"wrap",alignItems:"center"}}>{headMeta}</div>
+          {vts.length>0&&<ProgressBar value={done} max={vts.length} track={B.gray600}/>}
+        </div>}
         {managerMode&&total>0&&(()=>{const bal=total-vehiclePaid(vehicle.id,payments,isFD?"finishing":"performance");
           const inv=executed>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}><Ic n="done"/> {fmtBRL(executed)} investido</div>;
           const owe=bal>0
             ?<div style={{fontSize:10,color:B.red,fontWeight:700}}>Deve {fmtBRL(bal)}</div>
             :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3,justifyContent:"flex-end"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;
           return narrow
-          ?<div style={{order:3,flexBasis:"100%",marginLeft:0,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:10,paddingTop:6,borderTop:`1px solid ${B.gray600}`}}>
+          ?<div style={{order:4,flexBasis:"100%",marginLeft:0,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:10,paddingTop:6,borderTop:`1px solid ${B.gray600}`}}>
             <div><div style={{fontSize:10,color:B.gray400}}>Total OS</div><div style={{fontSize:15,fontWeight:800,color:B.amber,lineHeight:1.2,whiteSpace:"nowrap"}}>{fmtBRL(total)}</div></div>
             <div style={{textAlign:"right",whiteSpace:"nowrap"}}>{inv}{owe}</div>
           </div>
@@ -14205,7 +14214,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.273";
+const APP_VERSION = "2026.11.26.274";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

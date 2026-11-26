@@ -118,7 +118,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] ETE8I22 OS-142: total gravado (R$ 5.988,86) confere com as tarefas; o 2º Pix (19/10, R$ 3.115,95) foi calculado com a OS em R$ 6.060,95 e um item de R$ 72,09 saiu antes da entrega (sem registro do que era). Com o ok do Aleph (2026-11-26), virou crédito do cliente: `client_credits` +72,09 "Excedente OS-142" e pagamento -72,09 "Crédito" na OS (mesmo que o botão "Salvar crédito"). OS quitada; cliente com R$ 72,09 de crédito
 - [x] CAC8J62: a "OS sem número" (02/09, total 0) era um registro vazio com cópia dos 2 Pix da OS-24 (R$ 6.000 de 06/03 e R$ 25.000 de 28/05, relançados na OS-24 em 11/08 porque os originais não tinham ido para ela no fechamento). O Financeiro contava R$ 31.000 a mais. Com o ok do Aleph (2026-11-26), apagados o registro vazio e os 2 pagamentos duplicados; cópia em `~/OSC/backups/CAC8J62-os-vazia-apagada-2026-11-26.json`
 - [ ] **Aleph:** OS-24 da CAC8J62 tem total R$ 37.547,29 e R$ 31.000 pagos (R$ 6.547,29 em aberto no "A receber"): conferir se foi pago por fora ou se ainda deve
-- [ ] Evitar repetição: "entregar" um veículo sem OS aberta cria registro vazio no histórico e leva pagamentos soltos para ele. Bloquear o fechamento sem OS / sem tarefas, ou avisar
+- [x] Entregar veículo sem OS aberta e sem tarefas da Performance agora é bloqueado em `deliverVehicle` e o botão some (v2026.11.26.240). Finishing já exigia OS aberta
 
 ## Segurança (sem urgência, discutir antes de mexer)
 - [ ] Repositório `alephbayer/osc-performance` está público no GitHub; avaliar deixar privado

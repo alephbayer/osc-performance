@@ -13977,7 +13977,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.239";
+const APP_VERSION = "2026.11.26.240";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -18407,6 +18407,8 @@ function MainApp() {
   const deliverVehicle=async(vid)=>{
     const v=vehicles.find(x=>x.id===vid);
     if(!v)return;
+    // Sem OS aberta e sem tarefas da Performance: não fecha (criaria um registro vazio no histórico e levaria pagamentos soltos para ele)
+    if(!v.enteredAt&&!tasks.some(t=>t.vehicleId===vid&&(t.division||"performance")==="performance")){toast_("Este veículo não tem OS aberta na Performance. Nada para entregar.");return;}
     if(!deliveryReady(v,tasks,false)){toast_("Pendente de conferência de entrega");return;}
     const nowMs=Date.now();
     const deliveredAt=new Date().toISOString();
@@ -20038,7 +20040,7 @@ function MainApp() {
                           style={{padding:"7px 16px",borderRadius:8,background:`${B.blue}22`,border:`1px solid ${B.blue}44`,color:B.blue,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                           <ICheck s={12} c={B.blue}/>Pronto
                         </button>}
-                        {v.status==="ready"&&adminRole==="owner"&&(deliveryReady(v,tasks,false)
+                        {v.status==="ready"&&adminRole==="owner"&&(v.enteredAt||tasks.some(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance"))&&(deliveryReady(v,tasks,false)
                           ?<button onClick={()=>deliverVehicle(v.id)}
                           style={{padding:"7px 16px",borderRadius:8,background:`${B.green}22`,border:`1px solid ${B.green}44`,color:B.green,fontWeight:800,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                           <ICar2 s={12} c={B.green}/>Entregar

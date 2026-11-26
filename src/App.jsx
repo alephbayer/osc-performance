@@ -4694,6 +4694,8 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 const taskChip=(on,col)=>({background:on?`${col||B.gray400}1a`:"none",border:`1px solid ${on?(col||B.gray400)+"55":B.gray700}`,borderRadius:6,padding:"1px 7px",cursor:"pointer",color:on?(col||B.gray200):B.gray500,fontSize:10,fontWeight:on?600:400,flexShrink:0,display:"inline-flex",alignItems:"center",gap:3,whiteSpace:"nowrap"});
 // Botão-link fino (origens de material)
 const linkBtn=(col)=>({padding:"4px 6px",borderRadius:6,background:"none",border:"none",color:col||B.gray400,cursor:"pointer",fontWeight:400,fontSize:12,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"});
+// Botão colorido de origem de material (estoque, Mercado Livre, link)
+const matBtn=(col,on)=>({padding:"4px 8px",borderRadius:6,background:`${col}${on?"22":"12"}`,border:`1px solid ${col}44`,color:col,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"});
 function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,onOrderPart=null,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
   const [showSpec,setShowSpec]=useState(()=>{ try{ return localStorage.getItem("osc_spec_open")===task.id; }catch{ return false; } });
   const [showTaskPOs,setShowTaskPOs]=useState(false);
@@ -4852,17 +4854,17 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           {newMat.trim()&&<input value={newBrand} onChange={e=>setNewBrand(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addMat()} placeholder="Marca (opcional)"
             style={{background:B.gray700,border:`1px solid ${B.gray600}`,borderRadius:6,padding:"3px 9px",outline:"none",color:B.gray300,fontSize:12,width:"100%",boxSizing:"border-box"}}/>}
         </div>
-          <button onClick={()=>setSP(true)} style={linkBtn()}>
-            <IWarehouse s={11} c={B.gray400}/>Do estoque
+          <button onClick={()=>setSP(true)} style={matBtn(B.purple)}>
+            <IWarehouse s={11} c={B.purple}/>Do estoque
           </button>
-          {task.vehicleId&&<button onClick={()=>setShowMLPick(true)} title="Vincular uma compra do Mercado Livre a este serviço" style={linkBtn()}>
+          {task.vehicleId&&<button onClick={()=>setShowMLPick(true)} title="Vincular uma compra do Mercado Livre a este serviço" style={matBtn("#2aa5b5")}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 3h13v12H1zM14 8h4l3 3v4h-7z"/><circle cx="5.5" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/></svg>Do Mercado Livre
           </button>}
           {showMLPick&&<MLPickForTaskModal task={task} onClose={()=>setShowMLPick(false)}/>}
-          {onOrderPart&&<button onClick={()=>onOrderPart(task,-1,{name:newMat.trim(),brand:newBrand.trim(),qty:1,cost:0})} title="Pedir peça por link: o pedido já nasce ligado a este veículo e a este serviço" style={linkBtn()}>
+          {onOrderPart&&<button onClick={()=>onOrderPart(task,-1,{name:newMat.trim(),brand:newBrand.trim(),qty:1,cost:0})} title="Pedir peça por link: o pedido já nasce ligado a este veículo e a este serviço" style={matBtn(B.amber)}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"/></svg>Pedir por link
           </button>}
-          {hasPickable&&<button onClick={()=>setShowPOP(p=>!p)} style={{...linkBtn(B.amber),fontWeight:600,textDecoration:showPOP?"underline":"none"}}>
+          {hasPickable&&<button onClick={()=>setShowPOP(p=>!p)} style={matBtn(B.amber,showPOP)}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Peças ({receivedOrders.length+availableReserved.length})
           </button>}
         </div>
@@ -6385,7 +6387,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                 <span style={{fontSize:11,fontWeight:600,color:catColor||B.gray500}}>{cat||"Sem categoria"}</span>
                 <span style={{fontSize:10,color:(catColor||B.gray500)+"99"}}>{doneCount}/{groupTasks.length}</span>
                 {allDone&&<span style={{fontSize:9,color:B.green,fontWeight:700,display:"inline-flex",alignItems:"center",gap:2}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>concluída</span>}
-                {managerMode&&catTotal>0&&<span style={{fontSize:11,color:B.gray400,marginLeft:"auto",marginRight:4}}>{fmtBRL(catTotal)}</span>}
+                {managerMode&&catTotal>0&&<span style={{fontSize:11,fontWeight:700,color:catColor||B.gray500,marginLeft:"auto",marginRight:4}}>{fmtBRL(catTotal)}</span>}
                 <span style={{display:"flex",flexShrink:0,marginLeft:managerMode&&catTotal>0?0:"auto",transform:isCollapsed?"rotate(-90deg)":"none",transition:"transform .15s"}}><IChevD s={12} c={B.gray500}/></span>
               </div>
               {!isCollapsed&&<>
@@ -13963,7 +13965,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.254";
+const APP_VERSION = "2026.11.26.255";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

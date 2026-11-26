@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Página do carro no iPhone: o topo não fica mais atrás da barra de status (hora, bateria), nem ao rolar"
+      },
+      {
+        "type": "fix",
         "text": "Card do carro no celular: nome inteiro (até 2 linhas), informações agrupadas, barra de progresso visível e total da OS numa faixa própria. Anotações do cliente menores, com ver mais; Abrir página do carro virou link discreto; Observações do tamanho do texto"
       },
       {

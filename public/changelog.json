@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Tarefas do carro com tipografia uniforme: três tamanhos de fonte, pesos mais leves e cantos iguais nos chips, materiais e botões"
+      },
+      {
+        "type": "fix",
         "text": "Tarefas do carro mais limpas: chips 3º, Gar., Int. e Ficha em cinza (só ganham cor quando ligados, sem selo repetido), desconto sem vermelho e botões de material (estoque, Mercado Livre, link) como links discretos"
       },
       {

@@ -4043,7 +4043,7 @@ function Field({label,children,flex}) {
 function CategoryPill({category,size=10,isFD=false}) {
   if(!category) return null;
   const color=isFD?(CAT_MAP_FINISHING[category]||CAT_MAP[category]||B.gray500):(CAT_MAP[category]||CAT_MAP_FINISHING[category]||B.gray500);
-  return <span style={{fontSize:size,fontWeight:700,color,background:color+"22",border:`1px solid ${color}44`,borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>{category}</span>;
+  return <span style={{fontSize:size,fontWeight:600,color,background:color+"22",border:`1px solid ${color}44`,borderRadius:6,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>{category}</span>;
 }
 
 function CategorySelect({value,onChange,categories=CATEGORIES}) {
@@ -4057,16 +4057,16 @@ function CategorySelect({value,onChange,categories=CATEGORIES}) {
   const allCatMap={...CAT_MAP,...CAT_MAP_FINISHING};
   const color=value?allCatMap[value]||B.gray500:B.gray500;
   return (<div ref={ref} style={{position:"relative",flexShrink:0}}>
-    <button onClick={()=>setOpen(o=>!o)} style={{background:value?color+"22":"none",border:`1px solid ${value?color+"44":B.gray600}`,borderRadius:5,padding:"1px 7px",cursor:"pointer",color:value?color:B.gray500,fontSize:9,fontWeight:700,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}>
+    <button onClick={()=>setOpen(o=>!o)} style={{background:value?color+"22":"none",border:`1px solid ${value?color+"44":B.gray600}`,borderRadius:6,padding:"1px 7px",cursor:"pointer",color:value?color:B.gray500,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}>
       {value||"Categoria"}{open?<IChevU s={8}/>:<IChevD s={8}/>}
     </button>
-    {open&&<div style={{position:"absolute",top:"100%",left:0,zIndex:50,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:8,padding:4,minWidth:140,boxShadow:"0 8px 24px rgba(0,0,0,.5)",maxHeight:220,overflowY:"auto",marginTop:3}}>
-      {value&&<button onClick={()=>{onChange(null);setOpen(false);}} style={{width:"100%",textAlign:"left",padding:"4px 8px",borderRadius:5,background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:10,marginBottom:2}}>
+    {open&&<div style={{position:"absolute",top:"100%",left:0,zIndex:50,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:6,padding:4,minWidth:140,boxShadow:"0 8px 24px rgba(0,0,0,.5)",maxHeight:220,overflowY:"auto",marginTop:3}}>
+      {value&&<button onClick={()=>{onChange(null);setOpen(false);}} style={{width:"100%",textAlign:"left",padding:"4px 8px",borderRadius:6,background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:10,marginBottom:2}}>
         <Ic n="x"/> Sem categoria
       </button>}
       {categories.map(c=>(
         <button key={c.id} onClick={()=>{onChange(c.id);setOpen(false);}}
-          style={{width:"100%",textAlign:"left",padding:"5px 8px",borderRadius:5,background:value===c.id?c.color+"22":"none",border:"none",cursor:"pointer",color:c.color,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+          style={{width:"100%",textAlign:"left",padding:"5px 8px",borderRadius:6,background:value===c.id?c.color+"22":"none",border:"none",cursor:"pointer",color:c.color,fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
           <span style={{width:8,height:8,borderRadius:99,background:c.color,flexShrink:0}}/>
           {c.id}
         </button>
@@ -4454,11 +4454,11 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
   const bg = isEstimated ? estimatedBg : isQuote ? `${B.amber}12` : mat.fromStock ? B.purpleBg : isImported ? importBg : isML ? `${mlColor}16` : B.gray700;
   const border = isEstimated ? `2px solid ${estimatedColor}66` : isQuote ? `1px dashed ${B.amber}66` : mat.fromStock ? `1px solid ${B.purple}44` : isImported ? `1px solid ${importColor}55` : isML ? `1px solid ${mlColor}55` : `1px solid ${B.gray600}`;
 
-  return (<div style={{background:bg,border,borderRadius:8,padding:"7px 10px",width:"100%",boxSizing:"border-box"}}>
+  return (<div style={{background:bg,border,borderRadius:6,padding:"7px 10px",width:"100%",boxSizing:"border-box"}}>
     {/* Estimated banner */}
-    {isEstimated&&<div style={{display:"flex",alignItems:"center",gap:5,marginBottom:5,padding:"3px 7px",background:`${estimatedColor}22`,borderRadius:5}}>
+    {isEstimated&&<div style={{display:"flex",alignItems:"center",gap:5,marginBottom:5,padding:"3px 7px",background:`${estimatedColor}22`,borderRadius:6}}>
       <span style={{fontSize:10}}><Ic n="alert"/></span>
-      <span style={{fontSize:10,fontWeight:800,color:estimatedColor,letterSpacing:.3}}>ESTIMADO — quantidade a confirmar</span>
+      <span style={{fontSize:10,fontWeight:600,color:estimatedColor,letterSpacing:.3}}>ESTIMADO — quantidade a confirmar</span>
     </div>}
     {/* Line 1: icon + name + remove */}
     <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -4468,7 +4468,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
           ?<div style={{flex:1,minWidth:0}}>
               <span style={{fontSize:13,color:isEstimated?estimatedColor:mat.fromStock?B.purple:isImported?importColor:B.gray200,fontWeight:mat.fromStock||isImported||isEstimated?700:500}}>{mat.name}</span>
               {mat.brand&&<span style={{fontSize:10,color:mat.fromStock?B.purple+"99":B.gray500,marginLeft:6}}>{mat.brand}</span>}
-              {isQuote&&<span style={{fontSize:8.5,fontWeight:800,letterSpacing:".12em",textTransform:"uppercase",color:B.amber,border:`1px solid ${B.amber}66`,borderRadius:4,padding:"0 5px",marginLeft:7}}>Orçamento</span>}
+              {isQuote&&<span style={{fontSize:8.5,fontWeight:600,letterSpacing:".12em",textTransform:"uppercase",color:B.amber,border:`1px solid ${B.amber}66`,borderRadius:6,padding:"0 5px",marginLeft:7}}>Orçamento</span>}
             </div>
           :<div style={{flex:1,minWidth:0}}>
               <InlineEdit value={mat.name} onSave={v=>onUpdate(idx,{...mat,name:v})} placeholder="Nome do material"/>
@@ -4481,7 +4481,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
         onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={13}/></button>
     </div>
 
-    {mlDel&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4,fontSize:10.5,fontWeight:700,color:mlTone,letterSpacing:.2}}>
+    {mlDel&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4,fontSize:10.5,fontWeight:600,color:mlTone,letterSpacing:.2}}>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       {mlDel.text}
     </div>}
@@ -4489,31 +4489,31 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
     {onUpdate&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:4}}>
       <button onClick={()=>onUpdate(idx,{...mat,estimated:!isEstimated})}
         title={isEstimated?"Confirmar quantidade":"Marcar como estimado"}
-        style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:isEstimated?`${estimatedColor}22`:"none",border:`1px solid ${isEstimated?estimatedColor+"66":B.gray600}`,borderRadius:6,padding:"2px 7px",cursor:"pointer",color:isEstimated?estimatedColor:B.gray500,fontSize:10,fontWeight:600,whiteSpace:"nowrap"}}>
         <Ic n="alert"/> {isEstimated?"Estimado":"Estimado?"}
       </button>
       {isQuote&&onCommit&&<button onClick={()=>onCommit(idx)} title="Dar baixa deste produto no estoque (passa a ser material lançado na OS)"
-        style={{background:`${B.amber}22`,border:`1px solid ${B.amber}88`,borderRadius:5,padding:"2px 8px",cursor:"pointer",color:B.amber,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:`${B.amber}22`,border:`1px solid ${B.amber}88`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:B.amber,fontSize:10,fontWeight:600,whiteSpace:"nowrap"}}>
         Descontar do estoque
       </button>}
       <button onClick={()=>onUpdate(idx,{...mat,noCharge:!mat.noCharge})}
         title={mat.noCharge?"Cobrar do cliente":"Não cobrar do cliente"}
-        style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:6,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:10,fontWeight:600,whiteSpace:"nowrap"}}>
         {mat.noCharge?<><Ic n="done"/> Grátis</>:"Grátis?"}
       </button>
       {onOrder&&!mat.fromStock&&!isQuote&&<button onClick={()=>onOrder(idx,mat)}
         title={mat.ordered?"Já existe um pedido de compra para este material. Toque para fazer outro":"Criar pedido de compra deste material"}
-        style={{background:mat.ordered?`${B.blue}22`:`${B.amber}14`,border:`1px solid ${mat.ordered?B.blue+"66":B.amber+"55"}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.ordered?B.blue:B.amber,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:mat.ordered?`${B.blue}22`:`${B.amber}14`,border:`1px solid ${mat.ordered?B.blue+"66":B.amber+"55"}`,borderRadius:6,padding:"2px 7px",cursor:"pointer",color:mat.ordered?B.blue:B.amber,fontSize:10,fontWeight:600,whiteSpace:"nowrap"}}>
         {mat.ordered?<><Ic n="done"/> Pedido feito</>:<><Ic n="cart"/> Pedir</>}
       </button>}
       {showCost&&!mat.fromStock&&!isQuote&&<button onClick={()=>onUpdate(idx,{...mat,bought:!isBought})}
         title={isBought?"Peça conta como comprada (entra no investido). Toque para tirar da conta":"Peça fora da conta do investido. Toque para incluir"}
-        style={{background:isBought?`${B.green}22`:"none",border:`1px solid ${isBought?B.green+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isBought?B.green:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:isBought?`${B.green}22`:"none",border:`1px solid ${isBought?B.green+"66":B.gray600}`,borderRadius:6,padding:"2px 7px",cursor:"pointer",color:isBought?B.green:B.gray500,fontSize:10,fontWeight:600,whiteSpace:"nowrap"}}>
         <Ic n="cart"/> {isBought?"Comprado":"Fora da conta"}
       </button>}
       {!mat.fromStock&&!isQuote&&<button onClick={()=>onUpdate(idx,{...mat,imported:!isImported})}
         title={isImported?"Remover marcação de importado":"Marcar como importado"}
-        style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
+        style={{background:isImported?importBg:"none",border:`1px solid ${isImported?importColor+"66":B.gray600}`,borderRadius:6,padding:"2px 7px",cursor:"pointer",color:isImported?importColor:B.gray500,fontSize:10,fontWeight:600,whiteSpace:"nowrap"}}>
         <Ic n="plane"/> {isImported?"Importado":"Import."}
       </button>}
     </div>}
@@ -4531,7 +4531,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
 
         {showCost&&mat.fromStock&&<div style={{display:"flex",alignItems:"center",gap:4,background:B.gray800,borderRadius:6,padding:"4px 8px"}}>
           <span style={{fontSize:10,color:B.gray500}}>Preço/un</span>
-          <span style={{fontSize:12,color:B.purple,fontWeight:700}}>{fmtBRL(cost)}</span>
+          <span style={{fontSize:12,color:B.purple,fontWeight:600}}>{fmtBRL(cost)}</span>
         </div>}
 
         {showCost&&!mat.fromStock&&<>
@@ -4546,24 +4546,24 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
           </div>
           {cost>0&&<div style={{display:"flex",alignItems:"center",gap:4,background:`${B.amber}15`,border:`1px solid ${B.amber}33`,borderRadius:6,padding:"4px 8px"}}>
             <span style={{fontSize:10,color:B.gray500}}>Venda</span>
-            <span style={{fontSize:12,color:B.amber,fontWeight:700}}>{fmtBRL(salePrice)}/un</span>
+            <span style={{fontSize:12,color:B.amber,fontWeight:600}}>{fmtBRL(salePrice)}/un</span>
           </div>}
         </>}
 
         {showCost&&Number(qty)!==1&&<div style={{display:"flex",alignItems:"center",gap:4,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 8px"}}>
           <span style={{fontSize:10,color:B.gray500}}>Total</span>
-          <span style={{fontSize:12,color:B.amber,fontWeight:800}}>{fmtBRL(lineTotal)}</span>
+          <span style={{fontSize:12,color:B.amber,fontWeight:600}}>{fmtBRL(lineTotal)}</span>
         </div>}
       </div>
 
       {/* Row B: Freight — full width */}
       {showCost&&<div style={{display:"flex",alignItems:"center",gap:6,background:B.gray800,borderRadius:6,padding:"4px 10px"}}>
-        <span style={{fontSize:11}}><Ic n="truck"/></span>
+        <span style={{fontSize:12}}><Ic n="truck"/></span>
         <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Frete R$</span>
         <div style={{flex:1}}>
           <InlineEdit value={freight?fmtR2(freight):""} onSave={v=>onUpdate(idx,{...mat,freight:parseFloat(v.replace(",","."))||0})} placeholder="0,00" type="number"/>
         </div>
-        {freight>0&&<span style={{fontSize:11,color:"#60a5fa",fontWeight:700,flexShrink:0}}>{fmtBRL(freight)}</span>}
+        {freight>0&&<span style={{fontSize:12,color:"#60a5fa",fontWeight:600,flexShrink:0}}>{fmtBRL(freight)}</span>}
       </div>}
     </div>}
   </div>);
@@ -4580,14 +4580,14 @@ function TaskLabel({task,onUpdate}) {
           if(e.key==="Enter"){ if(v.trim()){onUpdate(task.id,{label:v.trim()});} setEditing(false); }
           if(e.key==="Escape"){ setV(task.label); setEditing(false); }
         }}
-        style={{flex:1,padding:"4px 8px",borderRadius:6,border:`1px solid ${B.orange}66`,background:B.gray900,color:B.white,fontSize:13.5,outline:"none"}}/>
-      <button onClick={()=>{ if(v.trim()){onUpdate(task.id,{label:v.trim()});} setEditing(false); }} style={{padding:"4px 9px",borderRadius:5,background:B.green,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:11,flexShrink:0}}>OK</button>
-      <button onClick={()=>{setV(task.label);setEditing(false);}} style={{padding:"4px 7px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11,flexShrink:0}}><Ic n="x"/></button>
+        style={{flex:1,padding:"4px 8px",borderRadius:6,border:`1px solid ${B.orange}66`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
+      <button onClick={()=>{ if(v.trim()){onUpdate(task.id,{label:v.trim()});} setEditing(false); }} style={{padding:"4px 9px",borderRadius:6,background:B.green,border:"none",color:B.white,cursor:"pointer",fontWeight:600,fontSize:12,flexShrink:0}}>OK</button>
+      <button onClick={()=>{setV(task.label);setEditing(false);}} style={{padding:"4px 7px",borderRadius:6,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:12,flexShrink:0}}><Ic n="x"/></button>
     </div>
   );
   return (
     <div style={{flex:1,display:"flex",alignItems:"center",gap:6,paddingTop:1}}>
-      <span style={{fontSize:13.5,color:task.done?B.gray400:B.gray200,textDecoration:task.done?"line-through":"none"}}>{task.label}</span>
+      <span style={{fontSize:13,color:task.done?B.gray400:B.gray200,textDecoration:task.done?"line-through":"none"}}>{task.label}</span>
       <button onClick={()=>{setV(task.label);setEditing(true);}} title="Editar nome do serviço" style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:1,display:"flex",flexShrink:0}}
         onMouseEnter={e=>e.currentTarget.style.color=B.orange} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IEdit s={11}/></button>
     </div>
@@ -4609,24 +4609,24 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 
   return (<><div style={{padding:"8px 0",borderBottom:`1px solid ${B.gray700}`,opacity:task.outsourced?.85:1}}>
     <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-      <button onClick={()=>{if(task.outsourced)return;if(!task.done&&!window.confirm(`Confirmar conclusão?\n\n"${task.label}"`))return;onToggle(task.id);}} style={{width:22,height:22,borderRadius:5,flexShrink:0,marginTop:1,cursor:task.outsourced?"not-allowed":"pointer",border:task.done?"none":`2px solid ${task.outsourced?B.gray600+"66":B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+      <button onClick={()=>{if(task.outsourced)return;if(!task.done&&!window.confirm(`Confirmar conclusão?\n\n"${task.label}"`))return;onToggle(task.id);}} style={{width:22,height:22,borderRadius:6,flexShrink:0,marginTop:1,cursor:task.outsourced?"not-allowed":"pointer",border:task.done?"none":`2px solid ${task.outsourced?B.gray600+"66":B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
         {task.done&&<ICheck/>}
       </button>
       <div style={{flex:1,minWidth:0}}>
         {/* Controls above */}
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}}>
           <CategorySelect value={task.category} onChange={cat=>onUpdate(task.id,{category:cat})} categories={task.division==="finishing"?CATEGORIES_FINISHING:CATEGORIES}/>
-          {task.outsourced&&<span style={{fontSize:10,fontWeight:800,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
+          {task.outsourced&&<span style={{fontSize:10,fontWeight:600,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:6,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
           <TaskLabel task={task} onUpdate={onUpdate}/>
         </div>
-        {task.outsourced&&<div style={{marginTop:5,padding:"5px 10px",background:"#a78bfa10",border:"1px solid #a78bfa33",borderRadius:7,fontSize:11,color:"#c4b5fd"}}>
+        {task.outsourced&&<div style={{marginTop:5,padding:"5px 10px",background:"#a78bfa10",border:"1px solid #a78bfa33",borderRadius:6,fontSize:12,color:"#c4b5fd"}}>
           ℹ️ Este serviço é realizado por um terceiro. Não é necessária a sua execução.
         </div>}
-        {task.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{task.description}</div>}
+        {task.description&&<div style={{fontSize:12,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:6,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{task.description}</div>}
         {signer&&task.done&&<div style={{marginTop:2}}>
-          <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}><Ic n="done"/> {signer.name}</span>
+          <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:6,padding:"1px 6px",whiteSpace:"nowrap"}}><Ic n="done"/> {signer.name}</span>
         </div>}
         {/* Updates feed button — always visible for mechanic */}
         <button onClick={()=>setShowUpdates(u=>!u)} style={{marginTop:4,background:"none",border:`1px solid ${showUpdates?B.blue:B.gray700}`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:showUpdates?B.blue:B.gray500,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3}}>
@@ -4652,23 +4652,23 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
             {newMat.trim()&&<button onClick={addMat} style={{background:"none",border:"none",cursor:"pointer",color:B.green,display:"flex"}}><IPlus s={13} c={B.green}/></button>}
           </div>
           {newMat.trim()&&<input value={newBrand} onChange={e=>setNewBrand(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addMat()} placeholder="Marca (opcional)"
-            style={{background:B.gray700,border:`1px solid ${B.gray600}`,borderRadius:6,padding:"3px 9px",outline:"none",color:B.gray300,fontSize:11,width:"100%",boxSizing:"border-box"}}/>}
+            style={{background:B.gray700,border:`1px solid ${B.gray600}`,borderRadius:6,padding:"3px 9px",outline:"none",color:B.gray300,fontSize:12,width:"100%",boxSizing:"border-box"}}/>}
         </div>
         {/* hours */}
         <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px",flexShrink:0}}>
           <IClock s={12} c={B.gray400}/>
           <InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder="Horas" type="number"/>
-          <span style={{fontSize:11,color:B.gray400}}>h</span>
+          <span style={{fontSize:12,color:B.gray400}}>h</span>
         </div>
       </div>
     </div>
   </div>
   {showUpdates&&<div style={{margin:"4px 0 4px 30px",padding:"10px 12px",background:`${B.blue}08`,border:`1px solid ${B.blue}22`,borderRadius:10}}>
     {[...(task.updates||[])].reverse().map((u,ui)=>(
-      <div key={ui} style={{padding:"7px 10px",background:B.gray900,borderRadius:8,marginBottom:5,border:`1px solid ${B.gray700}`}}>
+      <div key={ui} style={{padding:"7px 10px",background:B.gray900,borderRadius:6,marginBottom:5,border:`1px solid ${B.gray700}`}}>
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-          <span style={{fontSize:10,fontWeight:800,color:B.blue}}>{u.author||"Equipe"}</span>
-          <span style={{fontSize:9,color:B.gray500}}>{u.at?new Date(u.at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</span>
+          <span style={{fontSize:10,fontWeight:600,color:B.blue}}>{u.author||"Equipe"}</span>
+          <span style={{fontSize:10,color:B.gray500}}>{u.at?new Date(u.at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</span>
         </div>
         <div style={{fontSize:12,color:B.gray200,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{u.text}</div>
       </div>
@@ -4677,13 +4677,13 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
     <textarea value={updateText} onChange={e=>setUpdateText(e.target.value)}
       placeholder="Escreva um update…"
       rows={2}
-      style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box",marginTop:4}}/>
+      style={{width:"100%",padding:"8px 10px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box",marginTop:4}}/>
     <button onClick={()=>{
       if(!updateText.trim()) return;
       const u={text:updateText.trim(),author:currentEmployee?.name||"Mecânico",at:new Date().toISOString()};
       onUpdate(task.id,{updates:[...(task.updates||[]),u]});
       setUpdateText("");
-    }} disabled={!updateText.trim()} style={{marginTop:6,padding:"7px 14px",borderRadius:8,background:updateText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:updateText.trim()?"pointer":"not-allowed"}}>
+    }} disabled={!updateText.trim()} style={{marginTop:6,padding:"7px 14px",borderRadius:6,background:updateText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:600,fontSize:12,cursor:updateText.trim()?"pointer":"not-allowed"}}>
       Publicar update
     </button>
   </div>}
@@ -4695,7 +4695,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 // Chip discreto das tarefas: cinza desligado, cor suave só quando ligado
 const taskChip=(on,col)=>({background:on?`${col||B.gray400}1a`:"none",border:`1px solid ${on?(col||B.gray400)+"55":B.gray700}`,borderRadius:6,padding:"1px 7px",cursor:"pointer",color:on?(col||B.gray200):B.gray500,fontSize:10,fontWeight:on?600:400,flexShrink:0,display:"inline-flex",alignItems:"center",gap:3,whiteSpace:"nowrap"});
 // Botão-link fino (origens de material)
-const linkBtn=(col)=>({padding:"4px 6px",borderRadius:6,background:"none",border:"none",color:col||B.gray400,cursor:"pointer",fontWeight:400,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"});
+const linkBtn=(col)=>({padding:"4px 6px",borderRadius:6,background:"none",border:"none",color:col||B.gray400,cursor:"pointer",fontWeight:400,fontSize:12,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"});
 function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,onOrderPart=null,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
   const [showSpec,setShowSpec]=useState(()=>{ try{ return localStorage.getItem("osc_spec_open")===task.id; }catch{ return false; } });
   const [showTaskPOs,setShowTaskPOs]=useState(false);
@@ -4755,7 +4755,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
   return (<>
     <div style={{padding:"8px 0",borderBottom:`1px solid ${B.gray700}`}}>
       <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-        <button onClick={()=>{if(!task.done&&!window.confirm(`Confirmar conclusão?\n\n"${task.label}"`))return;onToggle(task.id);}} style={{width:22,height:22,borderRadius:5,flexShrink:0,marginTop:1,cursor:"pointer",border:task.done?"none":`2px solid ${B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+        <button onClick={()=>{if(!task.done&&!window.confirm(`Confirmar conclusão?\n\n"${task.label}"`))return;onToggle(task.id);}} style={{width:22,height:22,borderRadius:6,flexShrink:0,marginTop:1,cursor:"pointer",border:task.done?"none":`2px solid ${B.gray600}`,background:task.done?B.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
           {task.done&&<ICheck/>}
         </button>
         <div style={{flex:1,minWidth:0}}>
@@ -4783,12 +4783,12 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           {/* Line 1: task label — alone */}
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <TaskLabel task={task} onUpdate={onUpdate}/>
-            {!task.done&&!task.warranty&&!task.outsourced&&!task.hours&&!mats.some(m=>m.cost>0)&&<span title="Sem valor: fica interna (fora do PDF e do acompanhamento do cliente) até receber mão de obra ou material" style={{fontSize:9,fontWeight:700,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:4,padding:"1px 5px",flexShrink:0,cursor:"default"}}>
+            {!task.done&&!task.warranty&&!task.outsourced&&!task.hours&&!mats.some(m=>m.cost>0)&&<span title="Sem valor: fica interna (fora do PDF e do acompanhamento do cliente) até receber mão de obra ou material" style={{fontSize:10,fontWeight:600,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"1px 5px",flexShrink:0,cursor:"default"}}>
               <Ic n="alert"/> sem valor
             </span>}
           </div>
           {/* Description — optional */}
-          <div style={Object.assign({marginTop:3},task.description?{background:"rgba(128,128,128,0.1)",borderRadius:7,padding:"6px 10px",borderLeft:"2px solid rgba(128,128,128,0.3)",color:B.white}:{})}>
+          <div style={Object.assign({marginTop:3},task.description?{background:"rgba(128,128,128,0.1)",borderRadius:6,padding:"6px 10px",borderLeft:"2px solid rgba(128,128,128,0.3)",color:B.white}:{})}>
             <InlineEdit
               multiline
               value={task.description||""}
@@ -4797,7 +4797,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
               textStyle={{textAlign:"left",whiteSpace:"pre-wrap",fontSize:12}}/>
           </div>
           {/* Warranty info box */}
-          {task.warranty&&<div style={{marginTop:5,padding:"5px 10px",background:`${B.red}10`,border:`1px solid ${B.red}33`,borderRadius:7,fontSize:11,color:B.red}}>
+          {task.warranty&&<div style={{marginTop:5,padding:"5px 10px",background:`${B.red}10`,border:`1px solid ${B.red}33`,borderRadius:6,fontSize:12,color:B.red}}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Serviço em garantia — mão de obra não cobrada do cliente
           </div>}
           {/* Per-task discount — hidden for warranty */}
@@ -4806,11 +4806,11 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
             <InlineEdit value={task.discount?fmtR2(task.discount):""} onSave={v=>onUpdate(task.id,{discount:Math.max(0,parseFloat(v.replace(",","."))||0)})} placeholder="0" type="number"/>
             {task.discount>0&&<>
               <span style={{fontSize:10,color:B.gray500,textDecoration:"line-through",flexShrink:0}}>{fmtBRL(c.laborGross)}</span>
-              <span style={{fontSize:10,color:B.green,fontWeight:700,flexShrink:0}}>→ {fmtBRL(c.labor)}</span>
+              <span style={{fontSize:10,color:B.green,fontWeight:600,flexShrink:0}}>→ {fmtBRL(c.labor)}</span>
             </>}
           </div>}
           {signer&&task.done&&<div style={{marginTop:2}}>
-            <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}><Ic n="done"/> {signer.name}</span>
+            <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:6,padding:"1px 6px",whiteSpace:"nowrap"}}><Ic n="done"/> {signer.name}</span>
           </div>}
           {/* Updates feed toggle */}
           <div style={{marginTop:5,display:"flex",alignItems:"center",gap:5}}>
@@ -4832,14 +4832,14 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         </div>
         {(()=>{ const tos=(purchaseOrders||[]).filter(o=>o.taskId===task.id); if(!tos.length) return null; const stC=o=>(PO_STATUS[o.status]||PO_STATUS.pending);
           return (<div style={{marginBottom:6}}>
-            <button onClick={()=>setShowTaskPOs(v=>!v)} style={{background:`${B.blue}14`,border:`1px solid ${B.blue}55`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.blue,fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",gap:6}}>
+            <button onClick={()=>setShowTaskPOs(v=>!v)} style={{background:`${B.blue}14`,border:`1px solid ${B.blue}55`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.blue,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:6}}>
               <Ic n="done"/> Pedido feito · {tos.length} {tos.length!==1?"itens":"item"} <span style={{display:"inline-block",transform:showTaskPOs?"rotate(90deg)":"none",transition:"transform .2s"}}>▸</span>
             </button>
             {showTaskPOs&&<div style={{display:"flex",flexDirection:"column",gap:4,marginTop:6}}>
-              {tos.map(o=>{ const c=stC(o); return <div key={o.id} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"6px 10px"}}>
+              {tos.map(o=>{ const c=stC(o); return <div key={o.id} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:6,padding:"6px 10px"}}>
                 <span style={{flex:1,minWidth:0,fontSize:12,color:B.white,wordBreak:"break-word"}}>{o.partName}{(o.quantity||1)>1&&<span style={{color:B.gray500}}> · {o.quantity}x</span>}</span>
                 {o.link&&<a href={o.link} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} title="Abrir link do produto" style={{color:B.gray400,display:"flex",flexShrink:0}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"/></svg></a>}
-                <span style={{fontSize:9,fontWeight:800,letterSpacing:".06em",textTransform:"uppercase",color:c.color,background:`${c.color}1c`,border:`1px solid ${c.color}44`,borderRadius:6,padding:"2px 7px",flexShrink:0}}>{c.label}</span>
+                <span style={{fontSize:10,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",color:c.color,background:`${c.color}1c`,border:`1px solid ${c.color}44`,borderRadius:6,padding:"2px 7px",flexShrink:0}}>{c.label}</span>
               </div>; })}
             </div>}
           </div>); })()}
@@ -4852,7 +4852,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
             {newMat.trim()&&<button onClick={addMat} style={{background:"none",border:"none",cursor:"pointer",color:B.green,display:"flex"}}><IPlus s={13} c={B.green}/></button>}
           </div>
           {newMat.trim()&&<input value={newBrand} onChange={e=>setNewBrand(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addMat()} placeholder="Marca (opcional)"
-            style={{background:B.gray700,border:`1px solid ${B.gray600}`,borderRadius:6,padding:"3px 9px",outline:"none",color:B.gray300,fontSize:11,width:"100%",boxSizing:"border-box"}}/>}
+            style={{background:B.gray700,border:`1px solid ${B.gray600}`,borderRadius:6,padding:"3px 9px",outline:"none",color:B.gray300,fontSize:12,width:"100%",boxSizing:"border-box"}}/>}
         </div>
           <button onClick={()=>setSP(true)} style={linkBtn()}>
             <IWarehouse s={11} c={B.gray400}/>Do estoque
@@ -4875,44 +4875,44 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px"}}>
           {task.rateType==="qty"?<IBox s={12} c={B.gray400}/>:<IClock s={12} c={B.gray400}/>}
           <InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"Qtd":"Horas"} type="number"/>
-          <span style={{fontSize:11,color:B.gray400}}>{task.rateType==="qty"?"un":"h"}</span>
+          <span style={{fontSize:12,color:B.gray400}}>{task.rateType==="qty"?"un":"h"}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:5,background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px"}}>
-          <span style={{fontSize:10,color:B.amber,fontWeight:700}}>{task.rateType==="qty"?"R$/un":"R$/h"}</span>
+          <span style={{fontSize:10,color:B.amber,fontWeight:600}}>{task.rateType==="qty"?"R$/un":"R$/h"}</span>
           <InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={task.rateType==="qty"?"0,00":`${fmtR2(defaultRate)} (pad)`} type="number"/>
         </div>
         <button onClick={()=>onUpdate(task.id,{rateType:task.rateType==="qty"?"hour":"qty",ratePerHour:null,hours:0})}
           title={task.rateType==="qty"?"Cobrar por hora":"Cobrar por quantidade"}
-          style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:9,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
+          style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:10,fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>
           {task.rateType==="qty"?<><Ic n="pkg"/> Qtd</>:<><Ic n="clock"/> H</>}
         </button>
         {c.total>0&&<div style={{marginLeft:"auto",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 10px",flexShrink:0,textAlign:"right"}}>
           {!task.warranty&&c.discount>0&&<div style={{fontSize:10,color:B.gray500,textDecoration:"line-through",lineHeight:1.2}}>{fmtBRL(c.total+c.discount)}</div>}
-          <span style={{fontSize:13,fontWeight:800,color:B.amber}}>{fmtBRL(c.total)}</span>
+          <span style={{fontSize:13,fontWeight:600,color:B.amber}}>{fmtBRL(c.total)}</span>
         </div>}
       </div>}
     </div>
     {showSP&&<StockPickerModal stock={stock} onPick={pickStock} onClose={()=>setSP(false)}/>}
-    {showPOP&&hasPickable&&<div style={{margin:"4px 0 8px 30px",background:`${B.amber}10`,border:`1px solid ${B.amber}33`,borderRadius:9,padding:"8px 12px"}}>
-      <div style={{fontSize:10,fontWeight:700,color:B.amber,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Selecione para adicionar à tarefa</div>
+    {showPOP&&hasPickable&&<div style={{margin:"4px 0 8px 30px",background:`${B.amber}10`,border:`1px solid ${B.amber}33`,borderRadius:10,padding:"8px 12px"}}>
+      <div style={{fontSize:10,fontWeight:600,color:B.amber,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Selecione para adicionar à tarefa</div>
       {receivedOrders.map(o=>{
         const salePrice=o.costPrice!=null?o.costPrice*(1+(o.markupPct||30)/100):null;
         return (<div key={o.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.amber}22`}}>
           {o.photoUrl&&<img src={o.photoUrl} alt="" style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>}
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:12,fontWeight:700,color:B.white}}>{o.partName}{o.notesAdmin?<span style={{color:B.gray400,fontWeight:400}}> — {o.notesAdmin}</span>:""}</div>
+            <div style={{fontSize:12,fontWeight:600,color:B.white}}>{o.partName}{o.notesAdmin?<span style={{color:B.gray400,fontWeight:400}}> — {o.notesAdmin}</span>:""}</div>
             <div style={{fontSize:10,color:B.gray400}}>Pedido · Qtd: {o.quantity}{salePrice?` · ${fmtBRL(salePrice)}`:""}</div>
           </div>
-          <button onClick={()=>addFromPurchaseOrder(o)} style={{padding:"5px 12px",borderRadius:7,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11,cursor:"pointer",flexShrink:0}}>+ Usar</button>
+          <button onClick={()=>addFromPurchaseOrder(o)} style={{padding:"5px 12px",borderRadius:6,background:B.amber,border:"none",color:B.black,fontWeight:600,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Usar</button>
         </div>);
       })}
       {availableReserved.map((p,i)=>(
         <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${B.purple}22`}}>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:12,fontWeight:700,color:B.white}}>{p.name}{p.brand?<span style={{color:B.gray400,fontWeight:400}}> — {p.brand}</span>:""}</div>
+            <div style={{fontSize:12,fontWeight:600,color:B.white}}>{p.name}{p.brand?<span style={{color:B.gray400,fontWeight:400}}> — {p.brand}</span>:""}</div>
             <div style={{fontSize:10,color:B.purple}}><Ic n="pkg"/> Reservado{p.location?` · ${p.location}`:""} · Restam: {remainingOf(p)}/{p.qty||1}{p.value?` · ${fmtBRL(p.value)}`:""}</div>
           </div>
-          <button onClick={()=>addFromReserved(p)} style={{padding:"5px 12px",borderRadius:7,background:B.purple,border:"none",color:B.white,fontWeight:800,fontSize:11,cursor:"pointer",flexShrink:0}}>+ Usar</button>
+          <button onClick={()=>addFromReserved(p)} style={{padding:"5px 12px",borderRadius:6,background:B.purple,border:"none",color:B.white,fontWeight:600,fontSize:12,cursor:"pointer",flexShrink:0}}>+ Usar</button>
         </div>
       ))}
     </div>}
@@ -4922,10 +4922,10 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       {/* Existing updates */}
       {(task.updates||[]).length>0&&<div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:6}}>
         {[...(task.updates||[])].reverse().map((u,i)=>(
-          <div key={i} style={{padding:"8px 10px",background:B.gray900,borderRadius:8,border:`1px solid ${B.gray700}`}}>
+          <div key={i} style={{padding:"8px 10px",background:B.gray900,borderRadius:6,border:`1px solid ${B.gray700}`}}>
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-              <span style={{fontSize:10,fontWeight:700,color:B.blue}}>{u.author||"—"}</span>
-              <span style={{fontSize:9,color:B.gray500}}>{u.at?new Date(u.at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</span>
+              <span style={{fontSize:10,fontWeight:600,color:B.blue}}>{u.author||"—"}</span>
+              <span style={{fontSize:10,color:B.gray500}}>{u.at?new Date(u.at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</span>
             </div>
             <div style={{fontSize:12,color:B.gray200,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{u.text}</div>
           </div>
@@ -4934,7 +4934,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       {/* New update input */}
       <div style={{marginBottom:6}}>
         <select defaultValue="" id={`update-author-${task.id}`}
-          style={{width:"100%",padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",marginBottom:6}}>
+          style={{width:"100%",padding:"7px 10px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",marginBottom:6}}>
           <option value="">— Quem está atualizando? —</option>
           {employees.map(e=><option key={e.id} value={e.name}>{e.name}</option>)}
           <option value="Gestor">Gestor</option>
@@ -4943,7 +4943,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       <textarea value={updateText} onChange={e=>setUpdateText(e.target.value)}
         placeholder="Escreva um update sobre esta etapa…"
         rows={2}
-        style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+        style={{width:"100%",padding:"8px 10px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",resize:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
       <button onClick={()=>{
         if(!updateText.trim()) return;
         const sel=document.getElementById(`update-author-${task.id}`);
@@ -4953,7 +4953,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         onUpdate(task.id,{updates:newUpdates});
         setUpdateText("");
         if(sel) sel.value="";
-      }} disabled={!updateText.trim()} style={{marginTop:6,padding:"7px 14px",borderRadius:8,background:updateText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:updateText.trim()?"pointer":"not-allowed"}}>
+      }} disabled={!updateText.trim()} style={{marginTop:6,padding:"7px 14px",borderRadius:6,background:updateText.trim()?B.blue:B.gray700,border:"none",color:B.white,fontWeight:600,fontSize:12,cursor:updateText.trim()?"pointer":"not-allowed"}}>
         Publicar update
       </button>
     </div>}
@@ -13967,7 +13967,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.249";
+const APP_VERSION = "2026.11.26.250";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

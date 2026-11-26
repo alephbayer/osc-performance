@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-11-26",
+    "changes": [
+      {
+        "type": "fix",
+        "text": "Formas de pagamento: a mesma lista em todas as telas (Pix, Dinheiro, Cartão de débito, Cartão de crédito, Transferência, Boleto, Outro); lançamentos antigos com nomes diferentes (PIX, pix, Cartão Crédito, TED / DOC) aparecem com o nome padrão"
+      }
+    ]
+  },
+  {
     "date": "2026-11-25",
     "changes": [
       {

@@ -71,6 +71,16 @@ const fmtBRL=n  => `R$ ${Number(n||0).toLocaleString("pt-BR",{minimumFractionDig
 // Datas de pagamento: a coluna paid_at é DATE ("YYYY-MM-DD"). new Date("YYYY-MM-DD") lê como meia-noite UTC e, no
 // horário de Brasília, mostra o dia anterior. payDate lê data pura como meio-dia LOCAL; hora completa passa direto.
 const payDate=v=>{ if(!v) return new Date(NaN); const t=String(v); return /^\d{4}-\d{2}-\d{2}$/.test(t)?new Date(t+"T12:00:00"):new Date(t); };
+// Formas de pagamento: lista única para todas as telas. payMethodLabel padroniza nomes antigos só na exibição.
+const PAY_METHODS=["Pix","Dinheiro","Cartão de débito","Cartão de crédito","Transferência","Boleto","Outro"];
+const payMethodLabel=m=>{ const t=String(m||"").trim(); if(!t) return ""; if(t==="Crédito") return "Crédito do cliente";
+  const k=t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(k==="pix") return "Pix"; if(k==="dinheiro") return "Dinheiro"; if(k==="boleto") return "Boleto"; if(k==="outro") return "Outro";
+  if(/^(cartao( de)? )?debito$/.test(k)) return "Cartão de débito";
+  if(/^(cartao( de)? )?credito$/.test(k)) return "Cartão de crédito";
+  if(k==="transferencia"||k==="ted / doc"||k==="ted"||k==="doc") return "Transferência";
+  return t; };
+const PayMethodOptions=({value})=>{ const v=payMethodLabel(value); return <>{!PAY_METHODS.includes(v)&&v&&<option value={value}>{v}</option>}{PAY_METHODS.map(m=><option key={m}>{m}</option>)}</>; };
 // "Hoje" no fuso local em YYYY-MM-DD (toISOString usa UTC e vira o dia seguinte depois das 21h)
 const todayLocal=()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const quoteTotal=items=>(items||[]).reduce((s,it)=>s+Number(it.price||0)+(it.materials||[]).reduce((ms,m)=>ms+Number(m.cost||0)*Number(m.qty||1)*(1+Number(m.markup||0)/100),0),0);
@@ -359,7 +369,7 @@ function PortalHistoryCard({h,v,payments}) {
       {hPays.length>0&&<>
         <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",margin:"12px 0 6px"}}>Pagamentos</div>
         {hPays.map(p=><div key={p.id} style={{display:"flex",gap:8,padding:"4px 0",fontSize:12}}>
-          <span style={{flex:1,color:B.gray200}}>{p.method}{p.note?` · ${p.note}`:""}</span>
+          <span style={{flex:1,color:B.gray200}}>{payMethodLabel(p.method)}{p.note?` · ${p.note}`:""}</span>
           <span style={{color:B.gray500}}>{p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):""}</span>
           <span style={{fontWeight:700,color:B.green}}>{fmtBRL(p.amount)}</span>
         </div>)}
@@ -791,7 +801,7 @@ function ClientPortal({client,vehicles,tasks,employees,payments,osHistory,defaul
                 <div style={{fontSize:10,letterSpacing:1,color:B.gray500,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Pagamentos</div>
                 {groupPaymentsForClient(vPayments).map(p=>(
                   <div key={p.id} style={{display:"flex",alignItems:"baseline",gap:8,padding:"5px 0",fontSize:12}}>
-                    <span style={{flex:1,color:B.gray200}}>{p.method}{p.note?` · ${p.note}`:""}</span>
+                    <span style={{flex:1,color:B.gray200}}>{payMethodLabel(p.method)}{p.note?` · ${p.note}`:""}</span>
                     <span style={{color:B.gray500}}>{p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"—"}</span>
                   </div>
                 ))}
@@ -1271,9 +1281,9 @@ function groupPaymentsForClient(list){
   const map=new Map(), order=[];
   (list||[]).forEach(p=>{
     const day=String(p.paidAt||"").slice(0,10);
-    const key=p.groupId?`g:${p.groupId}`:`d:${p.vehicleId}|${day}|${p.method||""}`;
+    const key=p.groupId?`g:${p.groupId}`:`d:${p.vehicleId}|${day}|${payMethodLabel(p.method)}`;
     let g=map.get(key);
-    if(!g){g={id:key,amount:0,method:p.method,paidAt:p.paidAt,notes:[]};map.set(key,g);order.push(g);}
+    if(!g){g={id:key,amount:0,method:payMethodLabel(p.method),paidAt:p.paidAt,notes:[]};map.set(key,g);order.push(g);}
     g.amount+=Number(p.amount);
     if(p.note&&!g.notes.includes(p.note)) g.notes.push(p.note);
   });
@@ -2200,7 +2210,7 @@ async function renderElegantQuote(o) {
   if(paid.length){
     const totalPaid=paid.reduce((s,p)=>s+Number(p.amount),0), balance=grandTotal-totalPaid;
     need(40); y+=6; cap("Pagamentos recebidos",mx,y,6.5,gray); y+=3; hair(y); y+=5.5;
-    paid.forEach(p=>{ need(7); const d=p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):""; txt(d,mx+4,y,{s:9}); txt([p.method,p.note].filter(Boolean).join(" · "),mx+34,y,{s:9}); txt(R(p.amount),cT,y,{s:9,c:green,al:"right"}); y+=6; });
+    paid.forEach(p=>{ need(7); const d=p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):""; txt(d,mx+4,y,{s:9}); txt([payMethodLabel(p.method),p.note].filter(Boolean).join(" · "),mx+34,y,{s:9}); txt(R(p.amount),cT,y,{s:9,c:green,al:"right"}); y+=6; });
     y+=1; hair(y); y+=7; need(24);
     txt("Total pago",bx,y,{s:9}); txt(R(totalPaid),cT,y,{s:9,al:"right"}); y+=7;
     if(balance>0.005){ cap("Saldo em aberto",bx,y,7,accentText); serif(R(balance),cT,y+0.5,15,{align:"right"}); }
@@ -6722,7 +6732,7 @@ function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
               <div style={{display:"flex",flexDirection:"column",gap:4}}>
                 {[...g.items].sort((a,b)=>new Date(b.paidAt)-new Date(a.paidAt)).map(p=><div key={p.id} style={{display:"flex",gap:10,alignItems:"baseline",background:B.gray900,borderRadius:8,padding:"6px 10px"}}>
                   <span style={{fontSize:10.5,color:B.gray400,flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{fd(p.paidAt)}</span>
-                  <span style={{flex:1,minWidth:0,fontSize:11,color:B.gray300,wordBreak:"break-word"}}>{p.method||"—"}{p.note&&<span style={{color:B.gray500}}> · {p.note}</span>}</span>
+                  <span style={{flex:1,minWidth:0,fontSize:11,color:B.gray300,wordBreak:"break-word"}}>{payMethodLabel(p.method)||"—"}{p.note&&<span style={{color:B.gray500}}> · {p.note}</span>}</span>
                   <span style={{fontSize:12,fontWeight:700,color:B.white,flexShrink:0}}>{fmtBRL(Number(p.amount)||0)}</span>
                 </div>)}
               </div>
@@ -6821,7 +6831,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
             <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Valor (R$)" type="number" step="0.01"
               style={{flex:"1 1 110px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
             <select value={method} onChange={e=>setMethod(e.target.value)} style={{flex:"1 1 110px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}>
-              {["Pix","Dinheiro","Cartão débito","Cartão crédito","Transferência","Boleto","Outro"].map(m=><option key={m}>{m}</option>)}
+              <PayMethodOptions/>
             </select>
             <input value={date} onChange={e=>setDate(e.target.value)} type="date"
               style={{flex:"1 1 130px",padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
@@ -6848,14 +6858,14 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
               <div style={{width:34,height:34,borderRadius:8,background:B.greenBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ITrendUp s={15} c={B.green}/></div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:700,fontSize:13,color:B.white,display:"flex",alignItems:"center",gap:6}}>
-                  {fmtBRL(p.amount)} <span style={{fontWeight:400,color:B.gray400,fontSize:11}}>· {p.method}</span>
+                  {fmtBRL(p.amount)} <span style={{fontWeight:400,color:B.gray400,fontSize:11}}>· {payMethodLabel(p.method)}</span>
                   {p.division==="finishing"
                     ?<span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 5px"}}>FD</span>
                     :<span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 5px"}}>OSC</span>}
                 </div>
                 <div style={{fontSize:11,color:B.gray400}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}{p.note?` · ${p.note}`:""}</div>
               </div>
-              <button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:p.method,note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
+              <button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
                 style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:4,display:"flex",flexShrink:0}}
                 onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}>
                 <IEdit s={14}/>
@@ -6868,7 +6878,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
                 style={{flex:"1 1 100px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
               <select value={editingPay.method} onChange={e=>setEditingPay(ep=>({...ep,method:e.target.value}))}
                 style={{flex:"1 1 110px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
-                {["Pix","Dinheiro","Cartão débito","Cartão crédito","Transferência","Boleto","Outro"].map(m=><option key={m}>{m}</option>)}
+                <PayMethodOptions value={editingPay.method}/>
               </select>
               <input type="date" value={editingPay.paidAt} onChange={e=>setEditingPay(ep=>({...ep,paidAt:e.target.value}))}
                 style={{flex:"1 1 120px",padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
@@ -7119,7 +7129,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
   const [orderQty,setOrderQty]=useState(String(item.minQty||1));
   const [showAdjust,setShowAdjust]=useState(false);
   const [dirMode,setDirMode]=useState(null); // "sell" | "use"
-  const [dirQty,setDirQty]=useState("1"); const [dirPrice,setDirPrice]=useState(""); const [dirMethod,setDirMethod]=useState("pix"); const [dirWho,setDirWho]=useState(""); const [dirBusy,setDirBusy]=useState(false); const [dirEmp,setDirEmp]=useState("");
+  const [dirQty,setDirQty]=useState("1"); const [dirPrice,setDirPrice]=useState(""); const [dirMethod,setDirMethod]=useState("Pix"); const [dirWho,setDirWho]=useState(""); const [dirBusy,setDirBusy]=useState(false); const [dirEmp,setDirEmp]=useState("");
   const [adjustQty,setAdjustQty]=useState(String(item.qty||0));
   const salePrice=Number(item.costPrice||form.costPrice||0)*(1+Number(form.markup||0)/100);
 
@@ -7227,7 +7237,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
                 {dirMode==="sell"&&<><span style={{fontSize:11,color:B.gray400,marginLeft:"auto"}}>R$/un</span><input type="number" min="0" step="0.01" value={dirPrice} onChange={e=>setDirPrice(e.target.value)} style={{width:90,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,fontWeight:700,outline:"none"}}/></>}
               </div>
               {dirMode==="sell"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {["pix","dinheiro","crédito","débito","transferência"].map(m=><button key={m} onClick={()=>setDirMethod(m)} style={{padding:"5px 10px",borderRadius:99,border:`1px solid ${dirMethod===m?B.green:B.gray600}`,background:dirMethod===m?`${B.green}22`:"transparent",color:dirMethod===m?B.green:B.gray400,fontSize:11,fontWeight:600,cursor:"pointer"}}>{m}</button>)}
+                {PAY_METHODS.filter(m=>m!=="Boleto"&&m!=="Outro").map(m=><button key={m} onClick={()=>setDirMethod(m)} style={{padding:"5px 10px",borderRadius:99,border:`1px solid ${dirMethod===m?B.green:B.gray600}`,background:dirMethod===m?`${B.green}22`:"transparent",color:dirMethod===m?B.green:B.gray400,fontSize:11,fontWeight:600,cursor:"pointer"}}>{m}</button>)}
               </div>}
               {dirMode==="use"&&<select value={dirEmp} onChange={e=>setDirEmp(e.target.value)} style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${dirEmp?B.blue:B.gray600}`,background:B.gray800,color:dirEmp?B.white:B.gray400,fontSize:12,outline:"none"}}>
                 <option value="">Quem usou? (obrigatório)</option>
@@ -10149,7 +10159,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
               <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:B.greenBg,borderRadius:7,marginBottom:4,border:`1px solid ${B.green}33`}}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                 <span style={{fontWeight:700,fontSize:12,color:B.green}}>{fmtBRL(p.amount)}</span>
-                <span style={{fontSize:11,color:B.gray400}}>{p.method}</span>
+                <span style={{fontSize:11,color:B.gray400}}>{payMethodLabel(p.method)}</span>
                 {p.note&&<span style={{fontSize:11,color:B.gray400,flex:1}}>{p.note}</span>}
                 <span style={{fontSize:10,color:B.gray500,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
                 {canManage&&<button onClick={()=>onDeletePayment(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:2}}><ITrash s={11}/></button>}
@@ -10162,7 +10172,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
                 <select value={payForm.method} onChange={e=>setPayForm(p=>({...p,method:e.target.value}))}
                   style={{flex:1,padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}>
-                  {["Pix","Dinheiro","Cartão débito","Cartão crédito","Transferência"].map(m=><option key={m}>{m}</option>)}
+                  <PayMethodOptions/>
                 </select>
               </div>
               <input value={payForm.note} onChange={e=>setPayForm(p=>({...p,note:e.target.value}))} placeholder="Observação"
@@ -10355,7 +10365,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
   const [showForm,setShowForm]=useState(false);
   const [showDiscount,setShowDiscount]=useState(false);
   const [amount,setAmount]=useState("");
-  const [method,setMethod]=useState("Dinheiro");
+  const [method,setMethod]=useState("Pix");
   const [note,setNote]=useState("");
   const [paidAt,setPaidAt]=useState(todayLocal());
   const [editingPay,setEditingPay]=useState(null);
@@ -10453,10 +10463,10 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
           <div style={{display:"flex",alignItems:"center",gap:6,padding:"3px 8px",background:editingPay?.id===p.id?`${B.blue}15`:B.greenBg,border:`1px solid ${editingPay?.id===p.id?B.blue+"44":B.green+"33"}`,borderRadius:editingPay?.id===p.id?"5px 5px 0 0":5}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             <span style={{fontSize:11,color:B.green,fontWeight:700,flexShrink:0}}>{fmtBRL(p.amount)}</span>
-            <span style={{fontSize:10,color:B.gray400,flexShrink:0}}>{p.method}</span>
+            <span style={{fontSize:10,color:B.gray400,flexShrink:0}}>{payMethodLabel(p.method)}</span>
             {p.note&&<span style={{fontSize:10,color:B.gray400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.note}</span>}
             <span style={{fontSize:10,color:B.gray500,flexShrink:0,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
-            {onUpdatePayment&&<button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:p.method,note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
+            {onUpdatePayment&&<button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
               style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:0,display:"flex"}}
               onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}><IEdit s={11}/></button>}
             {onDeletePayment&&<button onClick={()=>onDeletePayment(p.id)}
@@ -10468,7 +10478,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
               style={{flex:"1 1 90px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
             <select value={editingPay.method} onChange={e=>setEditingPay(ep=>({...ep,method:e.target.value}))}
               style={{flex:"1 1 100px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}>
-              {["Dinheiro","Pix","Cartão Débito","Cartão Crédito","Transferência","Outro"].map(m=><option key={m}>{m}</option>)}
+              <PayMethodOptions value={editingPay.method}/>
             </select>
             <input type="date" value={editingPay.paidAt} onChange={e=>setEditingPay(ep=>({...ep,paidAt:e.target.value}))}
               style={{flex:"1 1 110px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
@@ -10529,7 +10539,7 @@ function OsHistoryPaymentPanel({h,payments=[],onAddPayment,onDeletePayment,onUpd
         style={{flex:"0 1 100px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
       <select value={method} onChange={e=>setMethod(e.target.value)}
         style={{flex:"0 1 110px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
-        {["Dinheiro","Pix","Cartão Débito","Cartão Crédito","Transferência","Outro"].map(m=><option key={m}>{m}</option>)}
+        <PayMethodOptions/>
       </select>
       <input type="date" value={paidAt} onChange={e=>setPaidAt(e.target.value)}
         style={{flex:"0 1 130px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
@@ -12179,7 +12189,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
       y+=7;
       ps.forEach(p=>{
         const dateStr=p.paidAt?payDate(p.paidAt).toLocaleDateString("pt-BR"):"";
-        row(`  ${p.method||""}`,Number(p.amount),dateStr,[22,163,74]);
+        row(`  ${payMethodLabel(p.method)}`,Number(p.amount),dateStr,[22,163,74]);
       });
     });
   }
@@ -12197,7 +12207,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
     filteredSales.forEach(s=>{
       const label=(s.client_name?`${s.client_name} — `:"")+(s.description||s.note||"Venda");
       const dateStr=s.soldAt||s.sold_at?new Date(s.soldAt||s.sold_at).toLocaleDateString("pt-BR"):"";
-      row(label,Number(s.total),`${s.method||""}${dateStr?` · ${dateStr}`:""}`.trim(),[22,163,74]);
+      row(label,Number(s.total),`${payMethodLabel(s.method)}${dateStr?` · ${dateStr}`:""}`.trim(),[22,163,74]);
     });
   }
   y+=4;
@@ -12234,7 +12244,7 @@ function FinanceEntriesCard({payments=[],vehicles=[],clients=[]}){
     const c=v?clients.find(x=>x.id===v.clientId):null;
     const title=v?`${v.model||"Veículo"}${v.plate?` · ${v.plate}`:""}`:(p.note||"Venda avulsa");
     return {p,v,c,title,sub:[c?.name,v&&p.note?p.note:null].filter(Boolean).join(" · "),
-      hay:norm([title,c?.name,p.method,p.note,String(p.amount).replace(".",","),Number(p.amount).toLocaleString("pt-BR",{minimumFractionDigits:2})].join(" "))};
+      hay:norm([title,c?.name,payMethodLabel(p.method),p.note,String(p.amount).replace(".",","),Number(p.amount).toLocaleString("pt-BR",{minimumFractionDigits:2})].join(" "))};
   }).sort((a,b)=>String(b.p.paidAt||"").localeCompare(String(a.p.paidAt||""))),[payments,vehicles,clients]);
   const nq=norm(q.trim());
   const list=rows.filter(r=>{const d=String(r.p.paidAt||"").slice(0,10);return (!nq||r.hay.includes(nq))&&(!df||d>=df)&&(!dt||d<=dt);});
@@ -12261,7 +12271,7 @@ function FinanceEntriesCard({payments=[],vehicles=[],clients=[]}){
         <div style={{width:44,flexShrink:0,fontSize:10.5,color:B.gray500,fontWeight:600}}>{fd(r.p.paidAt)}</div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:12.5,fontWeight:600,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.title}</div>
-          <div style={{fontSize:10.5,color:B.gray400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.p.method||"—"}{r.sub?` · ${r.sub}`:""}</div>
+          <div style={{fontSize:10.5,color:B.gray400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{payMethodLabel(r.p.method)||"—"}{r.sub?` · ${r.sub}`:""}</div>
         </div>
         <div style={{fontSize:13,fontWeight:800,color:B.green,flexShrink:0}}>{fmtBRL(r.p.amount)}</div>
       </div>))}
@@ -13399,7 +13409,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
                   {paysOpen&&<div style={{padding:"4px 14px"}}>
                     {list.map((p,pi,arr)=>(<div key={p.id} style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap",padding:"10px 0",borderBottom:pi<arr.length-1?`1px solid ${B.gray700}`:"none"}}>
                       <span style={{fontSize:13,color:B.green,fontWeight:700}}>{fmtBRL(p.amount)}</span>
-                      <span style={{fontSize:11,color:B.gray400}}>{p.method}</span>
+                      <span style={{fontSize:11,color:B.gray400}}>{payMethodLabel(p.method)}</span>
                       <span style={{fontSize:11,color:B.gray500,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
                       {p.note&&<span style={{fontSize:11,color:B.gray500,width:"100%"}}>{p.note}</span>}
                     </div>))}
@@ -13476,7 +13486,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
                         <div style={{display:"flex",alignItems:"center",gap:3,flexWrap:"wrap",padding:"6px 0"}}>
                           <span style={{fontSize:12,color:B.green,fontWeight:700,flexShrink:0}}>{fmtBRL(p.amount)}</span>
                           <span style={{fontSize:11,color:B.gray400,marginLeft:2,flexShrink:0}}>·</span>
-                          <span style={{fontSize:11,color:B.gray300,flexShrink:0,marginRight:"auto"}}>{p.method}</span>
+                          <span style={{fontSize:11,color:B.gray300,flexShrink:0,marginRight:"auto"}}>{payMethodLabel(p.method)}</span>
                           <span style={{fontSize:11,color:B.gray500,flexShrink:0}}>{payDate(p.paidAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>
                           {p.note&&<span style={{fontSize:11,color:B.gray500,width:"100%"}}>{p.note}</span>}
                         </div>
@@ -13771,7 +13781,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.25.226";
+const APP_VERSION = "2026.11.26.227";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15617,13 +15627,12 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
 }
 
 // ─── Quick Payment Modal ──────────────────────────────────────────────────────
-const PAY_METHODS = ["Dinheiro","PIX","Cartão de Débito","Cartão de Crédito","TED / DOC","Outro"];
 
 function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[],payments=[],defaultRate=0}) {
   const activeVehicles=vehicles.filter(v=>v.enteredAt||v.enteredAtFinishing||tasks.some(t=>t.vehicleId===v.id));
   const [selectedId,setSelectedId]=useState(activeVehicles.length===1?activeVehicles[0].id:"");
   const [payDiv,setPayDiv]=useState("performance");
-  const [method,setMethod]=useState("PIX");
+  const [method,setMethod]=useState("Pix");
   const [amount,setAmount]=useState("");
   const [note,setNote]=useState("");
   const [date,setDate]=useState(new Date().toLocaleDateString("pt-BR"));
@@ -17032,7 +17041,7 @@ function PresencaTab({employees, isOwner=false}) {
 function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale,onUpdateSale}){
   const [view,setView]=useState("sell"); // sell | shelf | history
   const [cart,setCart]=useState([]); // {id,name,price,qty,from_stock,stock_item_id}
-  const [method,setMethod]=useState("pix");
+  const [method,setMethod]=useState("Pix");
   const [saleNote,setSaleNote]=useState("");
   const [saleClientName,setSaleClientName]=useState("");
   const [saleDescription,setSaleDescription]=useState("");
@@ -17051,7 +17060,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
   const [editSale,setEditSale]=useState(null); // {id, client_name, description, note}
 
   const cats=["peças","acessórios","serviços","produtos","outros"];
-  const METHODS=["pix","dinheiro","crédito","débito","transferência"];
+  const METHODS=PAY_METHODS.filter(m=>m!=="Boleto"&&m!=="Outro");
   const cartSubtotal=cart.reduce((s,i)=>s+i.price*i.qty,0);
   const discountAmount=discountVal?(discountType==="percent"?cartSubtotal*(parseFloat(discountVal)||0)/100:Math.min(parseFloat(discountVal)||0,cartSubtotal)):0;
   const cartTotal=Math.max(0,cartSubtotal-discountAmount);
@@ -17255,7 +17264,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
             <div style={{fontWeight:700,fontSize:14,color:B.white}}>{fmtBRL(Number(sale.total))}</div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:11,color:B.gray400,textTransform:"capitalize"}}>{sale.method}</span>
+              <span style={{fontSize:11,color:B.gray400,}}>{payMethodLabel(sale.method)}</span>
               <button onClick={()=>setEditSale(editSale?.id===sale.id?null:{id:sale.id,client_name:sale.client_name||"",description:sale.description||"",note:sale.note||""})}
                 style={{width:26,height:26,borderRadius:6,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,color:B.blue,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <IEdit s={11} c={B.blue}/>
@@ -18983,8 +18992,8 @@ function MainApp() {
       await insertPayment(p);
       toast_(`Pagamento de ${fmtBRL(p.amount)} registrado ✓`);
       const v=vehicles.find(x=>x.id===p.vehicleId);
-      if(v?.clientId) db.sendPushToClient(v.clientId,`Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${p.method}`,`/?portal=cliente`).catch(()=>{});
-      postTimeline(p.vehicleId,{type:"payment",title:`Pagamento — ${fmtBRL(p.amount)}`,body:p.method||"",actor:null,color:B.green});
+      if(v?.clientId) db.sendPushToClient(v.clientId,`Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${payMethodLabel(p.method)}`,`/?portal=cliente`).catch(()=>{});
+      postTimeline(p.vehicleId,{type:"payment",title:`Pagamento — ${fmtBRL(p.amount)}`,body:payMethodLabel(p.method),actor:null,color:B.green});
     }
     catch(e){errToast(e);}
   };

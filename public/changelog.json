@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Categorias da OS sem caixa-alta, total em cinza e setas em traço. Card do mecânico mais leve: sem sombra, borda fina, etiquetas em texto normal e WhatsApp, editar e excluir só como ícones"
+      },
+      {
+        "type": "fix",
         "text": "Lápis de editar agora fica colado ao texto (não solto na direita) e some em campos vazios; nome da tarefa se edita tocando nele. Títulos de seções do card que tinham perdido a cor e o tamanho voltaram ao normal"
       },
       {

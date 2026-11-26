@@ -4871,7 +4871,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       {/* ── Row 3: Hours/Qty + Rate + Toggle — hidden for warranty ── */}
       {!task.warranty&&<div style={{marginLeft:30,marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",fontSize:12,color:B.gray400}}>
         {task.rateType==="qty"?<IBox s={12} c={B.gray500}/>:<IClock s={12} c={B.gray500}/>}
-        <span style={{display:"inline-flex",minWidth:28}}><InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"qtd":"horas"} type="number" textStyle={{fontSize:12}} bare/></span>
+        <span style={{display:"inline-flex",minWidth:28}}><InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder="0" type="number" textStyle={{fontSize:12}} bare/></span>
         <span>{task.rateType==="qty"?"un":"h"}</span>
         <span style={{color:B.gray600}}>×</span>
         <span>R$</span>
@@ -6382,11 +6382,11 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             return (<div key={key} style={{marginBottom:4}}>
               <div onClick={toggleCat} style={{display:"flex",alignItems:"center",gap:6,margin:"8px 0 4px",padding:"4px 8px",background:catColor?(catColor+(isCollapsed?"22":"15")):B.gray700+"80",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 4px 4px 0",cursor:"pointer",userSelect:"none",opacity:allDone?.75:1}}>
                 <span style={{width:7,height:7,borderRadius:99,background:catColor||B.gray500,flexShrink:0}}/>
-                <span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
+                <span style={{fontSize:11,fontWeight:600,color:catColor||B.gray500}}>{cat||"Sem categoria"}</span>
                 <span style={{fontSize:10,color:(catColor||B.gray500)+"99"}}>{doneCount}/{groupTasks.length}</span>
                 {allDone&&<span style={{fontSize:9,color:B.green,fontWeight:700,display:"inline-flex",alignItems:"center",gap:2}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>concluída</span>}
-                {managerMode&&catTotal>0&&<span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,marginLeft:"auto",marginRight:4}}>{fmtBRL(catTotal)}</span>}
-                <span style={{color:(catColor||B.gray500),fontSize:9,flexShrink:0}}>{isCollapsed?"▶":"▼"}</span>
+                {managerMode&&catTotal>0&&<span style={{fontSize:11,color:B.gray400,marginLeft:"auto",marginRight:4}}>{fmtBRL(catTotal)}</span>}
+                <span style={{display:"flex",flexShrink:0,marginLeft:managerMode&&catTotal>0?0:"auto",transform:isCollapsed?"rotate(-90deg)":"none",transition:"transform .15s"}}><IChevD s={12} c={B.gray500}/></span>
               </div>
               {!isCollapsed&&<>
                 {/* Pending tasks — always shown normally */}
@@ -6404,7 +6404,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={B.green} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                       <span style={{fontSize:10,color:B.green,fontWeight:700,flex:1}}>{doneTasks.length} concluída{doneTasks.length!==1?"s":""}</span>
                       {managerMode&&<span style={{fontSize:10,color:B.green,fontWeight:700,opacity:.7}}>{fmtBRL(doneTasks.reduce((s,t)=>s+taskCost(t,defaultRate).total,0))}</span>}
-                      <span style={{fontSize:9,color:B.green,opacity:.6,marginLeft:4}}>{doneOpen?"▲":"▼"}</span>
+                      <span style={{display:"flex",marginLeft:4,opacity:.6}}>{doneOpen?<IChevU s={11} c={B.green}/>:<IChevD s={11} c={B.green}/>}</span>
                     </div>
                     {doneOpen&&doneTasks.map(t=>managerMode
                       ?<TaskItemManager key={t.id} task={t} defaultRate={defaultRate} stock={stock} employees={employees} onToggle={onToggleTask} onDelete={onDeleteTask} onUpdate={onUpdateTask} onConsumeStock={onConsumeStock} onReturnStock={onReturnStock} isFD={isFD} purchaseOrders={purchaseOrders} onOrderPart={orderPart} allTasks={tasks} reservedParts={(vehicle.partsList||[]).map((p,i)=>({...p,_idx:i}))} currentEmployee={employees.find(e=>e.id===vehicle.mechanicIds?.[0])||null}/>
@@ -6760,9 +6760,9 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
   const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase(),vColor.trim());setMod("");setPlate("");setVColor("");setSF(false);};;
-  return (<><div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,marginBottom:20,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,.35)"}}>
-    <div onClick={()=>setOpen(o=>!o)} style={{padding:"12px 16px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer",userSelect:"none"}}>
-      <div style={{width:42,height:42,borderRadius:10,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={20} c={B.orange}/></div>
+  return (<><div style={{background:B.gray800,borderRadius:10,border:`1px solid ${B.gray700}`,marginBottom:16,overflow:"hidden"}}>
+    <div onClick={()=>setOpen(o=>!o)} style={{padding:"12px 16px",background:B.gray900,borderBottom:`1px solid ${B.orange}66`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer",userSelect:"none"}}>
+      <div style={{width:34,height:34,borderRadius:99,border:`1px solid ${B.orange}55`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={16} c={B.orange}/></div>
       <div style={{flex:1,minWidth:120}}>
         {editing
           ?<div style={{display:"flex",flexDirection:"column",gap:6}} onClick={e=>e.stopPropagation()}>
@@ -6776,34 +6776,34 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
             </div>
           </div>
           :<>
-            <div style={{fontWeight:700,fontSize:14,color:B.white}}>{employee.name}</div>
+            <div style={{fontWeight:600,fontSize:14,color:B.white}}>{employee.name}</div>
             <div style={{fontSize:12,color:B.gray400,marginTop:2}}>{empV.length} veículo{empV.length!==1?"s":""} · {donT}/{totT} tarefas {totT>0&&donT===totT?<span style={{color:B.green,fontWeight:700,display:"flex",alignItems:"center"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>:""}</div>
             {employee.phone&&<div style={{fontSize:11,color:B.wa,marginTop:2,display:"flex",alignItems:"center",gap:4}}><IPhone s={11} c={B.wa}/>{employee.phone}</div>}
             {employee.division==="finishing"
-              ?<div style={{marginTop:2}}><span style={{fontSize:9,fontWeight:800,color:FD.primary,background:FD.bg,border:`1px solid ${FD.border}`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>FINISHING</span></div>
+              ?<div style={{marginTop:2}}><span style={{fontSize:10,color:FD.primary,border:`1px solid ${FD.border}`,borderRadius:6,padding:"1px 7px"}}>Finishing</span></div>
               :<div style={{marginTop:2,display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
-                <span style={{fontSize:9,fontWeight:800,color:B.orange,background:`${B.orange}12`,border:`1px solid ${B.orange}33`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>PERFORMANCE</span>
-                {employee.specialty&&<span style={{fontSize:9,fontWeight:800,color:B.blue,background:`${B.blue}12`,border:`1px solid ${B.blue}33`,borderRadius:4,padding:"1px 6px",letterSpacing:.3}}>{employee.specialty.toUpperCase()}</span>}
+                <span style={{fontSize:10,color:B.orange,border:`1px solid ${B.orange}44`,borderRadius:6,padding:"1px 7px"}}>Performance</span>
+                {employee.specialty&&<span style={{fontSize:10,color:B.gray300,border:`1px solid ${B.gray600}`,borderRadius:6,padding:"1px 7px"}}>{employee.specialty}</span>}
               </div>}
           </>}
       </div>
       <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
         {!editing&&<button onClick={()=>{setEditing(true);setEditName(employee.name);setEditPhone(employee.phone||"");setOpen(true);}}
           title="Editar mecânico"
-          style={{padding:"7px 9px",borderRadius:8,border:`1px solid ${B.gray600}`,cursor:"pointer",background:B.gray700,color:B.gray300,display:"flex",alignItems:"center"}}>
-          <IEdit s={13}/>
+          style={{padding:7,borderRadius:6,border:"none",cursor:"pointer",background:"none",color:B.gray400,display:"flex",alignItems:"center"}}>
+          <IEdit s={14}/>
         </button>}
         {onUpdateDivision&&<button onClick={()=>onUpdateDivision(employee.id,employee.division==="finishing"?"performance":"finishing")}
           title="Alternar empresa"
-          style={{padding:"5px 8px",borderRadius:8,border:`1px solid ${employee.division==="finishing"?FD.border:B.orange+"33"}`,cursor:"pointer",fontWeight:700,fontSize:10,background:employee.division==="finishing"?FD.bg:`${B.orange}12`,color:employee.division==="finishing"?FD.primary:B.orange}}>
+          style={{padding:7,borderRadius:6,border:"none",cursor:"pointer",display:"flex",alignItems:"center",background:"none",color:employee.division==="finishing"?FD.primary:B.orange}}>
           {employee.division==="finishing"?<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/></svg>:<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>}
         </button>}
-        <button onClick={()=>onSendWA(employee)} style={{padding:"7px 11px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:4,background:employee.phone?B.wa:B.gray700,color:employee.phone?B.white:B.gray500}}>
-          <IPhone s={13} c={employee.phone?B.white:B.gray500}/>{employee.phone?"WA":"Sem WA"}
+        <button onClick={()=>onSendWA(employee)} title={employee.phone?"Enviar pelo WhatsApp":"Sem WhatsApp cadastrado"} style={{padding:7,borderRadius:6,border:"none",cursor:"pointer",display:"flex",alignItems:"center",background:"none"}}>
+          <IPhone s={14} c={employee.phone?B.wa:B.gray600}/>
         </button>
-        <button onClick={()=>setConfirmDel(true)} style={{background:`${B.white}10`,border:"none",borderRadius:8,padding:7,cursor:"pointer",color:B.gray400,display:"flex"}}
-          onMouseEnter={e=>{e.currentTarget.style.background="#ef444430";e.currentTarget.style.color=B.red;}}
-          onMouseLeave={e=>{e.currentTarget.style.background=`${B.white}10`;e.currentTarget.style.color=B.gray400;}}><ITrash s={14}/></button>
+        <button onClick={()=>setConfirmDel(true)} title="Excluir mecânico" style={{background:"none",border:"none",borderRadius:6,padding:7,cursor:"pointer",color:B.gray500,display:"flex"}}
+          onMouseEnter={e=>{e.currentTarget.style.color=B.red;}}
+          onMouseLeave={e=>{e.currentTarget.style.color=B.gray500;}}><ITrash s={14}/></button>
         <div style={{padding:7,color:B.gray400,display:"flex"}}>{open?<IChevU s={14} c={B.gray400}/>:<IChevD s={14} c={B.gray400}/>}</div>
       </div>
     </div>
@@ -13963,7 +13963,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.252";
+const APP_VERSION = "2026.11.26.253";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14181,7 +14181,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       return (<div key={cat||"__none__"} style={{marginBottom:10}}>
         <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",background:(catColor||B.gray500)+"18",borderLeft:`3px solid ${catColor||B.gray500}`,borderRadius:"0 5px 5px 0",marginBottom:5}}>
           <span style={{width:6,height:6,borderRadius:99,background:catColor||B.gray500,flexShrink:0,display:"inline-block"}}/>
-          <span style={{fontSize:10,fontWeight:800,color:catColor||B.gray500,textTransform:"uppercase",letterSpacing:.8}}>{cat||"Sem categoria"}</span>
+          <span style={{fontSize:11,fontWeight:600,color:catColor||B.gray500}}>{cat||"Sem categoria"}</span>
           <span style={{fontSize:10,color:(catColor||B.gray500)+"88",marginLeft:"auto"}}>{group.filter(t=>t.done).length}/{group.length}</span>
         </div>
         {group.map((t,i)=>{

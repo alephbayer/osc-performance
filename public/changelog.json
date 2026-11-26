@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Campo \"Nova tarefa\" do carro agora busca no catálogo de serviços: digite duas letras, escolha a sugestão e horas, categoria e valor já vêm preenchidos (chefes veem sem valores)"
+      },
+      {
+        "type": "fix",
         "text": "Símbolos ✓ e ✕ trocados por ícones de traço em botões, selos e listas; avisos de confirmação sem símbolo; PDF de recibo mostra \"Quitado\" sem caractere quebrado"
       },
       {

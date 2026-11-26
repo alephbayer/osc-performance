@@ -5922,7 +5922,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [showPage,setShowPage] = useState(!!openPageOnMount);
   const [orderTarget,setOrderTarget] = useState(null);
   const orderPart = onAddPurchaseOrder ? (task,idx,mat)=>setOrderTarget({task,idx,mat}) : null;
-  const [newT,setNewT] = useState("");const [newCat,setNewCat] = useState("");const [newH,setNewH] = useState("");
+  const [newT,setNewT] = useState("");const [newCat,setNewCat] = useState("");const [newH,setNewH] = useState("");const [newPick,setNewPick] = useState(null);
   const [aiL, setAiL] = useState(false);
   const [aiS, setAiS] = useState([]);
   const [xfM, setXfM] = useState(false);
@@ -5992,7 +5992,11 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const statusColorsFD = {active:{bg:`${B.green}22`,border:`${B.green}44`,color:B.green,label:"Ativo",icon:<IPlay s={10} c={B.green}/>}, paused:{bg:`${B.amber}22`,border:`${B.amber}44`,color:B.amber,label:"Pausado (Fin.)",icon:<IPause s={10} c={B.amber}/>}, ready:{bg:`${B.blue}22`,border:`${B.blue}44`,color:B.blue,label:"Pronto",icon:<ICheck s={10} c={B.blue}/>}};
   const sc = division==="finishing" ? (statusColorsFD[vehicle.statusFinishing||"active"]) : (statusColors[vehicle.status||"active"]);
 
-  const addT=()=>{if(!newT.trim())return;const h=parseFloat(String(newH).replace(",","."));onAddTask(vehicle.id,newT.trim(),newCat||null,isFD?"finishing":"performance",h>0?{hours:h}:null);setNewT("");setNewCat("");setNewH("");};
+  const addT=()=>{if(!newT.trim())return;const h=parseFloat(String(newH).replace(",","."));
+    // Serviço escolhido do catálogo (nome não editado depois): copia o valor e o tipo de cobrança para a tarefa
+    const pk=newPick&&newPick.name===newT.trim()?newPick:null; const pkType=pk?(pk.rate_type||"hour"):null;
+    const extra={...(h>0?{hours:h}:{}),...(pk&&pk.rate!=null?{ratePerHour:Number(pk.rate)}:{}),...(pk&&pkType!==(isFD?"qty":"hour")?{rateType:pkType,...(h>0?{}:{hours:1})}:{})};
+    onAddTask(vehicle.id,newT.trim(),newCat||null,isFD?"finishing":"performance",Object.keys(extra).length?extra:null);setNewT("");setNewCat("");setNewH("");setNewPick(null);};
   const doAI=async()=>{setAiL(true);setAiS([]);try{setAiS(await aiSuggest(vehicle.model));}catch{}setAiL(false);};
   const copyLink=()=>{navigator.clipboard?.writeText(pubLink);setCPL(true);setTimeout(()=>setCPL(false),2000);};
   const doPDF=async()=>{
@@ -6421,7 +6425,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             <IPlus s={12} c={B.orange}/>{sg}</button>))}
         </div>}
         <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
-          <input value={newT} onChange={e=>setNewT(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addT()} placeholder="Nova tarefa…"
+          <SvcPickInput value={newT} onChange={setNewT} onKeyDown={e=>e.key==="Enter"&&addT()} placeholder="Nova tarefa… (digite para buscar no catálogo)" division={isFD?"finishing":"performance"} defaultRate={defaultRate} showValues={!!managerMode}
+            onPick={sv=>{setNewT(sv.name);setNewPick(sv);const q=Number(sv.hours||0);setNewH(q?String(q):"");if(sv.category&&(isFD?CATEGORIES_FINISHING:CATEGORIES).some(c=>c.id===sv.category))setNewCat(sv.category);}}
             style={{flex:1,minWidth:130,padding:"7px 11px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
           <input value={newH} onChange={e=>setNewH(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addT()} type="number" inputMode="decimal" step="0.5" min="0" placeholder={isFD?"Qtd":"Horas"} title={isFD?"Quantidade (opcional)":"Tempo em horas (opcional)"}
             style={{width:64,padding:"7px 8px",borderRadius:7,border:`1px solid ${newH?B.orange+"88":B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
@@ -13957,7 +13962,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.246";
+const APP_VERSION = "2026.11.26.247";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14780,23 +14785,30 @@ function svcEstLabel(s,defaultRate,showValues=true){
   return val>0?`${base} · ${fmtBRL(val)}`:base;
 }
 // Campo de nome do serviço com sugestões do catálogo. onPick(serviço) preenche o resto.
-function SvcPickInput({value,onChange,onPick,division,placeholder,style={},autoFocus,defaultRate=0,showValues=true}){
+function SvcPickInput({value,onChange,onPick,division,placeholder,style={},autoFocus,defaultRate=0,showValues=true,onKeyDown}){
   const catalog=React.useContext(SvcCatalogCtx)||[];
   const [open,setOpen]=useState(false);
+  const [,setTick]=useState(0);
+  const ref=useRef(null);
   const list=open?svcMatches(catalog,value,division):[];
+  const show=list.length>0;
+  // A lista fica fixa na tela (portal), para não ser cortada por cards com overflow; acompanha rolagem e redimensionamento
+  useEffect(()=>{ if(!show) return; const f=()=>setTick(t=>t+1); window.addEventListener("scroll",f,true); window.addEventListener("resize",f); return()=>{window.removeEventListener("scroll",f,true);window.removeEventListener("resize",f);}; },[show]);
   const {flex,minWidth,width,...inpStyle}=style;
+  const r=show&&ref.current?ref.current.getBoundingClientRect():null;
+  const below=r?window.innerHeight-r.bottom:0, up=r&&below<240&&r.top>below;
   return (<div style={{position:"relative",flex,minWidth,width}}>
-    <input value={value} autoFocus={autoFocus} autoComplete="off" placeholder={placeholder}
+    <input ref={ref} value={value} autoFocus={autoFocus} autoComplete="off" placeholder={placeholder} onKeyDown={e=>{if(e.key==="Enter"||e.key==="Escape")setOpen(false);onKeyDown&&onKeyDown(e);}}
       onChange={e=>{onChange(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),150)}
       style={{...inpStyle,width:"100%",boxSizing:"border-box"}}/>
-    {list.length>0&&<div style={{position:"absolute",left:0,right:0,top:"100%",marginTop:4,zIndex:60,background:B.gray900,border:`1px solid ${B.gray600}`,borderRadius:8,overflow:"hidden",boxShadow:"0 8px 24px rgba(0,0,0,.45)"}}>
+    {r&&createPortal(<div style={{position:"fixed",left:r.left,width:Math.max(r.width,260),...(up?{bottom:window.innerHeight-r.top+4}:{top:r.bottom+4}),maxHeight:Math.max(160,(up?r.top:below)-16),overflowY:"auto",zIndex:10050,background:B.gray900,border:`1px solid ${B.gray600}`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.45)",fontFamily:"'Inter','Segoe UI',sans-serif"}}>
       <div style={{padding:"5px 10px",fontSize:9,color:B.gray500,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${B.gray800}`}}>Catálogo</div>
       {list.map(s=><div key={s.id} onMouseDown={e=>{e.preventDefault();onPick(s);setOpen(false);}}
         style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray800}`}}>
         <div style={{fontSize:12,color:B.white,lineHeight:1.3}}>{s.name}</div>
         <div style={{fontSize:10,color:B.gray500,marginTop:2}}>{[s.category,svcEstLabel(s,defaultRate,showValues)].filter(Boolean).join(" · ")}</div>
       </div>)}
-    </div>}
+    </div>,document.body)}
   </div>);
 }
 

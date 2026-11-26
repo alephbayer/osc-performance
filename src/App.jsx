@@ -378,20 +378,30 @@ function PortalHistoryCard({h,v,payments}) {
   </div>);
 }
 
-// Saldo da OS aberta de um veículo no portal do cliente. Cartão do Início e aba Conta usam esta mesma conta.
-function portalVehicleDue(v,tasks,payments,defaultRate){
+// ─── Conta da OS aberta: FONTE ÚNICA do total, pago e saldo por empresa ─────────
+// Mesma regra do fechamento da OS. Performance: tarefas (M.O. + peças + frete das peças) + combustível, reboque,
+// frete avulso e importados do veículo − desconto da OS sobre a M.O. Finishing: tarefas − desconto da Finishing
+// (reboque/frete/importados do veículo ficam só na Performance). Pago = pagamentos sem OS fechada, por divisão.
+// Usada por Conta Corrente, pagamento rápido, A receber, Financeiro, portal e link. Mudou a regra? Mude só aqui.
+function openOsAccount(v,tasks,payments,defaultRate){
+  const r2=n=>Math.round(n*100)/100;
+  const pctOf=x=>parseFloat(String(x||0).replace(",","."))||0;
   const perfTasks=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
   const finTasks=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
-  const perfTotal=v.enteredAt?vehicleTotal(v.id,perfTasks,defaultRate,v):0;
+  const perfOpen=!!v.enteredAt||perfTasks.length>0, finOpen=!!v.enteredAtFinishing||finTasks.length>0;
+  const perfTotal=perfOpen?r2(vehicleTotal(v.id,perfTasks,defaultRate,v)):0;
   const finLabor=finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0);
-  const finMat=finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).mat,0);
-  const finDisc=finLabor*Number(v.osDiscountPctFinishing||0)/100;
-  const finTotal=v.enteredAtFinishing?finLabor+finMat-finDisc:0;
-  const vPayments=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId);
-  const paid=vPayments.reduce((a,p)=>a+Number(p.amount),0);
-  const totalDue=perfTotal+finTotal;
-  return {perfTasks,finTasks,perfTotal,finTotal,finDisc,totalDue,vPayments,paid,balance:totalDue-paid};
+  const finDisc=finLabor*pctOf(v.osDiscountPctFinishing)/100;
+  const finTotal=finOpen?r2(finTasks.reduce((a,t)=>a+taskCost(t,defaultRate).total,0)-finDisc):0;
+  const vPayments=(payments||[]).filter(p=>p.vehicleId===v.id&&!p.osHistoryId);
+  const perfPaid=r2(vPayments.filter(p=>(p.division||"performance")==="performance").reduce((a,p)=>a+Number(p.amount),0));
+  const finPaid=r2(vPayments.filter(p=>p.division==="finishing").reduce((a,p)=>a+Number(p.amount),0));
+  const total=r2(perfTotal+finTotal), paid=r2(perfPaid+finPaid);
+  return {perfTasks,finTasks,perfTotal,finTotal,finDisc,total,totalDue:total,perfPaid,finPaid,paid,vPayments,
+    perfBal:r2(perfTotal-perfPaid),finBal:r2(finTotal-finPaid),balance:r2(total-paid),hasBoth:perfTasks.length>0&&finTasks.length>0};
 }
+// Portal do cliente (cartão do Início e aba Conta)
+const portalVehicleDue=openOsAccount;
 
 function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen,onPhoto}) {
   const vts=tasks.filter(t=>t.vehicleId===v.id&&!t.warranty);
@@ -1044,7 +1054,7 @@ function vehicleTotal(vehicleId, tasks, defaultRate, vehicle) {
   const freightTotal2=(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0), 0);
   const laborSum   = vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor, 0);
   const osDiscount = laborSum * (parseFloat(String(vehicle.osDiscountPct||0).replace(",","."))||0) / 100;
-  return tasksTotal + fuelTotal + towTotal + freightTotal2 + importTotal(vehicle) - osDiscount;
+  return tasksTotal + fuelTotal + Number(vehicle.fuelCost||0) + towTotal + freightTotal2 + importTotal(vehicle) - osDiscount;
 }
 // Valor já EXECUTADO: tarefas concluídas (M.O. + peças + frete) menos o desconto geral sobre a M.O. concluída,
 // mais os extras já lançados (combustível, reboque, frete avulso), que já foram gastos.
@@ -1166,15 +1176,8 @@ function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCred
   // OS abertas
   vehicles.forEach(v=>{
     if(!(v.enteredAt||v.enteredAtFinishing)) return;
-    const perfTasks=tasks.filter(t=>t.vehicleId===v.id&&(t.division||"performance")==="performance");
-    const finTasks=tasks.filter(t=>t.vehicleId===v.id&&t.division==="finishing");
-    const perfTotal=v.enteredAt?vehicleTotal(v.id,perfTasks,defaultRate,v):0;
-    const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-    const finMat=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
-    const finTotal=v.enteredAtFinishing?finLabor+finMat-finLabor*Number(v.osDiscountPctFinishing||0)/100:0;
-    const total=perfTotal+finTotal;
+    const {perfTasks,finTasks,total,paid}=openOsAccount(v,tasks,payments,defaultRate);
     const invested=Math.min(total,(v.enteredAt?executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),true):0)+(v.enteredAtFinishing?executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,true):0));
-    const paid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId).reduce((s,p)=>s+Number(p.amount),0);
     const collect=Math.max(0,invested-paid), receive=Math.max(0,total-paid);
     if(receive<0.01&&collect<0.01) return;
     const c=get(v.clientId);
@@ -1298,18 +1301,7 @@ function groupPaymentsForClient(list){
   });
   return order.map(g=>({...g,note:g.notes.join(" · ")}));
 }
-function divisionBalances(vehicle,tasks,payments,defaultRate){
-  const perfTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&(t.division||"performance")==="performance");
-  const finTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&t.division==="finishing");
-  const perfTotal=vehicleTotal(vehicle.id,perfTasks,defaultRate,vehicle);
-  const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-  const finMat=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
-  const finTotal=finLabor+finMat-finLabor*Number(vehicle.osDiscountPctFinishing||0)/100;
-  const vp=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId);
-  const perfPaid=vp.filter(p=>(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
-  const finPaid=vp.filter(p=>p.division==="finishing").reduce((s,p)=>s+Number(p.amount),0);
-  return {perfTotal,finTotal,perfPaid,finPaid,hasBoth:perfTasks.length>0&&finTasks.length>0};
-}
+function divisionBalances(vehicle,tasks,payments,defaultRate){ return openOsAccount(vehicle,tasks,payments,defaultRate); }
 // Sugestão proporcional ao saldo de cada divisão. O gestor pode digitar a parte da Performance (string)
 // ou a da Finishing ({fin:"..."}); a outra parte é o restante do total.
 function resolveSplit(total,perfStr,perfBal,finBal){
@@ -1362,9 +1354,6 @@ function OverpayNote({amount,owed,what="",onFix,style}){
 }
 function vehiclePaid(vehicleId,payments,division=null) {
   return payments.filter(p=>p.vehicleId===vehicleId&&!p.osHistoryId&&(division===null||(p.division||"performance")===division)).reduce((s,p)=>s+Number(p.amount),0);
-}
-function vehicleBalance(vehicleId,tasks,payments,defaultRate) {
-  return vehicleTotal(vehicleId,tasks,defaultRate)-vehiclePaid(vehicleId,payments);
 }
 // Financial summary across all tasks marked done (only material counts as cost)
 function financeSummary(tasks,defaultRate,vehicles,clients,from,to) {
@@ -5841,9 +5830,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const mech  = mechs[0] || null;  // first mechanic for PDF compat
   const cli   = clients.find(c=>c.id===vehicle.clientId);
   const tasksTotal = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0):0;
-  const towTotal    = managerMode?(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0):0;
-  const fuelTotal   = managerMode&&!isFD?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
-  const freightTotal= managerMode?(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
+  // Reboque, combustível, frete avulso e importados do veículo são da Performance (mesma regra de openOsAccount)
+  const towTotal    = managerMode&&!isFD?(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0):0;
+  const fuelTotal   = managerMode&&!isFD?(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)+Number(vehicle.fuelCost||0):0;
+  const freightTotal= managerMode&&!isFD?(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0):0;
   const parseDiscount=v=>parseFloat(String(v||0).replace(",","."))||0;
   const laborSum    = managerMode?vts.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0):0;
   const osDiscount  = managerMode?laborSum*parseDiscount(isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)/100:0;
@@ -6498,9 +6488,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           </div>
         </div>}
         {(()=>{
-          const towTotal=(vehicle.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
-          const freightTotal=(vehicle.freights||[]).reduce((s,f)=>s+Number(f.value||0),0);
-          const fuelTotal=(vehicle.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0);
+          // towTotal, freightTotal e fuelTotal vêm do topo do card (zero na Finishing)
           const osDiscountAmt=osDiscount; // already computed correctly above with right division field
           const origAmt=total+osDiscountAmt+taskDiscSum(vts,defaultRate);
           if(!managerMode||total<=0) return null;
@@ -6796,18 +6784,9 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   const [useCredit,setUseCredit]=useState(false);
   const [busy,setBusy]=useState(false);
 
-  const vPayments=payments.filter(p=>p.vehicleId===vehicle.id&&!p.osHistoryId).sort((a,b)=>a.paidAt<b.paidAt?1:-1);
-  const perfPaid=vPayments.filter(p=>(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
-  const finPaid=vPayments.filter(p=>p.division==="finishing").reduce((s,p)=>s+Number(p.amount),0);
-  const paid=perfPaid+finPaid;
-
-  const perfTotal=vehicleTotal(vehicle.id,perfTasks,defaultRate,{...vehicle,fuels:vehicle.fuels,tows:vehicle.tows,osDiscountPct:vehicle.osDiscountPct});
-  const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-  const finMat=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
-  const finDiscount=finLabor*Number(vehicle.osDiscountPctFinishing||0)/100;
-  const finTotal=finLabor+finMat-finDiscount;
-  const total=perfTotal+finTotal;
-  const balance=total-paid;
+  const acc=openOsAccount(vehicle,tasks,payments,defaultRate);
+  const vPayments=[...acc.vPayments].sort((a,b)=>a.paidAt<b.paidAt?1:-1);
+  const {perfPaid,finPaid,paid,perfTotal,finTotal,total,balance}=acc;
 
   const submit=async()=>{
     const val=Math.round((parseFloat(String(amount).replace(",","."))||0)*100)/100;
@@ -12366,8 +12345,9 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
     const historyTotal=osHistory
       .filter(h=>h.vehicle_id===v.id&&(h.division||"performance")===finDiv)
       .reduce((s,h)=>s+Number(h.total_value||0),0);
-    // Active OS value uses ALL tasks (not just done)
-    const activeTotal=vtsAll.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
+    // OS aberta: mesma conta da Conta Corrente (inclui reboque, combustível, frete, importados e desconto da OS)
+    const accO=openOsAccount(v,tasks,payments,defaultRate);
+    const activeTotal=finDiv==="finishing"?accO.finTotal:accO.perfTotal;
     const total=Math.round((activeTotal+historyTotal)*100)/100;
     if(total===0&&paidGlobal===0) return null;
     const cost=vtsDone.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
@@ -12686,19 +12666,7 @@ function PayMethodsBox() {
   );
 }
 function publicFinInfo(v,perfTasks,finTasks,payments,defaultRate){
-  const perfPaid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId&&(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
-  const finPaid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId&&p.division==="finishing").reduce((s,p)=>s+Number(p.amount),0);
-  const paid=perfPaid+finPaid;
-  const perfLabor=perfTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-  const perfParts=perfTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
-  const perfFr=perfTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
-  const fuel=(v.fuels||[]).reduce((s,f)=>s+Number(f.value||0),0)+Number(v.fuelCost||0);
-  const tow=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
-  const vFr=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0)+importTotal(v);
-  const perfTotal=perfLabor+perfParts+perfFr+fuel+tow+vFr-perfLabor*Number(v.osDiscountPct||0)/100;
-  const finLabor=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
-  const finTotal=finLabor+finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat+taskCost(t,defaultRate).freight,0)-finLabor*Number(v.osDiscountPctFinishing||0)/100;
-  const total=perfTotal+finTotal;
+  const {total,paid}=openOsAccount(v,[...perfTasks,...finTasks],payments,defaultRate);
   const executed=total>0?Math.min(total,executedValue(perfTasks,defaultRate,v.osDiscountPct,vehicleExtras(v),!!v.enteredAt)+executedValue(finTasks,defaultRate,v.osDiscountPctFinishing,0,!!v.enteredAtFinishing)):0;
   return {total,paid,executed,balance:Math.max(0,total-paid),pending:Math.max(0,executed-paid)};
 }
@@ -13384,9 +13352,8 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
       {payCardFn(false)}
       {/* ── Account / Financeiro ── */}
       {(()=>{
-        const perfPaid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId&&(p.division||"performance")==="performance").reduce((s,p)=>s+Number(p.amount),0);
-        const finPaid=payments.filter(p=>p.vehicleId===v.id&&!p.osHistoryId&&p.division==="finishing").reduce((s,p)=>s+Number(p.amount),0);
-        const activePaid=perfPaid+finPaid;
+        const accV=openOsAccount(v,[...perfTasks,...finTasks],payments,defaultRate);
+        const {perfPaid,finPaid}=accV, activePaid=accV.paid;
         const pastOSs=osHistory.filter(h=>h.vehicle_id===v.id);
         const totalOwedPast=pastOSs.reduce((s,h)=>{const paid=payments.filter(p=>p.osHistoryId===h.id).reduce((a,p)=>a+Number(p.amount),0);return s+Math.max(0,Number(h.total_value||0)-paid);},0);
         const perfLaborTotal=perfTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
@@ -13396,13 +13363,13 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
         const towTotal=(v.tows||[]).reduce((s,t)=>s+Number(t.value||0),0);
         const perfDiscount=perfLaborTotal*Number(v.osDiscountPct||0)/100;
         const vFreightTotal=(v.freights||[]).reduce((s,f)=>s+Number(f.value||0),0)+importTotal(v);
-        const perfTotal=perfLaborTotal+perfPartsTotal+perfFreightTotal+fuelTotal+towTotal+vFreightTotal-perfDiscount;
+        const perfTotal=accV.perfTotal; // parcelas acima servem só para o detalhamento
         const finLaborTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).labor,0);
         const finPartsTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
         const finFreightTotal=finTasks.reduce((s,t)=>s+taskCost(t,defaultRate).freight,0);
         const finDiscount=finLaborTotal*Number(v.osDiscountPctFinishing||0)/100;
-        const finTotal=finLaborTotal+finPartsTotal+finFreightTotal-finDiscount;
-        const activeTotal=perfTotal+finTotal;
+        const finTotal=accV.finTotal;
+        const activeTotal=accV.total;
         const perfOrig=perfTotal>0?perfTotal+taskDiscSum(perfTasks,defaultRate)+perfDiscount:perfTotal;
         const finOrig=finTotal>0?finTotal+taskDiscSum(finTasks,defaultRate)+finDiscount:finTotal;
         const origTotal=perfOrig+finOrig;
@@ -13834,7 +13801,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.232";
+const APP_VERSION = "2026.11.26.233";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14742,8 +14709,9 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
   const todo=vts.filter(t=>!t.done), done=vts.filter(t=>t.done).sort((a,b)=>new Date(b.completedAt||0)-new Date(a.completedAt||0));
   // Financeiro da OS (mesma regra do card: tarefas + combustível/reboque/frete − desconto sobre M.O.)
   const sumT=l=>l.reduce((a,t)=>a+taskCost(t,defaultRate).total,0);
-  const tows=(vehicle.tows||[]).reduce((a,t)=>a+Number(t.value||0),0), frs=(vehicle.freights||[]).reduce((a,f)=>a+Number(f.value||0),0)+(isFD?0:importTotal(vehicle));
-  const fuels=isFD?0:(vehicle.fuels||[]).reduce((a,f)=>a+Number(f.value||0),0);
+  // Reboque, combustível, frete avulso e importados do veículo são da Performance (mesma regra de openOsAccount)
+  const tows=isFD?0:(vehicle.tows||[]).reduce((a,t)=>a+Number(t.value||0),0), frs=isFD?0:(vehicle.freights||[]).reduce((a,f)=>a+Number(f.value||0),0)+importTotal(vehicle);
+  const fuels=isFD?0:(vehicle.fuels||[]).reduce((a,f)=>a+Number(f.value||0),0)+Number(vehicle.fuelCost||0);
   const extrasV=tows+frs+fuels;
   const discPct=parseFloat(String((isFD?vehicle.osDiscountPctFinishing:vehicle.osDiscountPct)||0).replace(",","."))||0;
   const laborAll=allVts.reduce((a,t)=>a+taskCost(t,defaultRate).labor,0);

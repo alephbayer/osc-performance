@@ -3,6 +3,14 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "fix",
+        "text": "Saldo da OS aberta calculado num lugar só (Conta Corrente, pagamento rápido, A receber, Financeiro, portal e link); na Finishing, reboque e frete do veículo deixam de entrar no total (ficam na Performance)"
+      },
+      {
+        "type": "fix",
+        "text": "Financeiro: o saldo das OSs abertas agora inclui reboque, combustível, frete, peças importadas e o desconto da OS, igual à Conta Corrente"
+      },
+      {
         "type": "feat",
         "text": "Conta Corrente da OS aberta: quando o cliente tem crédito, aparece \"Usar crédito\", que lança o pagamento com o crédito (também dá para dividir entre Performance e Finishing)"
       },

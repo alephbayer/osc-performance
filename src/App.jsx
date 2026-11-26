@@ -546,6 +546,8 @@ function ClientNotesTab({client, vehicles}) {
 
 // Crédito do cliente: lista e função de aplicar, disponíveis para a Conta Corrente sem passar props por todas as telas
 const CreditCtx=React.createContext(null);
+// Margem dos modais centralizados: barra de status e indicador do iPhone (o iOS desfoca o topo)
+const MODAL_PAD="calc(env(safe-area-inset-top) + 56px) 12px calc(env(safe-area-inset-bottom) + 20px)";
 const OSC_WA="5521966816241"; // WhatsApp da oficina (portal do cliente)
 // ─── Client Portal ────────────────────────────────────────────────────────────
 function PixPaymentBox() {
@@ -3686,7 +3688,7 @@ function PhotoLightbox({items,current,onChange,onClose,taskLabel}) {
   const label=taskLabel&&cur.taskId?taskLabel(cur.taskId):null;
   const arrow=(side,d,show)=>show&&<button onClick={e=>{e.stopPropagation();go(d);}} aria-label={d>0?"Próxima foto":"Foto anterior"}
     style={{position:"fixed",top:"50%",[side]:10,transform:"translateY(-50%)",width:44,height:44,borderRadius:99,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.12)",color:"#fff",fontSize:22,cursor:"pointer",zIndex:2,display:"flex",alignItems:"center",justifyContent:"center"}}>{d>0?"›":"‹"}</button>;
-  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={onClose}>
+  return <div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={onClose}>
     {nav&&<div style={{position:"fixed",top:22,left:0,right:0,textAlign:"center",color:"rgba(255,255,255,.75)",fontSize:12,fontWeight:700,letterSpacing:1.5,pointerEvents:"none"}}>{idx+1} / {n}</div>}
     <ZoomImg src={urlOf(current)} onSwipe={nav?d=>goRef.current(d):undefined} style={{maxWidth:"95vw",maxHeight:"75vh",objectFit:"contain",borderRadius:8}}/>
     {(cur.caption||label)&&<div style={{textAlign:"center",padding:"0 20px"}}>
@@ -3839,8 +3841,8 @@ function PhotoEditor({file,aspect=1,onCancel,onDone,onFail}){
   const ico=(d)=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html:d}}/>;
   const btn={display:"inline-flex",alignItems:"center",justifyContent:"center",width:34,height:30,borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.gray200,cursor:"pointer"};
   const lab={fontSize:9.5,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:B.gray400,width:54,flexShrink:0};
-  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,padding:16,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}} onClick={onCancel}>
-    <div style={{background:B.gray800,borderRadius:16,border:`1px solid ${B.gray700}`,padding:16,width:STAGE+32,maxWidth:"100%",maxHeight:"96vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,padding:MODAL_PAD,boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}} onClick={onCancel}>
+    <div style={{background:B.gray800,borderRadius:16,border:`1px solid ${B.gray700}`,padding:16,width:STAGE+32,maxWidth:"100%",maxHeight:"min(96vh, 100%)",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
       <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase",color:B.amber,marginBottom:10}}>Ajustar foto</div>
       <div style={{width:STAGE,height:STAGE,borderRadius:10,overflow:"hidden",background:"#fff",border:`1px solid ${B.gray600}`,margin:"0 auto"}}>
         {img?<canvas ref={cv} style={{width:STAGE,height:STAGE,display:"block",touchAction:"none",cursor:"grab"}} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}/>
@@ -3916,7 +3918,7 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
   };
 
   return (<>
-    {confirmRemove!==null&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}} onClick={()=>setConfirmRemove(null)}>
+    {confirmRemove!==null&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}} onClick={()=>setConfirmRemove(null)}>
       <div style={{background:B.gray800,borderRadius:14,padding:24,maxWidth:320,width:"100%",border:`1px solid ${B.red}44`}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:15,fontWeight:800,color:B.white,marginBottom:8}}>Excluir foto?</div>
         <div style={{fontSize:13,color:B.gray400,marginBottom:20}}>Esta ação não pode ser desfeita.</div>
@@ -3971,8 +3973,8 @@ function PhotoGallery({photos=[],onAdd,onAddMany,onRemove,onUpdate,readOnly=fals
       }} folder="os-photos" label="+ Foto" multiple style={{width:maxH,height:maxH,justifyContent:"center",flexDirection:"column",gap:6,borderRadius:8,fontSize:11}}/>}
     </div>
     {lightbox&&(
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
-        <ZoomImg src={lightbox.url} style={{maxWidth:"95vw",maxHeight:"85vh",objectFit:"contain",borderRadius:8}}/>
+      <div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10}} onClick={()=>setLB(null)}>
+        <ZoomImg src={lightbox.url} style={{maxWidth:"95vw",maxHeight:"min(85vh, 100%)",objectFit:"contain",borderRadius:8}}/>
         {(lightbox.caption||tasks.find(t=>t.id===lightbox.taskId))&&<div style={{textAlign:"center",color:B.gray200,fontSize:13}}>
           {tasks.find(t=>t.id===lightbox.taskId)&&<div style={{color:B.purple,fontWeight:700,marginBottom:2}} style={{display:"flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>{tasks.find(t=>t.id===lightbox.taskId).label}</div>}
           {lightbox.caption&&<div>{lightbox.caption}</div>}
@@ -3988,7 +3990,7 @@ function ShareModal({title,subtitle,phone,text,accentColor=B.wa,onClose}) {
   const [cp,sC]=useState(false);
   const num=cleanPhone(phone||"");
   const copy=()=>navigator.clipboard?.writeText(text).then(()=>{sC(true);setTimeout(()=>sC(false),2000);});
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:80,padding:16}} onClick={onClose}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:80,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:500,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,boxShadow:"0 24px 80px rgba(0,0,0,.7)"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"16px 20px",background:B.gray900,borderBottom:`2px solid ${accentColor}`,display:"flex",alignItems:"center",gap:12}}>
         <div style={{width:40,height:40,borderRadius:9,background:accentColor,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IPhone s={18} c={B.white}/></div>
@@ -4010,7 +4012,7 @@ function ShareModal({title,subtitle,phone,text,accentColor=B.wa,onClose}) {
 // ─── TransferModal ────────────────────────────────────────────────────────────
 // ─── Confirm Modal (generic confirmation dialog) ──────────────────────────────
 function ConfirmModal({title,message,confirmLabel="Confirmar",danger=true,onConfirm,onCancel}) {
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onCancel}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onCancel}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:380,width:"100%",overflow:"hidden",border:`1px solid ${danger?B.red+"55":B.gray600}`,boxShadow:"0 24px 80px rgba(0,0,0,.7)"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"16px 20px",background:B.gray900,borderBottom:`2px solid ${danger?B.red:B.gray600}`,display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:36,height:36,borderRadius:8,background:danger?`${B.red}22`:B.gray700,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -4074,7 +4076,7 @@ function CategorySelect({value,onChange,categories=CATEGORIES}) {
 }
 
 function TransferModal({title,subtitle,items,onPick,onClose}) {
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",overflow:"hidden",border:`1px solid ${B.gray600}`}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:34,height:34,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center"}}><ISwap s={16} c={B.orange}/></div>
@@ -4102,8 +4104,8 @@ function VehiclePickerModal({vehicles,employees,clients,employeeId,onPickExistin
     !(v.mechanicIds||[v.employeeId]).includes(employeeId) &&
     (v.model.toLowerCase().includes(q.toLowerCase())||v.plate.toLowerCase().includes(q.toLowerCase()))
   );
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",overflow:"hidden",border:`1px solid ${B.orange}55`,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",overflow:"hidden",border:`1px solid ${B.orange}55`,maxHeight:"min(80vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <div style={{width:34,height:34,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={16} c={B.orange}/></div>
         <div><div style={{fontWeight:700,fontSize:14,color:B.white}}>Adicionar veículo</div><div style={{fontSize:12,color:B.gray400}}>Escolha um existente ou cadastre novo</div></div>
@@ -4152,8 +4154,8 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose,title="Abrir nova OS",
   const [selectedEmp,setSelectedEmp]=useState(null);
   const [entryInput,setEntryInput]=useState(new Date().toISOString().slice(0,16));
   const canConfirm = optional || !!selectedEmp;
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",overflow:"hidden",border:`1px solid ${accentColor}55`,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",overflow:"hidden",border:`1px solid ${accentColor}55`,maxHeight:"min(80vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${accentColor}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <div style={{width:34,height:34,borderRadius:8,background:`${accentColor}18`,display:"flex",alignItems:"center",justifyContent:"center"}}><IFileText s={16} c={accentColor}/></div>
         <div>
@@ -4232,8 +4234,8 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
     });
   };
 
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:16,maxWidth:480,width:"100%",overflow:"hidden",border:`1px solid ${B.orange}55`,maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:480,width:"100%",overflow:"hidden",border:`1px solid ${B.orange}55`,maxHeight:"min(90vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
 
       {/* Header */}
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
@@ -4339,7 +4341,7 @@ function StockPickerModal({stock,onPick,onClose}) {
   const [quoteOnly,setQuoteOnly]=useState(false);
   const [hideZero,setHideZero]=useState(false);
   const filtered=stock.filter(s=>(s.name.toLowerCase().includes(q.toLowerCase())||s.brand.toLowerCase().includes(q.toLowerCase()))&&!(hideZero&&Number(s.qty)<=0));
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:95,padding:16}} onClick={onClose}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:95,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",overflow:"hidden",border:`1px solid ${B.gray600}`}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.purple}`,display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:34,height:34,borderRadius:8,background:B.purpleBg,display:"flex",alignItems:"center",justifyContent:"center"}}><IWarehouse s={16} c={B.purple}/></div>
@@ -4975,7 +4977,7 @@ function NewOSModal({division,vehicles,clients,employees,onClose,onConfirm}) {
     return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
   });
   const relevantEmps=employees.filter(e=>isFin?e.division==="finishing":(e.division||"performance")==="performance");
-  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+  return(<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
     <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:420,width:"100%",border:`1px solid ${color}44`}}>
       <div style={{fontWeight:800,fontSize:16,color:B.white,marginBottom:4}}>{isFin?<><Ic n="brush"/> Nova OS — Finishing</>:<><Ic n="wrench"/> Nova OS — Performance</>}</div>
       <div style={{fontSize:12,color:B.gray400,marginBottom:14}}>Selecione o veículo para abrir a OS</div>
@@ -5057,8 +5059,8 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
 
   const canSave=selected.size>0||newItems.some(i=>i.label.trim())||notes.trim();
 
-  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-    <div style={{background:B.gray900,borderRadius:16,padding:0,maxWidth:480,width:"100%",border:`1px solid ${B.purple}44`,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+  return(<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,0.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    <div style={{background:B.gray900,borderRadius:16,padding:0,maxWidth:480,width:"100%",border:`1px solid ${B.purple}44`,maxHeight:"min(90vh, 100%)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       {/* Header */}
       <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -5601,7 +5603,7 @@ function StockItemPickModal({stock,suggested=[],onPick,onClose}){
   const sugIds=new Set(suggested.map(x=>x.id));
   const base=stock.filter(s=>stockSearchMatch(q,s.name+" "+(s.brand||"")+" "+(s.type||"")));
   const list=q?base.slice(0,80):[...stock.filter(s=>sugIds.has(s.id)),...stock.filter(s=>!sugIds.has(s.id))].slice(0,80);
-  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1100,padding:16,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}} onClick={onClose}>
+  return createPortal(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1100,padding:MODAL_PAD,boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",overflow:"hidden",border:`1px solid ${B.gray600}`}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.purple}`}}>
         <div style={{fontWeight:700,fontSize:14,color:B.white}}>Adicionar compra a um item existente</div>
@@ -6675,7 +6677,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     }} onCancel={()=>setConfirmDelV(false)}/>}
     {confirmDeliver&&<ConfirmModal title={isFD?"Encerrar OS Finishing?":"Confirmar entrega?"} danger={false} message={isFD?<>Encerrar a OS da <b style={{color:FD.primary}}>Finishing Division</b> para <b style={{color:B.white}}>{vehicle.model}</b>?</>:<>Registrar a entrega de <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b> ao cliente? O timer será encerrado.</>} confirmLabel={isFD?"Encerrar Finishing":"Confirmar entrega"} onConfirm={()=>{isFD?onDeliverFinishing&&onDeliverFinishing(vehicle.id):onDeliver&&onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
     {showNextVisit&&<NextVisitModal vehicle={vehicle} tasks={tasks} clients={clients} defaultRate={defaultRate} onClose={()=>setShowNextVisit(false)} onCreateAppointment={onCreateAppointment} onDeleteTask={onDeleteTask}/>}
-    {showTLNote&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    {showTLNote&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{background:B.gray900,borderRadius:14,padding:20,maxWidth:380,width:"100%",border:`1px solid ${B.blue}44`}}>
         <div style={{fontWeight:800,fontSize:14,color:B.white,marginBottom:4}}><Ic n="chat"/> Nota para o cliente</div>
         <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>Aparece na timeline do link de acompanhamento</div>
@@ -7191,8 +7193,8 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
         {filtered.map(item=><StockRow key={item.id} item={item} salePrice={salePrice(item)} onLightbox={setLB} onOpen={()=>setOpenItem(item)}/>)}
       </div>}
 
-    {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
-      <ZoomImg src={lightbox} style={{maxWidth:"95vw",maxHeight:"95vh",objectFit:"contain",borderRadius:8}}/>
+    {lightbox&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
+      <ZoomImg src={lightbox} style={{maxWidth:"95vw",maxHeight:"min(95vh, 100%)",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
 
@@ -10440,7 +10442,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
     </div>}
 
     {/* Confirm convert */}
-    {convertPick&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    {convertPick&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,0.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{background:B.gray900,borderRadius:16,padding:24,maxWidth:400,width:"100%",border:`1px solid ${B.orange}44`}}>
         <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:4}}>Converter em OS</div>
         <div style={{fontSize:12,color:B.gray400,marginBottom:16}}>
@@ -11150,8 +11152,8 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
         </button>
       </div>}
     </div>}
-    {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightbox(null)}>
-      <ZoomImg src={lightbox} style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
+    {lightbox&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightbox(null)}>
+      <ZoomImg src={lightbox} style={{maxWidth:"95vw",maxHeight:"min(90vh, 100%)",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLightbox(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.15)",border:"none",borderRadius:99,padding:"8px 12px",cursor:"pointer",color:"#fff",fontSize:16}}>✕</button>
     </div>}
   </div>);
@@ -11476,7 +11478,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     </div>}
 
     {/* Stock export modal for materiais */}
-    {stockModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setStockModal(null)}>
+    {stockModal&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setStockModal(null)}>
       <div style={{background:B.gray900,borderRadius:16,padding:24,width:"100%",maxWidth:420,border:`1px solid ${B.amber}44`}} onClick={e=>e.stopPropagation()}>
         <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:4}}><Ic n="pkg"/> {stockModal.name} recebido!</div>
         <div style={{fontSize:12,color:B.gray400,marginBottom:18}}>O que deseja fazer com estes materiais?</div>
@@ -11870,7 +11872,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
   };
   return (<>
     {/* Receive decision modal */}
-    {receiveModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReceiveModal(null)}>
+    {receiveModal&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReceiveModal(null)}>
       <div style={{background:B.gray800,borderRadius:18,maxWidth:380,width:"100%",border:`1px solid ${B.green}55`,padding:24}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:22,textAlign:"center",marginBottom:8}}><Ic n="pkg"/></div>
         <div style={{fontWeight:800,fontSize:16,color:B.white,textAlign:"center",marginBottom:4}}>Peça recebida!</div>
@@ -11896,7 +11898,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
     </div>}
 
     {/* Return confirmation modal */}
-    {returnModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReturnModal(null)}>
+    {returnModal&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={()=>setReturnModal(null)}>
       <div style={{background:B.gray800,borderRadius:18,maxWidth:380,width:"100%",border:`1px solid ${B.red}55`,padding:24}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:22,textAlign:"center",marginBottom:8}}>↩</div>
         <div style={{fontWeight:800,fontSize:16,color:B.white,textAlign:"center",marginBottom:4}}>Confirmar devolução?</div>
@@ -12650,8 +12652,8 @@ function SettingsPanel({defaultRate,onSaveRate,company,onSaveCompany,onClose}) {
     onSaveCompany(comp);
     onClose();
   };
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:80,padding:16}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:80,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",overflow:"hidden",border:`1px solid ${B.gray700}`,maxHeight:"min(90vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"14px 18px",background:B.gray900,borderBottom:`2px solid ${B.amber}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <div style={{width:36,height:36,borderRadius:8,background:B.amberBg,display:"flex",alignItems:"center",justifyContent:"center"}}><IGear s={17} c={B.amber}/></div>
         <div><div style={{fontWeight:700,fontSize:14,color:B.white}}>Configurações</div><div style={{fontSize:12,color:B.gray400}}>Visível apenas ao gestor</div></div>
@@ -13952,7 +13954,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.243";
+const APP_VERSION = "2026.11.26.244";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13960,8 +13962,8 @@ function ChangelogModal({onClose}) {
     fetch("/changelog.json?v="+APP_VERSION)
       .then(r=>r.json()).then(setEntries).catch(()=>{});
   },[]);
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.orange}55`,overflow:"hidden",maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.orange}55`,overflow:"hidden",maxHeight:"min(80vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
       <div style={{padding:"16px 20px",background:B.gray900,borderBottom:`2px solid ${B.orange}`,display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:36,height:36,borderRadius:9,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="spark"/></div>
         <div>
@@ -14222,8 +14224,8 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
   if(embedded) return (<div>
     {sortedHistory.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray500,fontSize:13}}>Nenhuma OS anterior.</div>}
     {historyCards}
-    {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
-      <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
+    {lb&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
+      <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"min(90vh, 100%)",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
   </div>);
@@ -14344,8 +14346,8 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       </div>
     </div>
 
-    {lb&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
-      <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"90vh",objectFit:"contain",borderRadius:8}}/>
+    {lb&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
+      <img src={lb} alt="" style={{maxWidth:"95vw",maxHeight:"min(90vh, 100%)",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLB(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
   </div>);
@@ -14377,7 +14379,7 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
     onClose();
   };
 
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onClose}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:420,width:"100%",border:`2px solid #f59e0b55`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
       {/* Header */}
       <div style={{background:B.gray900,borderBottom:`2px solid #f59e0b`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
@@ -14480,7 +14482,7 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
     inputRef.current?.focus();
   };
 
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onClose}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",border:`2px solid ${B.green}55`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
       {/* Header */}
       <div style={{background:B.gray900,borderBottom:`2px solid ${B.green}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
@@ -14728,8 +14730,8 @@ function OrderPartModal({target,vehicleId,onSubmit,onClose}) {
       onClose();
     }catch(e){ setSaving(false); }
   };
-  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.amber}55`,borderRadius:16,width:"100%",maxWidth:460,maxHeight:"92vh",overflowY:"auto",padding:18,color:B.white}}>
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9600,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:MODAL_PAD,boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.amber}55`,borderRadius:16,width:"100%",maxWidth:460,maxHeight:"min(92vh, 100%)",overflowY:"auto",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:4}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Pedir material</div>
         <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
@@ -14783,8 +14785,8 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
     await onSave(label.trim(),category||null,extra);
     setSaving(false); onClose();
   };
-  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9500,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:16,width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",padding:18,color:B.white}}>
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9500,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",padding:MODAL_PAD,boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:16,width:"100%",maxWidth:520,maxHeight:"min(92vh, 100%)",overflowY:"auto",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:12}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Nova tarefa</div>
         <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
@@ -15611,8 +15613,8 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
           }}/>        </label>
       </div>
     </div>
-    {lbPhoto&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLbPhoto(null)}>
-      <ZoomImg src={lbPhoto} style={{maxWidth:"95vw",maxHeight:"92vh",objectFit:"contain",borderRadius:8}}/>
+    {lbPhoto&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLbPhoto(null)}>
+      <ZoomImg src={lbPhoto} style={{maxWidth:"95vw",maxHeight:"min(92vh, 100%)",objectFit:"contain",borderRadius:8}}/>
       <button onClick={()=>setLbPhoto(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.1)",border:"none",borderRadius:99,padding:10,cursor:"pointer"}}><IX s={18} c={B.white}/></button>
     </div>}
   </div>);
@@ -15658,8 +15660,8 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
     if(!fromStockItem) nameRef.current?.focus();
   };
 
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",border:`2px solid ${B.blue}55`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:460,width:"100%",border:`2px solid ${B.blue}55`,overflow:"hidden",maxHeight:"min(90vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
       {/* Header */}
       <div style={{background:B.gray900,borderBottom:`2px solid ${B.blue}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}><Ic n="pkg"/></div>
@@ -15860,8 +15862,8 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
     onClose();
   };
 
-  return (<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onClose}>
-    <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",border:`2px solid ${B.green}55`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+  return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:16}} onClick={onClose}>
+    <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",border:`2px solid ${B.green}55`,overflow:"hidden",maxHeight:"min(90vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
 
       {/* Header */}
       <div style={{background:B.gray900,borderBottom:`2px solid ${B.green}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
@@ -20486,8 +20488,8 @@ function MainApp() {
           }catch(e){errToast(e);}
           setSaving(false);
         };
-        return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickPedidoOS(false)}>
-          <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.amber}44`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+        return(<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickPedidoOS(false)}>
+          <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.amber}44`,overflow:"hidden",maxHeight:"min(90vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
               <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="cart"/></div>
               <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Novo pedido de peça</div><div style={{fontSize:11,color:B.gray400}}>Para uma OS em andamento</div></div>
@@ -20568,8 +20570,8 @@ function MainApp() {
           }catch(e){errToast(e);}
           setSaving(false);
         };
-        return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickPecasVeiculo(false)}>
-          <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.purple}44`,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+        return(<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickPecasVeiculo(false)}>
+          <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.purple}44`,overflow:"hidden",maxHeight:"min(90vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
               <div style={{width:36,height:36,borderRadius:10,background:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="nut"/></div>
               <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Adicionar peça ao veículo</div><div style={{fontSize:11,color:B.gray400}}>Peça enviada pelo cliente</div></div>
@@ -20638,7 +20640,7 @@ function MainApp() {
           }catch(e){errToast(e);}
           setSaving(false);
         };
-        return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickMatSortidos(false)}>
+        return(<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.8)",backdropFilter:"blur(8px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowQuickMatSortidos(false)}>
           <div style={{background:B.gray900,borderRadius:18,maxWidth:420,width:"100%",border:`1px solid ${B.amber}44`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="pkg"/></div>

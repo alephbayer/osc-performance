@@ -107,6 +107,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Portal: lista de pagamentos da OS aberta volta a mostrar o valor (tinha saído no redesenho da aba Conta) (v2026.11.26.239)
 - [x] Botão "Quitar tudo" na Conta Corrente e no pagamento rápido: saldo da OS inteira, dividido entre as empresas quando há as duas (v2026.11.26.236)
 - [x] Recibo testado pelo Aleph no celular (funcionou). Conta Corrente redesenhada para o celular: resumo com saldo em destaque, campos em grade, lista de pagamentos com ações ao tocar (v2026.11.26.241). Conferida em tela de celular com dados de exemplo. Pagamentos da OS fechada no mesmo visual (v2026.11.26.242)
+- [x] Modais centralizados com margem da barra de status/indicador do iPhone (`MODAL_PAD`, 35 janelas; altura máxima limitada à área livre) (v2026.11.26.243/244). Ficaram de fora telas cheias e folhas de baixo (QuickActionSheet, NovaOSModal, VehicleStagesPage), que já tratam a barra ou abrem de baixo. Não testado no iPhone janela por janela
 - [x] Filtro em Pagamentos do cliente (período e forma, total do filtro) (v2026.11.26.237). Todas as melhorias levantadas na revisão de 2026-11-26 foram feitas
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar

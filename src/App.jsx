@@ -779,7 +779,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
                 {v.photo?<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>:<div style={{width:44,height:44,borderRadius:10,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.gray400}/></div>}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
-                  <div style={{fontSize:11,color:B.gray500,marginTop:2}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/>{v.color?` · ${v.color}`:""}{ld?` · última visita ${new Date(ld).toLocaleDateString("pt-BR")}`:""}</div>
+                  <div style={{fontSize:11,color:B.gray500,marginTop:4,display:"flex",alignItems:"center",gap:"4px 10px",flexWrap:"wrap"}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/><CarSpecs vehicle={v} style={{color:B.gray400}}/>{ld&&<span>última visita {new Date(ld).toLocaleDateString("pt-BR")}</span>}</div>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
               </button>
@@ -852,7 +852,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
               {v.photo?<img src={v.photo} alt="" style={{width:30,height:30,borderRadius:8,objectFit:"cover"}}/>:<div style={{width:30,height:30,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={15} c={B.gray400}/></div>}
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v} stack/></div>
-                <div style={{fontSize:11,color:B.gray500}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/></div>
+                <div style={{fontSize:11,color:B.gray500,marginTop:3,display:"flex",alignItems:"center",gap:"4px 10px",flexWrap:"wrap"}}><Plate plate={v.plate} black={v.blackPlate} fs={9.5}/><CarSpecs vehicle={v} style={{color:B.gray400}}/></div>
               </div>
             </div>
             <div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,overflow:"hidden"}}>
@@ -13273,7 +13273,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
             {hasFin&&v.osNumberFinishing&&<span style={{fontSize:11,color:FD.primary,fontFamily:"monospace"}}>{fmtOSFD(v.osNumberFinishing)}</span>}
           </div>
           <div style={{fontWeight:900,fontSize:26,color:B.white,letterSpacing:-.5,lineHeight:1.1}}><VehName v={v} stack/></div>
-          <div style={{fontSize:13,color:B.gray400,marginTop:5}}>{[v.year,v.color,v.plate&&("Placa "+v.plate)].filter(Boolean).join(" · ")}</div>
+          <div style={{display:"flex",alignItems:"center",gap:"6px 14px",flexWrap:"wrap",marginTop:10}}><Plate plate={v.plate} black={v.blackPlate} fs={14}/><CarSpecs vehicle={v} style={{fontSize:13,color:B.gray300}}/></div>
           {ts.length>0&&<div style={{marginTop:16}}>
             <div style={{height:8,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/></div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:8,fontSize:12}}>
@@ -14221,7 +14221,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.276";
+const APP_VERSION = "2026.11.26.277";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

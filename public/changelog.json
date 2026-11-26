@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Portal do cliente e link de acompanhamento: placa em miniatura (Mercosul, antiga ou preta) e cor com bolinha, ano e motor"
+      },
+      {
+        "type": "fix",
         "text": "Cards do carro no PC (Oficina e Veículos): cor com bolinha, ano e motor no mesmo formato do celular"
       },
       {

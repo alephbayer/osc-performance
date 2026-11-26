@@ -1780,7 +1780,7 @@ export const db = {
       id:q.id, createdAt:q.created_at, updatedAt:q.updated_at,
       clientId:q.client_id, vehicleId:q.vehicle_id,
       tempName:q.temp_name||"", tempPhone:q.temp_phone||"", tempEmail:q.temp_email||"",
-      tempModel:q.temp_model||"", tempPlate:q.temp_plate||"",
+      tempModel:q.temp_model||"", tempPlate:q.temp_plate||"", tempVehicle:q.temp_vehicle||{},
       description:q.description||"", division:q.division||"performance",
       status:q.status||"draft", notes:q.notes||"",
       items:q.items||[], approvedItems:q.approved_items||[],
@@ -1803,7 +1803,7 @@ export const db = {
     if(error) throw error;
     return {id:data.id,createdAt:data.created_at,clientId:data.client_id,vehicleId:data.vehicle_id,
       tempName:data.temp_name||"",tempPhone:data.temp_phone||"",tempEmail:data.temp_email||"",
-      tempModel:data.temp_model||"",tempPlate:data.temp_plate||"",
+      tempModel:data.temp_model||"",tempPlate:data.temp_plate||"",tempVehicle:data.temp_vehicle||{},
       description:data.description||"",division:data.division||"performance",
       status:data.status||"draft",notes:data.notes||"",
       items:data.items||[],approvedItems:data.approved_items||[],
@@ -1813,13 +1813,13 @@ export const db = {
     const {data,error}=await supabase.from("quotes").insert({
       client_id:q.clientId||null, vehicle_id:q.vehicleId||null,
       temp_name:q.tempName||null, temp_phone:q.tempPhone||null, temp_email:q.tempEmail||null,
-      temp_model:q.tempModel||null, temp_plate:q.tempPlate||null,
+      temp_model:q.tempModel||null, temp_plate:q.tempPlate||null, temp_vehicle:q.tempVehicle&&Object.keys(q.tempVehicle).length?q.tempVehicle:null,
       description:q.description||"", division:q.division||"performance",
       status:"draft", notes:q.notes||"", items:q.items||[],
     }).select().single();
     if(error) throw error;
     return {id:data.id,createdAt:data.created_at,clientId:data.client_id,vehicleId:data.vehicle_id,
-      tempName:data.temp_name||"",tempPhone:data.temp_phone||"",tempModel:data.temp_model||"",tempPlate:data.temp_plate||"",
+      tempName:data.temp_name||"",tempPhone:data.temp_phone||"",tempModel:data.temp_model||"",tempPlate:data.temp_plate||"",tempVehicle:data.temp_vehicle||{},
       description:data.description||"",division:data.division||"performance",status:data.status||"draft",
       notes:data.notes||"",items:data.items||[],approvedItems:[],approvedAt:null,rejectedAt:null,appointmentId:null};
   },
@@ -1834,6 +1834,12 @@ export const db = {
     if(patch.clientId!==undefined) map.client_id=patch.clientId;
     if(patch.notes!==undefined) map.notes=patch.notes;
     if(patch.description!==undefined) map.description=patch.description;
+    if(patch.vehicleId!==undefined) map.vehicle_id=patch.vehicleId;
+    if(patch.tempName!==undefined) map.temp_name=patch.tempName||null;
+    if(patch.tempPhone!==undefined) map.temp_phone=patch.tempPhone||null;
+    if(patch.tempModel!==undefined) map.temp_model=patch.tempModel||null;
+    if(patch.tempPlate!==undefined) map.temp_plate=patch.tempPlate||null;
+    if(patch.tempVehicle!==undefined) map.temp_vehicle=patch.tempVehicle&&Object.keys(patch.tempVehicle).length?patch.tempVehicle:null;
     map.updated_at=new Date().toISOString();
     const {error}=await supabase.from("quotes").update(map).eq("id",id);
     if(error) throw error;

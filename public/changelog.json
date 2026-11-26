@@ -4,6 +4,14 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Cadastros rápidos de veículo (card do mecânico, Nova OS e orçamento com veículo novo) com todos os campos: marca, modelo, placa, ano, cor, motorização, combustível, chassi e motor nº, e o botão Buscar pela placa"
+      },
+      {
+        "type": "fix",
+        "text": "Orçamento: editar nome, telefone, modelo ou placa do veículo novo agora fica salvo"
+      },
+      {
+        "type": "feat",
         "text": "Veículos: marca em destaque antes do modelo em todo o app, como no estoque; PDFs, links e mensagens mostram marca e modelo juntos"
       },
       {

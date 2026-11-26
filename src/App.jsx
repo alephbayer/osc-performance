@@ -970,7 +970,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
         {[...cliQuotes].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).map(q=>{
           const items=q.items||[];
           const total=quoteTotal(items);
-          const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
+          const vModel=q.vehicleId?vehTitle(vehicles.find(v=>v.id===q.vehicleId)):q.tempModel;
           const isPending=q.status==="draft"||q.status==="sent";
           const statusCfg={draft:{label:"Pendente",color:B.amber},sent:{label:"Aguardando aprovação",color:B.amber},approved:{label:"Aprovado",color:B.green},rejected:{label:"Recusado",color:B.red}};
           const cfg=statusCfg[q.status]||statusCfg.draft;
@@ -4289,6 +4289,39 @@ function PlateLookup({plate,current={},onApply}) {
   </div>;
 }
 
+// ─── Campos do veículo (cadastros rápidos): todos os campos + busca pela placa ──
+const VEH_FORM_EMPTY={brand:"",model:"",plate:"",year:"",color:"",engine:"",fuelType:"",chassis:"",engineNumber:""};
+// Converte o formulário no objeto aceito por db.addVehicle
+const vehFormOut=f=>({brand:(f.brand||"").trim(),model:(f.model||"").trim(),plate:(f.plate||"").trim().toUpperCase(),year:parseInt(f.year)||null,color:(f.color||"").trim(),
+  engine:(f.engine||"").trim(),fuelType:(f.fuelType||"").trim(),chassis:(f.chassis||"").trim().toUpperCase(),engineNumber:(f.engineNumber||"").trim().toUpperCase()});
+function VehicleFormFields({value,onChange,inputStyle={},requirePlate=false,autoFocus=false}){
+  const f={...VEH_FORM_EMPTY,...value};
+  const set=(k,v)=>onChange({...f,[k]:v});
+  const base={width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",...inputStyle};
+  const mono={...base,fontFamily:"monospace",letterSpacing:.5};
+  const row={display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"};
+  return <div>
+    <div style={row}>
+      <input value={f.brand} onChange={e=>set("brand",e.target.value)} placeholder="Marca" style={{...base,flex:"1 1 90px",width:"auto"}}/>
+      <input value={f.model} onChange={e=>set("model",e.target.value)} placeholder="Modelo *" autoFocus={autoFocus} style={{...base,flex:"2 1 140px",width:"auto"}}/>
+    </div>
+    <div style={row}>
+      <input value={f.plate} onChange={e=>set("plate",e.target.value.toUpperCase())} placeholder={requirePlate?"Placa *":"Placa"} style={{...mono,flex:"1 1 100px",width:"auto"}}/>
+      <input value={f.year} onChange={e=>set("year",e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="Ano" inputMode="numeric" style={{...base,flex:"0 1 70px",width:"auto"}}/>
+      <input value={f.color} onChange={e=>set("color",e.target.value)} placeholder="Cor" style={{...base,flex:"1 1 90px",width:"auto"}}/>
+    </div>
+    <div style={row}>
+      <input value={f.engine} onChange={e=>set("engine",e.target.value)} placeholder="Motorização" style={{...base,flex:"1 1 110px",width:"auto"}}/>
+      <input value={f.fuelType} onChange={e=>set("fuelType",e.target.value)} placeholder="Combustível" style={{...base,flex:"1 1 90px",width:"auto"}}/>
+    </div>
+    <div style={row}>
+      <input value={f.chassis} onChange={e=>set("chassis",e.target.value.toUpperCase())} placeholder="Chassi" maxLength={17} style={{...mono,flex:"2 1 150px",width:"auto"}}/>
+      <input value={f.engineNumber} onChange={e=>set("engineNumber",e.target.value.toUpperCase())} placeholder="Motor nº" style={{...mono,flex:"1 1 100px",width:"auto"}}/>
+    </div>
+    <PlateLookup plate={f.plate} current={f} onApply={p=>onChange({...f,...Object.fromEntries(Object.entries(p).map(([k,v])=>[k,k==="year"?String(v):v]))})}/>
+  </div>;
+}
+
 // ─── Create Vehicle modal — from Vehicles tab ─────────────────────────────────
 function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
   const [model,setModel]=useState("");
@@ -6890,7 +6923,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
   const [editing,setEditing]=useState(false);
   const [editName,setEditName]=useState(employee.name);
   const [editPhone,setEditPhone]=useState(employee.phone||"");
-  const [model,setMod]=useState(""); const [plate,setPlate]=useState(""); const [vColor,setVColor]=useState("");
+  const [vf,setVf]=useState(VEH_FORM_EMPTY);
   const saveEdit=()=>{
     if(editName.trim()&&editName.trim()!==employee.name) onUpdateName(employee.id,editName.trim());
     if(editPhone.trim()!==employee.phone) onUpdatePhone(employee.id,editPhone.trim());
@@ -6923,7 +6956,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>;
   const totT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)).length;
   const donT=tasks.filter(t=>empV.find(v=>v.id===t.vehicleId)&&t.done).length;
-  const addV=()=>{if(!model.trim()||!plate.trim())return;onAddVehicle(employee.id,model.trim(),plate.trim().toUpperCase(),vColor.trim());setMod("");setPlate("");setVColor("");setSF(false);};;
+  const addV=()=>{if(!vf.model.trim()||!vf.plate.trim())return;onAddVehicle(employee.id,vehFormOut(vf));setVf(VEH_FORM_EMPTY);setSF(false);};
   return (<><div style={{background:B.gray800,borderRadius:10,border:`1px solid ${B.gray700}`,marginBottom:16,overflow:"hidden"}}>
     <div onClick={()=>setOpen(o=>!o)} style={{padding:"12px 16px",background:B.gray900,borderBottom:`1px solid ${B.orange}66`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer",userSelect:"none"}}>
       <div style={{width:34,height:34,borderRadius:99,border:`1px solid ${B.orange}55`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IWrench s={16} c={B.orange}/></div>
@@ -6998,14 +7031,9 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
           onAddPurchaseOrder={onAddPurchaseOrder} purchaseOrders={purchaseOrders}/>)}
       </div>}
       {showF?<div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:4}}>
-        <input value={model} onChange={e=>setMod(e.target.value)} placeholder="Modelo (ex: Honda Civic 2020)"
-          style={{flex:"1 1 160px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-        <input value={plate} onChange={e=>setPlate(e.target.value)} placeholder="Placa"
-          style={{flex:"0 1 110px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",fontFamily:"monospace",letterSpacing:1}}/>
-        <input value={vColor} onChange={e=>setVColor(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addV()} placeholder="Cor (ex: Preto)"
-          style={{flex:"0 1 120px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-        <button onClick={addV} style={{padding:"7px 14px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700}}>Salvar</button>
-        <button onClick={()=>setSF(false)} style={{padding:"7px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer"}}><Ic n="x"/></button>
+        <div style={{flex:"1 1 100%"}}><VehicleFormFields value={vf} onChange={setVf} requirePlate autoFocus/></div>
+        <button onClick={addV} disabled={!vf.model.trim()||!vf.plate.trim()} style={{padding:"7px 14px",borderRadius:7,background:vf.model.trim()&&vf.plate.trim()?B.orange:B.gray700,border:"none",color:B.white,cursor:"pointer",fontWeight:700}}>Salvar</button>
+        <button onClick={()=>{setSF(false);setVf(VEH_FORM_EMPTY);}} style={{padding:"7px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer"}}><Ic n="x"/></button>
       </div>:<button onClick={()=>setShowPicker(true)} style={{marginTop:4,padding:"7px 12px",borderRadius:8,background:"transparent",border:`1px dashed ${B.orange}66`,color:B.orange,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontWeight:600,fontSize:13}}
         onMouseEnter={e=>e.currentTarget.style.background=`${B.orange}15`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
         <ICar s={13} c={B.orange}/>+ Veículo
@@ -9784,7 +9812,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
     if(form._editing){
       // Update existing quote
       const {_editing,...patch}=form;
-      await onUpdate(_editing,{items:patch.items,description:patch.description,notes:patch.notes,tempName:patch.tempName,tempPhone:patch.tempPhone,tempModel:patch.tempModel,tempPlate:patch.tempPlate,clientId:patch.clientId||null,vehicleId:patch.vehicleId||null});
+      await onUpdate(_editing,{items:patch.items,description:patch.description,notes:patch.notes,tempName:patch.tempName,tempPhone:patch.tempPhone,tempModel:patch.tempModel,tempPlate:patch.tempPlate,tempVehicle:patch.tempVehicle||{},clientId:patch.clientId||null,vehicleId:patch.vehicleId||null});
     } else {
       const payload={...form,status:"draft",createdAt:new Date().toISOString()};
       await onAdd(payload);
@@ -9861,12 +9889,9 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
             </div>)}
           </div>}
         </div>:<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <input value={form.tempModel} onChange={e=>setForm(p=>({...p,tempModel:e.target.value}))} placeholder="Modelo do veículo *"
-            style={{flex:"2 1 120px",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-          <input value={form.tempYear||""} onChange={e=>setForm(p=>({...p,tempYear:e.target.value}))} placeholder="Ano"
-            style={{flex:"0 0 60px",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-          <input value={form.tempPlate} onChange={e=>setForm(p=>({...p,tempPlate:e.target.value}))} placeholder="Placa"
-            style={{flex:"1 1 80px",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+          <div style={{flex:"1 1 100%"}}><VehicleFormFields value={{...(form.tempVehicle||{}),model:form.tempModel||"",plate:form.tempPlate||"",year:form.tempYear||(form.tempVehicle||{}).year||""}}
+            inputStyle={{padding:"7px 10px",borderRadius:7,background:B.gray800,fontSize:12}}
+            onChange={v=>setForm(p=>({...p,tempModel:v.model,tempPlate:v.plate,tempYear:v.year,tempVehicle:{brand:v.brand,year:v.year,color:v.color,engine:v.engine,fuelType:v.fuelType,chassis:v.chassis,engineNumber:v.engineNumber}}))}/></div>
         </div>}
       </div>
 
@@ -9998,7 +10023,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       const cfg=statusCfg[q.status]||statusCfg.draft;
       const total=quoteTotal(q.items);
       const clientName=q.clientId?clients.find(c=>c.id===q.clientId)?.name:q.tempName;
-      const vModel=q.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:q.tempModel;
+      const vModel=q.vehicleId?vehTitle(vehicles.find(v=>v.id===q.vehicleId)):q.tempModel;
       const isConverted=q.status==="approved"&&q.appointmentId;
       const isEditable=q.status==="draft"||q.status==="sent";
       const isExpanded=!!expandedQuotes[q.id];
@@ -10057,7 +10082,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
 
           {/* Actions */}
           <div style={{padding:"8px 14px",borderTop:`1px solid ${B.gray800}`,display:"flex",gap:6,flexWrap:"wrap"}}>
-            {isEditable&&<button onClick={()=>{setShowNew(true);setForm({...q,_editing:q.id});setExpandedQuotes(p=>({...p,[q.id]:false}));}}
+            {isEditable&&<button onClick={()=>{setShowNew(true);setForm({...q,tempYear:(q.tempVehicle||{}).year||"",_editing:q.id});setExpandedQuotes(p=>({...p,[q.id]:false}));}}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.orange}18`,border:`1px solid ${B.orange}33`,color:B.orange,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
               <Ic n="note"/> Editar
             </button>}
@@ -14150,7 +14175,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.263";
+const APP_VERSION = "2026.11.26.264";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17832,10 +17857,8 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
   // New client/vehicle fields
   const [clientName,setClientName]=useState("");
   const [clientPhone,setClientPhone]=useState("");
-  const [vModel,setVModel]=useState("");
-  const [vPlate,setVPlate]=useState("");
-  const [vYear,setVYear]=useState("");
-  const [vColor,setVColor]=useState("");
+  const [vf,setVf]=useState(VEH_FORM_EMPTY);
+  const vModel=vf.model, vPlate=vf.plate;
   const [division,setDivision]=useState(null); // performance | finishing
   const [mechId,setMechId]=useState("");
   const [loading,setLoading]=useState(false);
@@ -17877,7 +17900,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
       await onCreateAndOpen({
         isNew,
         client:isNew?{name:clientName.trim(),phone:clientPhone.trim()}:selectedClient,
-        vehicle:(isNew||addingVehicle)?{model:vModel.trim(),plate:vPlate.trim().toUpperCase(),year:vYear,color:vColor}:selectedVehicle,
+        vehicle:(isNew||addingVehicle)?vehFormOut(vf):selectedVehicle,
         existingVehicleId:selectedVehicle?.id,
         division,
         mechanicId:mechId||null,
@@ -17958,12 +17981,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
             <input value={clientName} onChange={e=>setClientName(e.target.value)} placeholder="Nome do cliente *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
             <input value={clientPhone} onChange={e=>setClientPhone(e.target.value)} placeholder="Telefone (WhatsApp)" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
             <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Veículo</div>
-            <input value={vModel} onChange={e=>setVModel(e.target.value)} placeholder="Modelo *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
-            <div style={{display:"flex",gap:8,marginBottom:8}}>
-              <input value={vPlate} onChange={e=>setVPlate(e.target.value.toUpperCase())} placeholder="Placa *" style={{flex:1,padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
-              <input value={vYear} onChange={e=>setVYear(e.target.value)} placeholder="Ano" style={{width:80,padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            </div>
-            <input value={vColor} onChange={e=>setVColor(e.target.value)} placeholder="Cor" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
+            <div style={{marginBottom:12}}><VehicleFormFields value={vf} onChange={setVf} requirePlate inputStyle={{padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13}}/></div>
           </>}
 
           {!isNew&&selectedClient&&<>
@@ -17973,12 +17991,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
             </div>
             {addingVehicle&&<>
               <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Novo veículo de {selectedClient.name}</div>
-              <input value={vModel} onChange={e=>setVModel(e.target.value)} placeholder="Modelo *" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
-              <div style={{display:"flex",gap:8,marginBottom:8}}>
-                <input value={vPlate} onChange={e=>setVPlate(e.target.value.toUpperCase())} placeholder="Placa *" style={{flex:1,padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
-                <input value={vYear} onChange={e=>setVYear(e.target.value)} placeholder="Ano" style={{width:80,padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-              </div>
-              <input value={vColor} onChange={e=>setVColor(e.target.value)} placeholder="Cor" style={{width:"100%",padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
+              <div style={{marginBottom:12}}><VehicleFormFields value={vf} onChange={setVf} requirePlate inputStyle={{padding:"9px 12px",borderRadius:9,border:inputBorder,background:B.gray800,color:textColor,fontSize:13}}/></div>
               {vehicles.some(v=>v.clientId===selectedClient.id)&&<div onClick={()=>setAddingVehicle(false)} style={{fontSize:12,fontWeight:700,color:subColor,cursor:"pointer",marginBottom:8}}>← Escolher um veículo já cadastrado</div>}
             </>}
             {!addingVehicle&&<>
@@ -18118,7 +18131,7 @@ function ClientPortalRoot() {
   if(!data) return <LoadingScreen/>;
   const cli=data.client;
   const setQuote=(qid,patch)=>setData(d=>({...d,quotes:d.quotes.map(q=>q.id===qid?{...q,...patch}:q)}));
-  const quoteModel=qid=>{const q=data.quotes.find(x=>x.id===qid);return q?.vehicleId?data.vehicles.find(v=>v.id===q.vehicleId)?.model:q?.tempModel;};
+  const quoteModel=qid=>{const q=data.quotes.find(x=>x.id===qid);return q?.vehicleId?vehTitle(data.vehicles.find(v=>v.id===q.vehicleId)):q?.tempModel;};
   return <div key={theme} style={{...shell,display:"flex",flexDirection:"column"}}><ErrorBoundary><ClientPortal client={cli} company={data.company} vehicles={data.vehicles} tasks={data.tasks.filter(t=>!isInternalTask(t))} employees={data.employees} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} onLogout={doLogout} appointments={data.appointments} quotes={data.quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={data.clientCredits} clients={[cli]} purchaseOrders={data.purchaseOrders} stock={data.stock}
     onVehiclePhoto={async(vid,url)=>{const vv=data.vehicles.find(x=>x.id===vid);if(!vv) return; setData(d=>({...d,vehicles:d.vehicles.map(x=>x.id===vid?{...x,photo:url}:x)})); try{ await db.updateVehicle(vid,{photo:url}); }catch(e){ errToast(e); return; } db.sendPushToAdmins(`Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${cli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}}
     onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuote(qid,{status:"approved",approvedItems:items});toast_("Orçamento aprovado");pushQuoteDecision(data.quotes.find(q=>q.id===qid),true,quoteModel(qid),cli.name);}catch(e){errToast(e);}}}
@@ -18482,7 +18495,7 @@ function MainApp() {
       onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);if("photos" in patch||"photosFinishing" in patch){const v=vehicles.find(x=>x.id===id);const vModel=v?.model||v?.plate||"Veículo";const div="photosFinishing" in patch?"Finishing":"Performance";db.sendPushToAdmins(`Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
       onLogout={doLogout}
       purchaseOrders={purchaseOrders}
-      onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(e){errToast(e);}}}
+      onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder({...p,employeeId:liveEmp.id});setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehTitle(vehicles.find(x=>x.id===p.vehicleId))||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(e){errToast(e);}}}
       /></ErrorBoundary><GlobalErrorDisplay/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>
   }
 
@@ -18553,9 +18566,9 @@ function MainApp() {
   };
 
   // ── Vehicles
-  const addVeh=async(eid,model,plate,color="")=>{
+  const addVeh=async(eid,vd)=>{
     try{
-      const row=await db.addVehicle({employeeId:eid,clientId:null,model,plate,color,photo:null,photos:[]});
+      const row=await db.addVehicle({...vd,employeeId:eid,clientId:null,photo:null,photos:[]});
       row.mechanicIds=[eid];
       setVeh(p=>[...p,row]); toast_("Veículo adicionado");
     }catch(e){errToast(e);}
@@ -20211,7 +20224,7 @@ function MainApp() {
                 onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}
                 onDelete={delEmp} onSendWA={sendMechWA} onUpdatePhone={updEmpP} onUpdateName={updEmpN} onUpdateDivision={updEmpDiv}
                 onUpdateSpecialty={async(id,specialty)=>{try{await db.updateEmployee(id,{specialty});setEmp(p=>p.map(e=>e.id===id?{...e,specialty}:e));toast_("Especialidade atualizada");}catch(err){errToast(err);}}}
-                purchaseOrders={purchaseOrders} onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}/>)}
+                purchaseOrders={purchaseOrders} onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehTitle(vehicles.find(x=>x.id===p.vehicleId))||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}/>)}
           </>}
       </>}
 
@@ -20409,7 +20422,7 @@ function MainApp() {
             setVehicleStatus={setVehicleStatus} deliverVehicle={deliverVehicle} deliverVehicleFinishing={deliverVehicleFinishing} adminRole={adminRole}
             searching={!!osSearch} purchaseOrders={purchaseOrders} onOpenOS={openNewOS}
             onPostTimeline={postTimeline}
-            onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}
+            onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehTitle(vehicles.find(x=>x.id===p.vehicleId))||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}
             />}</>;
         })()}
       </>}
@@ -20461,7 +20474,7 @@ function MainApp() {
               onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
               onDeliver={deliverVehicleFinishing} onDeliverFinishing={deliverVehicleFinishing}
               isOwner={adminRole==="owner"} division="finishing"
-              onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders} onPostTimeline={postTimeline}/>)}
+              onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehTitle(vehicles.find(x=>x.id===p.vehicleId))||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}} purchaseOrders={purchaseOrders} onPostTimeline={postTimeline}/>)}
           </div>;
         })()}
       </>}
@@ -20531,7 +20544,7 @@ function MainApp() {
             setQuotes(p=>p.map(q=>q.id===id?{...q,...patch}:q));
             const q=quotes.find(x=>x.id===id);
             const clientId=patch.clientId||q?.clientId;
-            const vModel=q?.tempModel||(q?.vehicleId?vehicles.find(v=>v.id===q.vehicleId)?.model:null)||"seu veículo";
+            const vModel=q?.tempModel||(q?.vehicleId?vehTitle(vehicles.find(v=>v.id===q.vehicleId)):null)||"seu veículo";
             const total=quoteTotal(patch.items||q?.items||[]);
             if(clientId&&patch.status==="sent"&&q?.status!=="sent"){
               // "Enviar": a partir daqui o orçamento aparece no portal do cliente
@@ -20552,7 +20565,7 @@ function MainApp() {
                 setCli(p=>[...p,newCli]); clientId=newCli.id;
               }
               if(!vehicleId&&quote.tempModel){
-                const newV=await db.addVehicle({model:quote.tempModel,plate:quote.tempPlate||"",clientId,status:"active"});
+                const newV=await db.addVehicle({...vehFormOut({...(quote.tempVehicle||{}),model:quote.tempModel,plate:quote.tempPlate||""}),clientId,status:"active"});
                 setVeh(p=>[...p,newV]); vehicleId=newV.id;
               }
               // Create appointment
@@ -20791,7 +20804,7 @@ function MainApp() {
         }
         // Create vehicle if new
         if(!vehicleId){
-          const newVeh=await db.addVehicle({model:vehicle.model,plate:vehicle.plate,year:vehicle.year||"",color:vehicle.color||"",clientId});
+          const newVeh=await db.addVehicle({...vehicle,clientId});
           setVeh(p=>[...p,newVeh]);
           vehicleId=newVeh.id;
         }

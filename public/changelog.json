@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Pagamento dividido: quando o valor cobre o saldo de uma das empresas, aparece embaixo do campo dela a sugestão para quitar (um toque preenche o valor)"
+      },
+      {
+        "type": "feat",
         "text": "Pagamento dividido entre Performance e Finishing: agora dá para digitar o valor da Finishing, e a Performance fica com o restante (ou o contrário)"
       },
       {

@@ -94,6 +94,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Formas de pagamento: lista única `PAY_METHODS` (Pix, Dinheiro, Cartão de débito, Cartão de crédito, Transferência, Boleto, Outro) em todas as telas, inclusive vendas; `payMethodLabel` padroniza nomes antigos na exibição (PIX/pix, Cartão Crédito, TED / DOC...; "Crédito" vira "Crédito do cliente"). Banco não alterado (v2026.11.26.227)
 - [x] Nomes padronizados gravados no banco com o ok do Aleph (2026-11-26): 65 linhas em `payments`, 9 em `sales`; "Crédito" (crédito de cliente) mantido. Cópia dos valores antigos em `~/OSC/backups/formas-pagamento-antes-2026-11-26.json`
 - [x] Pagamento dividido: dá para digitar a parte da Finishing e a Performance fica com o restante (ou o contrário); a última digitada prevalece (v2026.11.26.228)
+- [x] Pagamento dividido: se o valor cobre o saldo de uma empresa, aparece "Quitar <empresa>: R$ X" embaixo do campo dela (v2026.11.26.229)
 - [ ] PDF ignora pagamentos negativos: depois de "Salvar crédito" mostra pago acima do total
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar

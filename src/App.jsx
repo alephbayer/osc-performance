@@ -1318,16 +1318,24 @@ function SplitBox({total,perfStr,setPerfStr,perfBal,finBal}){
   const r=resolveSplit(total,perfStr,perfBal,finBal);
   const finSide=perfStr&&typeof perfStr==="object";
   const inp={width:"100%",padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"};
+  // Se o valor pago cobre o saldo de uma empresa, sugere quitar aquela empresa
+  const r2=n=>Math.round(n*100)/100;
+  const payoff=(bal,cur,set,name)=>{ const b=r2(bal); if(!(b>=0.01)||total+0.005<b) return null;
+    const on=Math.abs(cur-b)<0.005;
+    return on?<div style={{fontSize:10,color:B.green,fontWeight:700,marginTop:4,display:"flex",alignItems:"center",gap:3}}><ICheck s={9} c={B.green}/>Quita a {name}</div>
+      :<button type="button" onClick={set} style={{marginTop:4,padding:0,background:"none",border:"none",cursor:"pointer",fontSize:10,fontWeight:700,color:B.green,textAlign:"left",fontFamily:"inherit"}}>Quitar {name}: R$ {fmtR2(b)}</button>; };
   return (<div style={{marginTop:8,background:`${B.green}0d`,border:`1px solid ${B.green}33`,borderRadius:9,padding:"10px 12px"}}>
     <div style={{fontSize:10,fontWeight:800,color:B.green,textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>Divisão do valor entre as empresas</div>
     <div style={{display:"flex",gap:8}}>
       <div style={{flex:1}}>
         <div style={{fontSize:10,color:B.orange,fontWeight:700,marginBottom:3}}><Ic n="gear"/> Performance (R$)</div>
         <input value={finSide?"":(perfStr||"")} onChange={e=>setPerfStr(e.target.value)} placeholder={fmtR2(Math.max(0,r.perf))} type="number" step="0.01" style={inp}/>
+        {payoff(perfBal,r.perf,()=>setPerfStr(fmtR2(r2(perfBal)).replace(",",".")),"Performance")}
       </div>
       <div style={{flex:1}}>
         <div style={{fontSize:10,color:FD.primary,fontWeight:700,marginBottom:3}}><Ic n="brush"/> Finishing (R$)</div>
         <input value={finSide?perfStr.fin:""} onChange={e=>setPerfStr(e.target.value===""?"":{fin:e.target.value})} placeholder={fmtR2(Math.max(0,r.fin))} type="number" step="0.01" style={inp}/>
+        {payoff(finBal,r.fin,()=>setPerfStr({fin:fmtR2(r2(finBal)).replace(",",".")}),"Finishing")}
       </div>
     </div>
     <div style={{fontSize:10,color:B.gray500,marginTop:6,lineHeight:1.4}}>{total>0?"Sugestão proporcional ao saldo de cada empresa; edite o valor de uma delas e a outra fica com o restante. ":"Informe o valor total acima. "}O cliente vê um pagamento só.</div>
@@ -13785,7 +13793,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.228";
+const APP_VERSION = "2026.11.26.229";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

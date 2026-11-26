@@ -85,6 +85,13 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] Ideia: aprovação parcial de orçamento (cliente escolhe os itens). Nem portal nem `?q=` têm; a conversão em agendamento já usa `approvedItems`, mas a lista de orçamentos da oficina não mostra o que foi aprovado
 - [ ] Achado não tratado: os 4 quadrinhos do PIN às vezes não pulam sozinhos para o próximo dígito (automação; conferir no celular)
 
+## Importar OSs de sistemas antigos (sessão dedicada, 2026-11-26)
+- Fontes (Aleph): planilhas próprias (xlsx/CSV) e OSs em papel/PDF. Trazer clientes, veículos, serviços, peças, valores e pagamentos. Caminho: script no Mac (não tela no app)
+- Mapa: OS fechada em `os_history` (`tasks_snapshot` com `materials`), `clients`, `vehicles`, `payments` (`os_history_id`). `db.archiveAndResetVehicle` não serve para importar (zera o veículo)
+- Decidido (Aleph): pagamento entra como estiver na OS antiga; sem dado de pagamento, a OS fica em aberto (aparece no "A receber") e o Aleph lança à mão pelo extrato do banco
+- Plano: normalizar em `~/OSC/importacao/normalizado/` -> relatório de conferência (duplicados por placa e telefone, totais que não batem) -> migration 065 (origem e número antigo em `os_history`; números antigos colidem com 1-172) -> `scripts/importar-os.mjs` (simula por padrão, grava com limite, log para desfazer) -> teste com 3 a 5 OSs -> backup -> resto
+- [ ] **Aleph:** copiar planilhas e PDFs para `~/OSC/importacao/originais/` (pasta criada, fora do repositório)
+
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor
 - [ ] Subir o backup (zip de `backup-AAAA-MM-DD/`) para o local privado e confirmar

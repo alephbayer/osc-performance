@@ -45,6 +45,20 @@ function splitVersion(full: string) {
   return m ? { name: m[1].trim(), engine: m[2].trim() } : { name: full.trim(), engine: "" };
 }
 
+// Siglas/grafias do Detran -> nome usado no cadastro da oficina
+const BRANDS: Record<string, string> = {
+  "VW": "Volkswagen", "VOLKSWAGEN": "Volkswagen", "GM": "Chevrolet", "CHEV": "Chevrolet", "CHEVROLET": "Chevrolet",
+  "MB": "Mercedes-Benz", "M.BENZ": "Mercedes-Benz", "M BENZ": "Mercedes-Benz", "MBENZ": "Mercedes-Benz", "MERCEDES": "Mercedes-Benz", "MERCEDES BENZ": "Mercedes-Benz", "MERCEDES-BENZ": "Mercedes-Benz",
+  "LR": "Land Rover", "LROVER": "Land Rover", "LAND ROVER": "Land Rover", "LANDROVER": "Land Rover",
+  "KIA": "Kia", "JAC": "JAC", "BMW": "BMW", "MINI": "Mini", "RAM": "RAM", "BYD": "BYD", "GWM": "GWM",
+  "CITROEN": "Citroën", "MMC": "Mitsubishi", "MITSUBISHI": "Mitsubishi", "HYUNDAI": "Hyundai", "TOYOTA": "Toyota",
+  "ALFA ROMEO": "Alfa Romeo", "ROLLS ROYCE": "Rolls-Royce", "ASTON MARTIN": "Aston Martin", "HARLEY DAVIDSON": "Harley-Davidson",
+};
+const brandName = (s: string) => {
+  const k = s.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+  return BRANDS[k] || title(s);
+};
+
 // Converte a resposta do provedor no formato que o app usa
 function normalize(j: Record<string, any>) {
   const b = j?.basico?.dados || {};
@@ -62,7 +76,7 @@ function normalize(j: Record<string, any>) {
     .sort((a: any, b: any) => b.score - a.score);
   return {
     versions,
-    brand: title(brand),
+    brand: brand ? brandName(brand) : "",
     model: title(model),
     year: parseInt(clean(b.ano)) || null,
     modelYear: parseInt(clean(b.anoModelo)) || null,

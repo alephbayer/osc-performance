@@ -55,6 +55,16 @@ const B = {
   purple:"#8b5cf6", purpleBg:"rgba(139,92,246,.12)",
   red:"#ef4444",    wa:"#25D366",
 };
+// Veículo: marca em campo próprio, exibida antes do modelo (como a marca no estoque).
+// vehTitle = texto corrido ("BMW M3 Coupê"), sem repetir a marca quando o modelo antigo já começa com ela
+const vehModelOnly=v=>{const b=String(v?.brand||"").trim(),m=String(v?.model||"").trim();return b&&m.toUpperCase().startsWith(b.toUpperCase()+" ")?m.slice(b.length+1):m;};
+const vehTitle=v=>{const b=String(v?.brand||"").trim(),m=vehModelOnly(v);return b?(m?`${b} ${m}`:b):m;};
+// VehName = marca destacada (maiúsculas pequenas, âmbar) + ponto + modelo
+function VehName({v}){
+  const b=String(v?.brand||"").trim(), m=vehModelOnly(v);
+  if(!b) return <>{m}</>;
+  return <><span style={{color:B.amber,fontSize:".72em",fontWeight:600,letterSpacing:".08em",textTransform:"uppercase"}}>{b}</span><span style={{display:"inline-block",width:".26em",height:".26em",borderRadius:99,background:B.gray500,margin:"0 .5em",verticalAlign:"middle"}}/>{m}</>;
+}
 
 const qtyNum=v=>{const n=parseFloat(String(v).replace(",","."));return n>0?n:1;};
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
@@ -289,7 +299,7 @@ function CollapsibleVehicleGroup({vehicle,count,children}) {
         ?<img src={vehicle.photo} alt="" style={{width:36,height:36,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>
         :<div style={{width:36,height:36,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={18} c={B.blue}/></div>}
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{vehicle.model}</div>
+        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle}/></div>
         <div style={{fontSize:11,color:B.gray400}}>{vehicle.plate}{vehicle.color?` · ${vehicle.color}`:""}</div>
       </div>
       {count&&<span style={{fontSize:10,color:B.gray500,flexShrink:0}}>{count}</span>}
@@ -353,7 +363,7 @@ function PortalHistoryCard({h,v,payments,client,company}) {
   return (<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,marginBottom:10,overflow:"hidden"}}>
     <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left",fontFamily:"inherit",color:B.white}}>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
+        <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v}/></div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4,flexWrap:"wrap"}}>
           <span style={{fontSize:10,fontWeight:800,color:divColor,border:`1px solid ${divColor}44`,borderRadius:99,padding:"1px 8px"}}>{osLabel}</span>
           <span style={{fontSize:11,color:B.gray500}}>{deliveredAt?new Date(deliveredAt).toLocaleDateString("pt-BR"):"—"}</span>
@@ -429,7 +439,7 @@ function PortalVehicleCard({v,tasks,payments,defaultRate,onOpen,onPhoto}) {
     <div style={{padding:"14px 16px 16px"}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:800,fontSize:16,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
+          <div style={{fontWeight:800,fontSize:16,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v}/></div>
           <div style={{fontSize:11,color:B.gray400,marginTop:2,letterSpacing:.3}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
@@ -479,7 +489,7 @@ function ClientNotesTab({client, vehicles}) {
       setNotes(p=>[row,...p]);
       setNewNote("");
       const v=vehicles.find(x=>x.id===selectedVehicle);
-      db.sendPushToAdmins(`Anotação do cliente — ${v?.model||"Veículo"}`,`${client.name}: ${text.length>120?text.slice(0,117)+"…":text}`,"/?").catch(()=>{});
+      db.sendPushToAdmins(`Anotação do cliente — ${vehTitle(v)||"Veículo"}`,`${client.name}: ${text.length>120?text.slice(0,117)+"…":text}`,"/?").catch(()=>{});
     }catch(e){ setNoteErr("Não foi possível salvar a anotação. Verifique a conexão e tente de novo."); }
     finally{ setSaving(false); }
   };
@@ -504,7 +514,7 @@ function ClientNotesTab({client, vehicles}) {
         <button key={v.id} onClick={()=>setSelectedVehicle(v.id)}
           style={{minHeight:36,padding:"0 14px",borderRadius:99,border:`1px solid ${on?B.orange+"88":B.gray700}`,background:on?`${B.orange}18`:"none",color:on?B.orange:B.gray400,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontFamily:"inherit"}}>
           {v.photo&&<img src={v.photo} alt="" style={{width:18,height:18,borderRadius:99,objectFit:"cover"}}/>}
-          {v.model}
+          {vehTitle(v)}
         </button>);})}
     </div>}
 
@@ -639,7 +649,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
   const attention=[
     ...(pendingQuotes.length>0?[{k:"q",c:B.amber,t:`${pendingQuotes.length} orçamento${pendingQuotes.length!==1?"s":""} aguardando aprovação`,s:"Toque para revisar e aprovar",go:()=>setTab("quotes"),ic:'<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 14l2 2 4-4"/>'}]:[]),
     ...(debtTotal>=0.01?[{k:"d",c:B.red,t:"Saldo em aberto",s:`${fmtBRL(debtTotal)} em ${debtOS.length} OS anterior${debtOS.length!==1?"es":""}`,go:()=>setTab("account"),ic:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'}]:[]),
-    ...recentArrivals.map(({p,v})=>({k:"a"+v.id+p.name,c:B.green,t:`${p.name||"Peça importada"} chegou`,s:v.model,go:()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}},ic:'<path d="M20 6L9 17l-5-5"/>'})),
+    ...recentArrivals.map(({p,v})=>({k:"a"+v.id+p.name,c:B.green,t:`${p.name||"Peça importada"} chegou`,s:vehTitle(v),go:()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}},ic:'<path d="M20 6L9 17l-5-5"/>'})),
     ...(nextAppt?[{k:"ap",c:B.blue,t:"Agendamento marcado",s:`${new Date(String(nextAppt.scheduledDate).slice(0,10)+"T12:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}${nextAppt.title?` · ${nextAppt.title}`:""}`,go:()=>setTab("appts"),ic:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'}]:[]),
   ];
 
@@ -727,7 +737,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
               <button onClick={()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}}} style={{display:"flex",alignItems:"center",gap:12,flex:1,minWidth:0,textAlign:"left",padding:"10px 14px",background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:14,cursor:"pointer",fontFamily:"inherit",color:B.white}}>
                 {v.photo?<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>:<div style={{width:44,height:44,borderRadius:10,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.gray400}/></div>}
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
+                  <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v}/></div>
                   <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{v.plate}{v.color?` · ${v.color}`:""}{ld?` · última visita ${new Date(ld).toLocaleDateString("pt-BR")}`:""}</div>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 18l6-6-6-6"/></svg>
@@ -800,7 +810,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
             <div style={{display:"flex",alignItems:"center",gap:10,margin:"0 2px 10px"}}>
               {v.photo?<img src={v.photo} alt="" style={{width:30,height:30,borderRadius:8,objectFit:"cover"}}/>:<div style={{width:30,height:30,borderRadius:8,background:B.gray700,display:"flex",alignItems:"center",justifyContent:"center"}}><ICar s={15} c={B.gray400}/></div>}
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.model}</div>
+                <div style={{fontWeight:800,fontSize:14,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={v}/></div>
                 <div style={{fontSize:11,color:B.gray500}}>{v.plate}</div>
               </div>
             </div>
@@ -878,7 +888,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
             <div style={{padding:"16px 18px",display:"flex",alignItems:"center",gap:12}}>
               {v?.photo&&<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:10,objectFit:"cover",flexShrink:0}}/>}
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:800,fontSize:15,color:B.white}}>{v?`${v.model}${v.plate?` · ${v.plate}`:""}`:a.title}</div>
+                <div style={{fontWeight:800,fontSize:15,color:B.white}}>{v?`${vehTitle(v)}${v.plate?` · ${v.plate}`:""}`:a.title}</div>
                 <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{a.title}</div>
                 {a.scheduledDate&&<div style={{fontSize:11,color:B.blue,fontWeight:700,marginTop:5,display:"flex",alignItems:"center",gap:5}}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -927,7 +937,7 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
           const isUsed=(p)=>partIsUsed(p,v.id,tasks);
           return(<div key={v.id} style={{marginBottom:18}}>
             <div style={{display:"flex",alignItems:"baseline",gap:8,margin:"0 2px 8px"}}>
-              <span style={{fontWeight:800,fontSize:14,color:B.white}}>{v.model}</span>
+              <span style={{fontWeight:800,fontSize:14,color:B.white}}><VehName v={v}/></span>
               {v.plate&&<span style={{fontSize:11,color:B.gray500}}>{v.plate}</span>}
             </div>
             <div style={{background:B.gray800,borderRadius:14,border:`1px solid ${B.gray700}`,overflow:"hidden"}}>
@@ -1193,7 +1203,7 @@ function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCred
     const collect=Math.max(0,invested-paid), receive=Math.max(0,total-paid);
     if(receive<0.01&&collect<0.01) return;
     const c=get(v.clientId);
-    c.items.push({key:"v"+v.id,kind:"open",label:`${v.model||""} ${v.plate?`· ${v.plate}`:""}`.trim(),total,invested,paid,collect,receive});
+    c.items.push({key:"v"+v.id,kind:"open",label:`${vehTitle(v)||""} ${v.plate?`· ${v.plate}`:""}`.trim(),total,invested,paid,collect,receive});
     c.collect+=collect; c.receive+=receive;
   });
   // OS fechadas com saldo
@@ -1205,7 +1215,7 @@ function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCred
     const vid=h.vehicle_id||h.vehicleId;
     const v=vehicles.find(x=>x.id===vid);
     const c=get(h.client_id||v?.clientId);
-    c.items.push({key:"h"+h.id,kind:"closed",label:v?`${v.model||""} ${v.plate?`· ${v.plate}`:""}`.trim():(h.vehicle_label||"OS fechada"),total,invested:total,paid,collect:owed,receive:owed});
+    c.items.push({key:"h"+h.id,kind:"closed",label:v?`${vehTitle(v)||""} ${v.plate?`· ${v.plate}`:""}`.trim():(h.vehicle_label||"OS fechada"),total,invested:total,paid,collect:owed,receive:owed});
     c.collect+=owed; c.receive+=owed; c.closed+=owed;
   });
   // crédito do cliente abate o saldo dele
@@ -1526,7 +1536,7 @@ function waMechanic(emp,vehicles,tasks,clients) {
   vehicles.filter(v=>v.employeeId===emp.id).forEach((v,i)=>{
     const ts=tasks.filter(t=>t.vehicleId===v.id),done=ts.filter(t=>t.done).length;
     const cli=clients.find(c=>c.id===v.clientId);
-    rows.push(`🚗 *${i+1}. ${v.model}* — ${v.plate}`);
+    rows.push(`🚗 *${i+1}. ${vehTitle(v)}* — ${v.plate}`);
     if(cli) rows.push(`👤 Cliente: ${cli.name}`);
     rows.push(`📋 ${done}/${ts.length} tarefas`);
     ts.forEach(t=>{
@@ -1548,7 +1558,7 @@ function waClient(cli,vehicles,tasks,employees,defaultRate) {
   cliV.forEach(v=>{
     const ts=tasks.filter(t=>t.vehicleId===v.id),done=ts.filter(t=>t.done).length;
     const mech=employees.find(e=>e.id===v.employeeId); let vt=0;
-    rows.push(`🚗 *${v.model}* — ${v.plate}`);
+    rows.push(`🚗 *${vehTitle(v)}* — ${v.plate}`);
     if(mech) rows.push(`🔧 Mecânico: ${mech.name}`);
     rows.push(`📋 ${done}/${ts.length} tarefas`,``);
     ts.forEach(t=>{ const c=taskCost(t,defaultRate); vt+=c.total; grand+=c.total;
@@ -1566,7 +1576,7 @@ function waVehicle(v,tasks,employees,clients,defaultRate) {
   const ts=tasks.filter(t=>t.vehicleId===v.id),done=ts.filter(t=>t.done).length;
   const mech=employees.find(e=>e.id===v.employeeId),cli=clients.find(c=>c.id===v.clientId);
   const total=ts.reduce((s,t)=>s+taskCost(t,defaultRate).total,0);
-  const rows=[`🔧 *OSC PERFORMANCE*`,``,`Olá${cli?`, *${cli.name}*`:""}! Atualização do seu veículo:`,``,`🚗 *${v.model}* — ${v.plate}`,`📅 ${fmtD()}`];
+  const rows=[`🔧 *OSC PERFORMANCE*`,``,`Olá${cli?`, *${cli.name}*`:""}! Atualização do seu veículo:`,``,`🚗 *${vehTitle(v)}* — ${v.plate}`,`📅 ${fmtD()}`];
   if(mech) rows.push(`🔧 Mecânico: ${mech.name}`);
   rows.push(`📋 Progresso: ${done}/${ts.length} tarefas`,``);
   ts.forEach(t=>{
@@ -1602,7 +1612,7 @@ function loadJsPDF() {
 function buildDeliveryInfo({vehicle,tasks,deliveryCheck,client,employees,company,isFD,deliveredAt,mechanicIds}){
   const ids=mechanicIds||vehicle.mechanicIds||[];
   return {
-    model:vehicle.model, plate:vehicle.plate, year:vehicle.year, color:vehicle.color,
+    model:vehTitle(vehicle), plate:vehicle.plate, year:vehicle.year, color:vehicle.color,
     osLabel:isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber),
     divisionLabel:isFD?"Finishing Division":"Performance",
     clientName:client?.name||"",
@@ -1852,7 +1862,7 @@ async function generateImportPartsPDF(vehicle, client, company) {
   doc.text("Peças importadas",mx,52);
   let y=62;
   doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...ink);
-  doc.text([vehicle.model,vehicle.plate].filter(Boolean).join("  ·  ")||"Veículo",mx,y); y+=5.5;
+  doc.text([vehTitle(vehicle),vehicle.plate].filter(Boolean).join("  ·  ")||"Veículo",mx,y); y+=5.5;
   if(client?.name){ doc.setFontSize(9); doc.setTextColor(...gray); doc.text(client.name,mx,y); y+=5.5; }
   y+=8; hair(y); y+=2;
   let total=0;
@@ -1882,7 +1892,7 @@ async function generateImportPartsPDF(vehicle, client, company) {
   doc.setFont("helvetica","italic"); doc.setFontSize(8); doc.setTextColor(...gray);
   doc.text(doc.splitTextToSize("O valor final em reais inclui conversão cambial, frete, imposto e taxas de importação.",cw),mx,y);
   footer();
-  doc.save(`pecas-importadas-${(vehicle.plate||vehicle.model||"veiculo").toString().replace(/[^a-z0-9]+/gi,"-")}.pdf`);
+  doc.save(`pecas-importadas-${(vehicle.plate||vehTitle(vehicle)||"veiculo").toString().replace(/[^a-z0-9]+/gi,"-")}.pdf`);
 }
 // ─── PDF de orçamento — estilo elegante (compartilhado Performance / Finishing) ───
 // Versões anteriores preservadas como generateQuotePDFLegacy / generateFinishingPDFLegacy.
@@ -1945,7 +1955,7 @@ async function renderElegantQuote(o) {
   // Cliente / veículo
   cap("Cliente",mx,y+6,6.5,gray); cap("Veículo",colR,y+6,6.5,gray);
   txt(doc.splitTextToSize(client?.name||"Não informado",cw/2-6)[0],mx,y+12,{b:true,s:10.5,c:ink});
-  txt(doc.splitTextToSize(vehicle.model||"",cw/2-6)[0],colR,y+12,{b:true,s:10.5,c:ink});
+  txt(doc.splitTextToSize(vehTitle(vehicle)||"",cw/2-6)[0],colR,y+12,{b:true,s:10.5,c:ink});
   txt(client?.phone?`Tel: ${fmtPh(client.phone)}`:"",mx,y+17.5,{s:9});
   txt(`Placa ${vehicle.plate||""}${vehicle.year?`  ·  ${vehicle.year}`:""}${vehicle.color?`  ·  ${vehicle.color}`:""}`,colR,y+17.5,{s:9});
   if(employee?.name) txt(`${perf?"Mecânico":"Responsável"}: ${employee.name}`,colR,y+22.5,{s:9});
@@ -1984,7 +1994,7 @@ async function renderElegantQuote(o) {
     doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
     cap(divisionName,mx,30,7.5,ink);
     cap(featList.length>1?`Detalhamento do serviço  ·  ${String(fi+1).padStart(2,"0")} / ${String(featList.length).padStart(2,"0")}`:"Detalhamento do serviço",W-mx,30,7,gray,{align:"right"});
-    cap([vehicle.model,vehicle.plate].filter(Boolean).join("  ·  "),mx,37,7,gray);
+    cap([vehTitle(vehicle),vehicle.plate].filter(Boolean).join("  ·  "),mx,37,7,gray);
     if(osLabel) cap(osLabel,W-mx,37,7,gray,{align:"right"});
     y=54; doc.setFont("times","normal"); doc.setFontSize(23);
     doc.splitTextToSize(String(t.label||""),cw).slice(0,4).forEach(l=>{ serif(l,mx,y,23); y+=10; });
@@ -2102,7 +2112,7 @@ async function renderElegantQuote(o) {
     doc.addPage(); inTable=false;
     doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
     cap(divisionName,mx,30,7.5,ink);
-    cap([vehicle.model,vehicle.plate].filter(Boolean).join("  ·  "),W-mx,30,7,gray,{align:"right"});
+    cap([vehTitle(vehicle),vehicle.plate].filter(Boolean).join("  ·  "),W-mx,30,7,gray,{align:"right"});
     serif("Investimento e condições",mx,54,26);
     if(osLabel) cap(osLabel,W-mx,54,8,gray,{align:"right"});
     y=66;
@@ -2394,7 +2404,7 @@ async function generatePaymentReceiptPDF({pays,vehicle,client,company,osLabel,ac
   doc.setFont("times","italic"); doc.setFontSize(12); doc.setTextColor(...body);
   const ext=doc.splitTextToSize(`(${extensoBRL(amount)})`,cw); doc.text(ext,mx,y); y+=ext.length*5.2+8;
   // Texto do recibo
-  const veic=[vehicle?.model,vehicle?.plate].filter(Boolean).join(" · ");
+  const veic=[vehTitle(vehicle),vehicle?.plate].filter(Boolean).join(" · ");
   const ref=`referente aos serviços${osLabel?` da ${osLabel}`:""}${veic?` no veículo ${veic}`:""}`;
   const para=`Recebemos de ${client?.name||"cliente"} a importância de ${R(amount)} (${extensoBRL(amount)}), ${ref}${closed?" (OS já entregue)":""}.`;
   doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...body);
@@ -2437,7 +2447,7 @@ function receiptWaText({pays,vehicle,client,osLabel,account}){
   const amt=pays.reduce((a,x)=>a+Number(x.amount),0);
   const d=pays[0]?.paidAt?payDate(pays[0].paidAt):null;
   const nome=String(client?.name||"").trim().split(/\s+/)[0];
-  const veic=[vehicle?.model,vehicle?.plate].filter(Boolean).join(" · ");
+  const veic=[vehTitle(vehicle),vehicle?.plate].filter(Boolean).join(" · ");
   const bal=account?Math.round((Number(account.total)-Number(account.paid))*100)/100:null;
   const sit=bal==null?"":bal>=0.01?`Saldo em aberto: *${fmtBRL(bal)}*`:bal<=-0.01?`Crédito a seu favor: *${fmtBRL(-bal)}*`:"OS quitada ✅";
   return [`Olá${nome?`, ${nome}`:""}! 🧾`,"",`Recebemos seu pagamento de *${fmtBRL(amt)}* (${payMethodLabel(pays[0]?.method)})${d&&!isNaN(d)?` em ${d.toLocaleDateString("pt-BR")}`:""}${osLabel?`, referente à ${osLabel}`:""}${veic?` — ${veic}`:""}.`,sit?"":null,sit||null,"","Segue o recibo. Obrigado!","OSC Group"].filter(x=>x!==null).join("\n");
@@ -2542,7 +2552,7 @@ async function generateQuotePDFLegacy(vehicle, tasks, client, employee, company,
   doc.text(client?.phone ? `Tel: ${client.phone}` : "", lx, y + 20);
 
   // Vehicle model (clipped to right half)
-  const vehicleModel = vehicle.model || "";
+  const vehicleModel = vehTitle(vehicle) || "";
   const vehicleModelLines = doc.splitTextToSize(vehicleModel, halfW - 10);
   doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...black);
   doc.text(vehicleModelLines[0], rx, y + 13);
@@ -3209,7 +3219,7 @@ async function generateFinishingPDFLegacy(vehicle, tasks, client, employee, defa
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
   doc.text(client?.phone ? `Tel: ${client.phone}` : "", lx, y + 20);
 
-  const vehicleModel = vehicle.model || "";
+  const vehicleModel = vehTitle(vehicle) || "";
   doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...black);
   doc.text(doc.splitTextToSize(vehicleModel, halfW - 10)[0], rx, y + 13);
 
@@ -4108,7 +4118,7 @@ function VehiclePickerModal({vehicles,employees,clients,employeeId,onPickExistin
   // Show all vehicles not already assigned to this mechanic
   const available=vehicles.filter(v=>
     !(v.mechanicIds||[v.employeeId]).includes(employeeId) &&
-    (v.model.toLowerCase().includes(q.toLowerCase())||v.plate.toLowerCase().includes(q.toLowerCase()))
+    (vehTitle(v).toLowerCase().includes(q.toLowerCase())||v.plate.toLowerCase().includes(q.toLowerCase()))
   );
   return (<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:90,padding:16}} onClick={onClose}>
     <div style={{background:B.gray800,borderRadius:16,maxWidth:440,width:"100%",overflow:"hidden",border:`1px solid ${B.orange}55`,maxHeight:"min(80vh, 100%)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
@@ -4133,7 +4143,7 @@ function VehiclePickerModal({vehicles,employees,clients,employeeId,onPickExistin
               {v.photo?<img src={v.photo} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:7}}/>:<ICar s={17} c={B.orange}/>}
             </div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:700,fontSize:13,color:B.white}}>{v.model}</div>
+              <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v}/></div>
               <div style={{fontSize:11,color:B.gray400,display:"flex",gap:6,flexWrap:"wrap"}}>
                 <span style={{fontFamily:"monospace"}}>{v.plate}</span>
                 {v.osNumber&&<span style={{color:B.orange}}>{fmtOS(v.osNumber)}</span>}
@@ -4166,7 +4176,7 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose,title="Abrir nova OS",
         <div style={{width:34,height:34,borderRadius:8,background:`${accentColor}18`,display:"flex",alignItems:"center",justifyContent:"center"}}><IFileText s={16} c={accentColor}/></div>
         <div>
           <div style={{fontWeight:700,fontSize:14,color:B.white}}>{title}</div>
-          <div style={{fontSize:12,color:B.gray400}}>{vehicle.model} · {vehicle.plate}</div>
+          <div style={{fontSize:12,color:B.gray400}}><VehName v={vehicle}/> · {vehicle.plate}</div>
         </div>
         <button onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:B.gray400}}><IX s={18}/></button>
       </div>
@@ -4205,16 +4215,14 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose,title="Abrir nova OS",
 
 // ─── Consulta pela placa (edge function plate-lookup, API Placas) ─────────────
 // Mostra o que veio da consulta ao lado do valor atual; nada é salvo até tocar em "Aplicar".
-// ver = versão FIPE escolhida (nome + motorização); sem ela usa o modelo do Detran e a cilindrada
-const plateLookupModel=(v,ver)=>[v.brand,ver?.name||v.model].filter(Boolean).join(" ");
+// ver = versão FIPE escolhida (nome + motorização); sem ela usa o modelo do Detran e a cilindrada. Marca vai no campo próprio
+const plateLookupModel=(v,ver)=>ver?.name||v.model||"";
 const plateLookupEngine=(v,ver)=>ver?.engine||[v.engineCc?(Math.round(v.engineCc/100)/10).toFixed(1):"",v.power&&/^\d+$/.test(String(v.power))?`${v.power} cv`:v.power].filter(Boolean).join(" · ");
 const plateLookupPatch=(v,ver)=>{
   const p={brand:v.brand||"",model:plateLookupModel(v,ver),engine:plateLookupEngine(v,ver),year:v.modelYear||v.year||null,color:v.color||"",fuelType:v.fuel||"",chassis:v.chassis||"",engineNumber:v.engineNumber||""};
   Object.keys(p).forEach(k=>{if(!p[k]) delete p[k];});
   return p;
 };
-// Nome do carro com a marca na frente, sem repetir quando o modelo já começa com ela
-const vehTitle=v=>{const b=String(v?.brand||"").trim(),m=String(v?.model||"").trim();return b&&!m.toUpperCase().startsWith(b.toUpperCase())?`${b} ${m}`:m;};
 const PLATE_LOOKUP_FIELDS=[["brand","Marca"],["model","Modelo"],["engine","Motorização"],["year","Ano"],["color","Cor"],["fuelType","Combustível"],["chassis","Chassi"],["engineNumber","Motor (nº)"]];
 function PlateLookup({plate,current={},onApply}) {
   const [busy,setBusy]=useState(false);
@@ -4315,7 +4323,7 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
 
   const confirm=()=>{
     if(!canSave) return;
-    if(plateConflict){setPlateErr(`Placa já cadastrada: ${plateConflict.model}`);return;}
+    if(plateConflict){setPlateErr(`Placa já cadastrada: ${vehTitle(plateConflict)}`);return;}
     onConfirm({
       model,plate,color,year:year?parseInt(year):null,brand:brand.trim(),engine:engine.trim(),chassis:chassis.trim().toUpperCase(),engineNumber:engineNumber.trim().toUpperCase(),fuelType:fuelType.trim(),
       clientId:clientMode==="existing"?selectedClientId:null,
@@ -4343,7 +4351,7 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
           </div>
           <div style={{flex:"2 1 180px"}}>
             <FieldLabel>Modelo do veículo</FieldLabel>
-            <input value={model} onChange={e=>setModel(e.target.value)} placeholder="Ex: Honda Civic 2022" autoFocus
+            <input value={model} onChange={e=>setModel(e.target.value)} placeholder="Ex: Civic Si" autoFocus
               style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           </div>
         </div>
@@ -4352,7 +4360,7 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
           <input value={plate} onChange={e=>{setPlate(e.target.value.toUpperCase());setPlateErr("");}} placeholder="Ex: ABC-1234"
             style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${plateConflict?B.red:B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace",letterSpacing:1}}/>
           {plateConflict&&<div style={{fontSize:11,color:B.red,marginTop:5,display:"flex",alignItems:"center",gap:4}}>
-            <Ic n="alert"/> Placa já cadastrada: <b>{plateConflict.model}</b>{plateConflict.plate&&` (${plateConflict.plate})`}
+            <Ic n="alert"/> Placa já cadastrada: <b><VehName v={plateConflict}/></b>{plateConflict.plate&&` (${plateConflict.plate})`}
           </div>}
           {!plateConflict&&<PlateLookup plate={plate} current={{brand,model,engine,year,color,fuelType,chassis,engineNumber}}
             onApply={p=>{if(p.brand)setBrand(p.brand);if(p.engine)setEngine(p.engine);if(p.model)setModel(p.model);if(p.year)setYear(String(p.year));if(p.color)setColor(p.color);if(p.fuelType)setFuelType(p.fuelType);if(p.chassis)setChassis(p.chassis);if(p.engineNumber)setEngineNumber(p.engineNumber);}}/>}
@@ -5094,7 +5102,7 @@ function NewOSModal({division,vehicles,clients,employees,onClose,onConfirm}) {
     const qs=q.toLowerCase();
     if(!qs) return true;
     const cli=clients.find(c=>c.id===v.clientId);
-    return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
+    return vehTitle(v)?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
   });
   const relevantEmps=employees.filter(e=>isFin?e.division==="finishing":(e.division||"performance")==="performance");
   return(<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -5110,7 +5118,7 @@ function NewOSModal({division,vehicles,clients,employees,onClose,onConfirm}) {
             style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:selV?.id===v.id?`${color}22`:"none"}}
             onMouseEnter={e=>e.currentTarget.style.background=B.gray800}
             onMouseLeave={e=>e.currentTarget.style.background=selV?.id===v.id?`${color}22`:"none"}>
-            <div style={{fontWeight:700,fontSize:13,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+            <div style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
             {cli&&<div style={{fontSize:11,color:B.blue}}>{cli.name}</div>}
           </div>);
         })}
@@ -5141,7 +5149,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
   const vTasks=tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty);
   const [selected,setSelected]=useState(new Set());
   const [newItems,setNewItems]=useState([{label:"",division:"performance",category:""}]);
-  const [title,setTitle]=useState(`Próxima visita — ${vehicle.model}`);
+  const [title,setTitle]=useState(`Próxima visita — ${vehTitle(vehicle)}`);
   const [notes,setNotes]=useState("");
   const [saving,setSaving]=useState(false);
 
@@ -5186,7 +5194,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:14,color:B.white}}>Próxima visita</div>
-          <div style={{fontSize:11,color:B.gray400}}>{vehicle.model}{vehicle.plate?` · ${vehicle.plate}`:""}</div>
+          <div style={{fontSize:11,color:B.gray400}}><VehName v={vehicle}/>{vehicle.plate?` · ${vehicle.plate}`:""}</div>
         </div>
         <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,fontSize:18,padding:4}}>×</button>
       </div>
@@ -5628,7 +5636,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
     try {
       const res = await guardedNoteImport({
         note, file, selected: sel, ignored: N.finish ? leftover : [], dest: "vehicle",
-        extra: { vehicleId: vehicle.id, vehicleLabel: `${vehicle.model || ""} · ${vehicle.plate || ""}`.trim() },
+        extra: { vehicleId: vehicle.id, vehicleLabel: `${vehTitle(vehicle) || ""} · ${vehicle.plate || ""}`.trim() },
         supplierName: supplier.trim(), actor: roleActor(),
         perform: () => onImport({ file: keepPdf ? file : null, items: sel.map(r => ({ ...r, tid: r.tid || taskId })), markup: mk, supplier: regMatch, supplierName: supplier.trim(), existingDoc: keepPdf ? N.fromDoc : null, noteId: note.noteId }),
       });
@@ -5642,7 +5650,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
       <div style={{ background: B.gray900, borderBottom: `2px solid ${B.orange}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: B.white }}>Importar compra (PDF ou foto)</div>
-          <div style={{ fontSize: 11, color: B.gray400 }}>{vehicle.model} · {vehicle.plate}</div>
+          <div style={{ fontSize: 11, color: B.gray400 }}><VehName v={vehicle}/> · {vehicle.plate}</div>
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: B.gray400 }}><IX s={18} /></button>
       </div>
@@ -6119,7 +6127,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     const pk=newPick&&newPick.name===newT.trim()?newPick:null; const pkType=pk?(pk.rate_type||"hour"):null;
     const extra={...(h>0?{hours:h}:{}),...(pk&&pk.rate!=null?{ratePerHour:Number(pk.rate)}:{}),...(pk&&pkType!==(isFD?"qty":"hour")?{rateType:pkType,...(h>0?{}:{hours:1})}:{})};
     onAddTask(vehicle.id,newT.trim(),newCat||null,isFD?"finishing":"performance",Object.keys(extra).length?extra:null);setNewT("");setNewCat("");setNewH("");setNewPick(null);};
-  const doAI=async()=>{setAiL(true);setAiS([]);try{setAiS(await aiSuggest(vehicle.model));}catch{}setAiL(false);};
+  const doAI=async()=>{setAiL(true);setAiS([]);try{setAiS(await aiSuggest(vehTitle(vehicle)));}catch{}setAiL(false);};
   const copyLink=()=>{navigator.clipboard?.writeText(pubLink);setCPL(true);setTimeout(()=>setCPL(false),2000);};
   const doPDF=async()=>{
     setPdfLoading(true);
@@ -6157,7 +6165,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           ?<img src={vehicle.photo} alt="" style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,border:`1px solid ${B.gray600}`}}/>
           :<div style={{width:44,height:44,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={20} c={B.orange}/></div>}
         <div style={{flex:1,minWidth:0}}>
-          <div style={narrow?{fontWeight:600,fontSize:14,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehTitle(vehicle)}</div>
+          <div style={narrow?{fontWeight:600,fontSize:14,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={vehicle}/></div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:narrow?"3px 8px":8,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>
             {isFD
@@ -6358,7 +6366,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         let receiptUrl=null;
         if(existingDoc){ receiptUrl=existingDoc.url; if(existingDoc.id&&!existingDoc.noteId&&noteId){ try{ await db.setSupplierDocNote(existingDoc.id,noteId); }catch{} } }
         else if(file){ try{ receiptUrl=await db.uploadPurchasePdf(vehicle.id,file); }catch(e){ console.warn("receipt upload",e); } }
-        if(receiptUrl&&supplier&&!existingDoc){ try{ await db.addSupplierDoc({supplier_id:supplier.id,file_url:receiptUrl,file_name:file.name,vehicle_label:`${vehicle.model||""} · ${vehicle.plate||""}`.trim(),total:Math.round(items0.reduce((s,r)=>s+(Number(r.cost)||0)*(Number(r.qty)||1),0)*100)/100,note:`${items0.length} item(ns) importado(s)`,note_id:noteId||null,created_by:(()=>{try{return sessionStorage.getItem(ADMIN_SESSION_KEY)||"";}catch{return "";}})()}); }catch(e){ console.warn("supplier doc",e); } }
+        if(receiptUrl&&supplier&&!existingDoc){ try{ await db.addSupplierDoc({supplier_id:supplier.id,file_url:receiptUrl,file_name:file.name,vehicle_label:`${vehTitle(vehicle)||""} · ${vehicle.plate||""}`.trim(),total:Math.round(items0.reduce((s,r)=>s+(Number(r.cost)||0)*(Number(r.qty)||1),0)*100)/100,note:`${items0.length} item(ns) importado(s)`,note_id:noteId||null,created_by:(()=>{try{return sessionStorage.getItem(ADMIN_SESSION_KEY)||"";}catch{return "";}})()}); }catch(e){ console.warn("supplier doc",e); } }
         const newMap={};
         for(const lbl of [...new Set(items.map(r=>r.tid).filter(x=>x.startsWith("new:")))]){
           const row=await onAddTask(vehicle.id,lbl.slice(4),null,isFD?"finishing":"performance");
@@ -6508,7 +6516,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
               <InlineEdit value={vehicle.fuelType||""} onSave={v=>onUpdateVehicle(vehicle.id,{fuelType:v.trim()})} placeholder="—"/>
             </div>
           </div>
-          <PlateLookup plate={vehicle.plate} current={{brand:vehicle.brand,model:vehicle.model,engine:vehicle.engine,year:vehicle.year,color:vehicle.color,fuelType:vehicle.fuelType,chassis:vehicle.chassis,engineNumber:vehicle.engineNumber}} onApply={p=>onUpdateVehicle(vehicle.id,p)}/>
+          <PlateLookup plate={vehicle.plate} current={{brand:vehicle.brand,model:vehModelOnly(vehicle),engine:vehicle.engine,year:vehicle.year,color:vehicle.color,fuelType:vehicle.fuelType,chassis:vehicle.chassis,engineNumber:vehicle.engineNumber}} onApply={p=>onUpdateVehicle(vehicle.id,p)}/>
         </div>}
         {vts.length>=4&&<div style={{display:"flex",alignItems:"center",gap:10,margin:"2px 0 6px"}}><div style={{position:"relative",flex:1,minWidth:0}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -6817,15 +6825,15 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         })()}
       </div>}
     </div>
-    {xfM&&<TransferModal title="Adicionar Mecânico" subtitle={`${vehicle.model} — ${vehicle.plate}`}
+    {xfM&&<TransferModal title="Adicionar Mecânico" subtitle={`${vehTitle(vehicle)} — ${vehicle.plate}`}
       items={employees.filter(e=>!(vehicle.mechanicIds||[]).includes(e.id)).map(e=>({id:e.id,label:e.name,sub:e.phone,icon:<IWrench s={15} c={B.orange}/>}))}
       onPick={id=>{if(onAddMechanic)onAddMechanic(vehicle.id,id);else onTransferMechanic(vehicle.id,id);setXfM(false);}} onClose={()=>setXfM(false)}/>}
-    {xfO&&<TransferModal title="Vincular / Transferir Cliente" subtitle={`${vehicle.model} — ${vehicle.plate}`}
+    {xfO&&<TransferModal title="Vincular / Transferir Cliente" subtitle={`${vehTitle(vehicle)} — ${vehicle.plate}`}
       items={clients.filter(c=>c.id!==vehicle.clientId).map(c=>({id:c.id,label:c.name,sub:c.phone,icon:<IUser s={15} c={B.blue}/>}))}
       onPick={id=>{onTransferOwner(vehicle.id,id);setXfO(false);}} onClose={()=>setXfO(false)}/>}
     {showAccount&&<AccountModal vehicle={vehicle} tasks={tasks} payments={payments} defaultRate={defaultRate} client={cli} company={company}
       onAddPayment={onAddPayment} onDeletePayment={onDeletePayment} onUpdatePayment={onUpdatePayment} onClose={()=>setSA(false)}/>}
-    {confirmDelV&&<ConfirmModal title="Excluir OS?" message={<>Deseja excluir a OS de <b style={{color:B.white}}>{vehicle.model}</b>? As tarefas desta {isFD?"Finishing":"Performance"} serão removidas, mas o veículo e seus dados continuam no sistema.</>} confirmLabel="Excluir OS" onConfirm={async()=>{
+    {confirmDelV&&<ConfirmModal title="Excluir OS?" message={<>Deseja excluir a OS de <b style={{color:B.white}}><VehName v={vehicle}/></b>? As tarefas desta {isFD?"Finishing":"Performance"} serão removidas, mas o veículo e seus dados continuam no sistema.</>} confirmLabel="Excluir OS" onConfirm={async()=>{
       // Remove tasks for this division only
       const divTasks=vts; // already filtered by division
       for(const t of divTasks) await onDeleteTask(t.id).catch(()=>{});
@@ -6834,7 +6842,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
       else await onUpdateVehicle(vehicle.id,{enteredAt:null,mechanicIds:[]}).catch(()=>{});
       setConfirmDelV(false);
     }} onCancel={()=>setConfirmDelV(false)}/>}
-    {confirmDeliver&&<ConfirmModal title={isFD?"Encerrar OS Finishing?":"Confirmar entrega?"} danger={false} message={isFD?<>Encerrar a OS da <b style={{color:FD.primary}}>Finishing Division</b> para <b style={{color:B.white}}>{vehicle.model}</b>?</>:<>Registrar a entrega de <b style={{color:B.white}}>{vehicle.model} — {vehicle.plate}</b> ao cliente? O timer será encerrado.</>} confirmLabel={isFD?"Encerrar Finishing":"Confirmar entrega"} onConfirm={()=>{isFD?onDeliverFinishing&&onDeliverFinishing(vehicle.id):onDeliver&&onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
+    {confirmDeliver&&<ConfirmModal title={isFD?"Encerrar OS Finishing?":"Confirmar entrega?"} danger={false} message={isFD?<>Encerrar a OS da <b style={{color:FD.primary}}>Finishing Division</b> para <b style={{color:B.white}}><VehName v={vehicle}/></b>?</>:<>Registrar a entrega de <b style={{color:B.white}}><VehName v={vehicle}/> — {vehicle.plate}</b> ao cliente? O timer será encerrado.</>} confirmLabel={isFD?"Encerrar Finishing":"Confirmar entrega"} onConfirm={()=>{isFD?onDeliverFinishing&&onDeliverFinishing(vehicle.id):onDeliver&&onDeliver(vehicle.id);setConfirmDeliver(false);}} onCancel={()=>setConfirmDeliver(false)}/>}
     {showNextVisit&&<NextVisitModal vehicle={vehicle} tasks={tasks} clients={clients} defaultRate={defaultRate} onClose={()=>setShowNextVisit(false)} onCreateAppointment={onCreateAppointment} onDeleteTask={onDeleteTask}/>}
     {showTLNote&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.75)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{background:B.gray900,borderRadius:14,padding:20,maxWidth:380,width:"100%",border:`1px solid ${B.blue}44`}}>
@@ -6858,7 +6866,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             // Open WhatsApp if client has phone
             const cli=clients.find(c=>c.id===vehicle.clientId);
             if(cli?.phone){
-              const vModel=vehicle.model||vehicle.plate||"seu veículo";
+              const vModel=vehTitle(vehicle)||vehicle.plate||"seu veículo";
               const waMsg=`Olá${cli.name?`, ${cli.name.split(" ")[0]}`:""}! 👋\n\nAtualização sobre o *${vModel}*:\n\n_${tlNoteText.trim()}_\n\nAcompanhe o progresso completo em: ${getPublicLink(vehicle.id)}`;
               openWhatsApp(cli.phone, waMsg);
             }
@@ -7056,7 +7064,7 @@ function ClientPaymentsHistory({cliV,payments,osHistory=[]}) {
         return (<div key={v.id} style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:10}}>
           <div onClick={()=>setOpenV(x=>({...x,[v.id]:!x[v.id]}))} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",cursor:"pointer"}}>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700,color:B.white}}>{v.model}</div>
+              <div style={{fontSize:13,fontWeight:700,color:B.white}}><VehName v={v}/></div>
               <div style={{fontSize:10.5,color:B.gray500,fontFamily:"monospace"}}>{v.plate}</div>
             </div>
             <span style={{fontSize:14,fontWeight:300,letterSpacing:".04em",color:B.green}}>{fmtBRL(vt)}</span>
@@ -7122,7 +7130,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
     if(useCredit){
       if(!cc||val>creditAvail+0.005) return;
       const osl=p.division==="finishing"&&payDiv!=="split"?(vehicle.osNumberFinishing!=null?fmtOSFD(vehicle.osNumberFinishing):"OS Finishing"):(vehicle.osNumber!=null?fmtOS(vehicle.osNumber):"OS aberta");
-      setBusy(true); const ok=await cc.applyClientCredit(vehicle.clientId,val,p,`Usado em ${osl} — ${vehicle.model||""} ${vehicle.plate||""}`.trim()); setBusy(false);
+      setBusy(true); const ok=await cc.applyClientCredit(vehicle.clientId,val,p,`Usado em ${osl} — ${vehTitle(vehicle)||""} ${vehicle.plate||""}`.trim()); setBusy(false);
       if(!ok) return;
       setUseCredit(false);
     } else onAddPayment(p);
@@ -7137,7 +7145,7 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
         <IBank s={18} c={B.green}/>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:9.5,letterSpacing:".18em",textTransform:"uppercase",color:B.gray500,fontWeight:600}}>Conta corrente</div>
-          <div style={{fontSize:14,fontWeight:600,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}>{vehicle.model}<span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate?`  ·  ${vehicle.plate}`:""}</span></div>
+          <div style={{fontSize:14,fontWeight:600,color:B.white,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginTop:2}}><VehName v={vehicle}/><span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate?`  ·  ${vehicle.plate}`:""}</span></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,padding:6,display:"flex"}}><IX s={18}/></button>
       </div>
@@ -7733,10 +7741,10 @@ function VehiclePicker({value,onChange,vehicles,clients=[]}) {
   const [open,setOpen]=useState(false);
   const [q,setQ]=useState("");
   const cliName=v=>clients.find(c=>c.id===v.clientId)?.name||"";
-  const lbl=v=>(v.model||"Veículo")+" · "+(v.plate||"sem placa");
+  const lbl=v=>(vehTitle(v)||"Veículo")+" · "+(v.plate||"sem placa");
   const cur=vehicles.find(v=>v.id===value);
   const nq=_normName(q);
-  const list=vehicles.filter(v=>!nq||_normName([v.model,v.plate,cliName(v)].join(" ")).includes(nq)).slice(0,40);
+  const list=vehicles.filter(v=>!nq||_normName([vehTitle(v),v.plate,cliName(v)].join(" ")).includes(nq)).slice(0,40);
   const pickIt=id=>{onChange(id);setOpen(false);setQ("");};
   return (<div style={{position:"relative",minWidth:0,width:"100%"}}>
     <button type="button" onClick={()=>setOpen(o=>!o)} style={{display:"block",width:"100%",boxSizing:"border-box",textAlign:"left",background:B.gray900,border:`1px solid ${cur?B.amber+"88":B.gray600}`,borderRadius:8,color:cur?B.white:B.gray400,padding:"8px 10px",fontSize:13,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cur?lbl(cur)+(cliName(cur)?` — ${cliName(cur)}`:""):"Escolha o carro…"} ▾</button>
@@ -8783,7 +8791,7 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
                     :<div style={{width:38,height:38,borderRadius:7,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={17} c={B.orange}/></div>}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                      <span style={{fontWeight:700,fontSize:13,color:B.white}}>{v.model}</span>
+                      <span style={{fontWeight:700,fontSize:13,color:B.white}}><VehName v={v}/></span>
                       <span style={{fontFamily:"monospace",fontSize:11,color:B.gray400}}>{v.plate}</span>
                       {v.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(v.osNumber)}</span>}
                     </div>
@@ -8857,7 +8865,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
     const qs=q.toLowerCase();
     if(!qs) return true;
     const cli=clients.find(c=>c.id===v.clientId);
-    return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
+    return vehTitle(v)?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
   }).slice(0,8);
 
   const selCli=selV?clients.find(c=>c.id===selV.clientId):null;
@@ -8874,7 +8882,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
       await onPost(selV.id,{type:selTask?"task_update":"note",title,body:note.trim(),actor:adminRole==="owner"?"Gestor":"Admin",category:selTask?.category||null,color});
       // Open WhatsApp if toggled and client has phone
       if(sendWA&&hasPhone){
-        const vModel=selV.model||selV.plate||"seu veículo";
+        const vModel=vehTitle(selV)||selV.plate||"seu veículo";
         const waMsg=`Olá${selCli?.name?`, ${selCli.name.split(" ")[0]}`:""}! 👋\n\nAtualização sobre o *${vModel}*:\n\n_${note.trim()}_\n\nAcompanhe o progresso completo em: ${getPublicLink(selV.id)}`;
         openWhatsApp(selCli.phone, waMsg);
       }
@@ -8892,7 +8900,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
     <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
       {/* Vehicle search */}
       <div style={{position:"relative"}}>
-        <input value={vOpen?q:(selV?`${selV.model}${selV.plate?` · ${selV.plate}`:""}`+(selCli?` · ${selCli.name}`:""):"")}
+        <input value={vOpen?q:(selV?`${vehTitle(selV)}${selV.plate?` · ${selV.plate}`:""}`+(selCli?` · ${selCli.name}`:""):"")}
           onChange={e=>setQ(e.target.value)}
           onFocus={()=>{setVOpen(true);setQ("");}}
           onBlur={()=>setTimeout(()=>setVOpen(false),150)}
@@ -8906,7 +8914,7 @@ function QuickNoteModal({vehicles,clients,tasks=[],adminRole,onClose,onPost}) {
               style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
               onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <div style={{fontWeight:700,fontSize:12,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
               {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
             </div>);
           })}
@@ -8956,12 +8964,12 @@ function ReminderVehicleSearch({value,onChange,vehicles,clients}){
   const [open,setOpen]=useState(false);
   const sel=vehicles.find(x=>x.id===value);
   const selCli=sel?clients.find(c=>c.id===sel.clientId):null;
-  const label=sel?`${sel.model}${sel.plate?` · ${sel.plate}`:""}`+(selCli?` · ${selCli.name}`:""):"";
+  const label=sel?`${vehTitle(sel)}${sel.plate?` · ${sel.plate}`:""}`+(selCli?` · ${selCli.name}`:""):"";
   const hits=vehicles.filter(v=>{
     const qs=q.toLowerCase();
     if(!qs) return true;
     const cli=clients.find(c=>c.id===v.clientId);
-    return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
+    return vehTitle(v)?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
   }).slice(0,8);
   return(<div style={{position:"relative"}}>
     <input value={open?q:label} onChange={e=>setQ(e.target.value)}
@@ -8977,7 +8985,7 @@ function ReminderVehicleSearch({value,onChange,vehicles,clients}){
           style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
           onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
           onMouseLeave={e=>e.currentTarget.style.background="none"}>
-          <div style={{fontSize:11,fontWeight:600,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+          <div style={{fontSize:11,fontWeight:600,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
           {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
         </div>);
       })}
@@ -9091,7 +9099,7 @@ function RemindersPanel({onClose,reminders=[],vehicles=[],clients=[],adminRole,o
                   <span style={{fontSize:9,fontWeight:700,color:prio.color,background:`${prio.color}18`,borderRadius:4,padding:"1px 5px"}}>{prio.label}</span>
                   {r.category&&<span style={{fontSize:9,color:B.gray400,background:B.gray700,borderRadius:4,padding:"1px 5px"}}>{r.category}</span>}
                   {r.visibility!=="both"&&<span style={{fontSize:9,color:B.purple,background:`${B.purple}18`,borderRadius:4,padding:"1px 5px"}}>{r.visibility==="owner"?"Gestor":"Admin"}</span>}
-                  {v&&<span style={{fontSize:9,color:B.orange,background:`${B.orange}18`,borderRadius:4,padding:"1px 5px"}}>{v.model}</span>}
+                  {v&&<span style={{fontSize:9,color:B.orange,background:`${B.orange}18`,borderRadius:4,padding:"1px 5px"}}><VehName v={v}/></span>}
                   {r.dueDate&&<span style={{fontSize:9,color:isOverdue?B.red:B.gray500,fontWeight:isOverdue?700:400}}>{isOverdue?<><Ic n="alert"/> </>:""}{new Date(r.dueDate+"T12:00").toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}</span>}
                 </div>
               </div>
@@ -9121,12 +9129,12 @@ function CalVehicleSearch({value,onChange,vehicles=[],clients=[],filterActive=fa
   const [open,setOpen]=useState(false);
   const sel=vehicles.find(x=>x.id===value);
   const selCli=sel?clients.find(x=>x.id===sel.clientId):null;
-  const selLabel=sel?`${sel.model}${sel.plate?` · ${sel.plate}`:""}`+(selCli?` · ${selCli.name}`:""):"";
+  const selLabel=sel?`${vehTitle(sel)}${sel.plate?` · ${sel.plate}`:""}`+(selCli?` · ${selCli.name}`:""):"";
   const filtered=vehicles.filter(v=>{
     if(filterActive&&v.status!=="active"&&v.status!=="ready") return false;
     const qs=q.toLowerCase();
     const c=clients.find(x=>x.id===v.clientId);
-    return !qs||v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||c?.name?.toLowerCase().includes(qs);
+    return !qs||vehTitle(v)?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||c?.name?.toLowerCase().includes(qs);
   });
   return(<div style={{position:"relative"}}>
     <input value={open?q:selLabel}
@@ -9143,7 +9151,7 @@ function CalVehicleSearch({value,onChange,vehicles=[],clients=[],filterActive=fa
           style={{padding:"6px 8px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:value===v.id?`${B.purple}22`:"none"}}
           onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
           onMouseLeave={e=>e.currentTarget.style.background=value===v.id?`${B.purple}22`:"none"}>
-          <div style={{fontSize:11,color:B.white,fontWeight:600}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+          <div style={{fontSize:11,color:B.white,fontWeight:600}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
           {c&&<div style={{fontSize:10,color:B.blue}}>{c.name}</div>}
         </div>);
       })}
@@ -9161,8 +9169,8 @@ function CalEventForm({ev,setEv,onSave,onClose2,onDel,vehicles=[],clients=[]}) {
       const v=vehicles.find(x=>x.id===vehicleId);
       if(!v) return "";
       const cli=clients.find(x=>x.id===v.clientId);
-      if(type==="delivery") return `Entrega ${v.model?`da ${v.model}`:""}`.trim();
-      if(type==="visit") return cli?`Visita de ${cli.name}`:(v.model?`Visita — ${v.model}`:"");
+      if(type==="delivery") return `Entrega ${vehTitle(v)?`da ${vehTitle(v)}`:""}`.trim();
+      if(type==="visit") return cli?`Visita de ${cli.name}`:(vehTitle(v)?`Visita — ${vehTitle(v)}`:"");
       return "";
     };
     const handleTypeChange=k=>{
@@ -9377,7 +9385,7 @@ function CalendarPanel({onClose,events=[],appointments=[],vehicles=[],clients=[]
                 <div style={{fontWeight:700,fontSize:12,color:B.white}}>{ev.title}</div>
                 <div style={{fontSize:10,color:B.gray400,display:"flex",gap:6,marginTop:2}}>
                   <span>{evDate.toLocaleDateString("pt-BR",{weekday:"short",day:"numeric",month:"short"})}{ev.time?` · ${ev.time}`:""}</span>
-                  {v&&<span style={{color:B.orange}}>· {v.model}</span>}
+                  {v&&<span style={{color:B.orange}}>· {vehTitle(v)}</span>}
                   <span style={{color:ev.color||CAL_TYPES[ev.type]?.color||B.purple}}>{CAL_TYPES[ev.type]?.label||"Evento"}</span>
                 </div>
               </div>
@@ -9427,7 +9435,7 @@ async function generateApptPDF(appt, vehicle, client, company) {
 
   // Vehicle + client info
   doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(...black);
-  doc.text(vehicle?.model||appt.title,marginX,y);
+  doc.text(vehTitle(vehicle)||appt.title,marginX,y);
   y+=6;
   if(vehicle?.plate){ doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...gray); doc.text(`Placa: ${vehicle.plate}`,marginX,y); y+=5; }
   if(client?.name){ doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...gray); doc.text(`Cliente: ${client.name}${client.phone?` · ${client.phone}`:""}`,marginX,y); y+=5; }
@@ -9517,7 +9525,7 @@ async function generateApptPDF(appt, vehicle, client, company) {
   doc.setFont("helvetica","italic"); doc.setFontSize(7); doc.setTextColor(180,180,180);
   doc.text(`Documento gerado em ${new Date().toLocaleString("pt-BR")} via OSC Group`,marginX,y);
 
-  const vName=(vehicle?.model||appt.title||"agendamento").replace(/[^a-zA-Z0-9]/g,"-");
+  const vName=(vehTitle(vehicle)||appt.title||"agendamento").replace(/[^a-zA-Z0-9]/g,"-");
   doc.save(`pre-aprovacao-${vName}.pdf`);
 }
 
@@ -9741,7 +9749,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
   const vehicleHits=vehicles.filter(v=>{
     const q=vehicleSearch.toLowerCase();
     const cli=clients.find(c=>c.id===v.clientId);
-    return !q||v.model?.toLowerCase().includes(q)||v.plate?.toLowerCase().includes(q)||cli?.name?.toLowerCase().includes(q);
+    return !q||vehTitle(v)?.toLowerCase().includes(q)||v.plate?.toLowerCase().includes(q)||cli?.name?.toLowerCase().includes(q);
   }).slice(0,6);
 
   const generateWithAI=async()=>{
@@ -9751,7 +9759,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       const r=await fetch("https://lchfmoeyzgbepunetuch.supabase.co/functions/v1/ai-quote",{
         method:"POST",
         headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjaGZtb2V5emdiZXB1bmV0dWNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NzEzOTUsImV4cCI6MjA5ODM0NzM5NX0.2RTbc1Dd_VWGT56ak1T41HH2zGXCS6MDbnXe4EY3SYQ"},
-        body:JSON.stringify({description:form.description,model:form.tempModel||selectedVehicle?.model||"",year:form.tempYear||selectedVehicle?.year||""})
+        body:JSON.stringify({description:form.description,model:form.tempModel||vehTitle(selectedVehicle)||"",year:form.tempYear||selectedVehicle?.year||""})
       });
       const txt=await r.text();
       console.log("ai-quote raw response:",txt);
@@ -9839,7 +9847,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       <div style={{marginBottom:10}}>
         <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>Veículo</div>
         {form.clientId?<div style={{position:"relative"}}>
-          <input value={vehicleOpen?vehicleSearch:(selectedVehicle?`${selectedVehicle.model}${selectedVehicle.plate?` · ${selectedVehicle.plate}`:""}`:"")}
+          <input value={vehicleOpen?vehicleSearch:(selectedVehicle?`${vehTitle(selectedVehicle)}${selectedVehicle.plate?` · ${selectedVehicle.plate}`:""}`:"")}
             onChange={e=>{setVehicleSearch(e.target.value);setVehicleOpen(true);}}
             onFocus={()=>setVehicleOpen(true)} onBlur={()=>setTimeout(()=>setVehicleOpen(false),150)}
             placeholder="Buscar veículo do cliente"
@@ -9849,7 +9857,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
               style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`}}
               onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <div style={{fontWeight:700,fontSize:12,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+              <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
             </div>)}
           </div>}
         </div>:<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -10152,19 +10160,19 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
             const q=vSearch.toLowerCase();
             const hits=vehicles.filter(v=>{
               const cli=clients.find(c=>c.id===v.clientId);
-              return (v.model||"").toLowerCase().includes(q)||(v.plate||"").toLowerCase().includes(q)||(cli?.name||"").toLowerCase().includes(q);
+              return (vehTitle(v)||"").toLowerCase().includes(q)||(v.plate||"").toLowerCase().includes(q)||(cli?.name||"").toLowerCase().includes(q);
             }).slice(0,8);
             if(!hits.length) return null;
             return(<div style={{position:"absolute",top:"100%",left:0,right:0,background:B.gray800,borderRadius:8,border:`1px solid ${B.gray600}`,zIndex:50,overflow:"hidden",marginTop:2}}>
               {hits.map(v=>{
                 const cli=clients.find(c=>c.id===v.clientId);
-                return(<div key={v.id} onClick={()=>{setForm(p=>({...p,vehicleId:v.id}));setVSearch(`${v.model}${v.plate?` (${v.plate})`:""}`);setShowVList(false);}}
+                return(<div key={v.id} onClick={()=>{setForm(p=>({...p,vehicleId:v.id}));setVSearch(`${vehTitle(v)}${v.plate?` (${v.plate})`:""}`);setShowVList(false);}}
                   style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}
                   onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
                   onMouseLeave={e=>e.currentTarget.style.background="none"}>
                   {v.photo&&<img src={v.photo} alt="" style={{width:28,height:28,borderRadius:5,objectFit:"cover",flexShrink:0}}/>}
                   <div>
-                    <div style={{fontSize:12,fontWeight:700,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+                    <div style={{fontSize:12,fontWeight:700,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
                     {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                   </div>
                 </div>);
@@ -10237,7 +10245,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
           {v?.photo&&<img src={v.photo} alt="" style={{width:38,height:38,borderRadius:8,objectFit:"cover",flexShrink:0}}/>}
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontWeight:900,fontSize:14,color:B.white,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-              {v&&<span>{v.model}{v.plate?` · ${v.plate}`:""}</span>}
+              {v&&<span><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</span>}
               {cli&&<span style={{color:B.blue,fontWeight:700}}>{cli.name}</span>}
             </div>
             <div style={{fontSize:11,color:B.gray500,marginTop:2,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
@@ -10595,7 +10603,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
         return(<div key={a.id} style={{padding:"10px 14px",background:B.gray900,borderRadius:10,marginBottom:6,border:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,opacity:.7}}>
           <div style={{flex:1}}>
             <div style={{fontSize:13,fontWeight:700,color:B.gray300}}>{a.title}</div>
-            <div style={{fontSize:11,color:B.gray500}}>{v?.model}{cli?` · ${cli.name}`:""} · {a.status==="converted"?"Convertido em OS":"Cancelado"}</div>
+            <div style={{fontSize:11,color:B.gray500}}><VehName v={v}/>{cli?` · ${cli.name}`:""} · {a.status==="converted"?"Convertido em OS":"Cancelado"}</div>
           </div>
           {a.status==="converted"&&<span style={{fontSize:10,color:B.green,fontWeight:700,background:B.greenBg,borderRadius:5,padding:"2px 7px"}}>OS gerada</span>}
           {a.status==="cancelled"&&<span style={{fontSize:10,color:B.red,background:`${B.red}12`,borderRadius:5,padding:"2px 7px"}}>Cancelado</span>}
@@ -10657,7 +10665,7 @@ function VehiclesTab({vehicles,tasks,employees,clients,defaultRate,onUpdateVehic
     if(osFilter==="active"&&!hasOS) return false;
     if(osFilter==="available"&&hasOS) return false;
     if(!search) return true;
-    return v.model.toLowerCase().includes(search.toLowerCase())||
+    return vehTitle(v).toLowerCase().includes(search.toLowerCase())||
       v.plate.toLowerCase().includes(search.toLowerCase())||
       (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase());
   });
@@ -10952,7 +10960,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
           :<div style={{width:42,height:42,borderRadius:8,background:`${B.orange}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><ICar s={19} c={B.orange}/></div>}
 
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehTitle(vehicle)}</div>
+          <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={vehicle}/></div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
             <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
             {vehicle.year&&<span style={{color:B.gray400}}>{vehicle.year}</span>}
@@ -11060,7 +11068,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             <InlineEdit value={vehicle.fuelType||""} onSave={v=>onUpdateVehicle(vehicle.id,{fuelType:v.trim()})} placeholder="—"/>
           </div>
         </div>
-        <PlateLookup plate={vehicle.plate} current={{brand:vehicle.brand,model:vehicle.model,engine:vehicle.engine,year:vehicle.year,color:vehicle.color,fuelType:vehicle.fuelType,chassis:vehicle.chassis,engineNumber:vehicle.engineNumber}} onApply={p=>onUpdateVehicle(vehicle.id,p)}/>
+        <PlateLookup plate={vehicle.plate} current={{brand:vehicle.brand,model:vehModelOnly(vehicle),engine:vehicle.engine,year:vehicle.year,color:vehicle.color,fuelType:vehicle.fuelType,chassis:vehicle.chassis,engineNumber:vehicle.engineNumber}} onApply={p=>onUpdateVehicle(vehicle.id,p)}/>
         {/* Identification photo */}
         <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
           {vehicle.photo
@@ -11222,7 +11230,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 })()}
                 {/* Reopen OS button — owner only, when no active OS */}
                 {isOwner&&!hasActiveOS&&onOpenOS&&(h.division||"performance")==="performance"&&<button onClick={()=>{
-                  if(window.confirm(`Reabrir a ${h.os_number?fmtOS(h.os_number):"OS"} para ${vehicle.model}? Os dados históricos serão mantidos.`)){
+                  if(window.confirm(`Reabrir a ${h.os_number?fmtOS(h.os_number):"OS"} para ${vehTitle(vehicle)}? Os dados históricos serão mantidos.`)){
                     onOpenOS(vehicle.id, null, h.entered_at||null);
                   }
                 }} style={{background:`${B.green}18`,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.green,fontSize:10,fontWeight:800,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}>
@@ -11233,7 +11241,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                   try{
                     const rawFuels=Array.isArray(h.fuels)?h.fuels:(h.fuels?JSON.parse(JSON.stringify(h.fuels)):[]);
                     const rawTows=Array.isArray(h.tows)?h.tows:(h.tows?JSON.parse(JSON.stringify(h.tows)):[]);
-                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehicle.model,fuelCost:Number(h.fuel_cost||0),fuels:rawFuels,tows:rawTows,freights:Array.isArray(h.freights)?h.freights:[],importParts:Array.isArray(h.import_parts)?h.import_parts:[],osDiscountPct:Number(h.os_discount_pct||0)};
+                    const histVehicle={...vehicle,osNumber:h.os_number,plate:vehicle.plate,model:vehTitle(vehicle),fuelCost:Number(h.fuel_cost||0),fuels:rawFuels,tows:rawTows,freights:Array.isArray(h.freights)?h.freights:[],importParts:Array.isArray(h.import_parts)?h.import_parts:[],osDiscountPct:Number(h.os_discount_pct||0)};
                     const hEmployee=employees.find(e=>(h.mechanic_ids||[]).includes(e.id))||null;
                     await generateQuotePDF(histVehicle,[],hClient,hEmployee,company,defaultRate,hTasks,payments.filter(p=>p.osHistoryId===h.id),{total:h.total_value!=null?Number(h.total_value):undefined,note:h.discount_note||""});
                   }catch(err){alert("Erro ao gerar PDF: "+err.message);}
@@ -11243,7 +11251,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
                 </button>
                 {isOwner&&<button onClick={()=>{
                   const osLabel=h.os_number?fmtOS(h.os_number):"OS";
-                  if(!window.confirm(`Excluir ${osLabel} do histórico de ${vehicle.model}?\n\nEsta ação não pode ser desfeita.`)) return;
+                  if(!window.confirm(`Excluir ${osLabel} do histórico de ${vehTitle(vehicle)}?\n\nEsta ação não pode ser desfeita.`)) return;
                   if(!window.confirm(`CONFIRMAÇÃO FINAL\n\nTem certeza que deseja excluir permanentemente ${osLabel}?\n\nTodos os dados desta OS serão perdidos.`)) return;
                   onDeleteOsHistory&&onDeleteOsHistory(h.id);
                 }} style={{background:`${B.red}15`,border:`1px solid ${B.red}33`,borderRadius:6,padding:"3px 8px",cursor:"pointer",color:B.red,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
@@ -11326,8 +11334,8 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
 
       {/* Delete vehicle — owner only, no active OS, inside expanded card */}
       {isOwner&&!hasActiveOS&&!hasActiveFinishing&&onDeleteVehicle&&open&&<div style={{padding:"12px 16px",borderTop:`1px solid ${B.gray700}`}}>
-        <button onClick={()=>{          if(!window.confirm(`Excluir ${vehicle.model}${vehicle.plate?` (${vehicle.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
-          if(!window.confirm(`CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${vehicle.model}?`)) return;
+        <button onClick={()=>{          if(!window.confirm(`Excluir ${vehTitle(vehicle)}${vehicle.plate?` (${vehicle.plate})`:""} do cadastro?\n\nO histórico de OSs será mantido.`)) return;
+          if(!window.confirm(`CONFIRMAÇÃO FINAL\n\nExcluir permanentemente ${vehTitle(vehicle)}?`)) return;
           onDeleteVehicle(vehicle.id);
         }} style={{background:"none",border:`1px solid ${B.red}33`,borderRadius:7,padding:"6px 12px",cursor:"pointer",color:B.red,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:5,opacity:.7}}
           onMouseEnter={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.background=`${B.red}12`;}}
@@ -11578,7 +11586,7 @@ function InvestmentsTab({investments,adminRole,onAdd,onUpdate,onDelete,onAddToSt
     return (mirror.orders||[]).filter(o=>key==="approved"?o.status==="ready_to_buy":o.status===key).filter(o=>{
       if(!q) return true;
       const v=(mirror.vehicles||[]).find(x=>x.id===o.vehicleId);
-      return (o.partName||"").toLowerCase().includes(q)||(o.description||"").toLowerCase().includes(q)||(v?.model||"").toLowerCase().includes(q)||(v?.plate||"").toLowerCase().includes(q);
+      return (o.partName||"").toLowerCase().includes(q)||(o.description||"").toLowerCase().includes(q)||(vehTitle(v)||"").toLowerCase().includes(q)||(v?.plate||"").toLowerCase().includes(q);
     });
   };
   const renderCat=(items,color,open,isMateriais=false)=>(<>
@@ -11928,7 +11936,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
             <div style={{fontWeight:800,fontSize:14,color:B.white}}>{o.partName}</div>
             {o.description&&<div style={{fontSize:12,color:B.gray400,marginTop:2}}>{o.description}</div>}
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
-              {v&&<span style={{fontSize:10,color:B.blue,background:`${B.blue}18`,borderRadius:5,padding:"1px 7px",fontWeight:700}}><Ic n="car"/> {v.model}</span>}
+              {v&&<span style={{fontSize:10,color:B.blue,background:`${B.blue}18`,borderRadius:5,padding:"1px 7px",fontWeight:700}}><Ic n="car"/> {vehTitle(v)}</span>}
               {emp&&<span style={{fontSize:10,color:B.orange,background:`${B.orange}18`,borderRadius:5,padding:"1px 7px",fontWeight:700}}><Ic n="user"/> {emp.name}</span>}
               {t&&<span style={{fontSize:10,color:B.gray400,background:B.gray700,borderRadius:5,padding:"1px 7px"}}><Ic n="wrench"/> {t.label}</span>}
               <span style={{fontSize:10,color:B.gray500}}>Qtd: {o.quantity}</span>
@@ -12044,7 +12052,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
                 <span style={{fontSize:12,fontWeight:800,color:B.green}}><Ic n="done"/></span>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13,color:B.white}}>{o.partName}</div>
-                  <div style={{fontSize:11,color:B.gray400}}>{v?.model} {v?.plate?`· ${v.plate}`:""}{emp?` · ${emp.name}`:""}</div>
+                  <div style={{fontSize:11,color:B.gray400}}><VehName v={v}/> {v?.plate?`· ${v.plate}`:""}{emp?` · ${emp.name}`:""}</div>
                   {o.costPrice&&<div style={{fontSize:11,color:B.green}}>R$ {Number(o.costPrice).toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>}
                 </div>
                 {isInstalled&&<span style={{fontSize:10,color:B.blue,fontWeight:700,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}><Ic n="done"/> Instalada</span>}
@@ -12116,7 +12124,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
         return o.partName.toLowerCase().includes(q)
           ||(o.description||"").toLowerCase().includes(q)
           ||(o.notesAdmin||"").toLowerCase().includes(q)
-          ||(v?.model||"").toLowerCase().includes(q)
+          ||(vehTitle(v)||"").toLowerCase().includes(q)
           ||(v?.plate||"").toLowerCase().includes(q)
           ||(emp?.name||"").toLowerCase().includes(q);
       })
@@ -12387,12 +12395,12 @@ function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[
           {(()=>{
             const selV=vehicles.find(x=>x.id===form.vehicleId);
             const selCli=selV?clients.find(c=>c.id===selV.clientId):null;
-            const selLabel=selV?`${selV.model}${selV.plate?` (${selV.plate})`:""}`+(selCli?` · ${selCli.name}`:""):"";
+            const selLabel=selV?`${vehTitle(selV)}${selV.plate?` (${selV.plate})`:""}`+(selCli?` · ${selCli.name}`:""):"";
             const hits=vehicles.filter(v=>{
               const qs=vSearch.toLowerCase();
               if(!qs) return true;
               const cli=clients.find(c=>c.id===v.clientId);
-              return v.model?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
+              return vehTitle(v)?.toLowerCase().includes(qs)||v.plate?.toLowerCase().includes(qs)||cli?.name?.toLowerCase().includes(qs);
             }).slice(0,12);
             return(<>
               <input value={vOpen?vSearch:selLabel} onChange={e=>setVSearch(e.target.value)}
@@ -12409,7 +12417,7 @@ function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[
                     style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,background:form.vehicleId===v.id?`${B.purple}22`:"none"}}
                     onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
                     onMouseLeave={e=>e.currentTarget.style.background=form.vehicleId===v.id?`${B.purple}22`:"none"}>
-                    <div style={{fontWeight:700,fontSize:12,color:B.white}}>{v.model}{v.plate?` · ${v.plate}`:""}{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</div>
+                    <div style={{fontWeight:700,fontSize:12,color:B.white}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}{osN?` — OS-${String(osN).padStart(3,"0")}`:""}</div>
                     {cli&&<div style={{fontSize:10,color:B.blue}}>{cli.name}</div>}
                   </div>);
                 })}
@@ -12454,7 +12462,7 @@ function InternalTransfersPanel({transfers=[],vehicles=[],clients=[],osHistory=[
               <span style={{fontSize:11,color:divColor(t.division_from),fontWeight:700}}>{divLabel(t.division_from)}</span>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={B.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               <span style={{fontSize:11,color:divColor(t.division_to),fontWeight:700}}>{divLabel(t.division_to)}</span>
-              {v&&<span style={{fontSize:10,color:B.gray400}}>· {v.model}{v.plate?` (${v.plate})`:""}</span>}
+              {v&&<span style={{fontSize:10,color:B.gray400}}>· {vehTitle(v)}{v.plate?` (${v.plate})`:""}</span>}
               {osNum&&<span style={{fontSize:10,fontWeight:700,color:B.orange,background:`${B.orange}15`,borderRadius:4,padding:"1px 6px"}}>{osNum}</span>}
             </div>
             <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8}}>
@@ -12611,7 +12619,7 @@ function FinanceEntriesCard({payments=[],vehicles=[],clients=[]}){
   const rows=useMemo(()=>payments.map(p=>{
     const v=vehicles.find(x=>x.id===p.vehicleId);
     const c=v?clients.find(x=>x.id===v.clientId):null;
-    const title=v?`${v.model||"Veículo"}${v.plate?` · ${v.plate}`:""}`:(p.note||"Venda avulsa");
+    const title=v?`${vehTitle(v)||"Veículo"}${v.plate?` · ${v.plate}`:""}`:(p.note||"Venda avulsa");
     return {p,v,c,title,sub:[c?.name,v&&p.note?p.note:null].filter(Boolean).join(" · "),
       hay:norm([title,c?.name,payMethodLabel(p.method),p.note,String(p.amount).replace(".",","),Number(p.amount).toLocaleString("pt-BR",{minimumFractionDigits:2})].join(" "))};
   }).sort((a,b)=>String(b.p.paidAt||"").localeCompare(String(a.p.paidAt||""))),[payments,vehicles,clients]);
@@ -12760,7 +12768,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
       :<div style={{display:"flex",flexDirection:"column",gap:8}}>
         {vehicleRows.map(r=>(<div key={r.v.id} style={{background:B.gray800,borderRadius:11,border:`1px solid ${B.gray700}`,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <div style={{flex:"1 1 160px",minWidth:0}}>
-            <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.v.model} <span style={{color:B.gray400,fontFamily:"monospace",fontSize:11}}>{r.v.plate}</span></div>
+            <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={r.v}/> <span style={{color:B.gray400,fontFamily:"monospace",fontSize:11}}>{r.v.plate}</span></div>
             <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap"}}>
               {r.cli&&<span><Ic n="user"/> {r.cli.name}</span>}{r.mech&&<span><Ic n="wrench"/> {r.mech.name}</span>}
             </div>
@@ -13177,7 +13185,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
       {cli&&cli.name&&<div style={{padding:"2px 4px 16px"}}>
         <div style={{width:24,height:2,borderRadius:99,background:B.orange,marginBottom:9}}/>
         <div style={{fontSize:13,fontWeight:600,color:B.white,letterSpacing:2.4,textTransform:"uppercase",lineHeight:1.3}}>Bem-vindo, <span style={{color:B.orange,fontWeight:800}}>{cli.name.trim().split(/\s+/)[0]}</span></div>
-        <div style={{fontSize:9,color:B.gray500,letterSpacing:.9,textTransform:"uppercase",marginTop:6,lineHeight:1.6}}>Acompanhe o andamento do seu {v.model}<br/>serviços · fotos · pagamentos</div>
+        <div style={{fontSize:9,color:B.gray500,letterSpacing:.9,textTransform:"uppercase",marginTop:6,lineHeight:1.6}}>Acompanhe o andamento do seu {vehTitle(v)}<br/>serviços · fotos · pagamentos</div>
       </div>}
       <div className="pv-grid">
       {/* ── Vehicle info ── */}
@@ -13193,7 +13201,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
             {hasPerf&&v.osNumber&&<span style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{fmtOS(v.osNumber)}</span>}
             {hasFin&&v.osNumberFinishing&&<span style={{fontSize:11,color:FD.primary,fontFamily:"monospace"}}>{fmtOSFD(v.osNumberFinishing)}</span>}
           </div>
-          <div style={{fontWeight:900,fontSize:26,color:B.white,letterSpacing:-.5,lineHeight:1.1}}>{v.model}</div>
+          <div style={{fontWeight:900,fontSize:26,color:B.white,letterSpacing:-.5,lineHeight:1.1}}><VehName v={v}/></div>
           <div style={{fontSize:13,color:B.gray400,marginTop:5}}>{[v.year,v.color,v.plate&&("Placa "+v.plate)].filter(Boolean).join(" · ")}</div>
           {ts.length>0&&<div style={{marginTop:16}}>
             <div style={{height:8,borderRadius:99,background:B.gray700,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:B.green,borderRadius:99,transition:"width .3s"}}/></div>
@@ -14142,7 +14150,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.262";
+const APP_VERSION = "2026.11.26.263";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14432,7 +14440,7 @@ function PublicVehicleHistoryView({vehicleId,vehicles,tasks,employees,osHistory=
       <div style={S.card}>
         {v.photo&&<img src={v.photo} alt="" style={{width:"100%",height:180,objectFit:"cover"}}/>}
         <div style={S.pad}>
-          <div style={{fontWeight:900,fontSize:22,color:B.white,marginBottom:8}}>{v.model}</div>
+          <div style={{fontWeight:900,fontSize:22,color:B.white,marginBottom:8}}><VehName v={v}/></div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <div style={{background:B.gray700,borderRadius:7,padding:"6px 12px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:1}}>Placa</div>
@@ -14555,7 +14563,7 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
 
   const filteredVehicles=activeVehicles.filter(v=>
     !search||
-    v.model.toLowerCase().includes(search.toLowerCase())||
+    vehTitle(v).toLowerCase().includes(search.toLowerCase())||
     v.plate.toLowerCase().includes(search.toLowerCase())||
     (v.color||"").toLowerCase().includes(search.toLowerCase())
   );
@@ -14598,7 +14606,7 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
                     style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:`2px solid ${selectedId===v.id?"#f59e0b":B.gray600}`,background:selectedId===v.id?"#f59e0b15":B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                     <span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/></div>
                       <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                     </div>
                     {selectedId===v.id&&<span style={{color:"#f59e0b",fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
@@ -14657,7 +14665,7 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
 
   const filtered=activeVehicles.filter(v=>
     !search||
-    v.model.toLowerCase().includes(search.toLowerCase())||
+    vehTitle(v).toLowerCase().includes(search.toLowerCase())||
     v.plate.toLowerCase().includes(search.toLowerCase())||
     (v.color||"").toLowerCase().includes(search.toLowerCase())
   );
@@ -14698,7 +14706,7 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
                 style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${selectedId===v.id?B.green:B.gray600}`,background:selectedId===v.id?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                 <span style={{fontSize:16,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/></div>
                   <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                 </div>
                 {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
@@ -15257,7 +15265,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         <button onClick={onClose} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:B.gray200,fontWeight:700,fontSize:12,cursor:"pointer"}}>← Voltar</button>
         {vehicle.photo&&<img src={vehicle.photo} alt="" style={{width:42,height:42,borderRadius:8,objectFit:"cover"}}/>}
         <div style={{flex:1,minWidth:160}}>
-          <div style={{fontSize:18,fontWeight:900,color:B.white,lineHeight:1.15}}>{vehicle.model}</div>
+          <div style={{fontSize:18,fontWeight:900,color:B.white,lineHeight:1.15}}><VehName v={vehicle}/></div>
           <div style={{fontSize:12,color:B.gray400}}><span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>{(isFD?vehicle.osNumberFinishing:vehicle.osNumber)?` · ${isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber)}`:""}</div>
         </div>
         <button onClick={()=>{try{navigator.clipboard.writeText(`${window.location.origin}/?carro=${vehicle.id}`);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch(e){}}}
@@ -15314,7 +15322,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         const nInternal=list.filter(isInternalTask).length;
         const forText=t=>tlInternal||!isInternalTask(t);
         const copyText=()=>{
-          const lines=[`Serviços concluídos — ${vehicle.model}${vehicle.plate?` (${vehicle.plate})`:""}`];
+          const lines=[`Serviços concluídos — ${vehTitle(vehicle)}${vehicle.plate?` (${vehicle.plate})`:""}`];
           groups.forEach(g=>{const it=g.items.filter(forText);if(!it.length)return;lines.push("",g.k||"Sem data");it.forEach(t=>lines.push(`• ${t.label}`));});
           try{navigator.clipboard.writeText(lines.join("\n"));setTlCopied(true);setTimeout(()=>setTlCopied(false),1800);}catch(e){}
         };
@@ -15643,7 +15651,7 @@ function PartialChargeModal({vehicle,tasks,isFD,defaultRate,client,employee,comp
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:10,fontWeight:700,color:accent,textTransform:"uppercase",letterSpacing:1.4}}>Cobrança parcial</div>
-          <div style={{fontSize:16,fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{vehicle.model} <span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate}</span></div>
+          <div style={{fontSize:16,fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle}/> <span style={{fontWeight:400,color:B.gray400,fontSize:12}}>{vehicle.plate}</span></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{width:40,height:40,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={16} c={B.white}/></button>
       </div>
@@ -15723,7 +15731,7 @@ function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,ma
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:10,fontWeight:800,color:accent,textTransform:"uppercase",letterSpacing:1.2}}>Conferência de entrega</div>
-          <div style={{fontSize:17,fontWeight:900,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{vehicle.model} <span style={{fontWeight:600,color:B.gray400,fontSize:13}}>{vehicle.plate}</span></div>
+          <div style={{fontSize:17,fontWeight:900,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle}/> <span style={{fontWeight:600,color:B.gray400,fontSize:13}}>{vehicle.plate}</span></div>
         </div>
         <button onClick={onClose} aria-label="Fechar" style={{width:44,height:44,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={18} c={B.white}/></button>
       </div>
@@ -15959,7 +15967,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
   const nameRef=useRef(null);
 
   const filteredVehicles=activeVehicles.filter(v=>
-    !vSearch||v.model.toLowerCase().includes(vSearch.toLowerCase())||v.plate.toLowerCase().includes(vSearch.toLowerCase())||(v.color||"").toLowerCase().includes(vSearch.toLowerCase())
+    !vSearch||vehTitle(v).toLowerCase().includes(vSearch.toLowerCase())||v.plate.toLowerCase().includes(vSearch.toLowerCase())||(v.color||"").toLowerCase().includes(vSearch.toLowerCase())
   );
   const vehicleTasks=tasks.filter(t=>t.vehicleId===selectedVid);
 
@@ -16009,7 +16017,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
                 style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:9,border:`2px solid ${selectedVid===v.id?B.blue:B.gray600}`,background:selectedVid===v.id?`${B.blue}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                 <span style={{fontSize:15,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:selectedVid===v.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:selectedVid===v.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/></div>
                   <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                 </div>
                 {selectedVid===v.id&&<span style={{color:B.blue,fontWeight:800}}><Ic n="done"/></span>}
@@ -16148,14 +16156,14 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
     return {h,total,paid,owed:Math.round((total-paid)*100)/100,v,cli};
   });
   const histRows=histAll.filter(r=>showSettled||r.owed>=0.01)
-    .filter(r=>{const q=search.toLowerCase();return !q||(r.v?.model||"").toLowerCase().includes(q)||(r.v?.plate||"").toLowerCase().includes(q)||(r.cli?.name||"").toLowerCase().includes(q);})
+    .filter(r=>{const q=search.toLowerCase();return !q||(vehTitle(r.v)||"").toLowerCase().includes(q)||(r.v?.plate||"").toLowerCase().includes(q)||(r.cli?.name||"").toLowerCase().includes(q);})
     .sort((a,b)=>String(b.h.delivered_at||"").localeCompare(String(a.h.delivered_at||"")));
   const selHist=histAll.find(r=>r.h.id===histId);
   const selOwed=selHist?Math.max(0,selHist.owed):0;
 
   const filtered=activeVehicles.filter(v=>
     !search||
-    v.model.toLowerCase().includes(search.toLowerCase())||
+    vehTitle(v).toLowerCase().includes(search.toLowerCase())||
     v.plate.toLowerCase().includes(search.toLowerCase())||
     (v.color||"").toLowerCase().includes(search.toLowerCase())||
     (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase())
@@ -16222,7 +16230,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
               return (<button key={r.h.id} onClick={()=>setHistId(r.h.id)}
                 style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${sel?B.green:B.gray600}`,background:sel?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:sel?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.v?`${r.v.model} · ${r.v.plate}`:"Veículo"}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:sel?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.v?`${vehTitle(r.v)} · ${r.v.plate}`:"Veículo"}</div>
                   <div style={{fontSize:11,color:B.gray400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.cli?.name||"Sem cliente"}{dt?` · entregue ${dt}`:""}</div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
@@ -16249,7 +16257,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
                 style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:9,border:`2px solid ${selectedId===v.id?B.green:B.gray600}`,background:selectedId===v.id?`${B.green}15`:B.gray900,cursor:"pointer",textAlign:"left",width:"100%"}}>
                 <span style={{fontSize:16,flexShrink:0}}><Ic n="car"/></span>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/></div>
                   <div style={{fontSize:11,color:B.gray400}}>{v.plate}{cli?` · ${cli.name}`:""}</div>
                 </div>
                 {(()=>{const b=divisionBalances(v,tasks,payments,defaultRate);const ow=(b.perfTotal-b.perfPaid)+(b.finTotal-b.finPaid);
@@ -16793,7 +16801,7 @@ function Deliveries99Tab({vehicles=[],canSeeValues=false,actor=""}) {
   useEffect(()=>{ if(!hasLiveApi) return; const t=setInterval(reload,30000); return ()=>clearInterval(t); },[hasLiveApi]);
 
   const fail=e=>alert(errMsg(e)||"Erro");
-  const vLabel=v=>[v.plate,v.model].filter(Boolean).join(" · ");
+  const vLabel=v=>[v.plate,vehTitle(v)].filter(Boolean).join(" · ");
   const vehicleOpts=vehicles.filter(v=>v.status!=="delivered").map(vLabel).filter(Boolean);
   const findVehicleId=label=>{ const l=String(label||"").trim(); if(!l) return null; const v=vehicles.find(x=>vLabel(x)===l)||vehicles.find(x=>x.plate&&normPlate(x.plate)===normPlate(l.split("·")[0])); return v?.id||null; };
   const apiReady=canSeeValues&&uberCfg?.configured;
@@ -17838,7 +17846,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
     c.name?.toLowerCase().includes(q)||c.phone?.includes(q)
   ).slice(0,5):[];
   const matchedVehicles=q?vehicles.filter(v=>
-    v.plate?.toLowerCase().includes(q)||v.model?.toLowerCase().includes(q)
+    v.plate?.toLowerCase().includes(q)||vehTitle(v)?.toLowerCase().includes(q)
   ).slice(0,5):[];
 
   function selectExistingVehicle(v){
@@ -17913,7 +17921,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
               return <div key={v.id} onClick={()=>selectExistingVehicle(v)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:rowBg,borderRadius:12,marginBottom:6,border:rowBorder,cursor:"pointer"}}>
                 <div style={{width:36,height:36,borderRadius:9,background:`${B.blue}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}><Ic n="car"/></div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,color:textColor,fontSize:13}}>{v.model} <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
+                  <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v}/> <span style={{color:B.gray500,fontFamily:"monospace"}}>· {v.plate}</span></div>
                   {c&&<div style={{fontSize:11,color:subColor}}>{c.name}</div>}
                 </div>
                 <span style={{color:subColor2,fontSize:16}}>›</span>
@@ -17978,7 +17986,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
             {vehicles.filter(v=>v.clientId===selectedClient.id).map(v=>(
               <div key={v.id} onClick={()=>{setSelectedVehicle(v);setStep(3);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:selectedVehicle?.id===v.id?`${B.orange}18`:B.gray800,borderRadius:12,marginBottom:6,border:`1px solid ${selectedVehicle?.id===v.id?B.orange+"55":B.gray700}`,cursor:"pointer"}}>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,color:textColor,fontSize:13}}>{v.model}</div>
+                  <div style={{fontWeight:700,color:textColor,fontSize:13}}><VehName v={v}/></div>
                   <div style={{fontSize:11,color:subColor,fontFamily:"monospace"}}>{v.plate}</div>
                 </div>
                 {selectedVehicle?.id===v.id&&<span style={{color:B.orange}}><Ic n="done"/></span>}
@@ -18467,10 +18475,10 @@ function MainApp() {
     const liveEmp=mechSession?(employees.find(e=>e.id===mechSession.id)||mechSession):null;
     if(!liveEmp) return <div key={theme} style={{height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><MechanicLoginScreen employees={employees} onLogin={doLogin}/><ThemeBtn toggleTheme={toggleTheme} theme={theme} themePref={themePref}/></div>;
     return <div key={theme} style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}><ErrorBoundary><MechanicPortal employee={liveEmp} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} stock={stock}
-      onAddTask={async(vid,lbl)=>{try{const div=liveEmp.division||"performance";const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:div==="finishing"?1:0,ratePerHour:null,completedAt:null,division:div,rateType:div==="finishing"?"qty":"hour"});setTsk(p=>[...p,row]);const v=vehicles.find(x=>x.id===vid);const vModel=v?.model||v?.plate||"Veículo";db.sendPushToAdmins(`Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});}catch(e){errToast(e);}}}
-      onToggleTask={async id=>{const t=tasks.find(x=>x.id===id);const nowDone=!t.done;const completedAt=nowDone?new Date().toISOString():null;const completedByEmployeeId=nowDone?liveEmp.id:null;setTsk(p=>p.map(x=>x.id===id?{...x,done:nowDone,completedAt,completedByEmployeeId}:x));try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});const v=vehicles.find(x=>x.id===t.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(nowDone){db.sendPushToAdmins(`${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}else{db.sendPushToAdmins(`${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}pushToVehicleMechs(t.vehicleId,nowDone?`Tarefa concluída — ${vModel}`:`Tarefa reaberta — ${vModel}`,t.label,t.division);}catch(e){errToast(e);}}}
-      onDeleteTask={async id=>{const t=tasks.find(x=>x.id===id);setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";if(t)db.sendPushToAdmins(`${vModel}`,`Tarefa removida: ${t.label}`,"/?").catch(()=>{});if(t&&v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}catch(e){errToast(e);}}}
-      onUpdateTask={async(id,patch)=>{const tOld=tasks.find(x=>x.id===id);setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);if(patch.materials){const v=vehicles.find(x=>x.id===tOld?.vehicleId);const vModel=v?.model||v?.plate||"Veículo";const added=addedMaterials(tOld?.materials,patch.materials);if(added.length)db.sendPushToAdmins(`Material — ${vModel}`,`Material incluído: ${added.map(m=>m.name).join(", ")}`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
+      onAddTask={async(vid,lbl)=>{try{const div=liveEmp.division||"performance";const row=await db.addTask({vehicleId:vid,label:lbl,done:false,materials:[],hours:div==="finishing"?1:0,ratePerHour:null,completedAt:null,division:div,rateType:div==="finishing"?"qty":"hour"});setTsk(p=>[...p,row]);const v=vehicles.find(x=>x.id===vid);const vModel=vehTitle(v)||v?.plate||"Veículo";db.sendPushToAdmins(`Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});}catch(e){errToast(e);}}}
+      onToggleTask={async id=>{const t=tasks.find(x=>x.id===id);const nowDone=!t.done;const completedAt=nowDone?new Date().toISOString():null;const completedByEmployeeId=nowDone?liveEmp.id:null;setTsk(p=>p.map(x=>x.id===id?{...x,done:nowDone,completedAt,completedByEmployeeId}:x));try{await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});const v=vehicles.find(x=>x.id===t.vehicleId);const vModel=vehTitle(v)||v?.plate||"Veículo";if(nowDone){db.sendPushToAdmins(`${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço concluído: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}else{db.sendPushToAdmins(`${vModel}`,`Tarefa reaberta: ${t.label}`,"/?").catch(()=>{});if(v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço reaberto: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}pushToVehicleMechs(t.vehicleId,nowDone?`Tarefa concluída — ${vModel}`:`Tarefa reaberta — ${vModel}`,t.label,t.division);}catch(e){errToast(e);}}}
+      onDeleteTask={async id=>{const t=tasks.find(x=>x.id===id);setTsk(p=>p.filter(t=>t.id!==id));try{await db.deleteTask(id);const v=vehicles.find(x=>x.id===t?.vehicleId);const vModel=vehTitle(v)||v?.plate||"Veículo";if(t)db.sendPushToAdmins(`${vModel}`,`Tarefa removida: ${t.label}`,"/?").catch(()=>{});if(t&&v?.clientId)db.sendPushToClient(v.clientId,`${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});}catch(e){errToast(e);}}}
+      onUpdateTask={async(id,patch)=>{const tOld=tasks.find(x=>x.id===id);setTsk(p=>p.map(t=>t.id===id?{...t,...patch}:t));try{await db.updateTask(id,patch);if(patch.materials){const v=vehicles.find(x=>x.id===tOld?.vehicleId);const vModel=vehTitle(v)||v?.plate||"Veículo";const added=addedMaterials(tOld?.materials,patch.materials);if(added.length)db.sendPushToAdmins(`Material — ${vModel}`,`Material incluído: ${added.map(m=>m.name).join(", ")}`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
       onUpdateVehicle={async(id,patch)=>{setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));try{await db.updateVehicle(id,patch);if("photos" in patch||"photosFinishing" in patch){const v=vehicles.find(x=>x.id===id);const vModel=v?.model||v?.plate||"Veículo";const div="photosFinishing" in patch?"Finishing":"Performance";db.sendPushToAdmins(`Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});}}catch(e){errToast(e);}}}
       onLogout={doLogout}
       purchaseOrders={purchaseOrders}
@@ -18581,7 +18589,7 @@ function MainApp() {
       await db.updateVehicle(id,patch);
       if("photos" in patch||"photosFinishing" in patch){
         const v=vehicles.find(x=>x.id===id);
-        const vModel=v?.model||v?.plate||"Veículo";
+        const vModel=vehTitle(v)||v?.plate||"Veículo";
         const div="photosFinishing" in patch?"Finishing":"Performance";
         db.sendPushToAdmins(`Nova foto — ${vModel}`,`Foto adicionada (${div})`,"/?").catch(()=>{});
         postTimeline(id,{type:"photo",title:"Fotos adicionadas",body:div,actor:null,color:"#6366f1"});
@@ -18589,7 +18597,7 @@ function MainApp() {
       // Notify mechanics when vehicle is marked urgent
       if("urgent" in patch&&patch.urgent){
         const v=vehicles.find(x=>x.id===id);
-        const vModel=v?.model||v?.plate||"Veículo";
+        const vModel=vehTitle(v)||v?.plate||"Veículo";
         (v?.mechanicIds||[]).forEach(eid=>{
           db.sendPushToEmployee(eid,`Prioridade — ${vModel}`,"Este veículo foi marcado como urgente.","/?portal=mecanico").catch(()=>{});
         });
@@ -18653,7 +18661,7 @@ function MainApp() {
     try{
       await db.updateVehicle(vid,patch);
       const v=vehicles.find(x=>x.id===vid);
-      const vModel=v?.model||v?.plate||"Veículo";
+      const vModel=vehTitle(v)||v?.plate||"Veículo";
       if(newStatus==="ready"){
         db.sendPushToAdmins(`Pronto — ${vModel}`,"Veículo concluiu todos os serviços e está pronto para entrega.","/?").catch(()=>{});
         if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — Pronto!`,"Seu veículo concluiu todos os serviços e está pronto para retirada!",`/?v=${vid}`).catch(()=>{});
@@ -18683,7 +18691,7 @@ function MainApp() {
     setVeh(p=>p.map(x=>x.id===vid?{...x,...patch}:x));
     try{
       await db.updateVehicle(vid,patch);
-      const vModel=v?.model||v?.plate||"Veículo";
+      const vModel=vehTitle(v)||v?.plate||"Veículo";
       const statusLabel=newStatus==="paused"?"pausado (Finishing)":newStatus==="active"?"▶ retomado (Finishing)":"atualizado";
       pushToVehicleMechs(vid,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de Finishing foi pausado.":"O serviço de Finishing foi retomado.");
       if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} — ${statusLabel}`,newStatus==="paused"?"O serviço de acabamento (Finishing) foi pausado momentaneamente.":"O serviço de acabamento (Finishing) foi retomado!",`/?portal=cliente`).catch(()=>{});
@@ -18773,7 +18781,7 @@ function MainApp() {
       setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]);
       setPay(d.payments||[]);
       toast_("Veículo entregue e OS arquivada");
-      const vModel=v?.model||v?.plate||"Veículo";
+      const vModel=vehTitle(v)||v?.plate||"Veículo";
       pushToVehicleMechs(vid,`OS encerrada — ${vModel}`,"O veículo foi entregue ao cliente.","performance");
       if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} pronto!`,"Seu veículo foi entregue. Obrigado pela preferência!",`/?portal=cliente`).catch(()=>{});
     }catch(e){
@@ -18800,7 +18808,7 @@ function MainApp() {
       }:x));
       toast_(`OS ${fmtOS(osNumber)} aberta`);
       const v=vehicles.find(x=>x.id===vid);
-      const vModel=v?.model||v?.plate||"Veículo";
+      const vModel=vehTitle(v)||v?.plate||"Veículo";
       if(employeeId) db.sendPushToEmployee(employeeId,`Nova OS — ${vModel}`,`${fmtOS(osNumber)} foi aberta para você.`,"/?portal=mecanico").catch(()=>{});
       db.sendPushToAdmins(`OS aberta — ${vModel}`,`${fmtOS(osNumber)} iniciada.`,"/?").catch(()=>{});
     }catch(e){ errToast(e); }
@@ -18822,7 +18830,7 @@ function MainApp() {
       }:x));
       toast_(`${fmtOSFD(osNumber)} Finishing aberta`);
       const v=vehicles.find(x=>x.id===vid);
-      const vModel=v?.model||v?.plate||"Veículo";
+      const vModel=vehTitle(v)||v?.plate||"Veículo";
       if(employeeId) db.sendPushToEmployee(employeeId,`Nova OS Finishing — ${vModel}`,`${fmtOSFD(osNumber)} foi aberta para você.`,"/?portal=mecanico").catch(()=>{});
       db.sendPushToAdmins(`OS Finishing aberta — ${vModel}`,`${fmtOSFD(osNumber)} iniciada.`,"/?").catch(()=>{});
     }catch(e){ errToast(e); }
@@ -18873,7 +18881,7 @@ function MainApp() {
       if(extra&&extra.done) return row; // lançamento retroativo (já concluída): sem avisos nem linha do tempo
       // Push notification to assigned mechanics
       const v=vehicles.find(x=>x.id===vid);
-      const vModel=v?.model||v?.plate||"Veículo";
+      const vModel=vehTitle(v)||v?.plate||"Veículo";
       pushToVehicleMechs(vid,`Nova tarefa — ${vModel}`,lbl,division);
       db.sendPushToAdmins(`Nova tarefa — ${vModel}`,lbl,"/?").catch(()=>{});
       if(v?.clientId) db.sendPushToClient(v.clientId,`Novo serviço — ${vModel}`,lbl,`/?v=${vid}`).catch(()=>{});
@@ -18892,7 +18900,7 @@ function MainApp() {
       if(event.type==="note"||event.type==="task_update"){
         const v=vehicles.find(x=>x.id===vehicleId);
         if(v?.clientId){
-          const vModel=v.model||v.plate||"Veículo";
+          const vModel=vehTitle(v)||v.plate||"Veículo";
           const body=event.body?.slice(0,80)+(event.body?.length>80?"…":"");
           db.sendPushToClient(v.clientId,`${vModel}`,body,`/?v=${vehicleId}`).catch(()=>{});
         }
@@ -18920,7 +18928,7 @@ function MainApp() {
     try{
       await db.updateTask(id,{done:nowDone,completedAt,completedByEmployeeId});
       const v=vehicles.find(x=>x.id===t.vehicleId);
-      const vModel=v?.model||v?.plate||"Veículo";
+      const vModel=vehTitle(v)||v?.plate||"Veículo";
       if(nowDone) {
         pushToVehicleMechs(t.vehicleId,`Tarefa concluída — ${vModel}`,t.label,t.division);
         db.sendPushToAdmins(`${vModel}`,`Tarefa concluída: ${t.label}`,"/?").catch(()=>{});
@@ -18970,7 +18978,7 @@ function MainApp() {
     try{
       await db.deleteTask(id);
       const v=vehicles.find(x=>x.id===t?.vehicleId);
-      const vModel=v?.model||v?.plate||"Veículo";
+      const vModel=vehTitle(v)||v?.plate||"Veículo";
       if(t) pushToVehicleMechs(t.vehicleId,`Tarefa removida — ${vModel}`,t.label,t.division);
       if(t) db.sendPushToAdmins(`Tarefa removida — ${vModel}`,t.label,"/?").catch(()=>{});
       if(t&&v?.clientId) db.sendPushToClient(v.clientId,`${vModel}`,`Serviço removido: ${t.label}`,`/?v=${t.vehicleId}`).catch(()=>{});
@@ -19033,7 +19041,7 @@ function MainApp() {
           const newIds=[...(v.mechanicIds||[]),specialistMech.id];
           setVeh(p=>p.map(x=>x.id===v.id?{...x,mechanicIds:newIds}:x));
           await db.addVehicleMechanic(v.id,specialistMech.id);
-          toast_(`${specialistMech.name} adicionado ao ${v.model}`);
+          toast_(`${specialistMech.name} adicionado ao ${vehTitle(v)}`);
         }
       }
       // Notify client when a task update is published
@@ -19042,7 +19050,7 @@ function MainApp() {
         const v=vehicles.find(x=>x.id===t?.vehicleId);
         const lastUpdate=patch.updates[patch.updates.length-1];
         if(lastUpdate&&v?.clientId){
-          const vModel=v?.model||v?.plate||"Veículo";
+          const vModel=vehTitle(v)||v?.plate||"Veículo";
           db.sendPushToClient(v.clientId,`Atualização — ${vModel}`,`${t?.label||"Serviço"}: ${lastUpdate.text.slice(0,80)}${lastUpdate.text.length>80?"…":""}`,`/?v=${v.id}`).catch(()=>{});
           // Timeline: task update
           const catColor=t?.category?(CAT_MAP?.[t.category]||B.blue):B.blue;
@@ -19063,7 +19071,7 @@ function MainApp() {
       if(patch.materials){
         const t=tasks.find(x=>x.id===id);
         const v=vehicles.find(x=>x.id===t?.vehicleId);
-        const vModel=v?.model||v?.plate||"Veículo";
+        const vModel=vehTitle(v)||v?.plate||"Veículo";
         const matNames=addedMaterials(t?.materials,patch.materials).map(m=>m.name).join(", ");
         if(matNames) db.sendPushToAdmins(`Material — ${vModel}`,`Material incluído: ${matNames}`,"/?").catch(()=>{});
       }
@@ -19221,7 +19229,7 @@ function MainApp() {
       item=child;
     }
     const veh=d.type==="vehicle"?vehicles.find(v=>v.id===d.vehicleId):null;
-    const vlabel=veh?`${veh.model||""} · ${veh.plate||""}`.trim():null;
+    const vlabel=veh?`${vehTitle(veh)||""} · ${veh.plate||""}`.trim():null;
     const ok=await db.claimMLItem(item.id,{destination:d.type,vehicle_id:d.type==="vehicle"?d.vehicleId:null,vehicle_label:vlabel,assigned_by:ROLE_CONFIG[adminRole]?.label||null,assigned_at:new Date().toISOString(),...(d.type==="return"?{return_status:"todo",return_deadline:d.returnDeadline||null,return_reason:d.returnReason||null}:{})});
     if(!ok) throw new Error("Esta peça já foi destinada por outra pessoa. Atualize a lista.");
     try{
@@ -19363,7 +19371,7 @@ function MainApp() {
                 const o=purchaseOrders.find(x=>x.id===id);
                 const v=vehicles.find(x=>x.id===o?.vehicleId);
                 const st=PO_STATUS[patch.status]||{icon:"↩",label:"Devolvido"};
-                if(o?.employeeId) db.sendPushToEmployee(o.employeeId,`Pedido atualizado — ${v?.model||"Veículo"}`,`${o.partName}: ${patch.status==="pending"?"Item devolvido — pedido reiniciado":st.label}`,"/?portal=mecanico").catch(()=>{});
+                if(o?.employeeId) db.sendPushToEmployee(o.employeeId,`Pedido atualizado — ${vehTitle(v)||"Veículo"}`,`${o.partName}: ${patch.status==="pending"?"Item devolvido — pedido reiniciado":st.label}`,"/?portal=mecanico").catch(()=>{});
               }
             }catch(err){errToast(err);}
           };
@@ -19391,7 +19399,7 @@ function MainApp() {
             const newList=[...existing,newPart];
             setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
             try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}`);}catch(err){errToast(err);}
-            try{ await db.syncMLByLink("po",o.id,{suggest_vehicle_id:v.id,suggest_vehicle_label:`${v.model||""} · ${v.plate||""}`.trim()}); }catch(e){ console.warn("ml sync reserve",e); }
+            try{ await db.syncMLByLink("po",o.id,{suggest_vehicle_id:v.id,suggest_vehicle_label:`${vehTitle(v)||""} · ${v.plate||""}`.trim()}); }catch(e){ console.warn("ml sync reserve",e); }
           };
   // Recebimento do ML NÃO é mais automático: só roda quando admin/gestor confirma o item (onlyId) após conferir o material
   mlRecvFn.current=async(onlyId)=>{
@@ -19422,7 +19430,7 @@ function MainApp() {
               const u=await db.updatePurchaseOrder(po.id,{status:"received",costPrice:unit});
               setPurchaseOrders(p=>p.map(o=>o.id===po.id?u:o));
               const v=vehicles.find(x=>x.id===po.vehicleId);
-              if(po.employeeId) db.sendPushToEmployee(po.employeeId,`Pedido atualizado — ${v?.model||"Veículo"}`,`${po.partName}: ${PO_STATUS.received.label}`,"/?portal=mecanico").catch(()=>{});
+              if(po.employeeId) db.sendPushToEmployee(po.employeeId,`Pedido atualizado — ${vehTitle(v)||"Veículo"}`,`${po.partName}: ${PO_STATUS.received.label}`,"/?portal=mecanico").catch(()=>{});
               await poReserve({...po,status:"received",costPrice:unit},"Na oficina — a definir");
               toast_(`"${po.partName}" recebido — entrega confirmada no Mercado Livre`);
             }
@@ -19500,7 +19508,7 @@ function MainApp() {
   const notifyPayment=(p)=>{
     if(!p?.vehicleId||!(Number(p.amount)>0)) return;
     const v=vehicles.find(x=>x.id===p.vehicleId);
-    if(v?.clientId&&p.method!=="Crédito") db.sendPushToClient(v.clientId,`Pagamento registrado — ${v.model||v.plate}`,`${fmtBRL(p.amount)} via ${payMethodLabel(p.method)}`,`/?portal=cliente`).catch(()=>{});
+    if(v?.clientId&&p.method!=="Crédito") db.sendPushToClient(v.clientId,`Pagamento registrado — ${vehTitle(v)||v.plate}`,`${fmtBRL(p.amount)} via ${payMethodLabel(p.method)}`,`/?portal=cliente`).catch(()=>{});
     if(!p.osHistoryId) postTimeline(p.vehicleId,{type:"payment",title:`Pagamento — ${fmtBRL(p.amount)}`,body:payMethodLabel(p.method),actor:null,color:B.green});
   };
   const addPayment=async(p)=>{
@@ -20192,7 +20200,7 @@ function MainApp() {
               .filter(emp=>!mechSearch||
                 emp.name.toLowerCase().includes(mechSearch.toLowerCase())||
                 vehicles.filter(v=>(v.mechanicIds||[]).includes(emp.id)).some(v=>
-                  v.model.toLowerCase().includes(mechSearch.toLowerCase())||
+                  vehTitle(v).toLowerCase().includes(mechSearch.toLowerCase())||
                   v.plate.toLowerCase().includes(mechSearch.toLowerCase())
                 )
               )
@@ -20216,7 +20224,7 @@ function MainApp() {
             !!v.enteredAt);
           const activeVehicles=osSearch
             ? allActive.filter(v=>
-                v.model.toLowerCase().includes(osSearch.toLowerCase())||
+                vehTitle(v).toLowerCase().includes(osSearch.toLowerCase())||
                 v.plate.toLowerCase().includes(osSearch.toLowerCase())||
                 (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase())||
                 (osParts&&vehHasPart(v,osSearch,tasks))
@@ -20235,7 +20243,7 @@ function MainApp() {
           const readyVehiclesAll=vehicles.filter(v=>v.status==="ready"&&v.enteredAt);
           const readyVehicles=osSearch
             ? readyVehiclesAll.filter(v=>
-                v.model.toLowerCase().includes(osSearch.toLowerCase())||
+                vehTitle(v).toLowerCase().includes(osSearch.toLowerCase())||
                 v.plate.toLowerCase().includes(osSearch.toLowerCase())||
                 (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(osSearch.toLowerCase())||
                 (osParts&&vehHasPart(v,osSearch,tasks)))
@@ -20315,7 +20323,7 @@ function MainApp() {
                     {/* Row 1: photo + model name full width */}
                     <div style={{padding:"14px 16px 10px 20px",display:"flex",alignItems:"center",gap:12,borderBottom:`1px solid ${B.green}11`}}>
                       {v.photo&&<img src={v.photo} alt="" style={{width:44,height:44,borderRadius:9,objectFit:"cover",border:`1px solid ${B.green}44`,flexShrink:0}}/>}
-                      <span style={{fontWeight:900,fontSize:17,color:B.white,flex:1,lineHeight:1.2}}>{v.model}</span>
+                      <span style={{fontWeight:900,fontSize:17,color:B.white,flex:1,lineHeight:1.2}}><VehName v={v}/></span>
                     </div>
                     {/* Row 2: badges + info + date + button */}
                     <div style={{padding:"10px 16px 14px 20px",display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-start"}}>
@@ -20425,7 +20433,7 @@ function MainApp() {
         {(()=>{
           const activeFin=vehicles.filter(v=>v.status!=="delivered"&&v.enteredAtFinishing);
           const filtered=finSearch?activeFin.filter(v=>
-            v.model.toLowerCase().includes(finSearch.toLowerCase())||
+            vehTitle(v).toLowerCase().includes(finSearch.toLowerCase())||
             v.plate.toLowerCase().includes(finSearch.toLowerCase())||
             (clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(finSearch.toLowerCase())||
             (finParts&&vehHasPart(v,finSearch,tasks))
@@ -20507,7 +20515,7 @@ function MainApp() {
               }
               await db.updateAppointment(a.id,{status:"converted",convertedAt:new Date().toISOString()});
               setAppts(p=>p.map(x=>x.id===a.id?{...x,status:"converted",convertedAt:new Date().toISOString()}:x));
-              toast_(`OS aberta para ${v.model} com ${a.services.length} tarefa(s)`);
+              toast_(`OS aberta para ${vehTitle(v)} com ${a.services.length} tarefa(s)`);
               setTab("clients");
             }catch(e){errToast(e);}
           }}
@@ -20804,7 +20812,7 @@ function MainApp() {
         const [form,setForm]=useState({partName:"",description:"",taskId:"",quantity:"1"});
         const [saving,setSaving]=useState(false);
         const activeVehicles=vehicles.filter(v=>v.enteredAt||v.enteredAtFinishing);
-        const filtered=activeVehicles.filter(v=>!search||v.model.toLowerCase().includes(search.toLowerCase())||(v.plate||"").toLowerCase().includes(search.toLowerCase())||(clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase()));
+        const filtered=activeVehicles.filter(v=>!search||vehTitle(v).toLowerCase().includes(search.toLowerCase())||(v.plate||"").toLowerCase().includes(search.toLowerCase())||(clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase()));
         const vTasks=tasks.filter(t=>t.vehicleId===vehicleId);
         const submit=async()=>{
           if(!vehicleId||!form.partName.trim()) return;
@@ -20813,7 +20821,7 @@ function MainApp() {
             const r=await db.addPurchaseOrder({vehicleId,taskId:form.taskId||null,partName:form.partName.trim(),description:form.description.trim(),quantity:parseInt(form.quantity)||1,photoUrl:""});
             setPurchaseOrders(prev=>[r,...prev]);
             const v=vehicles.find(x=>x.id===vehicleId);
-            db.sendPushToAdmins(`Pedido — ${v?.model||"Veículo"}`,form.partName,"/?").catch(()=>{});
+            db.sendPushToAdmins(`Pedido — ${vehTitle(v)||"Veículo"}`,form.partName,"/?").catch(()=>{});
             toast_(`Pedido "${form.partName}" criado`);
             setShowQuickPedidoOS(false);
           }catch(e){errToast(e);}
@@ -20844,7 +20852,7 @@ function MainApp() {
                       return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.amber}22`:B.gray800,border:`1px solid ${sel?B.amber:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                         {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>}
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+                          <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
                           {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                         </div>
                         {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,flexShrink:0}}>{fmtOS(v.osNumber)}</span>}
@@ -20886,7 +20894,7 @@ function MainApp() {
         const [qty,setQty]=useState("1");
         const [location,setLocation]=useState("");
         const [saving,setSaving]=useState(false);
-        const filtered=[...vehicles].sort((a,b)=>(a.model||"").localeCompare(b.model||"","pt-BR")).filter(v=>!search||v.model.toLowerCase().includes(search.toLowerCase())||(v.plate||"").toLowerCase().includes(search.toLowerCase())||(clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase()));
+        const filtered=[...vehicles].sort((a,b)=>(a.model||"").localeCompare(b.model||"","pt-BR")).filter(v=>!search||vehTitle(v).toLowerCase().includes(search.toLowerCase())||(v.plate||"").toLowerCase().includes(search.toLowerCase())||(clients.find(c=>c.id===v.clientId)?.name||"").toLowerCase().includes(search.toLowerCase()));
         const submit=async()=>{
           if(!vehicleId||!name.trim()) return;
           setSaving(true);
@@ -20896,7 +20904,7 @@ function MainApp() {
             const newParts=[...parts,{id:Date.now().toString(),name:name.trim(),qty:parseInt(qty)||1,location:location.trim(),note:"",photos:[]}];
             await db.updateVehicle(vehicleId,{partsList:newParts});
             setVeh(p=>p.map(x=>x.id===vehicleId?{...x,partsList:newParts}:x));
-            toast_(`Peça "${name}" adicionada ao ${v?.model}`);
+            toast_(`Peça "${name}" adicionada ao ${vehTitle(v)}`);
             setShowQuickPecasVeiculo(false);
           }catch(e){errToast(e);}
           setSaving(false);
@@ -20925,7 +20933,7 @@ function MainApp() {
                     return(<button key={v.id} onClick={()=>setVehicleId(v.id)} style={{width:"100%",textAlign:"left",padding:"8px 12px",borderRadius:8,background:sel?`${B.purple}22`:B.gray800,border:`1px solid ${sel?B.purple:B.gray700}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
                       {v.photo?<img src={v.photo} style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0}}/>:<span style={{fontSize:18,flexShrink:0}}><Ic n="car"/></span>}
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}{v.plate?` · ${v.plate}`:""}</div>
+                        <div style={{fontWeight:700,fontSize:12,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={v}/>{v.plate?` · ${v.plate}`:""}</div>
                         {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                       </div>
                       {parts>0&&<span style={{fontSize:10,fontWeight:800,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"1px 6px",flexShrink:0}}>{parts}<Ic n="nut"/></span>}

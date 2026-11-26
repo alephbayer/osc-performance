@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Cards do carro no PC (Oficina e Veículos): cor com bolinha, ano e motor no mesmo formato do celular"
+      },
+      {
+        "type": "fix",
         "text": "Card do carro no celular: cor (com bolinha da cor), ano e motor ao lado da placa"
       },
       {

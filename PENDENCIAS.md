@@ -23,6 +23,15 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] Depois: padronizar nomes das tarefas antigas? (só com OK, mexe em dados de produção)
 - [x] Símbolos ✓/✕/✗ da interface trocados por `<Ic n="done"/>`, `<Ic n="x"/>` (novo) e `<Ic n="xc"/>`; ✓ removido dos avisos (toasts); PDF "Quitado" sem ✓ (v2026.11.26.246). Conferir no app ao vivo o alinhamento dos ícones
 
+## Estética dos cards (veículo e mecânico, 2026-11-26)
+- [x] Chips 3º/Gar./Int./Ficha cinza (cor só ligado, sem selo repetido "Terceirizado"/"Garantia"), desconto sem vermelho, origens de material como links finos (v2026.11.26.249)
+- [x] Tarefas com escala única: fontes 10/12/13, peso 400/600, raio 6 (v.250)
+- [x] Linha de horas como texto "0 h × R$ 420,00/h", alternar por hora/quantidade, total sem caixa (v.251)
+- [x] `InlineEdit`: lápis colado ao texto, some em campo vazio, prop `bare` sem lápis; nome da tarefa edita ao tocar; 16 `style` duplicados juntados (títulos de seções voltaram a ter cor/tamanho, sem caixa-alta) (v.252)
+- [x] Cabeçalho de categoria sem caixa-alta, total cinza, chevron de traço; card do mecânico sem sombra, borda fina, etiquetas normais, ações só ícone (v.253)
+- Conferido no preview local (build de produção, perfil Gestor, celular, tema claro): card do veículo e lista de mecânicos. **Não conferido:** tema escuro, Finishing, tarefa com valor/desconto, portal do mecânico
+- [ ] Depois, se o Aleph quiser: mesmo tratamento nos botões do topo do card (Link/PDF/Estimados/Conta e a grade de ações coloridas), que ainda pesam
+
 ## Entregas 99 (99Entrega)
 - [x] Base: tabela `deliveries_99` (migration 058) e tela Compras > Entregas 99, registro manual com link, status e custo; chefes sem valores (v2026.11.23.198)
 - [ ] **Aleph:** cadastro da empresa em 99app.com/99-entrega (formulário: nome, telefone, CNPJ, e-mail) -> completar cadastro no Portal 99Entrega Empresas -> pedir acesso à API (no portal ou api-suporte@99app.com). Atenção: a 99 anuncia API/Portal para quem faz mais de 300 entregas/mês; abaixo disso indica o app. Sem mensalidade, paga por km

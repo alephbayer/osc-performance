@@ -59,11 +59,11 @@ const B = {
 // vehTitle = texto corrido ("BMW M3 Coupê"), sem repetir a marca quando o modelo antigo já começa com ela
 const vehModelOnly=v=>{const b=String(v?.brand||"").trim(),m=String(v?.model||"").trim();return b&&m.toUpperCase().startsWith(b.toUpperCase()+" ")?m.slice(b.length+1):m;};
 const vehTitle=v=>{const b=String(v?.brand||"").trim(),m=vehModelOnly(v);return b?(m?`${b} ${m}`:b):m;};
-// VehName = marca em âmbar, maiúsculas espaçadas, mesmo tamanho do modelo + ponto + modelo
+// VehName = marca em âmbar, maiúsculas espaçadas em 82% (compensação óptica da caixa alta) + ponto + modelo
 function VehName({v}){
   const b=String(v?.brand||"").trim(), m=vehModelOnly(v);
   if(!b) return <>{m}</>;
-  return <><span style={{whiteSpace:"nowrap"}}><span style={{color:B.amber,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase"}}>{b}</span><span style={{display:"inline-block",width:".26em",height:".26em",borderRadius:99,background:B.gray500,margin:"0 .45em",verticalAlign:"middle"}}/></span>{m}</>;
+  return <><span style={{whiteSpace:"nowrap"}}><span style={{color:B.amber,fontSize:".82em",fontWeight:500,letterSpacing:".07em",textTransform:"uppercase"}}>{b}</span><span style={{display:"inline-block",width:".26em",height:".26em",borderRadius:99,background:B.gray500,margin:"0 .45em",verticalAlign:"middle"}}/></span>{m}</>;
 }
 
 const qtyNum=v=>{const n=parseFloat(String(v).replace(",","."));return n>0?n:1;};
@@ -14175,7 +14175,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.266";
+const APP_VERSION = "2026.11.26.267";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

@@ -31,7 +31,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Cabeçalho de categoria sem caixa-alta, total cinza, chevron de traço; card do mecânico sem sombra, borda fina, etiquetas normais, ações só ícone (v.253)
 - Conferido no preview local (build de produção, perfil Gestor, celular, tema claro): card do veículo e lista de mecânicos. **Não conferido:** tema escuro, Finishing, tarefa com valor/desconto, portal do mecânico
 - [x] Aleph preferiu: botões de material (estoque, Mercado Livre, link) de volta às cores; total da categoria em negrito na cor da categoria (v.255; a v.254 subiu só o changelog por erro de script)
-- [ ] Depois, se o Aleph quiser: mesmo tratamento nos botões do topo do card (Link/PDF/Estimados/Conta e a grade de ações coloridas), que ainda pesam
+- [x] Topo do card do carro (v.256): no celular (< 600 px, hook `useNarrow`) nome em até 2 linhas, informações agrupadas, total da OS numa faixa própria; barra de progresso com trilho visível; anotações do cliente em 12 com "ver mais" (3 linhas) e "Recebido" discreto; "Abrir página do carro" virou link à direita; Observações com 2 linhas e cresce ao digitar. Conferido no preview (celular e PC); anotações do cliente não conferidas (carro de teste sem anotação)
+- [ ] **Aleph pensando:** botões de ação do card (Link/PDF/Pronto/Conta + 9 secundários coloridos). Proposta: 4 principais mais baixos e só contorno; secundários neutros com ícone colorido; no celular só os 3-4 mais usados e o resto no "…" do card (Link/PDF/Estimados/Conta e a grade de ações coloridas), que ainda pesam
 
 ## Entregas 99 (99Entrega)
 - [x] Base: tabela `deliveries_99` (migration 058) e tela Compras > Entregas 99, registro manual com link, status e custo; chefes sem valores (v2026.11.23.198)

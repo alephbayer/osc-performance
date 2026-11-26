@@ -4692,6 +4692,10 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
 }
 
 // ─── TaskItem — Manager ───────────────────────────────────────────────────────
+// Chip discreto das tarefas: cinza desligado, cor suave só quando ligado
+const taskChip=(on,col)=>({background:on?`${col||B.gray400}1a`:"none",border:`1px solid ${on?(col||B.gray400)+"55":B.gray700}`,borderRadius:6,padding:"1px 7px",cursor:"pointer",color:on?(col||B.gray200):B.gray500,fontSize:10,fontWeight:on?600:400,flexShrink:0,display:"inline-flex",alignItems:"center",gap:3,whiteSpace:"nowrap"});
+// Botão-link fino (origens de material)
+const linkBtn=(col)=>({padding:"4px 6px",borderRadius:6,background:"none",border:"none",color:col||B.gray400,cursor:"pointer",fontWeight:400,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"});
 function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onConsumeStock,onReturnStock,onOrderPart=null,employees=[],isFD=false,purchaseOrders=[],allTasks=[],reservedParts=[],currentEmployee=null}) {
   const [showSpec,setShowSpec]=useState(()=>{ try{ return localStorage.getItem("osc_spec_open")===task.id; }catch{ return false; } });
   const [showTaskPOs,setShowTaskPOs]=useState(false);
@@ -4759,24 +4763,22 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}}>
             <CategorySelect value={task.category} onChange={cat=>onUpdate(task.id,{category:cat})} categories={isFD?CATEGORIES_FINISHING:CATEGORIES}/>
             <button onClick={()=>onUpdate(task.id,{outsourced:!task.outsourced,warranty:false})} title={task.outsourced?"Marcar como interno":"Marcar como terceirizado"}
-              style={{background:task.outsourced?"#a78bfa22":"none",border:`1px solid ${task.outsourced?"#a78bfa44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.outsourced?"#a78bfa":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
-              {task.outsourced?<><Ic n="done"/> 3º</>:"3º"}
+              style={taskChip(task.outsourced)}>
+              {task.outsourced?"Terceirizado":"3º"}
             </button>
             <button onClick={()=>onUpdate(task.id,{warranty:!task.warranty,outsourced:false})} title={task.warranty?"Remover garantia":"Marcar como garantia"}
-              style={{background:task.warranty?`${B.red}22`:"none",border:`1px solid ${task.warranty?B.red+"44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.warranty?B.red:B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
-              {task.warranty?<><Ic n="done"/> Gar.</>:"Gar."}
+              style={taskChip(task.warranty,B.red)}>
+              {task.warranty?"Garantia":"Gar."}
             </button>
             {!task.warranty&&(()=>{const eff=isInternalTask(task);return <button onClick={()=>{const next=!eff;const auto=!taskHasValue(task);onUpdate(task.id,{internal:next===auto?null:next});}} title={eff?"Interno: não aparece no PDF nem no acompanhamento do cliente. Toque para exibir.":"Visível no PDF e para o cliente. Toque para marcar como interno."}
-              style={{background:eff?`${B.gray500}26`:"none",border:`1px solid ${eff?B.gray500:B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:eff?B.gray300:B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
-              {eff?<><Ic n="done"/> Int.</>:"Int."}
+              style={taskChip(eff)}>
+              {eff?"Interno":"Int."}
             </button>;})()}
             {!task.warranty&&<button onClick={()=>setShowSpec(true)} title="Ficha detalhada: vira uma página dedicada no PDF do orçamento"
-              style={{background:task.featured?"#a855f722":"none",border:`1px solid ${task.featured?"#a855f766":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.featured?"#a855f7":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
+              style={taskChip(task.featured)}>
               {task.featured?<><Ic n="done"/> Ficha</>:"Ficha"}
             </button>}
             {showSpec&&<TaskSpecModal task={task} onSave={patch=>onUpdate(task.id,patch)} onClose={()=>setShowSpec(false)}/>}
-            {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
-              {task.warranty&&<span style={{fontSize:10,fontWeight:800,color:B.red,background:`${B.red}18`,border:`1px solid ${B.red}44`,borderRadius:5,padding:"1px 7px",flexShrink:0,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={B.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Garantia</span>}
           </div>
           {/* Line 1: task label — alone */}
           <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -4800,7 +4802,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           </div>}
           {/* Per-task discount — hidden for warranty */}
           {!task.warranty&&c.laborGross>0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:4}}>
-            <span style={{fontSize:10,color:B.red,fontWeight:600,flexShrink:0}}>Desconto R$</span>
+            <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>Desconto</span>
             <InlineEdit value={task.discount?fmtR2(task.discount):""} onSave={v=>onUpdate(task.id,{discount:Math.max(0,parseFloat(v.replace(",","."))||0)})} placeholder="0" type="number"/>
             {task.discount>0&&<>
               <span style={{fontSize:10,color:B.gray500,textDecoration:"line-through",flexShrink:0}}>{fmtBRL(c.laborGross)}</span>
@@ -4852,17 +4854,17 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
           {newMat.trim()&&<input value={newBrand} onChange={e=>setNewBrand(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addMat()} placeholder="Marca (opcional)"
             style={{background:B.gray700,border:`1px solid ${B.gray600}`,borderRadius:6,padding:"3px 9px",outline:"none",color:B.gray300,fontSize:11,width:"100%",boxSizing:"border-box"}}/>}
         </div>
-          <button onClick={()=>setSP(true)} style={{padding:"4px 8px",borderRadius:6,background:B.purpleBg,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
-            <IWarehouse s={11} c={B.purple}/>Do estoque
+          <button onClick={()=>setSP(true)} style={linkBtn()}>
+            <IWarehouse s={11} c={B.gray400}/>Do estoque
           </button>
-          {task.vehicleId&&<button onClick={()=>setShowMLPick(true)} title="Vincular uma compra do Mercado Livre a este serviço" style={{padding:"4px 8px",borderRadius:6,background:"#2aa5b516",border:"1px solid #2aa5b555",color:"#2aa5b5",cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+          {task.vehicleId&&<button onClick={()=>setShowMLPick(true)} title="Vincular uma compra do Mercado Livre a este serviço" style={linkBtn()}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 3h13v12H1zM14 8h4l3 3v4h-7z"/><circle cx="5.5" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/></svg>Do Mercado Livre
           </button>}
           {showMLPick&&<MLPickForTaskModal task={task} onClose={()=>setShowMLPick(false)}/>}
-          {onOrderPart&&<button onClick={()=>onOrderPart(task,-1,{name:newMat.trim(),brand:newBrand.trim(),qty:1,cost:0})} title="Pedir peça por link: o pedido já nasce ligado a este veículo e a este serviço" style={{padding:"4px 8px",borderRadius:6,background:`${B.amber}10`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+          {onOrderPart&&<button onClick={()=>onOrderPart(task,-1,{name:newMat.trim(),brand:newBrand.trim(),qty:1,cost:0})} title="Pedir peça por link: o pedido já nasce ligado a este veículo e a este serviço" style={linkBtn()}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"/></svg>Pedir por link
           </button>}
-          {hasPickable&&<button onClick={()=>setShowPOP(p=>!p)} style={{padding:"4px 8px",borderRadius:6,background:showPOP?`${B.amber}22`:`${B.amber}10`,border:`1px solid ${B.amber}44`,color:B.amber,cursor:"pointer",fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+          {hasPickable&&<button onClick={()=>setShowPOP(p=>!p)} style={{...linkBtn(B.amber),fontWeight:600,textDecoration:showPOP?"underline":"none"}}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Peças ({receivedOrders.length+availableReserved.length})
           </button>}
         </div>
@@ -13965,7 +13967,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.248";
+const APP_VERSION = "2026.11.26.249";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

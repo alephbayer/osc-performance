@@ -106,7 +106,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Recibos no portal do cliente: botão "Recibo" nos pagamentos da OS aberta (aba Conta) e das OSs anteriores; `portal_load` passou a devolver `company` (migration 063, aplicada em 2026-11-26; função conferida igual à 061 antes) (v2026.11.26.238). **Não testado com sessão real do portal**: Aleph, entrar no portal e baixar um recibo
 - [x] Portal: lista de pagamentos da OS aberta volta a mostrar o valor (tinha saído no redesenho da aba Conta) (v2026.11.26.239)
 - [x] Botão "Quitar tudo" na Conta Corrente e no pagamento rápido: saldo da OS inteira, dividido entre as empresas quando há as duas (v2026.11.26.236)
-- [x] Recibo testado pelo Aleph no celular (funcionou). Conta Corrente redesenhada para o celular: resumo com saldo em destaque, campos em grade, lista de pagamentos com ações ao tocar (v2026.11.26.241). Conferida em tela de celular com dados de exemplo; a página do histórico (OS fechada) não foi redesenhada
+- [x] Recibo testado pelo Aleph no celular (funcionou). Conta Corrente redesenhada para o celular: resumo com saldo em destaque, campos em grade, lista de pagamentos com ações ao tocar (v2026.11.26.241). Conferida em tela de celular com dados de exemplo. Pagamentos da OS fechada no mesmo visual (v2026.11.26.242)
 - [x] Filtro em Pagamentos do cliente (período e forma, total do filtro) (v2026.11.26.237). Todas as melhorias levantadas na revisão de 2026-11-26 foram feitas
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar

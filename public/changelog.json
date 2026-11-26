@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "OS fechada: pagamentos no mesmo visual da Conta Corrente (tocar mostra Recibo, WhatsApp, Editar e Excluir) e formulário de pagamento em grade, com botão Quitar"
+      },
+      {
+        "type": "feat",
         "text": "Conta Corrente redesenhada para o celular: saldo em destaque com total e pago de cada empresa, campos em duas linhas e pagamentos em lista limpa; tocar num pagamento mostra Recibo, WhatsApp, Editar e Excluir"
       },
       {

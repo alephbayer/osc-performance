@@ -10566,6 +10566,7 @@ function OsHistoryPaymentPanel({h,vehicle,client,company,payments=[],onAddPaymen
   const [discVal,setDiscVal]=useState("");
   const [creditApply,setCreditApply]=useState("");
   const [confirmDel,setConfirmDel]=useState(null);
+  const [openPay,setOpenPay]=useState(null);
 
   const hPayments=payments.filter(p=>p.osHistoryId===h.id);
   const totalValue=Math.round(Number(h.total_value||0)*100)/100;
@@ -10651,49 +10652,38 @@ function OsHistoryPaymentPanel({h,vehicle,client,company,payments=[],onAddPaymen
       </div>
     </div>}
 
-    {/* Existing payments */}
-    {hPayments.length>0&&<div style={{display:"flex",flexDirection:"column",gap:3,marginBottom:showForm?6:0}}>
-      {hPayments.map(p=>(
-        <div key={p.id}>
-          <div style={{display:"flex",alignItems:"center",gap:6,padding:"3px 8px",background:editingPay?.id===p.id?`${B.blue}15`:B.greenBg,border:`1px solid ${editingPay?.id===p.id?B.blue+"44":B.green+"33"}`,borderRadius:editingPay?.id===p.id?"5px 5px 0 0":5}}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-            <span style={{fontSize:11,color:B.green,fontWeight:700,flexShrink:0}}>{fmtBRL(p.amount)}</span>
-            <span style={{fontSize:10,color:B.gray400,flexShrink:0}}>{payMethodLabel(p.method)}</span>
-            {p.note&&<span style={{fontSize:10,color:B.gray400,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.note}</span>}
-            <span style={{fontSize:10,color:B.gray500,flexShrink:0,marginLeft:"auto"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")}</span>
-            {Number(p.amount)>0&&<button title="Recibo" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total:totalValue,paid},osH:h})}
-              style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
-              onMouseEnter={e=>e.currentTarget.style.color=B.green} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IFileText s={11}/></button>}
-            {Number(p.amount)>0&&<button title="Enviar recibo pelo WhatsApp" onClick={()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total:totalValue,paid},osH:h,wa:true})}
-              style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
-              onMouseEnter={e=>e.currentTarget.style.color=B.wa} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><Ic n="chat" s={11}/></button>}
-            {onUpdatePayment&&<button onClick={()=>setEditingPay(editingPay?.id===p.id?null:{id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)})}
-              style={{background:"none",border:"none",cursor:"pointer",color:editingPay?.id===p.id?B.blue:B.gray500,padding:0,display:"flex"}}
-              onMouseEnter={e=>e.currentTarget.style.color=B.blue} onMouseLeave={e=>e.currentTarget.style.color=editingPay?.id===p.id?B.blue:B.gray500}><IEdit s={11}/></button>}
-            {onDeletePayment&&<button onClick={()=>setConfirmDel(p.id)}
-              style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}
-              onMouseEnter={e=>e.currentTarget.style.color=B.red} onMouseLeave={e=>e.currentTarget.style.color=B.gray500}><IX s={11}/></button>}
+    {/* Pagamentos: valor em cima, data/forma/observação embaixo; tocar mostra as ações (mesmo visual da Conta Corrente) */}
+    {hPayments.length>0&&<div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:8}}>
+      {hPayments.map(p=>{ const isOpen=openPay===p.id||editingPay?.id===p.id, neg=Number(p.amount)<0;
+        const act=(icon,label,color,onClick)=>(<button type="button" onClick={e=>{e.stopPropagation();onClick();}} style={{flex:"1 1 0",minWidth:0,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"6px 2px",borderRadius:7,background:B.gray800,border:`1px solid ${B.gray700}`,color,cursor:"pointer",fontSize:10,fontWeight:600,fontFamily:"inherit"}}>{icon}<span>{label}</span></button>);
+        const inp={minWidth:0,padding:"7px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"};
+        return (<div key={p.id} style={{borderRadius:9,background:B.gray700,border:`1px solid ${isOpen?B.gray600:"transparent"}`,overflow:"hidden"}}>
+          <div onClick={()=>{ setOpenPay(isOpen?null:p.id); if(isOpen) setEditingPay(null); }} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",cursor:"pointer"}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:600,color:neg?B.gray400:B.green,whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{neg?`- ${fmtBRL(-p.amount)}`:fmtBRL(p.amount)}</div>
+              <div style={{fontSize:10.5,color:B.gray400,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{payDate(p.paidAt).toLocaleDateString("pt-BR")} · {payMethodLabel(p.method)}{p.note?` · ${p.note}`:""}</div>
+            </div>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={B.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,transform:isOpen?"rotate(90deg)":"none",transition:"transform .15s"}}><path d="M9 18l6-6-6-6"/></svg>
           </div>
-          {editingPay?.id===p.id&&<div style={{display:"flex",gap:5,flexWrap:"wrap",padding:"7px 8px",background:`${B.blue}10`,border:`1px solid ${B.blue}44`,borderTop:"none",borderRadius:"0 0 5px 5px"}}>
-            <input value={editingPay.amount} onChange={e=>setEditingPay(ep=>({...ep,amount:e.target.value}))} type="number" step="0.01" placeholder="Valor R$"
-              style={{flex:"1 1 90px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
-            <select value={editingPay.method} onChange={e=>setEditingPay(ep=>({...ep,method:e.target.value}))}
-              style={{flex:"1 1 100px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}>
-              <PayMethodOptions value={editingPay.method}/>
-            </select>
-            <input type="date" value={editingPay.paidAt} onChange={e=>setEditingPay(ep=>({...ep,paidAt:e.target.value}))}
-              style={{flex:"1 1 110px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
-            <input value={editingPay.note} onChange={e=>setEditingPay(ep=>({...ep,note:e.target.value}))} placeholder="Observação"
-              style={{flex:"1 1 100px",padding:"4px 7px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+          {isOpen&&!editingPay&&<div style={{display:"flex",gap:5,padding:"0 8px 8px"}}>
+            {!neg&&act(<IFileText s={14}/>,"Recibo",B.gray200,()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total:totalValue,paid},osH:h}))}
+            {!neg&&act(<Ic n="chat" s={14}/>,"WhatsApp",B.gray200,()=>paymentReceipt({payment:p,payments,vehicle,client,company,account:{total:totalValue,paid},osH:h,wa:true}))}
+            {onUpdatePayment&&act(<IEdit s={14}/>,"Editar",B.gray200,()=>setEditingPay({id:p.id,amount:String(p.amount),method:PAY_METHODS.includes(payMethodLabel(p.method))?payMethodLabel(p.method):(p.method||"Pix"),note:p.note||"",paidAt:(p.paidAt||"").slice(0,10)}))}
+            {onDeletePayment&&act(<ITrash s={14}/>,"Excluir",B.red,()=>setConfirmDel(p.id))}
+          </div>}
+          {editingPay?.id===p.id&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,padding:"2px 10px 10px"}}>
+            <input value={editingPay.amount} onChange={e=>setEditingPay(ep=>({...ep,amount:e.target.value}))} type="number" step="0.01" placeholder="Valor R$" style={inp}/>
+            <select value={editingPay.method} onChange={e=>setEditingPay(ep=>({...ep,method:e.target.value}))} style={inp}><PayMethodOptions value={editingPay.method}/></select>
+            <input type="date" value={editingPay.paidAt} onChange={e=>setEditingPay(ep=>({...ep,paidAt:e.target.value}))} style={inp}/>
+            <input value={editingPay.note} onChange={e=>setEditingPay(ep=>({...ep,note:e.target.value}))} placeholder="Observação" style={inp}/>
             <button onClick={()=>{
               if(!editingPay.amount) return;
               onUpdatePayment(p.id,{amount:parseFloat(editingPay.amount),method:editingPay.method,note:editingPay.note,paidAt:editingPay.paidAt?new Date(editingPay.paidAt+"T12:00:00").toISOString():p.paidAt});
               setEditingPay(null);
-            }} style={{padding:"4px 10px",borderRadius:5,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:11,cursor:"pointer"}}>Salvar</button>
-            <button onClick={()=>setEditingPay(null)} style={{padding:"4px 7px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,fontSize:11,cursor:"pointer"}}>✕</button>
+            }} style={{padding:"7px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:600,fontSize:12,cursor:"pointer"}}>Salvar</button>
+            <button onClick={()=>setEditingPay(null)} style={{padding:"7px 0",borderRadius:7,background:B.gray800,border:`1px solid ${B.gray600}`,color:B.gray200,fontSize:12,cursor:"pointer"}}>Cancelar</button>
           </div>}
-        </div>
-      ))}
+        </div>); })}
     </div>}
 
     {/* Apply available credit */}
@@ -10727,22 +10717,19 @@ function OsHistoryPaymentPanel({h,vehicle,client,company,payments=[],onAddPaymen
       </div>);
     })()}
 
-    {/* Add payment form */}
-    {showForm&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"8px 10px",background:B.gray900,borderRadius:8,border:`1px solid ${B.gray700}`}}>
-      <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Valor R$" type="number"
-        style={{flex:"0 1 100px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-      <select value={method} onChange={e=>setMethod(e.target.value)}
-        style={{flex:"0 1 110px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}>
-        <PayMethodOptions/>
-      </select>
-      <input type="date" value={paidAt} onChange={e=>setPaidAt(e.target.value)}
-        style={{flex:"0 1 130px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-      <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)"
-        style={{flex:"1 1 120px",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-      <OverpayNote amount={parseFloat(String(amount).replace(",","."))} owed={owed} what=" desta OS" onFix={setAmount} style={{flex:"1 1 100%"}}/>
-      <button onClick={save} style={{padding:"5px 12px",borderRadius:6,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
-      <button onClick={()=>{setShowForm(false);setAmount("");setNote("");setPaidAt(todayLocal());}} style={{padding:"5px 8px",borderRadius:6,background:B.gray700,border:"none",color:B.gray200,fontSize:12,cursor:"pointer"}}>✕</button>
-    </div>}
+    {/* Lançar pagamento na OS fechada */}
+    {showForm&&(()=>{ const inp={minWidth:0,padding:"7px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"};
+      return (<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,padding:"10px",background:B.gray900,borderRadius:9,border:`1px solid ${B.gray700}`}}>
+      <div style={{gridColumn:"1 / -1",fontSize:9.5,color:B.green,fontWeight:600,textTransform:"uppercase",letterSpacing:".16em"}}>Lançar pagamento</div>
+      <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Valor R$" type="number" step="0.01" inputMode="decimal" style={inp}/>
+      <select value={method} onChange={e=>setMethod(e.target.value)} style={inp}><PayMethodOptions/></select>
+      <input type="date" value={paidAt} onChange={e=>setPaidAt(e.target.value)} style={inp}/>
+      <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Observação (opcional)" style={inp}/>
+      {owed>=0.01&&<button type="button" onClick={()=>setAmount(String(owed))} style={{gridColumn:"1 / -1",justifySelf:"start",background:`${B.amber}18`,border:`1px solid ${B.amber}55`,borderRadius:99,padding:"4px 11px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:600,fontFamily:"inherit"}}>Quitar · {fmtBRL(owed)}</button>}
+      <OverpayNote amount={parseFloat(String(amount).replace(",","."))} owed={owed} what=" desta OS" onFix={setAmount} style={{gridColumn:"1 / -1"}}/>
+      <button onClick={save} style={{padding:"8px 0",borderRadius:7,background:B.green,border:"none",color:B.white,fontWeight:600,fontSize:12,cursor:"pointer"}}>Registrar</button>
+      <button onClick={()=>{setShowForm(false);setAmount("");setNote("");setPaidAt(todayLocal());}} style={{padding:"8px 0",borderRadius:7,background:B.gray800,border:`1px solid ${B.gray600}`,color:B.gray200,fontSize:12,cursor:"pointer"}}>Cancelar</button>
+    </div>); })()}
   </div>);
 }
 
@@ -13964,7 +13951,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.241";
+const APP_VERSION = "2026.11.26.242";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

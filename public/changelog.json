@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Linha de horas da tarefa como texto (2 h × R$ 420/h), sem caixas coloridas nem \"(pad)\"; toque no número para editar e alterne entre por hora e por quantidade"
+      },
+      {
+        "type": "fix",
         "text": "Tarefas do carro com tipografia uniforme: três tamanhos de fonte, pesos mais leves e cantos iguais nos chips, materiais e botões"
       },
       {

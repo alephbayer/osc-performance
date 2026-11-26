@@ -4871,23 +4871,21 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
       </div>
 
       {/* ── Row 3: Hours/Qty + Rate + Toggle — hidden for warranty ── */}
-      {!task.warranty&&<div style={{marginLeft:30,marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-        <div style={{display:"flex",alignItems:"center",gap:5,background:B.gray700,borderRadius:6,padding:"4px 9px"}}>
-          {task.rateType==="qty"?<IBox s={12} c={B.gray400}/>:<IClock s={12} c={B.gray400}/>}
-          <InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"Qtd":"Horas"} type="number"/>
-          <span style={{fontSize:12,color:B.gray400}}>{task.rateType==="qty"?"un":"h"}</span>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:5,background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px"}}>
-          <span style={{fontSize:10,color:B.amber,fontWeight:600}}>{task.rateType==="qty"?"R$/un":"R$/h"}</span>
-          <InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={task.rateType==="qty"?"0,00":`${fmtR2(defaultRate)} (pad)`} type="number"/>
-        </div>
+      {!task.warranty&&<div style={{marginLeft:30,marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",fontSize:12,color:B.gray400}}>
+        {task.rateType==="qty"?<IBox s={12} c={B.gray500}/>:<IClock s={12} c={B.gray500}/>}
+        <span style={{display:"inline-flex",minWidth:28}}><InlineEdit value={task.hours?String(task.hours):""} onSave={v=>onUpdate(task.id,{hours:parseFloat(v)||0})} placeholder={task.rateType==="qty"?"qtd":"horas"} type="number" textStyle={{fontSize:12}}/></span>
+        <span>{task.rateType==="qty"?"un":"h"}</span>
+        <span style={{color:B.gray600}}>×</span>
+        <span>R$</span>
+        <span style={{display:"inline-flex",minWidth:40}} title={task.ratePerHour==null&&task.rateType!=="qty"?"Valor padrão da hora":undefined}><InlineEdit value={task.ratePerHour!=null?fmtR2(task.ratePerHour):""} onSave={v=>onUpdate(task.id,{ratePerHour:v===""||v==="0"?null:parseFloat(v.replace(",","."))||0})} placeholder={task.rateType==="qty"?"0,00":fmtR2(defaultRate)} type="number" textStyle={{fontSize:12}}/></span>
+        <span>{task.rateType==="qty"?"/un":"/h"}</span>
         <button onClick={()=>onUpdate(task.id,{rateType:task.rateType==="qty"?"hour":"qty",ratePerHour:null,hours:0})}
           title={task.rateType==="qty"?"Cobrar por hora":"Cobrar por quantidade"}
-          style={{background:task.rateType==="qty"?`${B.blue}22`:"none",border:`1px solid ${task.rateType==="qty"?B.blue+"44":B.gray600}`,borderRadius:6,padding:"4px 7px",cursor:"pointer",color:task.rateType==="qty"?B.blue:B.gray500,fontSize:10,fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>
-          {task.rateType==="qty"?<><Ic n="pkg"/> Qtd</>:<><Ic n="clock"/> H</>}
+          style={{...linkBtn(B.gray500),fontSize:10,padding:"2px 4px",textDecoration:"underline",textUnderlineOffset:2}}>
+          {task.rateType==="qty"?"por hora":"por quantidade"}
         </button>
-        {c.total>0&&<div style={{marginLeft:"auto",background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 10px",flexShrink:0,textAlign:"right"}}>
-          {!task.warranty&&c.discount>0&&<div style={{fontSize:10,color:B.gray500,textDecoration:"line-through",lineHeight:1.2}}>{fmtBRL(c.total+c.discount)}</div>}
+        {c.total>0&&<div style={{marginLeft:"auto",flexShrink:0,textAlign:"right",display:"flex",alignItems:"baseline",gap:6}}>
+          {c.discount>0&&<span style={{fontSize:10,color:B.gray500,textDecoration:"line-through"}}>{fmtBRL(c.total+c.discount)}</span>}
           <span style={{fontSize:13,fontWeight:600,color:B.amber}}>{fmtBRL(c.total)}</span>
         </div>}
       </div>}
@@ -13967,7 +13965,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.250";
+const APP_VERSION = "2026.11.26.251";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

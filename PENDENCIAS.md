@@ -92,7 +92,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 ## Pagamentos (sessão dedicada, 2026-11-26)
 - Mapa: OS aberta `AccountModal`/`QuickPayModal` (dividido Performance/Finishing via `insertPayment` + `group_id`); OS fechada `OsHistoryPaymentPanel` (desconto, "Salvar crédito" = pagamento negativo "Crédito"); "A receber" `computeReceivables` (só gestor); portal `portalVehicleDue`; link `?v=` com conta própria; PDF `renderElegantQuote` mostra pagamentos e saldo
 - [x] Formas de pagamento: lista única `PAY_METHODS` (Pix, Dinheiro, Cartão de débito, Cartão de crédito, Transferência, Boleto, Outro) em todas as telas, inclusive vendas; `payMethodLabel` padroniza nomes antigos na exibição (PIX/pix, Cartão Crédito, TED / DOC...; "Crédito" vira "Crédito do cliente"). Banco não alterado (v2026.11.26.227)
-- [ ] **Aleph (decidir):** gravar os nomes padronizados no banco também (`payments`, `sales`)? Só com o seu ok
+- [x] Nomes padronizados gravados no banco com o ok do Aleph (2026-11-26): 65 linhas em `payments`, 9 em `sales`; "Crédito" (crédito de cliente) mantido. Cópia dos valores antigos em `~/OSC/backups/formas-pagamento-antes-2026-11-26.json`
 - [ ] PDF ignora pagamentos negativos: depois de "Salvar crédito" mostra pago acima do total
 - [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
 - [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar

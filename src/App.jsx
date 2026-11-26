@@ -68,6 +68,22 @@ function VehName({v,stack=false}){
   return <><span style={{whiteSpace:"nowrap"}}><span style={{color:B.amber,fontSize:".82em",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase"}}>{b}</span><span style={{display:"inline-block",width:".26em",height:".26em",borderRadius:99,background:B.gray500,margin:"0 .45em",verticalAlign:"middle"}}/></span>{m}</>;
 }
 
+// Mini-placa: Mercosul (ABC1D23, faixa azul) ou modelo antigo cinza (ABC-1234); placa preta de coleção nos dois
+const plateKind=p=>{const t=String(p||"").toUpperCase().replace(/[^A-Z0-9]/g,"");return /^[A-Z]{3}\d[A-Z]\d{2}$/.test(t)?"mercosul":/^[A-Z]{3}\d{4}$/.test(t)?"old":null;};
+function Plate({plate,black=false,fs=10.5,style}){
+  const t=String(plate||"").toUpperCase().replace(/[^A-Z0-9]/g,""), k=plateKind(t);
+  if(!t) return null;
+  if(!k) return <span style={{fontFamily:"monospace",letterSpacing:.5,...style}}>{plate}</span>;
+  const txt=k==="old"?`${t.slice(0,3)}-${t.slice(3)}`:t;
+  const bg=black?"#141414":k==="mercosul"?"#fafafa":"#c9ccd1", fg=black?"#e6e6e6":"#141414";
+  return <span title={`${k==="mercosul"?"Placa Mercosul":"Placa modelo antigo"}${black?" · preta (coleção)":""}`} style={{display:"inline-flex",flexDirection:"column",verticalAlign:"middle",background:bg,border:`1px solid ${black?"#555":"#2a2a2a"}`,borderRadius:3,overflow:"hidden",lineHeight:1,flexShrink:0,...style}}>
+    {k==="mercosul"&&<span style={{height:Math.max(2,Math.round(fs*.28)),background:"#1f4fa3"}}/>}
+    <span style={{color:fg,fontFamily:"'Arial Narrow','Roboto Condensed','Helvetica Neue',Arial,sans-serif",fontStretch:"condensed",fontWeight:600,fontSize:fs,letterSpacing:".09em",padding:`${k==="mercosul"?2:3}px 5px 2px 6px`,whiteSpace:"nowrap"}}>{txt}</span>
+  </span>;
+}
+// Opção "Placa preta" ao lado do campo Placa
+const BlackPlateToggle=({vehicle,onUpdateVehicle})=><button onClick={()=>onUpdateVehicle(vehicle.id,{blackPlate:!vehicle.blackPlate})} title="Veículo de coleção com placa preta" style={{marginTop:4,display:"inline-flex",alignItems:"center",gap:4,background:"none",border:`1px solid ${vehicle.blackPlate?B.gray300:B.gray700}`,borderRadius:6,padding:"1px 7px",cursor:"pointer",color:vehicle.blackPlate?B.gray200:B.gray500,fontSize:10,fontWeight:vehicle.blackPlate?600:400}}>{vehicle.blackPlate&&<Ic n="done"/>}Placa preta</button>;
+
 const qtyNum=v=>{const n=parseFloat(String(v).replace(",","."));return n>0?n:1;};
 const fmtD = () => new Date().toLocaleDateString("pt-BR");
 const fmtBRLReal=n=>fmtBRL(n);
@@ -6204,7 +6220,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
           {String(vehicle.brand||"").trim()&&<div style={{color:B.amber,fontSize:9.5,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",lineHeight:1.2,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(vehicle.brand).trim()}</div>}
           <div style={narrow?{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:2}:{fontWeight:600,fontSize:15,color:B.white,lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vehModelOnly(vehicle)||vehicle.model}</div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:narrow?"3px 8px":8,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>
+            <Plate plate={vehicle.plate} black={vehicle.blackPlate}/>
             {isFD
               ?(vehicle.osNumberFinishing&&<span style={{background:`${FD.primary}22`,color:FD.primary,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOSFD(vehicle.osNumberFinishing)}</span>)
               :(vehicle.osNumber&&<span style={{background:`${B.orange}22`,color:B.orange,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10}}>{fmtOS(vehicle.osNumber)}</span>)}
@@ -6523,6 +6539,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             <div style={{flex:"1 1 90px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Placa</div>
               <InlineEdit value={vehicle.plate} onSave={v=>v.trim()&&onUpdateVehicle(vehicle.id,{plate:v.trim().toUpperCase()})} placeholder="Placa"/>
+              <BlackPlateToggle vehicle={vehicle} onUpdateVehicle={onUpdateVehicle}/>
             </div>
             <div style={{flex:"1 1 60px"}}>
               <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Ano</div>
@@ -10991,7 +11008,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:700,fontSize:13.5,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><VehName v={vehicle} stack/></div>
           <div style={{fontSize:11,color:B.gray400,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
-            <span style={{fontFamily:"monospace",letterSpacing:.5}}>{vehicle.plate}</span>
+            <Plate plate={vehicle.plate} black={vehicle.blackPlate}/>
             {vehicle.year&&<span style={{color:B.gray400}}>{vehicle.year}</span>}
             {vehicle.engine&&<span style={{color:B.gray400}}>{vehicle.engine}</span>}
             {(vehicle.color||vehicle.year)&&vehicle.color&&<span style={{color:B.gray300}}><Ic n="brush"/> {vehicle.color}</span>}
@@ -11067,6 +11084,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
           <div style={{flex:"1 1 90px"}}>
             <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Placa</div>
             <InlineEdit value={vehicle.plate} onSave={v=>v.trim()&&onUpdateVehicle(vehicle.id,{plate:v.trim().toUpperCase()})} placeholder="Placa"/>
+              <BlackPlateToggle vehicle={vehicle} onUpdateVehicle={onUpdateVehicle}/>
           </div>
           <div style={{flex:"1 1 60px"}}>
             <div style={{fontSize:9,color:B.gray500,marginBottom:2}}>Ano</div>
@@ -14179,7 +14197,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.270";
+const APP_VERSION = "2026.11.26.271";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15295,7 +15313,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
         {vehicle.photo&&<img src={vehicle.photo} alt="" style={{width:42,height:42,borderRadius:8,objectFit:"cover"}}/>}
         <div style={{flex:1,minWidth:160}}>
           <div style={{fontSize:18,fontWeight:900,color:B.white,lineHeight:1.15}}><VehName v={vehicle} stack/></div>
-          <div style={{fontSize:12,color:B.gray400}}><span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>{(isFD?vehicle.osNumberFinishing:vehicle.osNumber)?` · ${isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber)}`:""}</div>
+          <div style={{fontSize:12,color:B.gray400,display:"flex",alignItems:"center",gap:6,marginTop:3}}><Plate plate={vehicle.plate} black={vehicle.blackPlate} fs={11.5}/>{(isFD?vehicle.osNumberFinishing:vehicle.osNumber)?<span>{isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber)}</span>:null}</div>
         </div>
         <button onClick={()=>{try{navigator.clipboard.writeText(`${window.location.origin}/?carro=${vehicle.id}`);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch(e){}}}
           style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:copied?B.green:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{copied?<><Ic n="done"/> Link copiado</>:<><Ic n="link"/> Copiar link</>}</button>

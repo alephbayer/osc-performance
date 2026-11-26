@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Placa do carro em miniatura: Mercosul com faixa azul, modelo antigo em cinza e opção Placa preta para carros de coleção (em Dados do veículo, abaixo da placa)"
+      },
+      {
+        "type": "fix",
         "text": "Marca do carro em cima do modelo também nas listas, páginas e seletores de veículo, e um pouco menor"
       },
       {

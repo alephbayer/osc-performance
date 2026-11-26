@@ -89,6 +89,16 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] `index.html`: removido o script do `<head>` que dava erro de `classList` desde 03/08 (e por isso nunca rodou: trava de rolagem e ajuste de altura do iPhone) e o CSS que dependia dele; nenhuma mudança no uso (v2026.11.23.202)
 - [ ] Changelog: faltam as entradas entre 2026-08-19 e 2026-11-18 (`public/changelog.json`)
 
+## Pagamentos (sessão dedicada, 2026-11-26)
+- Mapa: OS aberta `AccountModal`/`QuickPayModal` (dividido Performance/Finishing via `insertPayment` + `group_id`); OS fechada `OsHistoryPaymentPanel` (desconto, "Salvar crédito" = pagamento negativo "Crédito"); "A receber" `computeReceivables` (só gestor); portal `portalVehicleDue`; link `?v=` com conta própria; PDF `renderElegantQuote` mostra pagamentos e saldo
+- [x] Formas de pagamento: lista única `PAY_METHODS` (Pix, Dinheiro, Cartão de débito, Cartão de crédito, Transferência, Boleto, Outro) em todas as telas, inclusive vendas; `payMethodLabel` padroniza nomes antigos na exibição (PIX/pix, Cartão Crédito, TED / DOC...; "Crédito" vira "Crédito do cliente"). Banco não alterado (v2026.11.26.227)
+- [ ] **Aleph (decidir):** gravar os nomes padronizados no banco também (`payments`, `sales`)? Só com o seu ok
+- [ ] PDF ignora pagamentos negativos: depois de "Salvar crédito" mostra pago acima do total
+- [ ] Sinal de agendamento (`appointment_payments`) não passa para a OS ao converter (hoje a tabela está vazia)
+- [ ] Contas de saldo espalhadas (`vehicleBalance` ignora fretes/importados; Financeiro, portal e link com contas próprias): unificar
+- [ ] Data do pagamento: OS aberta grava só o dia, OS fechada grava dia e hora
+- [ ] Não testado no app ao vivo (precisa senha): conferir as listas no lançamento e na edição de pagamento
+
 ## Correções de dados
 - [x] Fechar OS (Performance) não somava fretes do veículo nem peças importadas no total gravado, não os guardava no histórico e não os zerava no veículo (migration 062: `os_history.import_parts`). OS-127 (ASZ0D70) corrigida de R$ 11.897,80 para R$ 12.923,74 em 2026-11-24
 - [x] LDM0202 OS-172: frete de R$ 63,29 (rolamentos, São Cristóvão > OSC) estava fora do total; corrigido de R$ 1.434,39 para R$ 1.497,68 (= pago, quitada) em 2026-11-24

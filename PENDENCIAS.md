@@ -18,7 +18,8 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Carga inicial: 79 serviços do estudo (`~/OSC/orcamentos/dados/catalogo.json`, sem "Outros" e "Parafusos e consumíveis"), com horas medianas, categoria e observação (orçar caso a caso / candidato a preço de tabela). `source_key` = `estudo:<id>`
 - [ ] **Aleph:** revisar o catálogo no app: nomes, categorias, horas (ex.: "Diagnóstico e conferência" veio com 0,1 h; "Primeira partida e break-in" sem horas), e dar preço fechado aos candidatos a tabela
 - [ ] Conferir no app ao vivo: abrir o catálogo, criar/editar um serviço, escolher um na Nova tarefa (Performance e Finishing), no orçamento e no agendamento
-- [ ] Depois: padronizar nomes das tarefas antigas? (só com OK, mexe em dados de produção) e ícones ✕/✓ que ainda aparecem na Nova tarefa e em avisos
+- [ ] Depois: padronizar nomes das tarefas antigas? (só com OK, mexe em dados de produção)
+- [x] Símbolos ✓/✕/✗ da interface trocados por `<Ic n="done"/>`, `<Ic n="x"/>` (novo) e `<Ic n="xc"/>`; ✓ removido dos avisos (toasts); PDF "Quitado" sem ✓ (v2026.11.26.246). Conferir no app ao vivo o alinhamento dos ícones
 
 ## Entregas 99 (99Entrega)
 - [x] Base: tabela `deliveries_99` (migration 058) e tela Compras > Entregas 99, registro manual com link, status e custo; chefes sem valores (v2026.11.23.198)

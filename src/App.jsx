@@ -1268,7 +1268,7 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:10}}>
                   <span style={{fontSize:11,color:B.gray400}}>Cobrar agora</span>
-                  <span style={{fontSize:20,fontWeight:900,color:it.collect>=0.01?B.amber:B.green,letterSpacing:-.5}}>{it.collect>=0.01?m(it.collect):"em dia ✓"}</span>
+                  <span style={{fontSize:20,fontWeight:900,color:it.collect>=0.01?B.amber:B.green,letterSpacing:-.5}}>{it.collect>=0.01?m(it.collect):<>em dia <Ic n="done"/></>}</span>
                 </div>
                 <div style={{height:8,borderRadius:99,background:B.gray700,margin:"10px 0 10px",overflow:"hidden",display:"flex"}}>
                   <div style={{width:`${wPaid}%`,background:B.blue}}/>
@@ -3113,7 +3113,7 @@ async function generateQuotePDFLegacy(vehicle, tasks, client, employee, company,
       doc.text(fmtBRL(balance), balBoxX + balBoxW - 5, y + 15, { align: "right" });
     } else {
       doc.setFont("helvetica","bold"); doc.setTextColor(22, 163, 74);
-      doc.text("✓ Quitado", balBoxX + 5, y + 7 + 8);
+      doc.text("Quitado", balBoxX + 5, y + 7 + 8);
     }
     y += balBoxH + 8;
   }
@@ -3535,7 +3535,7 @@ async function generateFinishingPDFLegacy(vehicle, tasks, client, employee, defa
         doc.setFont("helvetica","normal"); doc.setTextColor(...gray); doc.text("Saldo em aberto", balBoxX+5, y+15);
         doc.setFont("helvetica","bold"); doc.setTextColor(220,38,38); doc.text(fmtBRL(balance), balBoxX+balBoxW-5, y+15, {align:"right"});
       } else {
-        doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74); doc.text("✓ Quitado", balBoxX+5, y+7+8);
+        doc.setFont("helvetica","bold"); doc.setTextColor(22,163,74); doc.text("Quitado", balBoxX+5, y+7+8);
       }
       y+=balBoxH+8;
     }
@@ -3756,7 +3756,7 @@ function InlineEdit({value,onSave,placeholder,type="text",multiline=false,textSt
       style={{width:"100%",padding:"5px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:12,outline:"none",resize:"vertical",fontFamily:"inherit",lineHeight:1.5,boxSizing:"border-box"}}/>
     <div style={{display:"flex",gap:5,marginTop:4}}>
       <button onClick={()=>{onSave(v);sE(false);}} style={{padding:"4px 12px",borderRadius:5,background:B.green,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:11}}>OK</button>
-      <button onClick={()=>sE(false)} style={{padding:"4px 8px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11}}>✕</button>
+      <button onClick={()=>sE(false)} style={{padding:"4px 8px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11}}><Ic n="x"/></button>
       <span style={{fontSize:10,color:B.gray600,alignSelf:"center"}}>⌘+Enter para salvar</span>
     </div>
   </div>);
@@ -3765,7 +3765,7 @@ function InlineEdit({value,onSave,placeholder,type="text",multiline=false,textSt
       onKeyDown={ev=>{if(ev.key==="Enter"){onSave(v);sE(false);}if(ev.key==="Escape")sE(false);}}
       style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,fontSize:12,outline:"none",width:type==="number"?80:"100%",flex:type==="number"?undefined:1}}/>
     <button onClick={()=>{onSave(v);sE(false);}} style={{padding:"3px 8px",borderRadius:5,background:B.green,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:11,flexShrink:0}}>OK</button>
-    <button onClick={()=>sE(false)} style={{padding:"3px 6px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>
+    <button onClick={()=>sE(false)} style={{padding:"3px 6px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11,flexShrink:0}}><Ic n="x"/></button>
   </div>);
 }
 // ─── Mini editor de foto: máscara do que será exibido, zoom, arrastar e girar ───
@@ -4002,7 +4002,7 @@ function ShareModal({title,subtitle,phone,text,accentColor=B.wa,onClose}) {
           {phone&&<button onClick={()=>window.open(`https://wa.me/${num}?text=${encodeURIComponent(text)}`,"_blank")} style={{flex:2,minWidth:150,padding:"10px 0",borderRadius:10,background:B.wa,border:"none",color:B.white,fontWeight:800,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}><Ic n="phone"/> Enviar direto</button>}
           <button onClick={()=>window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,"_blank")} style={{flex:1,minWidth:100,padding:"10px 0",borderRadius:10,background:phone?B.gray700:B.wa,border:`1px solid ${B.gray600}`,color:B.white,fontWeight:700,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="phone"/> WA</button>
           <button onClick={copy} style={{padding:"10px 12px",borderRadius:10,background:cp?B.greenBg:B.gray700,border:`1px solid ${cp?B.green:B.gray600}`,color:cp?B.green:B.gray200,cursor:"pointer",fontWeight:600,fontSize:12,display:"flex",alignItems:"center",gap:4}}><ICopy s={13}/>{cp?"Copiado!":"Copiar"}</button>
-          <button onClick={onClose} style={{padding:"10px 12px",borderRadius:10,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontWeight:600,fontSize:12}}>✕</button>
+          <button onClick={onClose} style={{padding:"10px 12px",borderRadius:10,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontWeight:600,fontSize:12}}><Ic n="x"/></button>
         </div>
       </div>
     </div>
@@ -4062,7 +4062,7 @@ function CategorySelect({value,onChange,categories=CATEGORIES}) {
     </button>
     {open&&<div style={{position:"absolute",top:"100%",left:0,zIndex:50,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:8,padding:4,minWidth:140,boxShadow:"0 8px 24px rgba(0,0,0,.5)",maxHeight:220,overflowY:"auto",marginTop:3}}>
       {value&&<button onClick={()=>{onChange(null);setOpen(false);}} style={{width:"100%",textAlign:"left",padding:"4px 8px",borderRadius:5,background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:10,marginBottom:2}}>
-        ✕ Sem categoria
+        <Ic n="x"/> Sem categoria
       </button>}
       {categories.map(c=>(
         <button key={c.id} onClick={()=>{onChange(c.id);setOpen(false);}}
@@ -4180,7 +4180,7 @@ function OpenOSModal({vehicle,employees,onConfirm,onClose,title="Abrir nova OS",
                 <div style={{fontWeight:700,fontSize:13}}>{emp.name}</div>
                 {emp.phone&&<div style={{fontSize:11,color:B.gray400}}>{emp.phone}</div>}
               </div>
-              {selectedEmp===emp.id&&<span style={{marginLeft:"auto",color:accentColor,fontWeight:700}}>✓</span>}
+              {selectedEmp===emp.id&&<span style={{marginLeft:"auto",color:accentColor,fontWeight:700}}><Ic n="done"/></span>}
             </button>
           ))}
           {employees.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"8px 0"}}>Nenhum mecânico da Finishing cadastrado.</div>}
@@ -4298,7 +4298,7 @@ function CreateVehicleModal({clients,vehicles=[],onConfirm,onClose}) {
                     <div style={{fontWeight:600,fontSize:13}}>{c.name}</div>
                     {c.phone&&<div style={{fontSize:11,color:B.gray400}}>{c.phone}</div>}
                   </div>
-                  {selectedClientId===c.id&&<span style={{marginLeft:"auto",color:B.blue,fontWeight:700}}>✓</span>}
+                  {selectedClientId===c.id&&<span style={{marginLeft:"auto",color:B.blue,fontWeight:700}}><Ic n="done"/></span>}
                 </button>
               ))}
             </div>
@@ -4354,7 +4354,7 @@ function StockPickerModal({stock,onPick,onClose}) {
         {/* Quote-only toggle */}
         <button onClick={()=>setQuoteOnly(q=>!q)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:9,background:quoteOnly?`${B.amber}18`:B.gray700,border:`1px solid ${quoteOnly?B.amber+"66":B.gray600}`,cursor:"pointer",marginBottom:10}}>
           <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${quoteOnly?B.amber:B.gray500}`,background:quoteOnly?B.amber:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            {quoteOnly&&<span style={{fontSize:10,color:B.black,fontWeight:900}}>✓</span>}
+            {quoteOnly&&<span style={{fontSize:10,color:B.black,fontWeight:900}}><Ic n="done"/></span>}
           </div>
           <div style={{textAlign:"left"}}>
             <div style={{fontSize:12,fontWeight:700,color:quoteOnly?B.amber:B.gray300}}>Apenas orçamento</div>
@@ -4473,7 +4473,7 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
           :<div style={{flex:1,minWidth:0}}>
               <InlineEdit value={mat.name} onSave={v=>onUpdate(idx,{...mat,name:v})} placeholder="Nome do material"/>
               {mat.brand
-                ?<span style={{fontSize:10,color:B.gray500,marginLeft:4}}>{mat.brand} <button onClick={()=>onUpdate(idx,{...mat,brand:""})} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0,fontSize:10}}>✕</button></span>
+                ?<span style={{fontSize:10,color:B.gray500,marginLeft:4}}>{mat.brand} <button onClick={()=>onUpdate(idx,{...mat,brand:""})} style={{background:"none",border:"none",cursor:"pointer",color:B.gray600,padding:0,fontSize:10}}><Ic n="x"/></button></span>
                 :<InlineEdit value="" onSave={v=>v.trim()&&onUpdate(idx,{...mat,brand:v.trim()})} placeholder="+ Marca"/>}
             </div>}
       </div>
@@ -4499,12 +4499,12 @@ function MaterialChip({mat,idx,onUpdate,onRemove,onOrder=null,onCommit=null,show
       <button onClick={()=>onUpdate(idx,{...mat,noCharge:!mat.noCharge})}
         title={mat.noCharge?"Cobrar do cliente":"Não cobrar do cliente"}
         style={{background:mat.noCharge?`${B.red}22`:"none",border:`1px solid ${mat.noCharge?B.red+"44":B.gray600}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.noCharge?B.red:B.gray500,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
-        {mat.noCharge?"✓ Grátis":"Grátis?"}
+        {mat.noCharge?<><Ic n="done"/> Grátis</>:"Grátis?"}
       </button>
       {onOrder&&!mat.fromStock&&!isQuote&&<button onClick={()=>onOrder(idx,mat)}
         title={mat.ordered?"Já existe um pedido de compra para este material. Toque para fazer outro":"Criar pedido de compra deste material"}
         style={{background:mat.ordered?`${B.blue}22`:`${B.amber}14`,border:`1px solid ${mat.ordered?B.blue+"66":B.amber+"55"}`,borderRadius:5,padding:"2px 7px",cursor:"pointer",color:mat.ordered?B.blue:B.amber,fontSize:9,fontWeight:800,whiteSpace:"nowrap"}}>
-        {mat.ordered?"✓ Pedido feito":<><Ic n="cart"/> Pedir</>}
+        {mat.ordered?<><Ic n="done"/> Pedido feito</>:<><Ic n="cart"/> Pedir</>}
       </button>}
       {showCost&&!mat.fromStock&&!isQuote&&<button onClick={()=>onUpdate(idx,{...mat,bought:!isBought})}
         title={isBought?"Peça conta como comprada (entra no investido). Toque para tirar da conta":"Peça fora da conta do investido. Toque para incluir"}
@@ -4582,7 +4582,7 @@ function TaskLabel({task,onUpdate}) {
         }}
         style={{flex:1,padding:"4px 8px",borderRadius:6,border:`1px solid ${B.orange}66`,background:B.gray900,color:B.white,fontSize:13.5,outline:"none"}}/>
       <button onClick={()=>{ if(v.trim()){onUpdate(task.id,{label:v.trim()});} setEditing(false); }} style={{padding:"4px 9px",borderRadius:5,background:B.green,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:11,flexShrink:0}}>OK</button>
-      <button onClick={()=>{setV(task.label);setEditing(false);}} style={{padding:"4px 7px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>
+      <button onClick={()=>{setV(task.label);setEditing(false);}} style={{padding:"4px 7px",borderRadius:5,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer",fontSize:11,flexShrink:0}}><Ic n="x"/></button>
     </div>
   );
   return (
@@ -4626,7 +4626,7 @@ function TaskItemMechanic({task,onToggle,onDelete,onUpdate,employees=[],currentE
         </div>}
         {task.description&&<div style={{fontSize:11,color:B.gray400,marginTop:5,background:"rgba(128,128,128,0.12)",borderRadius:7,padding:"7px 10px",borderLeft:"2px solid rgba(128,128,128,0.35)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{task.description}</div>}
         {signer&&task.done&&<div style={{marginTop:2}}>
-          <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
+          <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}><Ic n="done"/> {signer.name}</span>
         </div>}
         {/* Updates feed button — always visible for mechanic */}
         <button onClick={()=>setShowUpdates(u=>!u)} style={{marginTop:4,background:"none",border:`1px solid ${showUpdates?B.blue:B.gray700}`,borderRadius:6,padding:"2px 8px",cursor:"pointer",color:showUpdates?B.blue:B.gray500,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3}}>
@@ -4760,19 +4760,19 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
             <CategorySelect value={task.category} onChange={cat=>onUpdate(task.id,{category:cat})} categories={isFD?CATEGORIES_FINISHING:CATEGORIES}/>
             <button onClick={()=>onUpdate(task.id,{outsourced:!task.outsourced,warranty:false})} title={task.outsourced?"Marcar como interno":"Marcar como terceirizado"}
               style={{background:task.outsourced?"#a78bfa22":"none",border:`1px solid ${task.outsourced?"#a78bfa44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.outsourced?"#a78bfa":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
-              {task.outsourced?"✓ 3º":"3º"}
+              {task.outsourced?<><Ic n="done"/> 3º</>:"3º"}
             </button>
             <button onClick={()=>onUpdate(task.id,{warranty:!task.warranty,outsourced:false})} title={task.warranty?"Remover garantia":"Marcar como garantia"}
               style={{background:task.warranty?`${B.red}22`:"none",border:`1px solid ${task.warranty?B.red+"44":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.warranty?B.red:B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
-              {task.warranty?"✓ Gar.":"Gar."}
+              {task.warranty?<><Ic n="done"/> Gar.</>:"Gar."}
             </button>
             {!task.warranty&&(()=>{const eff=isInternalTask(task);return <button onClick={()=>{const next=!eff;const auto=!taskHasValue(task);onUpdate(task.id,{internal:next===auto?null:next});}} title={eff?"Interno: não aparece no PDF nem no acompanhamento do cliente. Toque para exibir.":"Visível no PDF e para o cliente. Toque para marcar como interno."}
               style={{background:eff?`${B.gray500}26`:"none",border:`1px solid ${eff?B.gray500:B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:eff?B.gray300:B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
-              {eff?"✓ Int.":"Int."}
+              {eff?<><Ic n="done"/> Int.</>:"Int."}
             </button>;})()}
             {!task.warranty&&<button onClick={()=>setShowSpec(true)} title="Ficha detalhada: vira uma página dedicada no PDF do orçamento"
               style={{background:task.featured?"#a855f722":"none",border:`1px solid ${task.featured?"#a855f766":B.gray600}`,borderRadius:5,padding:"1px 6px",cursor:"pointer",color:task.featured?"#a855f7":B.gray500,fontSize:9,fontWeight:600,flexShrink:0}}>
-              {task.featured?"✓ Ficha":"Ficha"}
+              {task.featured?<><Ic n="done"/> Ficha</>:"Ficha"}
             </button>}
             {showSpec&&<TaskSpecModal task={task} onSave={patch=>onUpdate(task.id,patch)} onClose={()=>setShowSpec(false)}/>}
             {task.outsourced&&<span style={{fontSize:10,fontWeight:700,color:"#a78bfa",background:"#a78bfa18",border:"1px solid #a78bfa44",borderRadius:5,padding:"1px 6px",flexShrink:0,whiteSpace:"nowrap"}}>Terceirizado</span>}
@@ -4808,7 +4808,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
             </>}
           </div>}
           {signer&&task.done&&<div style={{marginTop:2}}>
-            <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}>✓ {signer.name}</span>
+            <span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px",whiteSpace:"nowrap"}}><Ic n="done"/> {signer.name}</span>
           </div>}
           {/* Updates feed toggle */}
           <div style={{marginTop:5,display:"flex",alignItems:"center",gap:5}}>
@@ -4831,7 +4831,7 @@ function TaskItemManager({task,defaultRate,stock,onToggle,onDelete,onUpdate,onCo
         {(()=>{ const tos=(purchaseOrders||[]).filter(o=>o.taskId===task.id); if(!tos.length) return null; const stC=o=>(PO_STATUS[o.status]||PO_STATUS.pending);
           return (<div style={{marginBottom:6}}>
             <button onClick={()=>setShowTaskPOs(v=>!v)} style={{background:`${B.blue}14`,border:`1px solid ${B.blue}55`,borderRadius:6,padding:"3px 9px",cursor:"pointer",color:B.blue,fontSize:10,fontWeight:800,display:"inline-flex",alignItems:"center",gap:6}}>
-              ✓ Pedido feito · {tos.length} {tos.length!==1?"itens":"item"} <span style={{display:"inline-block",transform:showTaskPOs?"rotate(90deg)":"none",transition:"transform .2s"}}>▸</span>
+              <Ic n="done"/> Pedido feito · {tos.length} {tos.length!==1?"itens":"item"} <span style={{display:"inline-block",transform:showTaskPOs?"rotate(90deg)":"none",transition:"transform .2s"}}>▸</span>
             </button>
             {showTaskPOs&&<div style={{display:"flex",flexDirection:"column",gap:4,marginTop:6}}>
               {tos.map(o=>{ const c=stC(o); return <div key={o.id} style={{display:"flex",alignItems:"center",gap:8,background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"6px 10px"}}>
@@ -5099,7 +5099,7 @@ function NextVisitModal({vehicle,tasks,clients,defaultRate,onClose,onCreateAppoi
                 </div>
               </div>
               {cost.total>0&&<span style={{fontSize:11,color:B.amber,fontWeight:700,flexShrink:0}}>{fmtBRL(cost.total)}</span>}
-              {t.done&&<span style={{fontSize:9,color:B.green,fontWeight:700,flexShrink:0}}>✓</span>}
+              {t.done&&<span style={{fontSize:9,color:B.green,fontWeight:700,flexShrink:0}}><Ic n="done"/></span>}
             </div>);
           })}
         </div>}
@@ -5274,7 +5274,7 @@ function TaskPicker({ value, onChange, vts, allowDefault = false, placeholder = 
       <div style={{ maxHeight: 190, overflowY: "auto" }}>
         {allowDefault && <div onClick={() => pickIt("")} style={{ padding: "6px 8px", fontSize: 12, color: B.gray200, cursor: "pointer" }}>Tarefa padrão</div>}
         {q.trim() && <div onClick={() => pickIt("new:" + q.trim())} style={{ padding: "6px 8px", fontSize: 12, color: B.orange, fontWeight: 700, cursor: "pointer" }}>＋ Criar tarefa “{q.trim()}”</div>}
-        {list.map(t => <div key={t.id} onClick={() => pickIt(t.id)} style={{ padding: "6px 8px", fontSize: 12, color: t.id === value ? B.orange : B.white, cursor: "pointer", borderRadius: 4 }}>{lbl(t)}{t.done ? " ✓" : ""}</div>)}
+        {list.map(t => <div key={t.id} onClick={() => pickIt(t.id)} style={{ padding: "6px 8px", fontSize: 12, color: t.id === value ? B.orange : B.white, cursor: "pointer", borderRadius: 4 }}>{lbl(t)}{t.done ? <> <Ic n="done"/></> : null}</div>)}
         {!list.length && !q.trim() && <div style={{ padding: 8, fontSize: 11, color: B.gray400 }}>Digite para buscar ou criar</div>}
       </div>
       <div onClick={() => setOpen(false)} style={{ textAlign: "center", fontSize: 10, color: B.gray400, padding: 4, cursor: "pointer" }}>fechar</div>
@@ -5401,7 +5401,7 @@ function NoteStatusBanner({ note, rows, onRelease }) {
   const imp = rows.filter(r => r.imp), done = imp.length === rows.length;
   if (!imp.length) return note.docNumber ? <div style={{ fontSize: 11, color: B.gray400 }}>Nota nº {note.docNumber} · {rows.length} item(ns) · ainda não importada</div> : null;
   return (<div style={{ background: done ? `${B.green}15` : `${B.amber}12`, border: `1px solid ${done ? B.green : B.amber}55`, borderRadius: 8, padding: "9px 11px" }}>
-    <div style={{ fontSize: 12, fontWeight: 800, color: done ? B.green : B.amber }}>{done ? "✓ Esta nota já foi totalmente importada" : `Importação parcial: ${imp.length} de ${rows.length} itens já importados`}{note.docNumber ? ` (nota nº ${note.docNumber})` : ""}</div>
+    <div style={{ fontSize: 12, fontWeight: 800, color: done ? B.green : B.amber }}>{done ? <><Ic n="done"/> Esta nota já foi totalmente importada</> : `Importação parcial: ${imp.length} de ${rows.length} itens já importados`}{note.docNumber ? ` (nota nº ${note.docNumber})` : ""}</div>
     <div style={{ fontSize: 11, color: B.gray300, marginTop: 3 }}>{done ? "Para evitar lançamentos em duplicidade, ela não pode ser importada de novo." : "Os itens já importados ficam bloqueados; só os restantes podem ser importados."}</div>
     {[...new Set(imp.map(impLabel))].slice(0, 3).map(l => <div key={l} style={{ fontSize: 10, color: B.gray400, marginTop: 2 }}>• {l}</div>)}
     {onRelease && <button type="button" onClick={onRelease} style={{ marginTop: 6, background: "none", border: `1px solid ${B.gray600}`, color: B.gray300, borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer" }}>Liberar para importar de novo…</button>}
@@ -5416,7 +5416,7 @@ function NoteDocPicker({ docs, regSup, impMap, onPick, fieldS }) {
     <input value={q} onChange={e => setQ(e.target.value)} placeholder="Filtrar por fornecedor ou arquivo…" style={{ ...fieldS, marginBottom: 6 }} />
     <div style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
       {list.length === 0 && <div style={{ fontSize: 11, color: B.gray500, padding: 6 }}>{docs.length ? "Nenhuma nota encontrada." : "Ainda não há notas anexadas aos fornecedores."}</div>}
-      {list.map(d => { const m = d.note_id && impMap[d.note_id]; const st = m ? (m.keys.size >= m.total && m.total > 0 ? ["✓ importada", B.green] : [`parcial ${m.keys.size}/${m.total}`, B.amber]) : null;
+      {list.map(d => { const m = d.note_id && impMap[d.note_id]; const st = m ? (m.keys.size >= m.total && m.total > 0 ? ["importada", B.green] : [`parcial ${m.keys.size}/${m.total}`, B.amber]) : null;
         return (<div key={d.id} onClick={() => onPick(d)} style={{ padding: "7px 9px", borderRadius: 7, background: B.gray800, cursor: "pointer", border: `1px solid ${B.gray700}`, opacity: st && st[1] === B.green ? 0.6 : 1 }}>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <div style={{ fontSize: 12, color: B.white, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{nameOf(d) || "Fornecedor"} · {d.file_name || "nota.pdf"}</div>
@@ -5563,7 +5563,7 @@ function ImportPurchaseModal({ vehicle, vts, onClose, onImport }) {
                 <input value={r.name} disabled={!!r.imp} onChange={e => N.upd(r.id, { name: e.target.value })} style={{ ...importFieldS, flex: 1 }} />
               </div>
               {r.imp
-                ? <div style={{ fontSize: 10, marginTop: 5, color: B.green }}>✓ Já importado · {r.qty} × {fmtBRL(r.cost)} · {impLabel(r.imp)}</div>
+                ? <div style={{ fontSize: 10, marginTop: 5, color: B.green }}><Ic n="done"/> Já importado · {r.qty} × {fmtBRL(r.cost)} · {impLabel(r.imp)}</div>
                 : <>
                   <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
                     <span style={{ fontSize: 10, color: B.gray400 }}>Qtd</span>
@@ -5874,7 +5874,7 @@ function StockImportModal({ stock, onClose, onImport }) {
                 <input value={r.name} disabled={!!r.imp} onChange={e => N.upd(r.id, { name: e.target.value })} style={{ ...importFieldS, flex: 1 }} />
               </div>
               {r.imp
-                ? <div style={{ fontSize: 10, marginTop: 5, color: B.green }}>✓ Já importado · {r.qty} × {fmtBRL(r.cost)} · {impLabel(r.imp)}</div>
+                ? <div style={{ fontSize: 10, marginTop: 5, color: B.green }}><Ic n="done"/> Já importado · {r.qty} × {fmtBRL(r.cost)} · {impLabel(r.imp)}</div>
                 : <>
                   <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
                     <span style={{ fontSize: 10, color: B.gray400 }}>Qtd</span>
@@ -6054,7 +6054,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
         {managerMode&&total>0&&<div style={{textAlign:"right",flexShrink:0,marginRight:4}}>
           <div style={{fontSize:11,color:B.gray400}}>Total OS</div>
           <div style={{fontSize:14,fontWeight:800,color:B.amber}}>{fmtBRL(total)}</div>
-          {executed>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}>✓ {fmtBRL(executed)} investido</div>}
+          {executed>0&&<div style={{fontSize:10,color:B.green,fontWeight:700}}><Ic n="done"/> {fmtBRL(executed)} investido</div>}
           {(()=>{const bal=total-vehiclePaid(vehicle.id,payments,isFD?"finishing":"performance"); return bal>0
             ?<div style={{fontSize:10,color:B.red,fontWeight:700}}>Deve {fmtBRL(bal)}</div>
             :<div style={{fontSize:10,color:B.green,fontWeight:700,display:"flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pago</div>;})()}
@@ -6200,10 +6200,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
 
           {/* Entregue badge */}
           {vehicle.deliveredAt&&division!=="finishing"&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
-            ✓ Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
+            <Ic n="done"/> Entregue {new Date(vehicle.deliveredAt).toLocaleDateString("pt-BR")}
           </span>}
           {vehicle.deliveredAtFinishing&&division==="finishing"&&<span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}44`,borderRadius:6,padding:"3px 8px",flex:"0 0 auto",fontWeight:700}}>
-            ✓ Entregue {new Date(vehicle.deliveredAtFinishing).toLocaleDateString("pt-BR")}
+            <Ic n="done"/> Entregue {new Date(vehicle.deliveredAtFinishing).toLocaleDateString("pt-BR")}
           </span>}
         </div>
       </div>
@@ -6495,7 +6495,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                     style={{...selSt,flex:1,fontSize:11,color:ip.taskRef?B.white:B.gray500}}>
                     <option value="">Sem serviço vinculado</option>
                     {tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty).map(t=>(
-                      <option key={t.id} value={t.label}>{t.label}{t.done?" ✓":""}</option>
+                      <option key={t.id} value={t.label}>{t.label}{t.done?" · feita":""}</option>
                     ))}
                   </select>
                   <div style={{textAlign:"right",marginLeft:"auto"}}>
@@ -6614,7 +6614,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
                     style={{flex:1,minWidth:120,padding:"3px 6px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray900,color:fr.taskRef?B.white:B.gray500,fontSize:11,outline:"none"}}>
                     <option value="">Nenhuma</option>
                     {tasks.filter(t=>t.vehicleId===vehicle.id&&!t.warranty).map(t=>(
-                      <option key={t.id} value={t.label}>{t.label}{t.done?" ✓":""}</option>
+                      <option key={t.id} value={t.label}>{t.label}{t.done?" · feita":""}</option>
                     ))}
                   </select>
                 </div>
@@ -6838,7 +6838,7 @@ function EmployeeCard({employee,vehicles,tasks,employees,clients,stock,defaultRa
         <input value={vColor} onChange={e=>setVColor(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addV()} placeholder="Cor (ex: Preto)"
           style={{flex:"0 1 120px",padding:"7px 12px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
         <button onClick={addV} style={{padding:"7px 14px",borderRadius:7,background:B.orange,border:"none",color:B.white,cursor:"pointer",fontWeight:700}}>Salvar</button>
-        <button onClick={()=>setSF(false)} style={{padding:"7px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer"}}>✕</button>
+        <button onClick={()=>setSF(false)} style={{padding:"7px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray200,cursor:"pointer"}}><Ic n="x"/></button>
       </div>:<button onClick={()=>setShowPicker(true)} style={{marginTop:4,padding:"7px 12px",borderRadius:8,background:"transparent",border:`1px dashed ${B.orange}66`,color:B.orange,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontWeight:600,fontSize:13}}
         onMouseEnter={e=>e.currentTarget.style.background=`${B.orange}15`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
         <ICar s={13} c={B.orange}/>+ Veículo
@@ -7666,7 +7666,7 @@ function MLAssignModal({item,vehicles,clients=[],tasks,stock,onClose,onAssign}) 
         {vid&&lkCands.length>0&&<div style={{background:`${B.purple}14`,border:`1px solid ${B.purple}44`,borderRadius:8,padding:"7px 9px"}}>
           <div style={{fontSize:11,color:B.purple,fontWeight:700,marginBottom:2}}><Ic n="bulb"/> Parece algo já lançado neste carro</div>
           <div style={{fontSize:10.5,color:B.gray400,marginBottom:6,lineHeight:1.4}}>Toque para vincular e corrigir o lançamento (valor, quantidade) em vez de duplicar.</div>
-          <div style={{display:"flex",flexDirection:"column",gap:5}}>{lkCands.map(c=>{const on=lk&&lk.tid===c.tid&&lk.idx===c.idx;const mc=Number(c.m.cost)||0,mq=Number(c.m.qty)||1;return <button key={c.tid+c.idx} onClick={()=>{if(on){setLk(null);}else{setLk({tid:c.tid,idx:c.idx});setTid(c.tid);setNameStr(c.name);setMarkup(String(c.m.markup??markup));}}} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${on?B.purple:B.purple+"55"}`,background:on?`${B.purple}33`:"none",color:B.white,fontSize:11.5,cursor:"pointer",textAlign:"left",lineHeight:1.4}}>{on?"✓ ":""}{c.name}<div style={{fontSize:10.5,color:B.gray400}}>{c.tl} · lançado {mq}× {fmtBRL(mc)} (custo){(Number(c.m.markup)||0)?` +${c.m.markup}%`:""}</div></button>;})}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>{lkCands.map(c=>{const on=lk&&lk.tid===c.tid&&lk.idx===c.idx;const mc=Number(c.m.cost)||0,mq=Number(c.m.qty)||1;return <button key={c.tid+c.idx} onClick={()=>{if(on){setLk(null);}else{setLk({tid:c.tid,idx:c.idx});setTid(c.tid);setNameStr(c.name);setMarkup(String(c.m.markup??markup));}}} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${on?B.purple:B.purple+"55"}`,background:on?`${B.purple}33`:"none",color:B.white,fontSize:11.5,cursor:"pointer",textAlign:"left",lineHeight:1.4}}>{on?<><Ic n="done"/> </>:""}{c.name}<div style={{fontSize:10.5,color:B.gray400}}>{c.tl} · lançado {mq}× {fmtBRL(mc)} (custo){(Number(c.m.markup)||0)?` +${c.m.markup}%`:""}</div></button>;})}</div>
           {lk&&<div style={{fontSize:10.5,color:B.amber,marginTop:6,lineHeight:1.4}}>Vai atualizar para {qEff||"?"}× {fmtBRL(unitCost)} (custo) conforme o Mercado Livre.</div>}
         </div>}
         {vid&&<TaskPicker value={tid} onChange={setTid} vts={vts} placeholder="Escolha ou crie a tarefa…"/>}
@@ -7767,7 +7767,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         const left=rows.filter(i=>!i.ship_status&&i.order_status==="paid").length;
         if(!left||left>=prev) break; prev=left;
       }
-      setMsg(added?`${added} item(ns) novo(s) ✓`:"Tudo em dia — nenhuma compra nova"); setSt(s=>({...(s||{}),lastSync:new Date().toISOString()}));
+      setMsg(added?`${added} item(ns) novo(s)`:"Tudo em dia — nenhuma compra nova"); setSt(s=>({...(s||{}),lastSync:new Date().toISOString()}));
     }catch(e){ setErr(errMsg(e)||"Erro ao sincronizar"); }
     finally{ setBusy(""); }
   };
@@ -7775,7 +7775,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     (async()=>{
       try{
         let code=null; try{ code=sessionStorage.getItem("osc_ml_code"); }catch{}
-        if(code){ try{ sessionStorage.removeItem("osc_ml_code"); }catch{} setBusy("connect"); const r=await db.mlCall("connect",{code}); if(r.ok===false) setErr(r.error||"Falha ao conectar"); else setMsg("Conta conectada ✓"); setBusy(""); }
+        if(code){ try{ sessionStorage.removeItem("osc_ml_code"); }catch{} setBusy("connect"); const r=await db.mlCall("connect",{code}); if(r.ok===false) setErr(r.error||"Falha ao conectar"); else setMsg("Conta conectada"); setBusy(""); }
         const s=await db.mlCall("status"); setSt(s); await loadItems();
         if(s.connected&&(!s.lastSync||Date.now()-new Date(s.lastSync).getTime()>30*60000)) doSync(true);
       }catch(e){ setErr(errMsg(e)||"Erro ao consultar o Mercado Livre"); setBusy(""); }
@@ -7827,7 +7827,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       await new Promise(rs=>setTimeout(rs,180));
     }
     await loadItems(); setBulkBusy(""); exitSel();
-    if(ok) setMsg(`${ok} ${ok!==1?"itens destinados":"item destinado"} ✓`);
+    if(ok) setMsg(`${ok} ${ok!==1?"itens destinados":"item destinado"}`);
     if(fails.length) setErr(`${fails.length} não ${fails.length!==1?"foram destinados":"foi destinado"}: ${fails.join(" · ")}`);
   };
   const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(errMsg(e)); } };
@@ -7894,7 +7894,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         <span style={{fontSize:11,color:B.gray400}}>{RET_ST[i.return_status||"todo"]}</span>
       </div>); })()}
       {isPending&&i.suggest_vehicle_id&&<div style={{fontSize:11,color:"#2aa5b5",marginTop:4,wordBreak:"break-word"}}>Sugestão do pedido: {i.suggest_vehicle_label||"carro"}{i.suggest_task_label?` · ${i.suggest_task_label}`:""} · confirme em Destinar</div>}
-      {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}><Ic n="link"/> {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?" · recebido ✓":""}</div>}
+      {i.link_type&&<div style={{fontSize:11,color:B.purple,marginTop:4,wordBreak:"break-word"}}><Ic n="link"/> {i.link_type==="po"?"Pedido de veículo":"Pedido de compra"}: {i.link_label}{i.link_done_at?<> · recebido <Ic n="done"/></>:""}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
       {isPending?(selMode?null:<button onClick={e=>{e.stopPropagation();setPick(i);}} style={{padding:"6px 11px",borderRadius:8,background:B.amber,border:"none",color:B.black,fontWeight:800,fontSize:11.5,cursor:"pointer"}}>Destinar</button>)
@@ -7959,7 +7959,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     {st?.connected&&<div style={{marginTop:12}}>
       {items.length>0&&<div style={{position:"relative",marginBottom:10}}>
         <input value={qs} onChange={e=>setQs(e.target.value)} placeholder="Buscar peça, vendedor, carro…" style={{padding:"8px 30px 8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
-        {qs&&<button onClick={()=>setQs("")} style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,fontSize:15,cursor:"pointer",padding:"2px 6px"}}>✕</button>}
+        {qs&&<button onClick={()=>setQs("")} style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,fontSize:15,cursor:"pointer",padding:"2px 6px"}}><Ic n="x"/></button>}
       </div>}
       {active.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
         {chips.map(([k,l])=><button key={k} onClick={()=>setFil(k)} style={{padding:"3px 10px",borderRadius:99,border:`1px solid ${fil===k?B.amber:B.gray600}`,background:fil===k?`${B.amber}22`:"transparent",color:fil===k?B.amber:B.gray300,fontSize:11,fontWeight:700,cursor:"pointer"}}>{l} <span style={{opacity:.7}}>{cnt(k)}</span></button>)}
@@ -7992,7 +7992,7 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
         {(!shut.waiting||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6}}>{waiting.map(i=>row(i,false))}</div>}</>}
       {pending.length===0&&waiting.length===0&&<div style={{fontSize:12,color:B.gray500}}>{!items.length?"Nenhuma compra ainda — toque em Sincronizar.":(fil!=="all"||nqs)?(done.length?null:"Nada encontrado."):<>Tudo concluído. <Ic n="ready"/></>}</div>}
       {done.length>0&&<div style={{marginTop:12}}>
-        <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.green,fontSize:11,fontWeight:700,cursor:"pointer",padding:0}}>{(showDone||nqs)?"▾":"▸"} ✓ Concluídas — entregues e destinadas ({done.length})</button>
+        <button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:B.green,fontSize:11,fontWeight:700,cursor:"pointer",padding:0}}>{(showDone||nqs)?"▾":"▸"} <Ic n="done"/> Concluídas — entregues e destinadas ({done.length})</button>
         {(showDone||nqs)&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>{done.map(i=>row(i,false))}</div>}
       </div>}
     </div>}
@@ -8107,11 +8107,11 @@ function ToolsTab({showValues=true}) {
   const fmtS=d=>d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
   const add=async()=>{
     if(!form.name.trim()){ setErr("Informe o nome"); return; }
-    try{ await db.addTool({name:form.name.trim(),value:Number(String(form.value).replace(",","."))||0,qty:Number(form.qty)||1,location:form.location.trim(),purchased_at:new Date().toLocaleDateString("sv-SE")}); setForm({name:"",value:"",qty:"1",location:""}); setAdding(false); setErr(""); load(); notify("Ferramenta adicionada ✓"); }
+    try{ await db.addTool({name:form.name.trim(),value:Number(String(form.value).replace(",","."))||0,qty:Number(form.qty)||1,location:form.location.trim(),purchased_at:new Date().toLocaleDateString("sv-SE")}); setForm({name:"",value:"",qty:"1",location:""}); setAdding(false); setErr(""); load(); notify("Ferramenta adicionada"); }
     catch(e){ setErr(errMsg(e)||"Erro ao salvar"); }
   };
-  const save=async(t,patch)=>{ try{ await db.updateTool(t.id,patch); setEdit(null); load(); notify("Ferramenta atualizada ✓"); }catch(e){ setErr(errMsg(e)||"Erro ao salvar"); } };
-  const del=async t=>{ if(!window.confirm(`Remover “${t.name}” da lista de ferramentas?`)) return; try{ await db.deleteTool(t.id); load(); notify("Ferramenta removida ✓"); }catch(e){ setErr(errMsg(e)); } };
+  const save=async(t,patch)=>{ try{ await db.updateTool(t.id,patch); setEdit(null); load(); notify("Ferramenta atualizada"); }catch(e){ setErr(errMsg(e)||"Erro ao salvar"); } };
+  const del=async t=>{ if(!window.confirm(`Remover “${t.name}” da lista de ferramentas?`)) return; try{ await db.deleteTool(t.id); load(); notify("Ferramenta removida"); }catch(e){ setErr(errMsg(e)); } };
   return (<div>
     <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
       {showValues&&<div style={{flex:1,minWidth:150,background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px"}}>
@@ -8196,7 +8196,7 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
     catch(e){ setErr(errMsg(e)||"Erro ao anexar PDF"); }
     setUpBusy(false);
   };
-  const delDoc=async id=>{ try{ await db.deleteSupplierDoc(id); await loadDocs(); notify("Documento removido ✓"); }catch(e){ setErr(errMsg(e)||"Erro ao remover"); } };
+  const delDoc=async id=>{ try{ await db.deleteSupplierDoc(id); await loadDocs(); notify("Documento removido"); }catch(e){ setErr(errMsg(e)||"Erro ao remover"); } };
   const load=()=>{ loadDocs(); return db.getSuppliers().then(r=>{setList(r);setLoading(false);}).catch(e=>{setErr(errMsg(e)||"Erro ao carregar");setLoading(false);}); };
   useEffect(()=>{load();},[]);
   const stats=name=>{const k=norm(name);const ps=purchases.filter(p=>norm(p.supplier)===k);return {n:ps.length,total:ps.reduce((s,p)=>s+Number(p.totalCost||0),0),last:ps.map(p=>p.purchaseDate).sort().pop()||null};};
@@ -8211,11 +8211,11 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
       const row={name,cnpj:form.cnpj.trim()||null,phone:form.phone.trim()||null,email:form.email.trim()||null,contact:form.contact.trim()||null,address:form.address.trim()||null,notes:form.notes.trim()||null};
       if(editId==="new") await db.addSupplier(row);
       else await db.updateSupplier(editId,row,list.find(x=>x.id===editId)?.name);
-      setEditId(null); await load(); notify(editId==="new"?"Fornecedor adicionado ✓":"Fornecedor atualizado ✓");
+      setEditId(null); await load(); notify(editId==="new"?"Fornecedor adicionado":"Fornecedor atualizado");
     }catch(e){setErr(errMsg(e)||"Erro ao salvar");}
     setBusy(false);
   };
-  const del=async id=>{try{await db.deleteSupplier(id);setConfirmDel(null);await load();notify("Fornecedor removido ✓");}catch(e){setErr(errMsg(e)||"Erro ao remover");}};
+  const del=async id=>{try{await db.deleteSupplier(id);setConfirmDel(null);await load();notify("Fornecedor removido");}catch(e){setErr(errMsg(e)||"Erro ao remover");}};
   const inp={padding:"8px 11px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"};
   const shown=list.filter(x=>!q||norm([x.name,x.cnpj,x.phone,x.contact,x.email].join(" ")).includes(norm(q)));
   const formBox=(<div style={{background:B.gray800,borderRadius:12,border:`1px solid ${B.green}55`,padding:14,marginBottom:14}}>
@@ -8272,7 +8272,7 @@ function SuppliersTab({purchases=[],actor="",vehicles=[],clients=[],tasks=[],sto
             {sd.length===0&&<div style={{fontSize:11,color:B.gray500}}>Nenhuma nota anexada. As notas importadas em uma OS (com este fornecedor) aparecem aqui.</div>}
             {sd.map(d=><div key={d.id} style={{background:B.gray900,borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
               <a href={d.file_url} target="_blank" rel="noreferrer" style={{color:B.blue,fontSize:12,fontWeight:700,textDecoration:"none",flex:"1 1 160px",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><Ic n="file"/> {d.file_name||"nota.pdf"}</a>
-              {(()=>{const m=d.note_id&&impMap[d.note_id];if(!m)return null;const full=m.total>0&&m.keys.size>=m.total;return <span style={{fontSize:10,fontWeight:800,color:full?B.green:B.amber}}>{full?"✓ importada":`parcial ${m.keys.size}/${m.total}`}</span>;})()}
+              {(()=>{const m=d.note_id&&impMap[d.note_id];if(!m)return null;const full=m.total>0&&m.keys.size>=m.total;return <span style={{fontSize:10,fontWeight:800,color:full?B.green:B.amber}}>{full?<><Ic n="done"/> importada</>:`parcial ${m.keys.size}/${m.total}`}</span>;})()}
               <span style={{fontSize:10,color:B.gray500}}>{new Date(d.created_at).toLocaleDateString("pt-BR")}{d.vehicle_label?` · ${d.vehicle_label}`:""}{d.total!=null?` · ${fmtBRL(Number(d.total))}`:""}</span>
               <button onClick={()=>{if(window.confirm("Remover esta nota?"))delDoc(d.id);}} style={{background:"none",border:"none",color:B.red,fontSize:11,cursor:"pointer"}}>remover</button>
             </div>)}
@@ -9391,7 +9391,7 @@ function ApptManualMat({sv,onUpdateService}){
   const [em,setEm]=useState({name:"",qty:1,cost:0,markup:50});
   return(<>
     <button onClick={()=>setShowEM(s=>!s)} style={{fontSize:10,color:B.purple,background:"none",border:`1px solid ${B.purple}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer"}}>
-      {showEM?"✕ Fechar":"+ Material manual"}
+      {showEM?<><Ic n="x"/> Fechar</>:"+ Material manual"}
     </button>
     {showEM&&<div style={{padding:"6px",background:B.gray900,borderRadius:6,border:`1px solid ${B.purple}22`,display:"flex",flexDirection:"column",gap:4}}>
       <input value={em.name} onChange={e=>setEm(p=>({...p,name:e.target.value}))} placeholder="Nome *"
@@ -9672,7 +9672,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
           <input value={form.tempPhone} onChange={e=>setForm(p=>({...p,tempPhone:e.target.value}))} placeholder="Telefone (opcional)"
             style={{flex:1,padding:"7px 10px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
         </div>}
-        {form.clientId&&<button onClick={()=>{setForm(p=>({...p,clientId:"",vehicleId:""}));setClientSearch("");}} style={{marginTop:4,fontSize:11,color:B.gray500,background:"none",border:"none",cursor:"pointer"}}>✕ Limpar cliente</button>}
+        {form.clientId&&<button onClick={()=>{setForm(p=>({...p,clientId:"",vehicleId:""}));setClientSearch("");}} style={{marginTop:4,fontSize:11,color:B.gray500,background:"none",border:"none",cursor:"pointer"}}><Ic n="x"/> Limpar cliente</button>}
       </div>
 
       {/* Vehicle */}
@@ -9841,7 +9841,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontWeight:800,fontSize:14,color:isConverted?B.gray400:B.white,display:"flex",alignItems:"center",gap:6}}>
               {vModel||"Veículo"}
-              {isConverted&&<span style={{fontSize:10,color:B.green,fontWeight:700,background:`${B.green}15`,borderRadius:99,padding:"1px 7px"}}>✓ Convertido</span>}
+              {isConverted&&<span style={{fontSize:10,color:B.green,fontWeight:700,background:`${B.green}15`,borderRadius:99,padding:"1px 7px"}}><Ic n="done"/> Convertido</span>}
             </div>
             {clientName&&<div style={{fontSize:12,color:B.gray500}}>{clientName}{q.tempPhone?` · ${q.tempPhone}`:""}</div>}
             <div style={{fontSize:11,color:B.gray600,marginTop:2}}>{new Date(q.createdAt).toLocaleDateString("pt-BR")}</div>
@@ -9895,7 +9895,7 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
             </button>}
             {!isConverted&&<button onClick={()=>copyLink(q.id)}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.blue}18`,border:`1px solid ${B.blue}33`,color:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              {copiedId===q.id?"✓ Copiado":<><Ic n="link"/> Link</>}
+              {copiedId===q.id?<><Ic n="done"/> Copiado</>:<><Ic n="link"/> Link</>}
             </button>}
             {isEditable&&<button onClick={()=>{onUpdate(q.id,{status:"sent"});copyLink(q.id);}}
               style={{padding:"5px 10px",borderRadius:7,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,color:B.amber,fontSize:11,fontWeight:700,cursor:"pointer"}}>
@@ -9987,7 +9987,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
             onFocus={()=>setShowVList(true)}
             placeholder="Buscar veículo por modelo, placa ou cliente *"
             style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${form.vehicleId?B.green:B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
-          {form.vehicleId&&<span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",color:B.green,fontSize:11}}>✓</span>}
+          {form.vehicleId&&<span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",color:B.green,fontSize:11}}><Ic n="done"/></span>}
           {showVList&&vSearch.length>=1&&(()=>{
             const q=vSearch.toLowerCase();
             const hits=vehicles.filter(v=>{
@@ -10292,7 +10292,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                 </div>
                 {/* Manual material form */}
                 <button onClick={()=>setShowManualMat(s=>!s)} style={{marginTop:4,fontSize:10,color:B.purple,background:"none",border:`1px solid ${B.purple}44`,borderRadius:5,padding:"2px 8px",cursor:"pointer"}}>
-                  {showManualMat?"✕ Fechar":"+ Material manual (com custo e markup)"}
+                  {showManualMat?<><Ic n="x"/> Fechar</>:"+ Material manual (com custo e markup)"}
                 </button>
                 {showManualMat&&<div style={{marginTop:6,padding:"8px",background:B.gray900,borderRadius:7,border:`1px solid ${B.purple}33`,display:"flex",flexDirection:"column",gap:5}}>
                   <input value={manualMat.name} onChange={e=>setManualMat(p=>({...p,name:e.target.value}))} placeholder="Nome do material *"
@@ -10342,7 +10342,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
                   setSvcMatSearch("");
                   setShowSvcForm(null);
                 }} style={{flex:1,padding:"6px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Adicionar</button>
-                <button onClick={()=>{setShowSvcForm(null);setSvcForm({label:"",estimatedValue:"",division:"performance",category:"",materials:[],hours:"",rate:""});setSvcMatSearch("");}} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
+                <button onClick={()=>{setShowSvcForm(null);setSvcForm({label:"",estimatedValue:"",division:"performance",category:"",materials:[],hours:"",rate:""});setSvcMatSearch("");}} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}><Ic n="x"/></button>
               </div>
             </div>}
           </div>
@@ -10378,7 +10378,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
               <div style={{display:"flex",gap:6}}>
                 <button onClick={async()=>{if(!payForm.amount) return;await onAddPayment({appointmentId:a.id,amount:parseFloat(payForm.amount),method:payForm.method,note:payForm.note});setPayForm({amount:"",method:"Pix",note:""});setShowPayForm(null);}}
                   style={{flex:1,padding:"6px 0",borderRadius:7,background:B.green,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Registrar</button>
-                <button onClick={()=>setShowPayForm(null)} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>✕</button>
+                <button onClick={()=>setShowPayForm(null)} style={{padding:"6px 10px",borderRadius:7,background:B.gray700,border:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}><Ic n="x"/></button>
               </div>
             </div>}
           </div>
@@ -10406,7 +10406,7 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
               </div>}
               <div style={{display:"flex",justifyContent:"space-between",fontSize:13,borderTop:`1px solid ${B.gray700}`,paddingTop:5}}>
                 <span style={{color:balance>0?B.amber:B.green,fontWeight:800}}>{balance>0?"Saldo estimado":"Quitado"}</span>
-                <span style={{color:balance>0?B.amber:B.green,fontWeight:900}}>{balance>0?fmtBRL(balance):"✓"}</span>
+                <span style={{color:balance>0?B.amber:B.green,fontWeight:900}}>{balance>0?fmtBRL(balance):<Ic n="done"/>}</span>
               </div>
             </div>);
           })()}
@@ -11000,7 +11000,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
           <button onClick={()=>{
             const url=getPublicLink(vehicle.id,"historico");
             navigator.clipboard?.writeText(url);
-            toast_("Link do histórico copiado ✓");
+            toast_("Link do histórico copiado");
           }} title="Copiar link do histórico para o cliente" style={{background:`${B.purple}18`,border:`1px solid ${B.purple}44`,borderRadius:7,padding:"4px 10px",cursor:"pointer",color:B.purple,fontSize:11,fontWeight:700,flexShrink:0,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Link histórico
           </button>
@@ -11131,7 +11131,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
             </div>
             <button onClick={async()=>{await db.resolveClientVehicleNote(n.id);setClientNotes(p=>p.filter(x=>x.id!==n.id));}}
               style={{padding:"4px 10px",borderRadius:6,background:B.greenBg,border:`1px solid ${B.green}44`,color:B.green,cursor:"pointer",fontSize:11,fontWeight:700,flexShrink:0}}>
-              ✓ Recebido
+              <Ic n="done"/> Recebido
             </button>
           </div>
         ))}
@@ -11156,7 +11156,7 @@ function VehicleHistoryCard({vehicle,tasks,employees,clients,defaultRate,onUpdat
     </div>}
     {lightbox&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightbox(null)}>
       <ZoomImg src={lightbox} style={{maxWidth:"95vw",maxHeight:"min(90vh, 100%)",objectFit:"contain",borderRadius:8}}/>
-      <button onClick={()=>setLightbox(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.15)",border:"none",borderRadius:99,padding:"8px 12px",cursor:"pointer",color:"#fff",fontSize:16}}>✕</button>
+      <button onClick={()=>setLightbox(null)} style={{position:"fixed",top:16,right:16,background:"rgba(255,255,255,.15)",border:"none",borderRadius:99,padding:"8px 12px",cursor:"pointer",color:"#fff",fontSize:16}}><Ic n="x"/></button>
     </div>}
   </div>);
 }
@@ -11660,7 +11660,7 @@ const PO_STATUS = {
   approved:      { label:"Aprovado",             color:"#3b82f6", icon:"check", next:"ready_to_buy",  nextLabel:"Pronto p/ compra"  },
   ready_to_buy:  { label:"Pronto p/ compra",     color:"#6366f1", icon:"cart",  next:"bought",        nextLabel:"Marcar comprado"   },
   bought:        { label:"Comprado",             color:"#8b5cf6", icon:"box",   next:"received",      nextLabel:"Marcar recebido"   },
-  received:      { label:"Recebido ✓",           color:"#22c55e", icon:"check", next:null,            nextLabel:null                },
+  received:      { label:"Recebido",             color:"#22c55e", icon:"check", next:null,            nextLabel:null                },
 };
 
 // Cartão de pedido de veículo (usado em "Pedidos de Veículos" e espelhado em "Pedidos de Compras").
@@ -11754,7 +11754,7 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
           </div>
           <div style={{textAlign:"right",flexShrink:0}}>
             <div style={{fontSize:11,fontWeight:800,color:st.color,background:`${st.color}18`,border:`1px solid ${st.color}44`,borderRadius:6,padding:"2px 8px"}}><IKey k={st.icon} s={10} c={st.color}/> {st.label}{o.receivedAt&&o.status==="received"?` · ${new Date(o.receivedAt).toLocaleDateString("pt-BR")}`:""}</div>
-            {isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}>✓ Instalada</div>}
+            {isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}><Ic n="done"/> Instalada</div>}
             {isReserved&&!isInstalled&&<div style={{fontSize:10,fontWeight:700,color:B.purple,background:`${B.purple}18`,border:`1px solid ${B.purple}33`,borderRadius:5,padding:"1px 7px",marginTop:4}}><Ic n="pkg"/> Armazenada</div>}
             <div style={{fontSize:10,color:B.gray500,marginTop:4,lineHeight:1.5}}>
               {(()=>{const f=d=>new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}).replace(",","");
@@ -11859,13 +11859,13 @@ function PurchaseOrderCard({o,compact=false,tint=null,vehicles,employees,tasks,a
             const isReserved=o.status==="received"&&(v?.partsList||[]).some(p=>p.purchaseOrderId===o.id);
             return(<div key={o.id} style={{background:`${B.green}08`,border:`1px solid ${B.green}22`,borderRadius:10,padding:"10px 12px",marginBottom:6,opacity:0.8,...(tint?{background:`${tint}1f`,border:`1px solid ${tint}66`,opacity:1}:{})}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:12,fontWeight:800,color:B.green}}>✓</span>
+                <span style={{fontSize:12,fontWeight:800,color:B.green}}><Ic n="done"/></span>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13,color:B.white}}>{o.partName}</div>
                   <div style={{fontSize:11,color:B.gray400}}>{v?.model} {v?.plate?`· ${v.plate}`:""}{emp?` · ${emp.name}`:""}</div>
                   {o.costPrice&&<div style={{fontSize:11,color:B.green}}>R$ {Number(o.costPrice).toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>}
                 </div>
-                {isInstalled&&<span style={{fontSize:10,color:B.blue,fontWeight:700,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}>✓ Instalada</span>}
+                {isInstalled&&<span style={{fontSize:10,color:B.blue,fontWeight:700,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}><Ic n="done"/> Instalada</span>}
                 {isReserved&&!isInstalled&&<span style={{fontSize:10,color:B.purple,fontWeight:700,background:`${B.purple}18`,padding:"2px 7px",borderRadius:6}}><Ic n="pkg"/> Reservada</span>}
                 {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>setReturnModal(o)} style={{background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.amber,fontSize:11,fontWeight:700}}>Devolver</button>}
                 {(adminRole==="owner"||adminRole==="admin")&&<button onClick={()=>{if(window.confirm(`Excluir "${o.partName}" definitivamente?\n\nO pedido e a peça reservada no veículo serão removidos.`))onDelete&&onDelete(o.id);}} title="Excluir" style={{background:"none",border:`1px solid ${B.gray600}`,borderRadius:7,padding:"3px 9px",cursor:"pointer",color:B.gray400,fontSize:11,fontWeight:700}}><Ic n="trash"/></button>}
@@ -11950,7 +11950,7 @@ function PurchaseOrdersTab({orders,vehicles,employees,tasks,adminRole,onUpdate,o
       {[
         {key:"all",label:`Todos (${orders.length})`,color:B.gray400},
         {key:"pending",label:`Pendentes (${pendingCount})`,color:"#f59e0b"},
-        {key:"approved",label:`✓ Aprovados (${approvedCount})`,color:"#3b82f6"},
+        {key:"approved",label:`Aprovados (${approvedCount})`,color:"#3b82f6"},
         {key:"ready_to_buy",label:`Prontos (${readyCount})`,color:"#6366f1"},
         {key:"bought",label:`Comprados (${boughtCount})`,color:"#8b5cf6"},
         {key:"received",label:`Recebidos`,color:"#22c55e"},
@@ -12450,7 +12450,7 @@ function FinanceEntriesCard({payments=[],vehicles=[],clients=[]}){
       <input type="date" value={df} onChange={e=>{setDf(e.target.value);setLim(15);}} style={{flex:1,minWidth:0,padding:"6px 8px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11.5,outline:"none",fontFamily:"inherit",colorScheme:"dark"}}/>
       <span style={{color:B.gray500,fontSize:11}}>→</span>
       <input type="date" value={dt} onChange={e=>{setDt(e.target.value);setLim(15);}} style={{flex:1,minWidth:0,padding:"6px 8px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:11.5,outline:"none",fontFamily:"inherit",colorScheme:"dark"}}/>
-      {(df||dt)&&<button onClick={()=>{setDf("");setDt("");}} style={{padding:"6px 9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>}
+      {(df||dt)&&<button onClick={()=>{setDf("");setDt("");}} style={{padding:"6px 9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:11,flexShrink:0}}><Ic n="x"/></button>}
     </div>
     {list.length===0?<div style={{textAlign:"center",padding:"18px 0",color:B.gray500,fontSize:12}}>{q||df||dt?"Nenhuma entrada encontrada.":"Nenhuma entrada no período."}</div>
     :<div style={{display:"flex",flexDirection:"column"}}>
@@ -12553,7 +12553,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
         <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",minWidth:0}}/>
         <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
         <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",minWidth:0}}/>
-        {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>}
+        {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}><Ic n="x"/></button>}
       </div>
     </div>
 
@@ -12587,7 +12587,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
             <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.gray400}}>Pago</div><div style={{fontSize:13,fontWeight:700,color:B.blue}}>{fmtBRL(r.revenue)}</div></div>
             <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.gray400}}>Custo</div><div style={{fontSize:13,fontWeight:700,color:B.red}}>{fmtBRL(r.cost)}</div></div>
             <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.gray400}}>Lucro</div><div style={{fontSize:13,fontWeight:800,color:B.green}}>{fmtBRL(r.profit)}</div></div>
-            <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.gray400}}>Saldo</div><div style={{fontSize:13,fontWeight:800,color:r.balance>0?B.red:B.green}}>{r.balance>0?fmtBRL(r.balance):"Pago ✓"}</div></div>
+            <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.gray400}}>Saldo</div><div style={{fontSize:13,fontWeight:800,color:r.balance>0?B.red:B.green}}>{r.balance>0?fmtBRL(r.balance):<>Pago <Ic n="done"/></>}</div></div>
           </div>
         </div>))}
       </div>}
@@ -12721,6 +12721,7 @@ const PV_IC={
   pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
   play:'<path d="M6 4l14 8-14 8z"/>',
   xc:'<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>',
+  x:'<path d="M18 6L6 18M6 6l12 12"/>',
   nut:'<path d="M12 2l8.66 5v10L12 22l-8.66-5V7z"/><circle cx="12" cy="12" r="3"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   car:'<path d="M3 13l2.2-5.5A2 2 0 0 1 7 6h10a2 2 0 0 1 1.8 1.5L21 13v4h-2M5 17H3v-4h18"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/><path d="M9.5 17h5"/>',
@@ -13207,7 +13208,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
                             {m.imported&&<span style={{fontSize:9,fontWeight:800,color:"#60a5fa",background:"#60a5fa12",border:"1px solid #60a5fa33",borderRadius:4,padding:"0px 5px",whiteSpace:"nowrap"}}>Importado</span>}
                           </div>
                         ))}</PvMatToggle>
-                        {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
+                        {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}><Ic n="done"/> {signer.name}</span></div>}
                         {/* Updates feed */}
                         {(t.updates||[]).length>0&&<div style={{marginTop:8,borderTop:`1px solid ${B.gray700}`,paddingTop:8}}>
                           <div style={{fontSize:10,fontWeight:700,color:B.blue,marginBottom:6,display:"flex",alignItems:"center",gap:4,textTransform:"uppercase",letterSpacing:.5}}>
@@ -13287,7 +13288,7 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
                           {m.qty!=null&&Number(m.qty)!==1&&<span style={{fontSize:10,color:B.gray600}}>×{m.qty}</span>}
                         </div>
                       ))}</PvMatToggle>
-                      {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}>✓ {signer.name}</span></div>}
+                      {signer&&<div style={{marginTop:4}}><span style={{fontSize:10,color:B.green,background:B.greenBg,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 6px"}}><Ic n="done"/> {signer.name}</span></div>}
                       {tPhotos.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
                         {tPhotos.map((p,pi)=><div key={pi} style={{width:72,height:72,borderRadius:8,overflow:"hidden",cursor:"pointer",border:`1px solid ${FD.border}`,flexShrink:0}} onClick={()=>setLB(p)}>
                           <img src={p.url||p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -13425,8 +13426,8 @@ function PublicVehicleView({initialTab,vehicleId,vehicles,tasks,employees,client
             return (<div style={{marginBottom:12,background:B.gray900,borderRadius:10,overflow:"hidden",border:`1px solid ${B.gray700}`}}>
               <div style={{padding:"10px 14px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:13,fontWeight:800,color:B.blue}}>Checklist de entrada</span>
-                <span style={{fontSize:11,color:B.green,marginLeft:4}}>✓ {okItems.length} ok</span>
-                {badItems.length>0&&<span style={{fontSize:11,color:"#f87171"}}>✕ {badItems.length} com problema</span>}
+                <span style={{fontSize:11,color:B.green,marginLeft:4}}><Ic n="done"/> {okItems.length} ok</span>
+                {badItems.length>0&&<span style={{fontSize:11,color:"#f87171"}}><Ic n="x"/> {badItems.length} com problema</span>}
               </div>
               <div style={{padding:"10px 14px",display:"flex",flexDirection:"column",gap:4}}>
                 {CHECKLIST_ITEMS.filter(item=>cl.find(c=>c.id===item.id)?.status).map(item=>{
@@ -13956,7 +13957,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.245";
+const APP_VERSION = "2026.11.26.246";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -13989,7 +13990,7 @@ function ChangelogModal({onClose}) {
       </div>
       <div style={{padding:"12px 20px",borderTop:`1px solid ${B.gray700}`}}>
         <button onClick={onClose} style={{width:"100%",padding:"11px 0",borderRadius:10,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>
-          Entendido ✓
+          Entendido <Ic n="done"/>
         </button>
       </div>
     </div>
@@ -14102,7 +14103,7 @@ function AdminLoginScreen({onLogin}) {
           Na próxima vez, você pode entrar com<br/>Face ID, Touch ID ou biometria do dispositivo<br/>sem precisar digitar a senha.
         </div>
         <button onClick={acceptBio} style={{width:"100%",padding:"13px 0",borderRadius:11,background:B.orange,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",marginBottom:10}}>
-          ✓ Ativar biometria
+          <Ic n="done"/> Ativar biometria
         </button>
         <button onClick={skipBio} style={{width:"100%",padding:"11px 0",borderRadius:11,background:"none",border:`1px solid ${B.gray600}`,color:B.gray400,fontWeight:600,fontSize:13,cursor:"pointer"}}>
           Agora não
@@ -14415,7 +14416,7 @@ function FuelQuickModal({vehicles,tasks,onClose,onAddFuel}) {
                       <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?"#f59e0b":B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
                       <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                     </div>
-                    {selectedId===v.id&&<span style={{color:"#f59e0b",fontWeight:800,flexShrink:0}}>✓</span>}
+                    {selectedId===v.id&&<span style={{color:"#f59e0b",fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
                   </button>
                 ))}
               </div>
@@ -14515,7 +14516,7 @@ function QuickTaskModal({vehicles,tasks,employees,onClose,onAddTask}) {
                   <div style={{fontSize:13,fontWeight:700,color:selectedId===v.id?B.green:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
                   <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                 </div>
-                {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}>✓</span>}
+                {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
               </button>
             ))}
           </div>
@@ -14585,13 +14586,13 @@ function InstalledPOs({orders}) {
   if(!orders.length) return null;
   return (<div>
     <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,background:`${B.green}10`,border:`1px solid ${B.green}33`,color:B.green,fontWeight:700,fontSize:12,cursor:"pointer",textAlign:"left"}}>
-      <span style={{flex:1}}>✓ Instalados ({orders.length})</span><span style={{fontSize:10}}>{open?"▲":"▼"}</span>
+      <span style={{flex:1}}><Ic n="done"/> Instalados ({orders.length})</span><span style={{fontSize:10}}>{open?"▲":"▼"}</span>
     </button>
     {open&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>
       {orders.map(po=>(<div key={po.id} style={{background:`${B.green}08`,borderRadius:10,padding:"8px 12px",border:`1px solid ${B.green}22`,opacity:0.85}}>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
           <span style={{fontWeight:700,fontSize:13,color:B.white,flex:1}}>{po.partName}{po.quantity>1?` ×${po.quantity}`:""}</span>
-          <span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}>✓ Instalada</span>
+          <span style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,padding:"2px 7px",borderRadius:6}}><Ic n="done"/> Instalada</span>
         </div>
         {(po.consumedAt||po.receivedAt)&&<div style={{fontSize:10,color:B.gray500,marginTop:2}}>{po.consumedAt?"Utilizada em ":"Recebida em "}{new Date(po.consumedAt||po.receivedAt).toLocaleDateString("pt-BR")}</div>}
       </div>))}
@@ -14622,7 +14623,7 @@ function TaskSpecModal({task,onSave,onClose}) {
     <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${AC}66`,borderRadius:16,width:"100%",maxWidth:560,maxHeight:"100%",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:2}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Ficha do serviço</div>
-        <button onClick={closeKeep} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+        <button onClick={closeKeep} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}><Ic n="x"/></button>
       </div>
       <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>{task.label}. Vira uma página dedicada no PDF do orçamento.</div>
       <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingRight:2}}>
@@ -14637,7 +14638,7 @@ function TaskSpecModal({task,onSave,onClose}) {
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {photos.map((u,i)=><div key={u} style={{position:"relative",width:74,height:74,borderRadius:8,overflow:"hidden",border:`1px solid ${B.gray600}`}}>
               <img src={u} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-              <button onClick={()=>setPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:9,border:"none",background:"rgba(0,0,0,.7)",color:"#fff",fontSize:11,cursor:"pointer",lineHeight:1}}>✕</button>
+              <button onClick={()=>setPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:9,border:"none",background:"rgba(0,0,0,.7)",color:"#fff",fontSize:11,cursor:"pointer",lineHeight:1}}><Ic n="x"/></button>
             </div>)}
             {photos.length<8&&<label style={{width:74,height:74,borderRadius:8,border:`1px dashed ${B.gray500}`,display:"flex",alignItems:"center",justifyContent:"center",color:B.gray400,fontSize:11,textAlign:"center",cursor:"pointer"}}>
               {busy?"Enviando…":"+ foto"}<input type="file" accept="image/*" multiple onChange={up} style={{display:"none"}}/>
@@ -14677,7 +14678,7 @@ function MLPickForTaskModal({task,onClose}) {
     <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${ML}66`,borderRadius:16,width:"100%",maxWidth:480,maxHeight:"100%",display:"flex",flexDirection:"column",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:4}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Peça do Mercado Livre</div>
-        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}><Ic n="x"/></button>
       </div>
       <div style={{fontSize:11,color:B.gray400,marginBottom:10}}>Serviço: {task.label}. Só aparecem compras ainda sem destino.</div>
       {!sel&&<>
@@ -14736,7 +14737,7 @@ function OrderPartModal({target,vehicleId,onSubmit,onClose}) {
     <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.amber}55`,borderRadius:16,width:"100%",maxWidth:460,maxHeight:"min(92vh, 100%)",overflowY:"auto",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:4}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Pedir material</div>
-        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}><Ic n="x"/></button>
       </div>
       <div style={{fontSize:11,color:B.gray400,marginBottom:12}}>Tarefa: {task.label}. O pedido entra em "Pedidos de veículos" como aguardando compra.</div>
       <div style={{marginBottom:10}}><div style={lab}>Item</div><input value={name} onChange={e=>setName(e.target.value)} style={inp}/></div>
@@ -14915,7 +14916,7 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
     <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:16,width:"100%",maxWidth:520,maxHeight:"min(92vh, 100%)",overflowY:"auto",padding:18,color:B.white}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:12}}>
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Nova tarefa</div>
-        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
+        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}><Ic n="x"/></button>
       </div>
       <div style={{marginBottom:10}}><div style={lab}>Tarefa *</div><SvcPickInput autoFocus value={label} onChange={setLabel} division={isFD?"finishing":"performance"} defaultRate={defaultRate} placeholder="Digite para buscar no catálogo ou escreva livre" style={inp}
         onPick={sv=>{setLabel(sv.name);if(sv.category&&cats.some(c=>c.id===sv.category))setCategory(sv.category);const t=sv.rate_type||"hour";setPickType(t);setHours(sv.hours?String(sv.hours):(t==="qty"?"1":""));setRate(sv.rate!=null?String(sv.rate):"");}}/></div>
@@ -14925,11 +14926,11 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
         <div><div style={lab}>{isQty?"Quantidade":"Horas"}</div><input type="number" inputMode="decimal" value={hours} onChange={e=>setHours(e.target.value)} placeholder={isQty?"1":"0"} style={inp}/></div>
         <div><div style={lab}>{isQty?"R$ por unidade":"R$ por hora"}</div><input type="number" inputMode="decimal" value={rate} onChange={e=>setRate(e.target.value)} placeholder={isQty&&!isFD?"0,00":defaultRate?`padrão ${defaultRate}`:"padrão"} style={inp}/></div>
         <div style={{display:"flex",alignItems:"flex-end"}}>
-          <button onClick={()=>setOutsourced(o=>!o)} style={{width:"100%",padding:"9px 10px",borderRadius:8,border:`1px solid ${outsourced?"#a78bfa":B.gray600}`,background:outsourced?"#a78bfa22":"none",color:outsourced?"#c4b5fd":B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{outsourced?"✓ Terceirizado":"Terceirizar"}</button>
+          <button onClick={()=>setOutsourced(o=>!o)} style={{width:"100%",padding:"9px 10px",borderRadius:8,border:`1px solid ${outsourced?"#a78bfa":B.gray600}`,background:outsourced?"#a78bfa22":"none",color:outsourced?"#c4b5fd":B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{outsourced?<><Ic n="done"/> Terceirizado</>:"Terceirizar"}</button>
         </div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px 10px",borderRadius:9,border:`1px solid ${isDone?B.green+"66":B.gray700}`,background:isDone?`${B.green}10`:"none"}}>
-        <button onClick={()=>setIsDone(d=>!d)} style={{width:20,height:20,borderRadius:5,border:`2px solid ${isDone?B.green:B.gray500}`,background:isDone?B.green:"none",color:B.white,cursor:"pointer",padding:0,fontSize:12,lineHeight:1,flexShrink:0}}>{isDone?"✓":""}</button>
+        <button onClick={()=>setIsDone(d=>!d)} style={{width:20,height:20,borderRadius:5,border:`2px solid ${isDone?B.green:B.gray500}`,background:isDone?B.green:"none",color:B.white,cursor:"pointer",padding:0,fontSize:12,lineHeight:1,flexShrink:0}}>{isDone?<Ic n="done"/>:""}</button>
         <span onClick={()=>setIsDone(d=>!d)} style={{fontSize:12,fontWeight:700,color:isDone?B.green:B.gray300,cursor:"pointer",flex:1}}>Lançar já como concluída</span>
         {isDone&&<input type="date" value={doneDate} max={todayLocal()} onChange={e=>setDoneDate(e.target.value)} style={{...inp,width:"auto",padding:"5px 8px",fontSize:12}}/>}
       </div>
@@ -14942,7 +14943,7 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
         <input type="number" value={m.qty} onChange={e=>setM(i,{qty:e.target.value})} placeholder="Qtd" style={{...inp,padding:"8px 6px"}}/>
         <input type="number" value={m.cost} onChange={e=>setM(i,{cost:e.target.value})} placeholder="Custo R$" style={{...inp,padding:"8px 6px"}}/>
         <input type="number" value={m.markup} onChange={e=>setM(i,{markup:e.target.value})} placeholder="50%" title="Margem %" style={{...inp,padding:"8px 6px"}}/>
-        <button onClick={()=>setMats(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}>✕</button>
+        <button onClick={()=>setMats(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}><Ic n="x"/></button>
       </div>))}
       {mats.length>0&&<div style={{fontSize:10,color:B.gray500,marginBottom:6}}>Custo unitário · margem em % (padrão 50)</div>}
       <div style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"9px 12px",margin:"10px 0",fontSize:12,color:B.gray300}}>
@@ -15023,7 +15024,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           {mats.length>0&&<span style={{fontSize:10,color:B.gray400}}>{mats.length} peça{mats.length!==1?"s":""}</span>}
           {matMatches(t).map((m,mi)=><span key={mi} style={{fontSize:10,fontWeight:700,color:B.blue,background:`${B.blue}18`,borderRadius:4,padding:"1px 6px"}}><Ic n="nut"/> {m.name}{m.brand?` · ${m.brand}`:""}</span>)}
           {(t.updates||[]).length>0&&<span style={{fontSize:10,color:B.gray400}}>{(t.updates||[]).length} atualiz.</span>}
-          {t.done&&t.completedAt&&<span style={{fontSize:10,color:B.green,marginLeft:"auto"}}>✓ {fmtD(t.completedAt)}</span>}
+          {t.done&&t.completedAt&&<span style={{fontSize:10,color:B.green,marginLeft:"auto"}}><Ic n="done"/> {fmtD(t.completedAt)}</span>}
         </div>
       </div>
       {isOpen&&<div style={{marginTop:8,paddingTop:6,borderTop:`1px solid ${B.gray700}`}}>{renderTask(t)}</div>}
@@ -15066,7 +15067,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
           <div style={{fontSize:12,color:B.gray400}}><span style={{fontFamily:"monospace"}}>{vehicle.plate}</span>{(isFD?vehicle.osNumberFinishing:vehicle.osNumber)?` · ${isFD?fmtOSFD(vehicle.osNumberFinishing):fmtOS(vehicle.osNumber)}`:""}</div>
         </div>
         <button onClick={()=>{try{navigator.clipboard.writeText(`${window.location.origin}/?carro=${vehicle.id}`);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch(e){}}}
-          style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:copied?B.green:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{copied?"✓ Link copiado":<><Ic n="link"/> Copiar link</>}</button>
+          style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:"none",color:copied?B.green:B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{copied?<><Ic n="done"/> Link copiado</>:<><Ic n="link"/> Copiar link</>}</button>
       </div>
       {managerMode&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:10}}>
         {[["Total da OS",finTotal,B.white],["Investido",finInvested,B.green],["Pago",finPaid,B.blue],[finBalance>=0?"A receber":"Crédito",Math.abs(finBalance),finBalance>0.005?B.amber:B.green]].map(([l,v,c])=>(
@@ -15091,7 +15092,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
       </div>}
       {view!=="full"&&<div style={{position:"relative",marginBottom:10}}>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar tarefa ou material…" style={{width:"100%",boxSizing:"border-box",padding:"10px 36px 10px 12px",borderRadius:10,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>
-        {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:15}}>✕</button>}
+        {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:15}}><Ic n="x"/></button>}
         {qn&&<div style={{fontSize:11,color:B.gray400,marginTop:5}}>{vts.length} resultado{vts.length!==1?"s":""} de {allVts.length} tarefa{allVts.length!==1?"s":""}</div>}
       </div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
@@ -15134,7 +15135,7 @@ function VehicleStagesPage({vehicle,tasks,defaultRate,isFD=false,managerMode=tru
               <input type="checkbox" checked={tlInternal} onChange={e=>setTlInternal(e.target.checked)}/>Incluir {nInternal} interna{nInternal!==1?"s":""} no texto
             </label>}
             {managerMode&&list.length>0&&<button onClick={()=>{setTlReview(r=>!r);setOpenId(null);}} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${tlReview?accent:B.gray600}`,background:tlReview?`${accent}22`:"none",color:tlReview?accent:B.gray200,fontWeight:700,fontSize:12,cursor:"pointer"}}><Ic n="note"/> {tlReview?"Fechar revisão":"Revisar todas"}</button>}
-            <button onClick={copyText} disabled={!list.length} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${tlCopied?B.green:B.gray600}`,background:"none",color:tlCopied?B.green:B.gray200,fontWeight:700,fontSize:12,cursor:list.length?"pointer":"default"}}>{tlCopied?"✓ Texto copiado":<><Ic n="list"/> Copiar texto</>}</button>
+            <button onClick={copyText} disabled={!list.length} style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${tlCopied?B.green:B.gray600}`,background:"none",color:tlCopied?B.green:B.gray200,fontWeight:700,fontSize:12,cursor:list.length?"pointer":"default"}}>{tlCopied?<><Ic n="done"/> Texto copiado</>:<><Ic n="list"/> Copiar texto</>}</button>
           </div>
           {list.length===0&&<div style={{fontSize:12,color:B.gray500,padding:"14px 0"}}>Nenhuma tarefa concluída ainda.</div>}
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -15260,7 +15261,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
       <span style={{fontSize:13,fontWeight:800,color:B.purple}}><Ic n="nut"/> Peças reservadas</span>
       <span style={{fontSize:11,color:B.gray400}}>{parts.length} item{parts.length!==1?"s":""}</span>
       {managerMode&&<button onClick={()=>setAdding(p=>!p)} style={{marginLeft:"auto",padding:"3px 10px",borderRadius:6,background:adding?`${B.purple}22`:`${B.purple}12`,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontSize:11,fontWeight:700}}>
-        {adding?"✕ Cancelar":"+ Adicionar"}
+        {adding?<><Ic n="x"/> Cancelar</>:"+ Adicionar"}
       </button>}
     </div>
 
@@ -15298,7 +15299,7 @@ function VehiclePartsList({vehicle, onUpdateVehicle, managerMode=true, isFD=fals
                   ?<span style={{cursor:"pointer"}} onClick={()=>{const q=prompt("Quantidade:",part.qty);if(q)updatePart(part.id,{qty:parseInt(q)||1});}}>{part.qty}×</span>
                   :<span>{part.qty}×</span>}
               </span>
-              {installed&&<span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",flexShrink:0}}>✓ Utilizada</span>}
+              {installed&&<span style={{fontSize:10,fontWeight:800,color:B.green,background:`${B.green}18`,border:`1px solid ${B.green}33`,borderRadius:5,padding:"1px 7px",flexShrink:0}}><Ic n="done"/> Utilizada</span>}
               {!installed&&partUsedQty(part,vehicle.id,tasks)>0&&<span style={{fontSize:10,fontWeight:800,color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}33`,borderRadius:5,padding:"1px 7px",flexShrink:0}}>{partUsedQty(part,vehicle.id,tasks)}/{part.qty||1} usada(s) · restam {Number(part.qty||1)-partUsedQty(part,vehicle.id,tasks)}</span>}
             </div>
             {part.location&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}><Ic n="pin"/> {managerMode
@@ -15562,7 +15563,7 @@ function DeliveryCheckModal({vehicle,tasks,isFD,actor,onUpdateVehicle,onClose,ma
                   <span style={{display:"block",fontSize:14,fontWeight:700,lineHeight:1.3}}>{tk.label}</span>
                   {mats.length>0&&<span style={{display:"block",fontSize:11,color:B.gray400,marginTop:3,lineHeight:1.35}}>{mats.join(" · ")}</span>}
                   {!tk.done&&<span style={{display:"inline-block",fontSize:10,fontWeight:800,color:B.amber,marginTop:4}}>AINDA EM ABERTO</span>}
-                  {ck&&<span style={{display:"block",fontSize:10.5,color:accent,marginTop:4,fontWeight:700}}>✓ {ck.by} · {fmtAt(ck.at)}</span>}
+                  {ck&&<span style={{display:"block",fontSize:10.5,color:accent,marginTop:4,fontWeight:700}}><Ic n="done"/> {ck.by} · {fmtAt(ck.at)}</span>}
                 </span>
               </button>;
             })}
@@ -15689,17 +15690,17 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
             <div style={{display:"flex",gap:5,flexShrink:0}}>
               <button onClick={()=>setStatus(item.id, isOk?null:"ok")}
                 style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${isOk?B.green+"66":B.gray600}`,background:isOk?`${B.green}22`:"none",color:isOk?B.green:B.gray500,cursor:"pointer",fontSize:11,fontWeight:700}}>
-                ✓ Bom
+                <Ic n="done"/> Bom
               </button>
               <button onClick={()=>setStatus(item.id, isBad?null:"bad")}
                 style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${isBad?"#f87171"+"66":B.gray600}`,background:isBad?"#f8717122":"none",color:isBad?"#f87171":B.gray500,cursor:"pointer",fontSize:11,fontWeight:700}}>
-                ✕ Ruim
+                <Ic n="x"/> Ruim
               </button>
             </div>
             {/* Create task button */}
             {isBad&&managerMode&&<button onClick={()=>createTask(item)} disabled={state.taskCreated||creating===item.id}
               style={{padding:"3px 10px",borderRadius:6,background:state.taskCreated?`${B.green}15`:`${catColor}22`,border:`1px solid ${state.taskCreated?B.green+"44":catColor+"44"}`,color:state.taskCreated?B.green:catColor,cursor:state.taskCreated?"default":"pointer",fontSize:10,fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>
-              {creating===item.id?"…":state.taskCreated?"✓ Tarefa criada":"+ Criar tarefa"}
+              {creating===item.id?"…":state.taskCreated?<><Ic n="done"/> Tarefa criada</>:"+ Criar tarefa"}
             </button>}
           </div>
         </div>);
@@ -15719,7 +15720,7 @@ function VehicleChecklist({vehicle, tasks, onUpdateVehicle, onAddTask, managerMo
               <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
             </div>
             <button onClick={()=>savePhotos(clPhotos.filter((_,j)=>j!==i))}
-              style={{position:"absolute",top:3,right:3,width:18,height:18,borderRadius:99,background:"rgba(0,0,0,.75)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:B.white,fontSize:10}}>✕</button>
+              style={{position:"absolute",top:3,right:3,width:18,height:18,borderRadius:99,background:"rgba(0,0,0,.75)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:B.white,fontSize:10}}><Ic n="x"/></button>
           </div>
         ))}
         <label style={{width:90,height:90,borderRadius:8,border:`2px dashed ${B.gray600}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:4,flexShrink:0}}>
@@ -15817,7 +15818,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
                   <div style={{fontSize:13,fontWeight:700,color:selectedVid===v.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.model}</div>
                   <div style={{fontSize:11,color:B.gray400,fontFamily:"monospace"}}>{v.plate}{v.color?` · ${v.color}`:""}</div>
                 </div>
-                {selectedVid===v.id&&<span style={{color:B.blue,fontWeight:800}}>✓</span>}
+                {selectedVid===v.id&&<span style={{color:B.blue,fontWeight:800}}><Ic n="done"/></span>}
               </button>
             ))}
           </div>
@@ -15837,7 +15838,7 @@ function QuickMatModal({vehicles,tasks,stock=[],onClose,onAddMaterial}) {
                     <div style={{fontSize:13,color:selectedTid===t.id?B.blue:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.label}</div>
                     {t.category&&<div style={{fontSize:10,color:CAT_MAP[t.category]||B.gray500,fontWeight:700}}>{t.category}</div>}
                   </div>
-                  {selectedTid===t.id&&<span style={{color:B.blue,fontWeight:800,flexShrink:0}}>✓</span>}
+                  {selectedTid===t.id&&<span style={{color:B.blue,fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
                 </button>
               ))}
             </div>}
@@ -16031,7 +16032,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
                   <div style={{fontSize:11,color:B.gray400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.cli?.name||"Sem cliente"}{dt?` · entregue ${dt}`:""}</div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:13,fontWeight:800,color:r.owed>=0.01?B.amber:B.green}}>{r.owed>=0.01?fmtBRL(r.owed):"Quitada ✓"}</div>
+                  <div style={{fontSize:13,fontWeight:800,color:r.owed>=0.01?B.amber:B.green}}>{r.owed>=0.01?fmtBRL(r.owed):<>Quitada <Ic n="done"/></>}</div>
                   {r.owed>=0.01&&<div style={{fontSize:9,color:B.gray500}}>saldo</div>}
                 </div>
               </button>);
@@ -16060,7 +16061,7 @@ function QuickPayModal({vehicles,tasks,clients,onClose,onAddPayment,osHistory=[]
                 {(()=>{const b=divisionBalances(v,tasks,payments,defaultRate);const ow=(b.perfTotal-b.perfPaid)+(b.finTotal-b.finPaid);
                   return ow>=0.01?<div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:12,fontWeight:800,color:B.amber}}>{fmtBRL(ow)}</div><div style={{fontSize:9,color:B.gray500}}>saldo</div></div>
                     :b.perfTotal+b.finTotal>0?<span style={{fontSize:10,fontWeight:800,color:B.green,flexShrink:0}}>quitado</span>:null;})()}
-                {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}>✓</span>}
+                {selectedId===v.id&&<span style={{color:B.green,fontWeight:800,flexShrink:0}}><Ic n="done"/></span>}
               </button>);
             })}
           </div>
@@ -16957,7 +16958,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
         if(!canSeeValues){ row.items=items.map(i=>({name:i.name,value:0})); row.total=0; }
         row.created_by=actor||""; const r=await db.addPartnerJob(row); setJobs(p=>[r,...p]);
       }
-      setForm(emptyForm); setFormOpen(false); notify("Trabalho salvo ✓");
+      setForm(emptyForm); setFormOpen(false); notify("Trabalho salvo");
     }catch(e){fail(e);}
     setBusy(false);
   };
@@ -16971,7 +16972,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
     catch(e){fail(e);} setBusy(false);
   };
   const reopen=async j=>{ try{ const r=await db.updatePartnerJob(j.id,{status:"doing",delivered_at:null}); setJobs(p=>p.map(x=>x.id===j.id?r:x)); }catch(e){fail(e);} };
-  const delJob=async j=>{ if(!window.confirm(`Remover o trabalho ${j.plate||j.model}?`)) return; try{ await db.deletePartnerJob(j.id); setJobs(p=>p.filter(x=>x.id!==j.id)); notify("Trabalho removido ✓"); }catch(e){fail(e);} };
+  const delJob=async j=>{ if(!window.confirm(`Remover o trabalho ${j.plate||j.model}?`)) return; try{ await db.deletePartnerJob(j.id); setJobs(p=>p.filter(x=>x.id!==j.id)); notify("Trabalho removido"); }catch(e){fail(e);} };
   const setPaid=async(ids,paid)=>{
     try{ await db.setPartnerJobsPaid(ids,paid); const at=paid?new Date().toISOString():null; setJobs(p=>p.map(j=>ids.includes(j.id)?{...j,paid,paid_at:at}:j)); }catch(e){fail(e);}
   };
@@ -17007,7 +17008,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
         {(j.items||[]).map((i,k)=><div key={k} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:13,color:B.gray200}}><span>{i.name}</span>{canSeeValues&&<span style={{color:B.gray400}}>{fmtBRL(i.value)}</span>}</div>)}
       </div>
       {canSeeValues&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6,paddingTop:6,borderTop:`1px solid ${B.gray700}`}}>
-        <span style={{fontSize:11,color:j.paid?B.green:B.gray500,fontWeight:700}}>{j.paid?`✓ Pago${j.paid_at?" em "+fmtDateBR(j.paid_at.slice(0,10)):""}`:"Pendente de acerto"}</span>
+        <span style={{fontSize:11,color:j.paid?B.green:B.gray500,fontWeight:700}}>{j.paid?<><Ic n="done"/> {`Pago${j.paid_at?" em "+fmtDateBR(j.paid_at.slice(0,10)):""}`}</>:"Pendente de acerto"}</span>
         <span style={{fontWeight:800,color:B.white}}>{fmtBRL(j.total)}</span>
       </div>}
       {j.notes&&<div style={{fontSize:12,color:B.gray400,marginTop:6,whiteSpace:"pre-wrap"}}>{j.notes}</div>}
@@ -17024,7 +17025,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
         </div>
       </div>}
       <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
-        {!done&&delivering!==j.id&&<button onClick={()=>{setDelivering(j.id);setDelPhotos([]);}} style={{...pill(true,B.green)}}>✓ Entregar</button>}
+        {!done&&delivering!==j.id&&<button onClick={()=>{setDelivering(j.id);setDelPhotos([]);}} style={{...pill(true,B.green)}}><Ic n="done"/> Entregar</button>}
         {done&&<button onClick={()=>reopen(j)} style={pill(false)}>Reabrir</button>}
         <button onClick={()=>editJob(j)} style={pill(false)}>Editar</button>
         {canSeeValues&&<button onClick={()=>delJob(j)} style={{...pill(false),color:B.red,borderColor:`${B.red}55`}}>Remover</button>}
@@ -17044,7 +17045,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
   const perPaid=periodJobs.filter(j=>j.paid).reduce((s,j)=>s+Number(j.total||0),0);
   const perUnpaidIds=periodJobs.filter(j=>!j.paid).map(j=>j.id);
   const summaryText=()=>`*OSC Group — Fechamento ${fmtDateBR(period.from)} a ${fmtDateBR(period.to)}*\n${partner?.name||""}\n\n`+periodJobs.map(j=>`${fmtDateBR(j.job_date).slice(0,5)} · ${j.plate||j.model} ${j.model&&j.plate?"("+j.model+") ":""}— ${(j.items||[]).map(i=>i.name).join(", ")} — ${fmtBRL(j.total)}`).join("\n")+`\n\n*Total: ${fmtBRL(perTotal)}*`;
-  const copySummary=()=>{try{navigator.clipboard.writeText(summaryText());alert("Resumo copiado ✓");}catch{fail({message:"Não foi possível copiar"});}};
+  const copySummary=()=>{try{navigator.clipboard.writeText(summaryText());alert("Resumo copiado");}catch{fail({message:"Não foi possível copiar"});}};
   const waSummary=()=>{const ph=String(partner?.phone||"").replace(/\D/g,""); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(summaryText())}`,"_blank");};
 
   return (<div style={{color:B.white}}>
@@ -17056,7 +17057,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
     {adding&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
       <input value={newPartner.name} onChange={e=>setNewPartner(p=>({...p,name:e.target.value}))} placeholder="Nome da empresa" style={{...inp,flex:"1 1 160px"}}/>
       <input value={newPartner.phone} onChange={e=>setNewPartner(p=>({...p,phone:e.target.value}))} placeholder="WhatsApp (opcional)" style={{...inp,flex:"1 1 140px"}}/>
-      <button onClick={addPartner} style={{...pill(true)}}>Salvar</button><button onClick={()=>setAdding(false)} style={pill(false)}>✕</button>
+      <button onClick={addPartner} style={{...pill(true)}}>Salvar</button><button onClick={()=>setAdding(false)} style={pill(false)}><Ic n="x"/></button>
     </div>}
     {partners.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:B.gray400,fontSize:13}}>Nenhum parceiro cadastrado{canSeeValues?" — toque em “+ Parceiro”.":"."}</div>}
 
@@ -17071,7 +17072,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
       {canSeeValues&&showSvc&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:12,marginBottom:14}}>
         <div style={{fontSize:10,fontWeight:800,color:B.gray500,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Tabela de {partner.name}</div>
         {pServices.length===0&&<div style={{fontSize:12,color:B.gray500,marginBottom:8}}>Nenhum serviço combinado ainda. Você também pode lançar valores avulsos em cada trabalho.</div>}
-        {pServices.map(s=><div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",fontSize:13,color:B.gray200}}><span>{s.name}</span><span style={{display:"flex",gap:10,alignItems:"center"}}>{fmtBRL(s.price)}<button onClick={()=>delSvc(s.id)} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}>✕</button></span></div>)}
+        {pServices.map(s=><div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",fontSize:13,color:B.gray200}}><span>{s.name}</span><span style={{display:"flex",gap:10,alignItems:"center"}}>{fmtBRL(s.price)}<button onClick={()=>delSvc(s.id)} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}><Ic n="x"/></button></span></div>)}
         <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
           <input value={svcForm.name} onChange={e=>setSvcForm(f=>({...f,name:e.target.value}))} placeholder="Serviço" style={{...inp,flex:"2 1 140px"}}/>
           <input value={svcForm.price} onChange={e=>setSvcForm(f=>({...f,price:e.target.value}))} placeholder="R$" inputMode="decimal" style={{...inp,flex:"1 1 80px"}}/>
@@ -17092,7 +17093,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
             {pServices.map(s=><button key={s.id} onClick={()=>addSvcToForm(s)} style={pill(false)}>+ {s.name}{canSeeValues?` · ${fmtBRL(s.price)}`:""}</button>)}
           </div>}
           {form.items.length>0&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:4}}>
-            {form.items.map((i,k)=><div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,color:B.gray200,background:B.gray900,borderRadius:8,padding:"6px 10px"}}><span>{i.name}</span><span style={{display:"flex",gap:10,alignItems:"center"}}>{canSeeValues&&fmtBRL(i.value)}<button onClick={()=>rmItem(k)} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}>✕</button></span></div>)}
+            {form.items.map((i,k)=><div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,color:B.gray200,background:B.gray900,borderRadius:8,padding:"6px 10px"}}><span>{i.name}</span><span style={{display:"flex",gap:10,alignItems:"center"}}>{canSeeValues&&fmtBRL(i.value)}<button onClick={()=>rmItem(k)} style={{background:"none",border:"none",color:B.gray500,cursor:"pointer"}}><Ic n="x"/></button></span></div>)}
           </div>}
           <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}}>
             <input value={form.freeName} onChange={e=>setForm(f=>({...f,freeName:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&addFree()} placeholder="Serviço (descreva)" style={{...inp,flex:"2 1 160px"}}/>
@@ -17124,7 +17125,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
         <div style={{position:"relative",marginBottom:14}}>
           <input value={q} onChange={e=>{setQ(e.target.value);setLimit(40);}} placeholder="Buscar por placa, modelo ou serviço…" style={{...inp,width:"100%",paddingLeft:34}}/>
           <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",fontSize:14}}><Ic n="search"/></span>
-          {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,cursor:"pointer"}}>✕</button>}
+          {q&&<button onClick={()=>setQ("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:B.gray400,cursor:"pointer"}}><Ic n="x"/></button>}
         </div>
         <div style={{fontSize:11,color:B.gray500,marginBottom:10}}>{histAll.length} trabalho{histAll.length!==1?"s":""}{canSeeValues&&histAll.length>0?` · ${fmtBRL(histAll.reduce((s,j)=>s+Number(j.total||0),0))}`:""}</div>
         {histAll.slice(0,limit).map(j=><JobCard key={j.id} j={j}/>)}
@@ -17144,7 +17145,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
           <div style={{fontSize:12,color:B.gray400}}>{periodJobs.length} trabalho{periodJobs.length!==1?"s":""} · total {fmtBRL(perTotal)} · pago {fmtBRL(perPaid)}</div>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-          {perUnpaidIds.length>0&&<button onClick={()=>window.confirm(`Marcar ${perUnpaidIds.length} trabalho(s) como pagos?`)&&setPaid(perUnpaidIds,true)} style={pill(true,B.green)}>✓ Marcar quinzena como paga</button>}
+          {perUnpaidIds.length>0&&<button onClick={()=>window.confirm(`Marcar ${perUnpaidIds.length} trabalho(s) como pagos?`)&&setPaid(perUnpaidIds,true)} style={pill(true,B.green)}><Ic n="done"/> Marcar quinzena como paga</button>}
           <button onClick={copySummary} style={pill(false)}>Copiar resumo</button>
           <button onClick={waSummary} style={pill(false,B.wa)}>WhatsApp</button>
         </div>
@@ -17154,7 +17155,7 @@ function PartnersTab({employees=[],canSeeValues=false,actor=""}) {
             <div style={{fontSize:11,color:B.gray500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{(j.items||[]).map(i=>i.name).join(", ")}</div>
           </div>
           <div style={{fontWeight:800,color:B.white,fontSize:13}}>{fmtBRL(j.total)}</div>
-          <button onClick={()=>setPaid([j.id],!j.paid)} title={j.paid?"Desmarcar pago":"Marcar pago"} style={{width:26,height:26,borderRadius:99,border:`1px solid ${j.paid?B.green:B.gray600}`,background:j.paid?`${B.green}22`:"transparent",color:j.paid?B.green:B.gray600,cursor:"pointer",fontSize:13}}>✓</button>
+          <button onClick={()=>setPaid([j.id],!j.paid)} title={j.paid?"Desmarcar pago":"Marcar pago"} style={{width:26,height:26,borderRadius:99,border:`1px solid ${j.paid?B.green:B.gray600}`,background:j.paid?`${B.green}22`:"transparent",color:j.paid?B.green:B.gray600,cursor:"pointer",fontSize:13}}><Ic n="done"/></button>
         </div>)}
         {periodJobs.length===0&&<div style={{textAlign:"center",padding:"28px 0",color:B.gray500,fontSize:13}}>Nenhum trabalho nesta quinzena.</div>}
       </>}
@@ -17301,7 +17302,7 @@ function PresencaTab({employees, isOwner=false}) {
             <div style={{fontSize:11,color:B.gray400,display:"flex",gap:10,marginTop:2}}>
               <span style={{color:B.red}}>F: {stats.faltas}/{MAX_FALTAS}</span>
               <span style={{color:B.amber}}>A: {stats.atrasos}/{MAX_ATRASOS}</span>
-              <span style={{color:ok?B.green:B.red,fontWeight:700}}>{ok?"✓ Concorre ao prêmio":"✗ Fora do prêmio"}</span>
+              <span style={{color:ok?B.green:B.red,fontWeight:700}}>{ok?<><Ic n="done"/> Concorre ao prêmio</>:<><Ic n="xc"/> Fora do prêmio</>}</span>
             </div>
           </div>
           {(isCurrentMonth||isOwner)&&<div style={{display:"flex",gap:4,flexShrink:0}}>
@@ -17436,7 +17437,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
         <input value={stockSearch} onChange={e=>setStockSearch(e.target.value)} placeholder="Buscar item do estoque..."
           style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
         <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:13}}><Ic n="search"/></span>
-        {stockSearch&&<button onClick={()=>setStockSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:12}}>✕</button>}
+        {stockSearch&&<button onClick={()=>setStockSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:12}}><Ic n="x"/></button>}
       </div>
       {stockSearch&&<div style={{background:B.gray800,borderRadius:8,border:`1px solid ${B.gray700}`,marginBottom:16,maxHeight:220,overflowY:"auto"}}>
         {stock.filter(s=>(s.name||"").toLowerCase().includes(stockSearch.toLowerCase())||(s.brand||"").toLowerCase().includes(stockSearch.toLowerCase())).slice(0,12).map(s=>(
@@ -17469,7 +17470,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
               <button onClick={()=>changeQty(item.id,item.from_stock,-1)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
               <span style={{fontSize:13,fontWeight:700,color:B.white,minWidth:18,textAlign:"center"}}>{item.qty}</span>
               <button onClick={()=>changeQty(item.id,item.from_stock,1)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-              <button onClick={()=>removeFromCart(item.id,item.from_stock)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.red}44`,background:`${B.red}18`,color:B.red,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+              <button onClick={()=>removeFromCart(item.id,item.from_stock)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.red}44`,background:`${B.red}18`,color:B.red,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="x"/></button>
             </div>
           ))}
           <div style={{borderTop:`1px solid ${B.gray700}`,paddingTop:12,marginTop:4}}>
@@ -17501,7 +17502,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
             <input value={saleClientName} onChange={e=>setSaleClientName(e.target.value)} placeholder="Nome do cliente (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
             <input value={saleDescription} onChange={e=>setSaleDescription(e.target.value)} placeholder="Descrição da venda (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
             <input value={saleNote} onChange={e=>setSaleNote(e.target.value)} placeholder="Observação interna (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
-            <button onClick={finalizeSale} style={{width:"100%",padding:"12px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>✓ Finalizar venda — {fmtBRL(cartTotal)}</button>
+            <button onClick={finalizeSale} style={{width:"100%",padding:"12px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}><Ic n="done"/> Finalizar venda — {fmtBRL(cartTotal)}</button>
           </div>
         </div>
       </>}
@@ -17554,7 +17555,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
           <input type="date" value={histFrom} onChange={e=>setHistFrom(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
           <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
           <input type="date" value={histTo} onChange={e=>setHistTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-          {(histFrom||histTo)&&<button onClick={()=>{setHistFrom("");setHistTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>}
+          {(histFrom||histTo)&&<button onClick={()=>{setHistFrom("");setHistTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}><Ic n="x"/></button>}
         </div>
       </div>
       <div style={{background:`${"#06b6d4"}18`,border:`1px solid ${"#06b6d4"}33`,borderRadius:12,padding:"12px 16px",marginBottom:16,textAlign:"center"}}>
@@ -17573,7 +17574,7 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
                 style={{width:26,height:26,borderRadius:6,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,color:B.blue,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <IEdit s={11} c={B.blue}/>
               </button>
-              <button onClick={()=>onDeleteSale(sale.id)} style={{width:26,height:26,borderRadius:6,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+              <button onClick={()=>onDeleteSale(sale.id)} style={{width:26,height:26,borderRadius:6,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="x"/></button>
             </div>
           </div>
           <div style={{fontSize:11,color:B.gray500}}>{new Date(sale.sold_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
@@ -17786,7 +17787,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
                   <div style={{fontWeight:700,color:textColor,fontSize:13}}>{v.model}</div>
                   <div style={{fontSize:11,color:subColor,fontFamily:"monospace"}}>{v.plate}</div>
                 </div>
-                {selectedVehicle?.id===v.id&&<span style={{color:B.orange}}>✓</span>}
+                {selectedVehicle?.id===v.id&&<span style={{color:B.orange}}><Ic n="done"/></span>}
               </div>
             ))}
             <div onClick={()=>{setAddingVehicle(true);setSelectedVehicle(null);}} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:`${B.orange}10`,borderRadius:12,marginTop:4,border:`1px solid ${B.orange}33`,cursor:"pointer"}}>
@@ -17824,7 +17825,7 @@ function NovaOSModal({onClose,clients,vehicles,employees,onCreateAndOpen,theme})
           </div>
 
           <button onClick={confirm} disabled={!canConfirm||loading} style={{width:"100%",padding:"13px",borderRadius:12,background:canConfirm?B.orange:"rgba(255,255,255,.1)",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:canConfirm?"pointer":"default",opacity:loading?0.6:1}}>
-            {loading?"Abrindo OS...":"✓ Abrir OS agora"}
+            {loading?"Abrindo OS...":<><Ic n="done"/> Abrir OS agora</>}
           </button>
         </>}
       </div>
@@ -18297,7 +18298,7 @@ function MainApp() {
   // ── Employees
   const addEmp=async()=>{
     if(!eN.trim())return;
-    try{ const row=await db.addEmployee(eN.trim(),eP.trim(),eDiv); setEmp(p=>[...p,row]); setEN("");setEP("");setEDiv("performance");toast_("Mecânico cadastrado ✓"); }
+    try{ const row=await db.addEmployee(eN.trim(),eP.trim(),eDiv); setEmp(p=>[...p,row]); setEN("");setEP("");setEDiv("performance");toast_("Mecânico cadastrado"); }
     catch(e){errToast(e);}
   };
   const delEmp=async id=>{
@@ -18305,48 +18306,48 @@ function MainApp() {
     setTsk(p=>p.filter(t=>!vs.includes(t.vehicleId)));
     setVeh(p=>p.filter(v=>v.employeeId!==id));
     setEmp(p=>p.filter(e=>e.id!==id));
-    try{ await db.deleteEmployee(id); toast_("Mecânico removido ✓"); }catch(e){errToast(e);}
+    try{ await db.deleteEmployee(id); toast_("Mecânico removido"); }catch(e){errToast(e);}
   };
   const updEmpP=async(id,ph)=>{
     setEmp(p=>p.map(e=>e.id===id?{...e,phone:ph}:e));
-    try{ await db.updateEmployee(id,{phone:ph}); toast_("WA salvo ✓"); }catch(e){errToast(e);}
+    try{ await db.updateEmployee(id,{phone:ph}); toast_("WA salvo"); }catch(e){errToast(e);}
   };
   const updEmpN=async(id,n)=>{
     setEmp(p=>p.map(e=>e.id===id?{...e,name:n}:e));
-    try{ await db.updateEmployee(id,{name:n}); toast_("Nome salvo ✓"); }catch(e){errToast(e);}
+    try{ await db.updateEmployee(id,{name:n}); toast_("Nome salvo"); }catch(e){errToast(e);}
   };
   const updEmpDiv=async(id,division)=>{
     setEmp(p=>p.map(e=>e.id===id?{...e,division}:e));
-    try{ await db.updateEmployee(id,{division}); toast_(`Empresa atualizada ✓`); }catch(e){errToast(e);}
+    try{ await db.updateEmployee(id,{division}); toast_(`Empresa atualizada`); }catch(e){errToast(e);}
   };
 
   // ── Clients
   const addCli=async()=>{
     if(!cN.trim())return;
-    try{ const row=await db.addClient(cN.trim(),cP.trim(),cE.trim()); setCli(p=>[...p,row]); setCN("");setCP("");setCE("");toast_("Cliente cadastrado ✓"); }
+    try{ const row=await db.addClient(cN.trim(),cP.trim(),cE.trim()); setCli(p=>[...p,row]); setCN("");setCP("");setCE("");toast_("Cliente cadastrado"); }
     catch(e){errToast(e);}
   };
   const addCliDirect=async(name,phone="",email="")=>{
     if(!name.trim())return;
-    try{ const row=await db.addClient(name.trim(),phone.trim(),email.trim()); setCli(p=>[...p,row]); toast_("Cliente cadastrado ✓"); }
+    try{ const row=await db.addClient(name.trim(),phone.trim(),email.trim()); setCli(p=>[...p,row]); toast_("Cliente cadastrado"); }
     catch(e){errToast(e);}
   };
   const delCli=async id=>{
     setVeh(p=>p.map(v=>v.clientId===id?{...v,clientId:null}:v));
     setCli(p=>p.filter(c=>c.id!==id));
-    try{ await db.deleteClient(id); toast_("Cliente removido ✓"); }catch(e){errToast(e);}
+    try{ await db.deleteClient(id); toast_("Cliente removido"); }catch(e){errToast(e);}
   };
   const updCliP=async(id,ph)=>{
     setCli(p=>p.map(c=>c.id===id?{...c,phone:ph}:c));
-    try{ await db.updateClient(id,{phone:ph}); toast_("WA salvo ✓"); }catch(e){errToast(e);}
+    try{ await db.updateClient(id,{phone:ph}); toast_("WA salvo"); }catch(e){errToast(e);}
   };
   const updCliN=async(id,n)=>{
     setCli(p=>p.map(c=>c.id===id?{...c,name:n}:c));
-    try{ await db.updateClient(id,{name:n}); toast_("Nome salvo ✓"); }catch(e){errToast(e);}
+    try{ await db.updateClient(id,{name:n}); toast_("Nome salvo"); }catch(e){errToast(e);}
   };
   const updCliE=async(id,email)=>{
     setCli(p=>p.map(c=>c.id===id?{...c,email}:c));
-    try{ await db.updateClient(id,{email}); toast_("E-mail salvo ✓"); }catch(e){errToast(e);}
+    try{ await db.updateClient(id,{email}); toast_("E-mail salvo"); }catch(e){errToast(e);}
   };
 
   // ── Vehicles
@@ -18354,7 +18355,7 @@ function MainApp() {
     try{
       const row=await db.addVehicle({employeeId:eid,clientId:null,model,plate,color,photo:null,photos:[]});
       row.mechanicIds=[eid];
-      setVeh(p=>[...p,row]); toast_("Veículo adicionado ✓");
+      setVeh(p=>[...p,row]); toast_("Veículo adicionado");
     }catch(e){errToast(e);}
   };
 
@@ -18370,7 +18371,7 @@ function MainApp() {
       const vRow=await db.addVehicle({employeeId:null,clientId:finalClientId,model:model.trim(),plate:plate.trim().toUpperCase(),color:(color||"").trim(),year:year||null,photo:null,photos:[]});
       vRow.mechanicIds=[];
       setVeh(p=>[...p,vRow]);
-      toast_("Veículo cadastrado ✓");
+      toast_("Veículo cadastrado");
     }catch(e){errToast(e);}
   };
 
@@ -18378,7 +18379,7 @@ function MainApp() {
   const delVeh=async id=>{
     setTsk(p=>p.filter(t=>t.vehicleId!==id));
     setVeh(p=>p.filter(v=>v.id!==id));
-    try{ await db.deleteVehicle(id); toast_("Veículo removido ✓"); }catch(e){errToast(e);}
+    try{ await db.deleteVehicle(id); toast_("Veículo removido"); }catch(e){errToast(e);}
   };
   const updVeh=async(id,patch)=>{
     setVeh(p=>p.map(v=>v.id===id?{...v,...patch}:v));
@@ -18399,18 +18400,18 @@ function MainApp() {
           db.sendPushToEmployee(eid,`Prioridade — ${vModel}`,"Este veículo foi marcado como urgente.","/?portal=mecanico").catch(()=>{});
         });
       }
-      toast_(("photos" in patch||"photosFinishing" in patch)?"Foto salva ✓":"Salvo ✓");
+      toast_(("photos" in patch||"photosFinishing" in patch)?"Foto salva":"Salvo");
     }catch(e){errToast(e);}
   };
   // Add a mechanic to a vehicle (multi-mechanic)
   const addVehicleMechanic=async(vid,eid)=>{
     if(!eid)return;
     setVeh(p=>p.map(v=>v.id===vid?{...v,mechanicIds:[...new Set([...(v.mechanicIds||[]),eid])]}:v));
-    try{ await db.addVehicleMechanic(vid,eid); toast_(`${employees.find(e=>e.id===eid)?.name} adicionado ao veículo ✓`); }catch(e){errToast(e);}
+    try{ await db.addVehicleMechanic(vid,eid); toast_(`${employees.find(e=>e.id===eid)?.name} adicionado ao veículo`); }catch(e){errToast(e);}
   };
   const removeVehicleMechanic=async(vid,eid)=>{
     setVeh(p=>p.map(v=>v.id===vid?{...v,mechanicIds:(v.mechanicIds||[]).filter(id=>id!==eid)}:v));
-    try{ await db.removeVehicleMechanic(vid,eid); toast_("Mecânico removido do veículo ✓"); }catch(e){errToast(e);}
+    try{ await db.removeVehicleMechanic(vid,eid); toast_("Mecânico removido do veículo"); }catch(e){errToast(e);}
   };
   // Legacy single-transfer kept for TransferModal compat (adds mechanic instead of replacing)
   const xferMech=async(vid,eid)=>{ addVehicleMechanic(vid,eid); };
@@ -18424,7 +18425,7 @@ function MainApp() {
     const newOwnerRecord = {id:`temp-${Date.now()}`,vehicle_id:vid,client_id:cid,started_at:now,ended_at:null,is_current:true};
     setVehicleOwners(p=>[...p,newOwnerRecord]);
     setVeh(p=>p.map(v=>v.id===vid?{...v,clientId:cid,currentClientId:cid}:v));
-    try{ await db.transferVehicleOwner(vid,cid); toast_(`Transferido para ${clients.find(c=>c.id===cid)?.name} ✓`); }catch(e){errToast(e);}
+    try{ await db.transferVehicleOwner(vid,cid); toast_(`Transferido para ${clients.find(c=>c.id===cid)?.name}`); }catch(e){errToast(e);}
   };
 
   // Vehicle status (Ativo/Pausado/Pronto) — owner-only
@@ -18577,7 +18578,7 @@ function MainApp() {
       const d=await db.loadAll();
       setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]);
       setPay(d.payments||[]);
-      toast_("Veículo entregue e OS arquivada ✓");
+      toast_("Veículo entregue e OS arquivada");
       const vModel=v?.model||v?.plate||"Veículo";
       pushToVehicleMechs(vid,`OS encerrada — ${vModel}`,"O veículo foi entregue ao cliente.","performance");
       if(v?.clientId) db.sendPushToClient(v.clientId,`${vModel} pronto!`,"Seu veículo foi entregue. Obrigado pela preferência!",`/?portal=cliente`).catch(()=>{});
@@ -18603,7 +18604,7 @@ function MainApp() {
           : (x.mechanicIds||[]),
         photos:[],
       }:x));
-      toast_(`OS ${fmtOS(osNumber)} aberta ✓`);
+      toast_(`OS ${fmtOS(osNumber)} aberta`);
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
       if(employeeId) db.sendPushToEmployee(employeeId,`Nova OS — ${vModel}`,`${fmtOS(osNumber)} foi aberta para você.`,"/?portal=mecanico").catch(()=>{});
@@ -18625,7 +18626,7 @@ function MainApp() {
           : (x.mechanicIds||[]),
         photosFinishing:[],
       }:x));
-      toast_(`${fmtOSFD(osNumber)} Finishing aberta ✓`);
+      toast_(`${fmtOSFD(osNumber)} Finishing aberta`);
       const v=vehicles.find(x=>x.id===vid);
       const vModel=v?.model||v?.plate||"Veículo";
       if(employeeId) db.sendPushToEmployee(employeeId,`Nova OS Finishing — ${vModel}`,`${fmtOSFD(osNumber)} foi aberta para você.`,"/?portal=mecanico").catch(()=>{});
@@ -18658,7 +18659,7 @@ function MainApp() {
       await db.archiveAndResetVehicleFinishing(vid,historyRecord);
       const d=await db.loadAll();
       setVeh(d.vehicles); setTsk(d.tasks); setOsHistory(d.osHistory||[]); setPay(d.payments||[]);
-      toast_("Finishing encerrada e OS arquivada ✓");
+      toast_("Finishing encerrada e OS arquivada");
       const vFin=vehicles.find(x=>x.id===vid);
       const vModelFin=vFin?.model||vFin?.plate||"Veículo";
       pushToVehicleMechs(vid,`OS Finishing encerrada — ${vModelFin}`,"O veículo foi entregue ao cliente.","finishing");
@@ -18746,7 +18747,7 @@ function MainApp() {
             if(allDone){
               setVeh(p=>p.map(x=>x.id===t.vehicleId?{...x,mechanicIds:(x.mechanicIds||[]).filter(mid=>mid!==specialist.id)}:x));
               await db.removeVehicleMechanic(t.vehicleId,specialist.id);
-              toast_(`${specialist.name} removido do veículo — todas as tarefas de ${t.category} concluídas ✓`);
+              toast_(`${specialist.name} removido do veículo — todas as tarefas de ${t.category} concluídas`);
             }
           }
         }
@@ -18838,7 +18839,7 @@ function MainApp() {
           const newIds=[...(v.mechanicIds||[]),specialistMech.id];
           setVeh(p=>p.map(x=>x.id===v.id?{...x,mechanicIds:newIds}:x));
           await db.addVehicleMechanic(v.id,specialistMech.id);
-          toast_(`${specialistMech.name} adicionado ao ${v.model} ✓`);
+          toast_(`${specialistMech.name} adicionado ao ${v.model}`);
         }
       }
       // Notify client when a task update is published
@@ -18902,9 +18903,9 @@ function MainApp() {
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
     try{
       await db.updateTask(taskId,{materials:newMats});
-      toast_(commitIdx!=null?`${item.name} descontado do estoque · Saldo restante: ${Math.max(0,item.qty-matQty)} un. ✓`:quoteOnly
-        ?`${item.name} adicionado ao orçamento (sem descontar estoque) ✓`
-        :`${item.name} lançado na OS e descontado do estoque · Saldo restante: ${Math.max(0,item.qty-matQty)} un. ✓`);
+      toast_(commitIdx!=null?`${item.name} descontado do estoque · Saldo restante: ${Math.max(0,item.qty-matQty)} un.`:quoteOnly
+        ?`${item.name} adicionado ao orçamento (sem descontar estoque)`
+        :`${item.name} lançado na OS e descontado do estoque · Saldo restante: ${Math.max(0,item.qty-matQty)} un.`);
     }catch(e){errToast(e);}
   };
   // Removes one specific material (by index) from a task's list and returns its full quantity to stock if applicable
@@ -18920,7 +18921,7 @@ function MainApp() {
     }
     const newMats=(t?.materials||[]).filter((_,i)=>i!==matIdx);
     setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
-    try{ await db.updateTask(taskId,{materials:newMats}); toast_("Item devolvido ao estoque ✓"); }catch(e){errToast(e);}
+    try{ await db.updateTask(taskId,{materials:newMats}); toast_("Item devolvido ao estoque"); }catch(e){errToast(e);}
   };
 
   // ── Stock
@@ -18928,7 +18929,7 @@ function MainApp() {
     try{
       const row=await db.addStock(item);
       setStk(p=>[...p,row]);
-      toast_("Produto adicionado ✓");
+      toast_("Produto adicionado");
       return row; // return so callers can pass to recalcStockCost
     }
     catch(e){errToast(e);}
@@ -18948,12 +18949,12 @@ function MainApp() {
       const markup=patch.markup!==undefined?Number(patch.markup):Number(current?.markup||0);
       const salePrice=costPrice*(1+markup/100);
       await db.updateStock(id,{...patch,salePrice});
-      toast_("Item atualizado ✓");
+      toast_("Item atualizado");
     }catch(e){errToast(e);}
   };
   const delStock=async id=>{
     setStk(p=>p.filter(s=>s.id!==id));
-    try{ await db.deleteStock(id); toast_("Produto removido ✓"); }catch(e){errToast(e);}
+    try{ await db.deleteStock(id); toast_("Produto removido"); }catch(e){errToast(e);}
   };
   // Recalculates weighted average unit cost from all purchases of a stock item
   const recalcStockCost=async(stockId, allPurchases, itemOverride=null)=>{
@@ -18992,7 +18993,7 @@ function MainApp() {
         setStk(p=>p.map(s=>s.id===purchase.stockId?{...s,costPrice:lastCost,salePrice:newSalePrice}:s));
         await db.updateStock(purchase.stockId,{costPrice:lastCost,salePrice:newSalePrice});
       }
-      toast_(`Compra registrada: +${purchase.qty} ${latestItem?.name||""} ✓`);
+      toast_(`Compra registrada: +${purchase.qty} ${latestItem?.name||""}`);
     }catch(e){errToast(e);}
   };
   const importStockNote=async({items,supplierName,date,invoice,markup})=>{
@@ -19014,7 +19015,7 @@ function MainApp() {
       setStk(p=>p.map(s=>s.id===sid?{...s,qty:newQty,costPrice:cost,salePrice:sale}:s));
       bought++; lastSid=sid;
     }
-    toast_(`${bought} item(ns) lançado(s) no estoque${created?` (${created} produto${created!==1?"s":""} novo${created!==1?"s":""})`:""} ✓`);
+    toast_(`${bought} item(ns) lançado(s) no estoque${created?` (${created} produto${created!==1?"s":""} novo${created!==1?"s":""})`:""}`);
     return lastSid;
   };
   // Mercado Livre: destina uma peça comprada (carro/tarefa, estoque ou ignorar) com reserva anti-duplicidade
@@ -19050,18 +19051,18 @@ function MainApp() {
           await updTask(tid,{materials:base.map((m,ix)=>ix===d.linkIdx?upd:m)});
         } else await updTask(tid,{materials:[...base,mat]});
         await db.setMLItem(item.id,{task_id:String(tid),task_label:tlabel});
-        toast_(d.linkIdx!=null?"Lançamento da OS corrigido e vinculado ✓":"Peça lançada na OS ✓");
+        toast_(d.linkIdx!=null?"Lançamento da OS corrigido e vinculado":"Peça lançada na OS");
       } else if(d.type==="supplies"){
         const nm=String(d.name||item.title||"").trim();
         const exp=await db.addExpense({name:`Insumos: ${nm}`.slice(0,160),amount:Math.round((total+frt)*100)/100,category:"insumos",division:d.division||"ambos",recurrent:false,qty,date:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"})+"T12:00:00-03:00":undefined});
         setExpenses(p=>[...p,exp]);
         await db.setMLItem(item.id,{expense_id:exp.id});
-        toast_(`${fmtBRL(total+frt)} lançado em Insumos (${new Date(item.ordered_at||Date.now()).toLocaleDateString("pt-BR")}) ✓`);
+        toast_(`${fmtBRL(total+frt)} lançado em Insumos (${new Date(item.ordered_at||Date.now()).toLocaleDateString("pt-BR")})`);
       } else if(d.type==="tool"){
         const nm=String(d.name||item.title||"").trim();
         const tl=await db.addTool({name:nm,value:Math.round((total+frt)*100)/100,qty:Math.max(1,Math.round(qty)),purchased_at:item.ordered_at?new Date(item.ordered_at).toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"}):null,location:d.location||"",link:item.permalink,seller:item.seller,ml_item_id:item.id});
         await db.setMLItem(item.id,{tool_id:tl.id});
-        toast_("Ferramenta adicionada ao patrimônio ✓");
+        toast_("Ferramenta adicionada ao patrimônio");
       } else if(d.type==="stock"){
         const q=Math.max(1,Math.round(qty));
         const _bn=String(d.brand||"").trim(), _nm=String(d.name||item.title||"").trim();
@@ -19071,7 +19072,7 @@ function MainApp() {
           if(sid) await db.setMLItem(item.id,{stock_id:sid});
         } else {
           await db.setMLItem(item.id,{stock_plan:plan});
-          toast_("Destinada ao estoque — entra quando o Mercado Livre marcar como entregue ✓");
+          toast_("Destinada ao estoque — entra quando o Mercado Livre marcar como entregue");
         }
       }
     }catch(e){
@@ -19084,7 +19085,7 @@ function MainApp() {
     if(item.expense_id){ await db.deleteExpense(item.expense_id); setExpenses(p=>p.filter(e=>e.id!==item.expense_id)); }
     if(item.tool_id){ await db.deleteTool(item.tool_id); }
     await db.setMLItem(item.id,{destination:null,vehicle_id:null,vehicle_label:null,task_id:null,task_label:null,stock_id:null,expense_id:null,tool_id:null,assigned_by:null,assigned_at:null});
-    toast_("Insumo desfeito ✓");
+    toast_("Insumo desfeito");
   };
   const updatePurchase=async(id,patch)=>{
     const oldPurchase=stockPurchases.find(p=>p.id===id);
@@ -19108,7 +19109,7 @@ function MainApp() {
       } else if(oldPurchase){
         await recalcStockCost(oldPurchase.stockId,newPurchases);
       }
-      toast_("Compra atualizada ✓");
+      toast_("Compra atualizada");
     }catch(e){errToast(e);}
   };
   const deletePurchase=async(id)=>{
@@ -19130,7 +19131,7 @@ function MainApp() {
         await db.updateStock(oldPurchase.stockId,{qty:latestQty});
         await recalcStockCost(oldPurchase.stockId,newPurchases,latestItem);
       }
-      toast_("Compra excluída ✓");
+      toast_("Compra excluída");
     }catch(e){errToast(e);}
   };
 
@@ -19145,7 +19146,7 @@ function MainApp() {
         if(frozen){const set=new Set(ids);setTsk(p=>p.map(t=>set.has(t.id)?{...t,ratePerHour:old}:t));}
       }
       await db.setDefaultRate(r); setDR(r);
-      toast_(`R$/h atualizado: ${fmtBRL(r)} ✓${frozen?` · ${frozen} tarefas existentes mantêm ${fmtBRL(old)}`:""}`);
+      toast_(`R$/h atualizado: ${fmtBRL(r)}${frozen?` · ${frozen} tarefas existentes mantêm ${fmtBRL(old)}`:""}`);
     }catch(e){errToast(e);}
   };
   // ── Catálogo de serviços
@@ -19154,7 +19155,7 @@ function MainApp() {
   const svcDelete=async id=>{ try{ await db.deleteServiceCatalog(id); setSvcCatalog(p=>p.filter(x=>x.id!==id)); toast_("Serviço removido do catálogo"); }catch(e){errToast(e);} };
   const saveCompany=async info=>{
     setCompany(info);
-    try{ await db.setCompanyInfo(info); toast_("Dados da empresa salvos ✓"); }catch(e){errToast(e);}
+    try{ await db.setCompanyInfo(info); toast_("Dados da empresa salvos"); }catch(e){errToast(e);}
   };
 
   // ── WA
@@ -19195,7 +19196,7 @@ function MainApp() {
             const newPart={id:"po_"+o.id,name:o.partName,brand:o.notesAdmin||"",qty:o.quantity,cost:o.costPrice||0,value:salePrice,location:loc||"",purchaseOrderId:o.id,photo:stockItem?.photo||null};
             const newList=[...existing,newPart];
             setVeh(p=>p.map(x=>x.id===o.vehicleId?{...x,partsList:newList}:x));
-            try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}  ✓`);}catch(err){errToast(err);}
+            try{await db.updateVehicle(o.vehicleId,{partsList:newList});toast_(`"${o.partName}" reservado${loc?` — ${loc}`:""}`);}catch(err){errToast(err);}
             try{ await db.syncMLByLink("po",o.id,{suggest_vehicle_id:v.id,suggest_vehicle_label:`${v.model||""} · ${v.plate||""}`.trim()}); }catch(e){ console.warn("ml sync reserve",e); }
           };
   // Recebimento do ML NÃO é mais automático: só roda quando admin/gestor confirma o item (onlyId) após conferir o material
@@ -19212,7 +19213,7 @@ function MainApp() {
           if(!(await db.claimMLStockPlan(x.id))) continue; // outro aparelho já cuidou
           try{
             const sid=await importStockNote({items:[{pid:plan.pid||"",brand:plan.brand,name:plan.name,qty:plan.qty,cost:plan.cost}],supplierName:"Mercado Livre",date:String(x.delivered_at||x.status_at||x.ordered_at||"").slice(0,10)||new Date().toISOString().slice(0,10),invoice:plan.invoice||("ML "+x.ml_order_id),markup:plan.markup});
-            if(sid){ await db.setMLItem(x.id,{stock_id:sid}); toast_("Recebimento confirmado — entrou no estoque ✓"); }
+            if(sid){ await db.setMLItem(x.id,{stock_id:sid}); toast_("Recebimento confirmado — entrou no estoque"); }
           }catch(e){ try{ await db.setMLItem(x.id,{stock_plan:plan}); }catch{} console.warn("ml stock entry",e); throw e; }
         }
       }catch(e){ console.warn("ml stock pending",e); }
@@ -19229,7 +19230,7 @@ function MainApp() {
               const v=vehicles.find(x=>x.id===po.vehicleId);
               if(po.employeeId) db.sendPushToEmployee(po.employeeId,`Pedido atualizado — ${v?.model||"Veículo"}`,`${po.partName}: ${PO_STATUS.received.label}`,"/?portal=mecanico").catch(()=>{});
               await poReserve({...po,status:"received",costPrice:unit},"Na oficina — a definir");
-              toast_(`"${po.partName}" recebido — entrega confirmada no Mercado Livre ✓`);
+              toast_(`"${po.partName}" recebido — entrega confirmada no Mercado Livre`);
             }
           } else if(m.link_type==="inv"){
             const inv=investments.find(x=>x.id===m.link_id);
@@ -19250,7 +19251,7 @@ function MainApp() {
                 }
               }catch(e){ console.warn("ml expense fix",e); }
               if(inv.stockItemId){ await addPurchase({stockId:inv.stockItemId,qty:inv.quantity||1,unitCost:unit,purchaseDate:new Date().toISOString().slice(0,10),supplier:"Mercado Livre",note:"Recebido automaticamente (Mercado Livre)"}); try{ await db.syncMLByLink("inv",inv.id,{destination:"stock",stock_id:inv.stockItemId,assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }catch{} }
-              toast_(`"${inv.name}" recebido — entrega confirmada no Mercado Livre ✓`);
+              toast_(`"${inv.name}" recebido — entrega confirmada no Mercado Livre`);
             }
           }
           await db.setMLItem(m.id,{link_done_at:new Date().toISOString()});
@@ -19272,7 +19273,7 @@ function MainApp() {
       const newQty=Math.max(0,(Number(it.qty)||0)-q);
       await db.updateStock(it.id,{qty:newQty});
       setStk(p=>p.map(s=>s.id===it.id?{...s,qty:newQty}:s));
-      toast_(`Venda de ${fmtBRL(total)} registrada · estoque ${newQty} un. ✓`);
+      toast_(`Venda de ${fmtBRL(total)} registrada · estoque ${newQty} un.`);
     }catch(e){errToast(e);throw e;}
   };
   // Estoque → uso interno/insumo: só dá baixa no saldo
@@ -19282,7 +19283,7 @@ function MainApp() {
       await db.addStockUsage({stock_id:String(it.id),stock_name:it.name,qty:q,unit_cost:Number(it.costPrice)||0,employee_id:employeeId?String(employeeId):null,employee_name:employeeName||null,note:note||null,used_at:new Date().toISOString()});
       await db.updateStock(it.id,{qty:newQty});
       setStk(p=>p.map(s=>s.id===it.id?{...s,qty:newQty}:s));
-      toast_(`Baixa de ${q} un.${employeeName?` · ${employeeName}`:""} · estoque ${newQty} un. ✓`);
+      toast_(`Baixa de ${q} un.${employeeName?` · ${employeeName}`:""} · estoque ${newQty} un.`);
     }catch(e){errToast(e);throw e;}
   };
 
@@ -19311,7 +19312,7 @@ function MainApp() {
   const addPayment=async(p)=>{
     try{
       await insertPayment(p);
-      toast_(`Pagamento de ${fmtBRL(p.amount)} registrado ✓`);
+      toast_(`Pagamento de ${fmtBRL(p.amount)} registrado`);
       notifyPayment(p);
     }
     catch(e){errToast(e);}
@@ -19321,13 +19322,13 @@ function MainApp() {
   const deletePayment=async(id)=>{
     const ids=paymentGroup(id).map(x=>x.id); if(!ids.length) ids.push(id);
     setPay(prev=>prev.filter(p=>!ids.includes(p.id)));
-    try{ for(const x of ids) await db.deletePayment(x); toast_(ids.length>1?`Pagamento removido (${ids.length} partes) ✓`:"Pagamento removido ✓"); }catch(e){errToast(e);}
+    try{ for(const x of ids) await db.deletePayment(x); toast_(ids.length>1?`Pagamento removido (${ids.length} partes)`:"Pagamento removido"); }catch(e){errToast(e);}
   };
   const updatePayment=async(id,patch)=>{
     const shared={}; ["method","paidAt","note"].forEach(k=>{ if(patch[k]!==undefined) shared[k]=patch[k]; });
     const others=Object.keys(shared).length?paymentGroup(id).filter(x=>x.id!==id).map(x=>x.id):[];
     setPay(prev=>prev.map(p=>p.id===id?{...p,...patch}:others.includes(p.id)?{...p,...shared}:p));
-    try{ await db.updatePayment(id,patch); for(const x of others) await db.updatePayment(x,shared); toast_("Pagamento atualizado ✓"); }catch(e){errToast(e);}
+    try{ await db.updatePayment(id,patch); for(const x of others) await db.updatePayment(x,shared); toast_("Pagamento atualizado"); }catch(e){errToast(e);}
   };
 
   // ── WA
@@ -19706,7 +19707,7 @@ function MainApp() {
       if(error){errToast(error);}else{
         const {data}=await supabaseClient.storage.from("portfolio").list("",{sortBy:{column:"created_at",order:"desc"}});
         setFiles(data||[]);
-        toast_("PDF enviado ✓");
+        toast_("PDF enviado");
       }
       setUploading(false);
       e.target.value="";
@@ -19735,7 +19736,7 @@ function MainApp() {
       await supabaseClient.storage.from("portfolio").remove([name]);
       setFiles(p=>p.filter(f=>f.name!==name));
       setConfirmDel(null);
-      toast_("Arquivo removido ✓");
+      toast_("Arquivo removido");
     };
 
     const fmtSize=(b)=>b<1024*1024?`${(b/1024).toFixed(0)} KB`:`${(b/1024/1024).toFixed(1)} MB`;
@@ -19794,7 +19795,7 @@ function MainApp() {
           <div style={{display:"flex",gap:5,flexShrink:0}}>
             <button onClick={()=>copyLink(f.name)}
               style={{padding:"5px 10px",borderRadius:7,background:copiedId===f.name?`${B.green}22`:`${B.blue}18`,border:`1px solid ${copiedId===f.name?B.green:B.blue}33`,color:copiedId===f.name?B.green:B.blue,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              {copiedId===f.name?"✓ Copiado":<><Ic n="link"/> Link</>}
+              {copiedId===f.name?<><Ic n="done"/> Copiado</>:<><Ic n="link"/> Link</>}
             </button>
             <button onClick={()=>setConfirmDel(f.name)}
               style={{padding:"5px 8px",borderRadius:7,background:`${B.red}10`,border:`1px solid ${B.red}22`,color:B.red,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center"}}>
@@ -19849,8 +19850,8 @@ function MainApp() {
           </div>
         </div>
         <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10,marginTop:20}}>Portais</div>
-        <Item icon={<IUser s={14} c={B.blue}/>} label="Portal do cliente" sub={clientPortalUrl} color={B.blue} onClick={()=>navigator.clipboard?.writeText(clientPortalUrl).then(()=>toast_("Link copiado ✓")).catch(()=>{})}/>
-        <Item icon={<IWrench s={14} c={B.purple}/>} label="Portal do mecânico" sub={mechPortalUrl} color={B.purple} onClick={()=>navigator.clipboard?.writeText(mechPortalUrl).then(()=>toast_("Link copiado ✓")).catch(()=>{})}/>
+        <Item icon={<IUser s={14} c={B.blue}/>} label="Portal do cliente" sub={clientPortalUrl} color={B.blue} onClick={()=>navigator.clipboard?.writeText(clientPortalUrl).then(()=>toast_("Link copiado")).catch(()=>{})}/>
+        <Item icon={<IWrench s={14} c={B.purple}/>} label="Portal do mecânico" sub={mechPortalUrl} color={B.purple} onClick={()=>navigator.clipboard?.writeText(mechPortalUrl).then(()=>toast_("Link copiado")).catch(()=>{})}/>
         <Item icon={<ILogout s={14} c={B.red}/>} label="Sair" sub="Encerrar sessão" color={B.red} onClick={adminLogout}/>
         <div style={{fontSize:10,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10,marginTop:20}}>Arquivos</div>
         <PortfolioSection/>
@@ -19877,7 +19878,7 @@ function MainApp() {
       cid=await db.addClientCredit(clientId,-val,label,adminRole);
       setClientCredits(p=>[...p,{id:cid,clientId,amount:-val,note:label,createdAt:new Date().toISOString()}]);
       await insertPayment({...pay,amount:val,method:"Crédito",note:pay.note||"Crédito de cliente aplicado"});
-      toast_(`Crédito de ${fmtBRL(val)} aplicado ✓`);
+      toast_(`Crédito de ${fmtBRL(val)} aplicado`);
       return true;
     }catch(e){
       if(cid){ try{await db.deleteClientCredit(cid);}catch{} setClientCredits(p=>p.filter(c=>c.id!==cid)); }
@@ -19941,9 +19942,9 @@ function MainApp() {
       {/* ══ MAIS ══ */}
       {navSection==="mais"&&<MaisPage/>}
       {navSection==="calendario"&&<CalendarPage events={calendarEvents} appointments={appointments} reminders={reminders.filter(r=>adminRole==="owner"||r.visibility!=="owner")} vehicles={vehicles} clients={clients} employees={employees}
-        onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Adicionado ✓");}catch(err){errToast(err);}}}
-        onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Atualizado ✓");}catch(err){errToast(err);}}}
-        onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Removido ✓");}catch(err){errToast(err);}}}/>}
+        onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Adicionado");}catch(err){errToast(err);}}}
+        onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Atualizado");}catch(err){errToast(err);}}}
+        onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Removido");}catch(err){errToast(err);}}}/>}
 
       {(navSection==="oficina"||navSection==="cadastros"||navSection==="gestao"||navSection==="compras")&&<>
         <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
@@ -19990,7 +19991,7 @@ function MainApp() {
               <input value={mechSearch} onChange={e=>setMechSearch(e.target.value)} placeholder="Buscar mecânico ou veículo…"
                 style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
               <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
-              {mechSearch&&<button onClick={()=>setMechSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
+              {mechSearch&&<button onClick={()=>setMechSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}><Ic n="x"/></button>}
             </div>}
             {[...employees]
               .sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"))
@@ -20007,7 +20008,7 @@ function MainApp() {
                 onConsumeStock={consumeStock} onReturnStock={returnStock}
                 onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatus} onDeliver={deliverVehicle} isOwner={adminRole==="owner"}
                 onDelete={delEmp} onSendWA={sendMechWA} onUpdatePhone={updEmpP} onUpdateName={updEmpN} onUpdateDivision={updEmpDiv}
-                onUpdateSpecialty={async(id,specialty)=>{try{await db.updateEmployee(id,{specialty});setEmp(p=>p.map(e=>e.id===id?{...e,specialty}:e));toast_("Especialidade atualizada ✓");}catch(err){errToast(err);}}}
+                onUpdateSpecialty={async(id,specialty)=>{try{await db.updateEmployee(id,{specialty});setEmp(p=>p.map(e=>e.id===id?{...e,specialty}:e));toast_("Especialidade atualizada");}catch(err){errToast(err);}}}
                 purchaseOrders={purchaseOrders} onAddPurchaseOrder={async p=>{try{const r=await db.addPurchaseOrder(p);setPurchaseOrders(prev=>[r,...prev]);db.sendPushToAdmins(`${p.status==="ready_to_buy"?"Pedido pronto para compra":"Pedido"} — ${vehicles.find(x=>x.id===p.vehicleId)?.model||"Veículo"}`,`${p.partName}${(p.quantity||1)>1?` · ${p.quantity}x`:""}${p.taskId?` · ${(tasks.find(t=>t.id===p.taskId)||{}).label||""}`:""}`,"/?",p.status==="ready_to_buy").catch(()=>{});}catch(err){errToast(err);}}}/>)}
           </>}
       </>}
@@ -20065,7 +20066,7 @@ function MainApp() {
             <input value={osSearch} onChange={e=>setOsSearch(e.target.value)} placeholder={osParts?"Modelo, placa, cliente ou peça…":"Buscar por modelo, placa ou cliente…"}
               style={{width:"100%",padding:"8px 12px 8px 34px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
             <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:14}}><Ic n="search"/></span>
-            {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
+            {osSearch&&<button onClick={()=>setOsSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}><Ic n="x"/></button>}
             </div>
             <PartsToggle on={osParts} setOn={setOsParts} color={B.orange}/>
             <button onClick={()=>setShowNewOSModal("performance")} style={{padding:"8px 14px",borderRadius:8,background:`${B.orange}22`,border:`1px solid ${B.orange}44`,color:B.orange,fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
@@ -20199,7 +20200,7 @@ function MainApp() {
                   r.services=[...(r.services||[]),s];
                 }
                 setAppts(p=>[{...r,services:r.services||[],payments:[]},...p]);
-                toast_(`Agendamento "${title}" criado ✓`);
+                toast_(`Agendamento "${title}" criado`);
               }catch(e){errToast(e);}
             }}
             addVehicleMechanic={addVehicleMechanic} removeVehicleMechanic={removeVehicleMechanic}
@@ -20219,7 +20220,7 @@ function MainApp() {
           <div style={{position:"relative",flex:1}}>
           <input value={finSearch} onChange={e=>setFinSearch(e.target.value)} placeholder={finParts?"Modelo, placa, cliente ou peça…":"Buscar por modelo, placa ou cliente…"}
             style={{width:"100%",padding:"10px 36px 10px 14px",borderRadius:9,border:`1px solid ${finSearch?FD.border:B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-          {finSearch&&<button onClick={()=>setFinSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}>✕</button>}
+          {finSearch&&<button onClick={()=>setFinSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:13}}><Ic n="x"/></button>}
           </div>
           <PartsToggle on={finParts} setOn={setFinParts} color={FD.primary}/>
           <button onClick={()=>setShowNewOSModal("finishing")} style={{padding:"8px 14px",borderRadius:8,background:`${FD.primary}22`,border:`1px solid ${FD.primary}44`,color:FD.primary,fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
@@ -20252,7 +20253,7 @@ function MainApp() {
                   const r=await db.addAppointment({title,notes,vehicleId,clientId,estimatedValue:0});
                   for(const sv of services){const s=await db.addAppointmentService({appointmentId:r.id,label:sv.label,estimatedValue:sv.estimatedValue||0,division:sv.division,category:sv.category||null,materials:sv.materials||[],hours:sv.hours||0,rate:sv.rate||0});r.services=[...(r.services||[]),s];}
                   setAppts(p=>[{...r,services:r.services||[],payments:[]},...p]);
-                  toast_(`Agendamento "${title}" criado ✓`);
+                  toast_(`Agendamento "${title}" criado`);
                 }catch(e){errToast(e);}
               }}
               onAddMechanic={addVehicleMechanic} onRemoveMechanic={removeVehicleMechanic} onSetStatus={setVehicleStatusFinishing}
@@ -20272,7 +20273,7 @@ function MainApp() {
               const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});
               setInvestments(p=>[...p,r]);
               pushNewPurchaseItem(r);
-              toast_(`Pedido gerado em Materiais Sortidos ✓`);
+              toast_(`Pedido gerado em Materiais Sortidos`);
             }catch(e){errToast(e);}
           }}/>
       </>}
@@ -20290,14 +20291,14 @@ function MainApp() {
           appointments={appointments} vehicles={vehicles} clients={clients}
           employees={employees} adminRole={adminRole}
           stock={stock} clientNotes={allClientNotes} company={company} defaultRate={defaultRate}
-          onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);toast_("Agendamento criado ✓");}catch(e){errToast(e);}}}
-          onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));toast_("Salvo ✓");}catch(e){errToast(e);}}}
-          onDelete={async id=>{try{await db.deleteAppointment(id);setAppts(p=>p.filter(a=>a.id!==id));toast_("Agendamento removido ✓");}catch(e){errToast(e);}}}
-          onAddService={async s=>{try{const r=await db.addAppointmentService(s);setAppts(p=>p.map(a=>a.id===s.appointmentId?{...a,services:[...a.services,r]}:a));toast_("Serviço adicionado ✓");}catch(e){errToast(e);}}}
-          onUpdateService={async(id,patch)=>{try{await db.updateAppointmentService(id,patch);setAppts(p=>p.map(a=>({...a,services:a.services.map(s=>s.id===id?{...s,...patch}:s)})));toast_("Salvo ✓");}catch(e){errToast(e);}}}
-          onDeleteService={async id=>{try{await db.deleteAppointmentService(id);setAppts(p=>p.map(a=>({...a,services:a.services.filter(s=>s.id!==id)})));toast_("Serviço removido ✓");}catch(e){errToast(e);}}}
-          onAddPayment={async p=>{try{const r=await db.addAppointmentPayment(p);setAppts(prev=>prev.map(a=>a.id===p.appointmentId?{...a,payments:[...a.payments,r]}:a));toast_(`${fmtBRL(p.amount)} registrado ✓`);}catch(e){errToast(e);}}}
-          onDeletePayment={async id=>{try{await db.deleteAppointmentPayment(id);setAppts(p=>p.map(a=>({...a,payments:a.payments.filter(pay=>pay.id!==id)})));toast_("Pagamento removido ✓");}catch(e){errToast(e);}}}
+          onAdd={async a=>{try{const r=await db.addAppointment(a);setAppts(p=>[r,...p]);toast_("Agendamento criado");}catch(e){errToast(e);}}}
+          onUpdate={async(id,patch)=>{try{await db.updateAppointment(id,patch);setAppts(p=>p.map(a=>a.id===id?{...a,...patch}:a));toast_("Salvo");}catch(e){errToast(e);}}}
+          onDelete={async id=>{try{await db.deleteAppointment(id);setAppts(p=>p.filter(a=>a.id!==id));toast_("Agendamento removido");}catch(e){errToast(e);}}}
+          onAddService={async s=>{try{const r=await db.addAppointmentService(s);setAppts(p=>p.map(a=>a.id===s.appointmentId?{...a,services:[...a.services,r]}:a));toast_("Serviço adicionado");}catch(e){errToast(e);}}}
+          onUpdateService={async(id,patch)=>{try{await db.updateAppointmentService(id,patch);setAppts(p=>p.map(a=>({...a,services:a.services.map(s=>s.id===id?{...s,...patch}:s)})));toast_("Salvo");}catch(e){errToast(e);}}}
+          onDeleteService={async id=>{try{await db.deleteAppointmentService(id);setAppts(p=>p.map(a=>({...a,services:a.services.filter(s=>s.id!==id)})));toast_("Serviço removido");}catch(e){errToast(e);}}}
+          onAddPayment={async p=>{try{const r=await db.addAppointmentPayment(p);setAppts(prev=>prev.map(a=>a.id===p.appointmentId?{...a,payments:[...a.payments,r]}:a));toast_(`${fmtBRL(p.amount)} registrado`);}catch(e){errToast(e);}}}
+          onDeletePayment={async id=>{try{await db.deleteAppointmentPayment(id);setAppts(p=>p.map(a=>({...a,payments:a.payments.filter(pay=>pay.id!==id)})));toast_("Pagamento removido");}catch(e){errToast(e);}}}
           onConvertToOS={async(a,mechanicId)=>{
             try{
               const v=vehicles.find(x=>x.id===a.vehicleId);
@@ -20312,7 +20313,7 @@ function MainApp() {
               }
               await db.updateAppointment(a.id,{status:"converted",convertedAt:new Date().toISOString()});
               setAppts(p=>p.map(x=>x.id===a.id?{...x,status:"converted",convertedAt:new Date().toISOString()}:x));
-              toast_(`OS aberta para ${v.model} com ${a.services.length} tarefa(s) ✓`);
+              toast_(`OS aberta para ${v.model} com ${a.services.length} tarefa(s)`);
               setTab("clients");
             }catch(e){errToast(e);}
           }}
@@ -20321,7 +20322,7 @@ function MainApp() {
             const r=await db.addQuote(q);
             setQuotes(p=>[r,...p]);
             // criado como rascunho: o cliente só é avisado ao tocar em "Enviar"
-            toast_("Orçamento criado ✓");return r;
+            toast_("Orçamento criado");return r;
           }catch(e){errToast(e);}}}
           onUpdateQuote={async(id,patch)=>{try{
             await db.updateQuote(id,patch);
@@ -20338,7 +20339,7 @@ function MainApp() {
               db.sendPushToClient(clientId,`Orçamento atualizado — ${vModel}`,`O orçamento foi revisado${total>0?` · ${fmtBRL(total)}`:""}. Confira as alterações.`,"/?portal=cliente").catch(()=>{});
             }
           }catch(e){errToast(e);}}}
-          onDeleteQuote={async id=>{try{await db.deleteQuote(id);setQuotes(p=>p.filter(q=>q.id!==id));toast_("Orçamento removido ✓");}catch(e){errToast(e);}}}
+          onDeleteQuote={async id=>{try{await db.deleteQuote(id);setQuotes(p=>p.filter(q=>q.id!==id));toast_("Orçamento removido");}catch(e){errToast(e);}}}
           onConvertQuoteToAppointment={async(quote)=>{
             try{
               // Create client if temp
@@ -20374,7 +20375,7 @@ function MainApp() {
               // Mark quote as converted
               await db.updateQuote(quote.id,{status:"approved",appointmentId:newAppt.id,clientId,approvedAt:new Date().toISOString()});
               setQuotes(p=>p.map(q=>q.id===quote.id?{...q,status:"approved",appointmentId:newAppt.id}:q));
-              toast_("Orçamento convertido em agendamento ✓");
+              toast_("Orçamento convertido em agendamento");
             }catch(e){errToast(e);}
           }}
         />
@@ -20383,21 +20384,21 @@ function MainApp() {
       {tab==="vehicles"&&allowedTabs.includes("vehicles")&&<>
         <TabHeader color={B.blue} title="Veículos Cadastrados" subtitle="Visão geral, tempo na oficina e histórico"/>
         <VehiclesTab vehicles={vehicles} tasks={tasks} employees={employees} clients={clients} defaultRate={defaultRate} onUpdateVehicle={updVeh} osHistory={osHistory} onOpenOS={openNewOS} onOpenOSFinishing={openNewOSFinishing} company={company} onCreateVehicle={createVehicleFromTab} payments={payments} onAddPayment={addPayment} onDeletePayment={deletePayment} onUpdatePayment={updatePayment} isOwner={adminRole==="owner"}
-          onDeleteVehicle={adminRole==="owner"?async(id)=>{try{await db.deleteVehicle(id);setVeh(p=>p.filter(v=>v.id!==id));toast_("Veículo removido ✓");}catch(e){errToast(e);}}:null}
-          onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico ✓");}catch(e){errToast(e);}}}
-          onUpdateOsHistory={async(id,patch)=>{try{await db.updateOsHistory(id,patch);setOsHistory(p=>p.map(h=>h.id===id?{...h,...patch}:h));toast_("Desconto aplicado ✓");}catch(e){errToast(e);}}}
+          onDeleteVehicle={adminRole==="owner"?async(id)=>{try{await db.deleteVehicle(id);setVeh(p=>p.filter(v=>v.id!==id));toast_("Veículo removido");}catch(e){errToast(e);}}:null}
+          onDeleteOsHistory={async(id)=>{try{await db.deleteOsHistory(id);setOsHistory(p=>p.filter(h=>h.id!==id));toast_("OS removida do histórico");}catch(e){errToast(e);}}}
+          onUpdateOsHistory={async(id,patch)=>{try{await db.updateOsHistory(id,patch);setOsHistory(p=>p.map(h=>h.id===id?{...h,...patch}:h));toast_("Desconto aplicado");}catch(e){errToast(e);}}}
           clientCredits={clientCredits}
-          onAddClientCredit={async(clientId,amount,note)=>{try{const id=await db.addClientCredit(clientId,amount,note,adminRole);setClientCredits(p=>[...p,{id,clientId,amount,note,createdAt:new Date().toISOString()}]);toast_("Crédito salvo ✓");}catch(e){errToast(e);}}}
-          onDeleteClientCredit={async(id)=>{try{await db.deleteClientCredit(id);setClientCredits(p=>p.filter(c=>c.id!==id));toast_("Crédito removido ✓");}catch(e){errToast(e);}}}
+          onAddClientCredit={async(clientId,amount,note)=>{try{const id=await db.addClientCredit(clientId,amount,note,adminRole);setClientCredits(p=>[...p,{id,clientId,amount,note,createdAt:new Date().toISOString()}]);toast_("Crédito salvo");}catch(e){errToast(e);}}}
+          onDeleteClientCredit={async(id)=>{try{await db.deleteClientCredit(id);setClientCredits(p=>p.filter(c=>c.id!==id));toast_("Crédito removido");}catch(e){errToast(e);}}}
         />      </>}
       {tab==="finance"&&allowedTabs.includes("finance")&&<>
         <TabHeader color={B.green} title="Financeiro" subtitle="Receita e lucro · Atualizado conforme OSs concluídas"/>
         <FinanceTab tasks={tasks} vehicles={vehicles} clients={clients} employees={employees} payments={payments} defaultRate={defaultRate} expenses={expenses} osHistory={osHistory} internalTransfers={internalTransfers} adminRole={adminRole} sales={sales}
-          onAddTransfer={async t=>{try{const r=await db.addInternalTransfer(t);setInternalTransfers(p=>[r,...p]);toast_("Acerto registrado ✓");}catch(e){errToast(e);}}}
-          onDeleteTransfer={async id=>{try{await db.deleteInternalTransfer(id);setInternalTransfers(p=>p.filter(t=>t.id!==id));toast_("Acerto removido ✓");}catch(e){errToast(e);}}}
-          onAddExpense={async e=>{try{const r=await db.addExpense(e);setExpenses(p=>[...p,r]);toast_("Despesa adicionada ✓");}catch(err){errToast(err);}}}
-          onUpdateExpense={async(id,patch)=>{try{await db.updateExpense(id,patch);setExpenses(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Despesa atualizada ✓");}catch(err){errToast(err);}}}
-          onDeleteExpense={async id=>{try{await db.deleteExpense(id);setExpenses(p=>p.filter(e=>e.id!==id));toast_("Despesa removida ✓");}catch(err){errToast(err);}}}
+          onAddTransfer={async t=>{try{const r=await db.addInternalTransfer(t);setInternalTransfers(p=>[r,...p]);toast_("Acerto registrado");}catch(e){errToast(e);}}}
+          onDeleteTransfer={async id=>{try{await db.deleteInternalTransfer(id);setInternalTransfers(p=>p.filter(t=>t.id!==id));toast_("Acerto removido");}catch(e){errToast(e);}}}
+          onAddExpense={async e=>{try{const r=await db.addExpense(e);setExpenses(p=>[...p,r]);toast_("Despesa adicionada");}catch(err){errToast(err);}}}
+          onUpdateExpense={async(id,patch)=>{try{await db.updateExpense(id,patch);setExpenses(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Despesa atualizada");}catch(err){errToast(err);}}}
+          onDeleteExpense={async id=>{try{await db.deleteExpense(id);setExpenses(p=>p.filter(e=>e.id!==id));toast_("Despesa removida");}catch(err){errToast(err);}}}
         />
       </>}
       {tab==="purchases"&&allowedTabs.includes("purchases")&&<>
@@ -20409,7 +20410,7 @@ function MainApp() {
       {tab==="investments"&&allowedTabs.includes("investments")&&<>
         <TabHeader color={B.green} title="Investimentos" subtitle="Compras para a empresa · Por porte e prioridade"/>
         <InvestmentsTab investments={investments.filter(i=>i.category!=="materiais")} adminRole={adminRole}
-          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,createdBy:adminRole});setInvestments(p=>[...p,r]);toast_("Pedido adicionado ✓");}catch(e){errToast(e);}}}
+          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,createdBy:adminRole});setInvestments(p=>[...p,r]);toast_("Pedido adicionado");}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
             const r=await db.updateInvestment(id,patch);
             setInvestments(p=>p.map(i=>i.id===id?r:i));
@@ -20426,12 +20427,12 @@ function MainApp() {
                   recurrent:false,
                 });
                 setExpenses(p=>[...p,exp]);
-                toast_(`R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
+                toast_(`R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro`);
               }
             }
           }catch(e){errToast(e);}}}
-          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));toast_("Removido ✓");}catch(e){errToast(e);}}}
-          onAddToStock={async item=>{try{const r=await db.addStock(item);setStk(p=>[...p,r]);toast_(`"${item.name}" adicionado ao estoque ✓`);}catch(e){errToast(e);}}}
+          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));toast_("Removido");}catch(e){errToast(e);}}}
+          onAddToStock={async item=>{try{const r=await db.addStock(item);setStk(p=>[...p,r]);toast_(`"${item.name}" adicionado ao estoque`);}catch(e){errToast(e);}}}
         />
       </>}
 
@@ -20439,7 +20440,7 @@ function MainApp() {
         <TabHeader color={B.orange} title="Pedidos de Compras" subtitle="Peças e materiais avulsos para estoque da oficina"/>
         <InvestmentsTab investments={investments.filter(i=>i.category==="materiais")} adminRole={adminRole} defaultCategory="materiais"
           mirror={{orders:purchaseOrders,vehicles,employees,tasks,onUpdate:poUpdate,onDelete:poDelete,onReserve:poReserve}}
-          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);pushNewPurchaseItem(r);toast_("Material adicionado ✓");}catch(e){errToast(e);}}}
+          onAdd={async inv=>{try{const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});setInvestments(p=>[...p,r]);pushNewPurchaseItem(r);toast_("Material adicionado");}catch(e){errToast(e);}}}
           onUpdate={async(id,patch)=>{try{
             const r=await db.updateInvestment(id,patch);
             setInvestments(p=>p.map(i=>i.id===id?r:i));
@@ -20449,7 +20450,7 @@ function MainApp() {
                 const total=inv.value*(inv.quantity||1);
                 const exp=await db.addExpense({name:`Mat. Sortido: ${inv.name}`,amount:total,category:"materiais",division:inv.division||"ambos",recurrent:false});
                 setExpenses(p=>[...p,exp]);
-                toast_(`R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro ✓`);
+                toast_(`R$ ${total.toLocaleString("pt-BR",{minimumFractionDigits:2})} lançado no financeiro`);
               }
             }
             // When received and linked to a stock item — add to purchase history and update qty
@@ -20460,12 +20461,12 @@ function MainApp() {
                 const unitCost=inv.value||0;
                 await addPurchase({stockId:inv.stockItemId,qty,unitCost,purchaseDate:new Date().toISOString().slice(0,10),supplier:"",note:`Pedido via Materiais Sortidos`});
                 try{ await db.syncMLByLink("inv",inv.id,{destination:"stock",stock_id:inv.stockItemId,assigned_by:"Pedido de compra",assigned_at:new Date().toISOString()}); }catch(e){ console.warn("ml sync inv",e); }
-                toast_(`Estoque de "${inv.name}" atualizado ✓`);
+                toast_(`Estoque de "${inv.name}" atualizado`);
               }
             }
           }catch(e){errToast(e);}}}
-          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));toast_("Removido ✓");}catch(e){errToast(e);}}}
-          onAddToStock={async item=>{try{const r=await db.addStock(item);setStk(p=>[...p,r]);toast_(`"${item.name}" adicionado ao estoque ✓`);}catch(e){errToast(e);}}}
+          onDelete={async id=>{try{await db.deleteInvestment(id);setInvestments(p=>p.filter(i=>i.id!==id));toast_("Removido");}catch(e){errToast(e);}}}
+          onAddToStock={async item=>{try{const r=await db.addStock(item);setStk(p=>[...p,r]);toast_(`"${item.name}" adicionado ao estoque`);}catch(e){errToast(e);}}}
         />
       </>}
 
@@ -20503,9 +20504,9 @@ function MainApp() {
         <TabHeader color="#06b6d4" title="Vendas" subtitle="Venda avulsa de itens da prateleira ou do estoque"/>
         <SalesTab
           shelfItems={shelfItems} sales={sales} stock={stock}
-          onAddShelfItem={async item=>{try{const r=await db.addShelfItem(item);setShelfItems(p=>[...p,r]);toast_("Item adicionado ✓");}catch(e){errToast(e);}}}
-          onUpdateShelfItem={async(id,patch)=>{try{const r=await db.updateShelfItem(id,patch);setShelfItems(p=>p.map(i=>i.id===id?r:i));toast_("Item atualizado ✓");}catch(e){errToast(e);}}}
-          onDeleteShelfItem={async id=>{try{await db.deleteShelfItem(id);setShelfItems(p=>p.filter(i=>i.id!==id));toast_("Item removido ✓");}catch(e){errToast(e);}}}
+          onAddShelfItem={async item=>{try{const r=await db.addShelfItem(item);setShelfItems(p=>[...p,r]);toast_("Item adicionado");}catch(e){errToast(e);}}}
+          onUpdateShelfItem={async(id,patch)=>{try{const r=await db.updateShelfItem(id,patch);setShelfItems(p=>p.map(i=>i.id===id?r:i));toast_("Item atualizado");}catch(e){errToast(e);}}}
+          onDeleteShelfItem={async id=>{try{await db.deleteShelfItem(id);setShelfItems(p=>p.filter(i=>i.id!==id));toast_("Item removido");}catch(e){errToast(e);}}}
           onAddSale={async(sale,items)=>{
             try{
               const r=await db.addSale(sale,items);
@@ -20524,11 +20525,11 @@ function MainApp() {
                   }
                 }
               }
-              toast_(`Venda de ${fmtBRL(sale.total)} registrada ✓`);
+              toast_(`Venda de ${fmtBRL(sale.total)} registrada`);
             }catch(e){errToast(e);}
           }}
-          onDeleteSale={async id=>{try{await db.deleteSale(id);setSales(p=>p.filter(s=>s.id!==id));toast_("Venda removida ✓");}catch(e){errToast(e);}}}
-          onUpdateSale={async(id,patch)=>{try{await db.updateSale(id,patch);setSales(p=>p.map(s=>s.id===id?{...s,...patch}:s));toast_("Venda atualizada ✓");}catch(e){errToast(e);}}}
+          onDeleteSale={async id=>{try{await db.deleteSale(id);setSales(p=>p.filter(s=>s.id!==id));toast_("Venda removida");}catch(e){errToast(e);}}}
+          onUpdateSale={async(id,patch)=>{try{await db.updateSale(id,patch);setSales(p=>p.map(s=>s.id===id?{...s,...patch}:s));toast_("Venda atualizada");}catch(e){errToast(e);}}}
         />
       </>}
 
@@ -20546,23 +20547,23 @@ function MainApp() {
       if(!v) return;
       const fuels=[...(v.fuels||[]),fuel];
       setVeh(p=>p.map(x=>x.id===vid?{...x,fuels}:x));
-      try{ await db.updateVehicle(vid,{fuels}); toast_(`Combustível lançado ✓`); }catch(e){errToast(e);}
+      try{ await db.updateVehicle(vid,{fuels}); toast_(`Combustível lançado`); }catch(e){errToast(e);}
     }}/>}
     {quickTaskModal&&<QuickTaskModal vehicles={vehicles} tasks={tasks} employees={employees} onClose={()=>setQuickTaskModal(false)} onAddTask={async(vid,label,category)=>{
       try{
         const row=await db.addTask({vehicleId:vid,label,done:false,materials:[],hours:0,ratePerHour:null,category:category||null});
         setTsk(p=>[...p,row]);
-        toast_(`Tarefa "${label}" adicionada ✓`);
+        toast_(`Tarefa "${label}" adicionada`);
       }catch(e){errToast(e);}
     }}/>}
     {quickMatModal&&<QuickMatModal vehicles={vehicles} tasks={tasks} stock={stock} onClose={()=>setQuickMatModal(false)} onAddMaterial={async(taskId,mat,currentMats)=>{
       const newMats=[...currentMats,mat];
       setTsk(p=>p.map(t=>t.id===taskId?{...t,materials:newMats}:t));
-      try{ await db.updateTask(taskId,{materials:newMats}); toast_(`Material "${mat.name}" adicionado ✓`); }catch(e){errToast(e);}
+      try{ await db.updateTask(taskId,{materials:newMats}); toast_(`Material "${mat.name}" adicionado`); }catch(e){errToast(e);}
     }}/>}
     {quickPayModal&&<QuickPayModal vehicles={vehicles} tasks={tasks} clients={clients} osHistory={osHistory} payments={payments} defaultRate={defaultRate} onClose={()=>setQuickPayModal(false)} onAddPayment={async(vehicleId,payment)=>{
       const pay={vehicleId,amount:payment.amount,method:payment.method,note:payment.note,paidAt:payment.paidAt,division:payment.division||"performance",osHistoryId:payment.osHistoryId||null,parts:payment.parts};
-      try{ await insertPayment(pay); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado ✓`); notifyPayment(pay); }catch(e){errToast(e);}
+      try{ await insertPayment(pay); toast_(`Pagamento de ${fmtBRL(payment.amount)} registrado`); notifyPayment(pay); }catch(e){errToast(e);}
     }}/>}
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}
     
@@ -20619,7 +20620,7 @@ function MainApp() {
             setPurchaseOrders(prev=>[r,...prev]);
             const v=vehicles.find(x=>x.id===vehicleId);
             db.sendPushToAdmins(`Pedido — ${v?.model||"Veículo"}`,form.partName,"/?").catch(()=>{});
-            toast_(`Pedido "${form.partName}" criado ✓`);
+            toast_(`Pedido "${form.partName}" criado`);
             setShowQuickPedidoOS(false);
           }catch(e){errToast(e);}
           setSaving(false);
@@ -20629,7 +20630,7 @@ function MainApp() {
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
               <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="cart"/></div>
               <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Novo pedido de peça</div><div style={{fontSize:11,color:B.gray400}}>Para uma OS em andamento</div></div>
-              <button onClick={()=>setShowQuickPedidoOS(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
+              <button onClick={()=>setShowQuickPedidoOS(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}><Ic n="x"/></button>
             </div>
             <div style={{padding:16,display:"flex",flexDirection:"column",gap:10,overflowY:"auto"}}>
               {/* Vehicle search */}
@@ -20653,7 +20654,7 @@ function MainApp() {
                           {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                         </div>
                         {v.osNumber&&<span style={{fontSize:10,fontWeight:800,color:B.orange,flexShrink:0}}>{fmtOS(v.osNumber)}</span>}
-                        {sel&&<span style={{color:B.amber,fontSize:14,flexShrink:0}}>✓</span>}
+                        {sel&&<span style={{color:B.amber,fontSize:14,flexShrink:0}}><Ic n="done"/></span>}
                       </button>);
                     })}
                   </div>}
@@ -20701,7 +20702,7 @@ function MainApp() {
             const newParts=[...parts,{id:Date.now().toString(),name:name.trim(),qty:parseInt(qty)||1,location:location.trim(),note:"",photos:[]}];
             await db.updateVehicle(vehicleId,{partsList:newParts});
             setVeh(p=>p.map(x=>x.id===vehicleId?{...x,partsList:newParts}:x));
-            toast_(`Peça "${name}" adicionada ao ${v?.model} ✓`);
+            toast_(`Peça "${name}" adicionada ao ${v?.model}`);
             setShowQuickPecasVeiculo(false);
           }catch(e){errToast(e);}
           setSaving(false);
@@ -20711,7 +20712,7 @@ function MainApp() {
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
               <div style={{width:36,height:36,borderRadius:10,background:`${B.purple}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="nut"/></div>
               <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Adicionar peça ao veículo</div><div style={{fontSize:11,color:B.gray400}}>Peça enviada pelo cliente</div></div>
-              <button onClick={()=>setShowQuickPecasVeiculo(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
+              <button onClick={()=>setShowQuickPecasVeiculo(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}><Ic n="x"/></button>
             </div>
             <div style={{padding:16,display:"flex",flexDirection:"column",gap:10,overflowY:"auto"}}>
               {/* Vehicle search */}
@@ -20734,7 +20735,7 @@ function MainApp() {
                         {cli&&<div style={{fontSize:10,color:B.gray400}}>{cli.name}</div>}
                       </div>
                       {parts>0&&<span style={{fontSize:10,fontWeight:800,color:B.purple,background:`${B.purple}18`,borderRadius:5,padding:"1px 6px",flexShrink:0}}>{parts}<Ic n="nut"/></span>}
-                      {sel&&<span style={{color:B.purple,fontSize:14,flexShrink:0}}>✓</span>}
+                      {sel&&<span style={{color:B.purple,fontSize:14,flexShrink:0}}><Ic n="done"/></span>}
                     </button>);
                   })}
                 </div>
@@ -20771,7 +20772,7 @@ function MainApp() {
             const r=await db.addInvestment(inv);
             setInvestments(p=>[r,...p]);
             pushNewPurchaseItem(r);
-            toast_(`Material "${form.name}" adicionado aos sortidos ✓`);
+            toast_(`Material "${form.name}" adicionado aos sortidos`);
             setShowQuickMatSortidos(false);
           }catch(e){errToast(e);}
           setSaving(false);
@@ -20781,7 +20782,7 @@ function MainApp() {
             <div style={{padding:"16px 20px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:36,height:36,borderRadius:10,background:`${B.amber}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><Ic n="pkg"/></div>
               <div style={{flex:1}}><div style={{fontWeight:800,fontSize:14,color:B.white}}>Pedido de material sortido</div><div style={{fontSize:11,color:B.gray400}}>Adiciona direto aos Materiais Sortidos</div></div>
-              <button onClick={()=>setShowQuickMatSortidos(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}>✕</button>
+              <button onClick={()=>setShowQuickMatSortidos(false)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:18}}><Ic n="x"/></button>
             </div>
             <div style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
               <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="Nome do material *"
@@ -20850,17 +20851,17 @@ function MainApp() {
         vehicles={vehicles}
         clients={clients}
         adminRole={adminRole}
-        onAdd={async r=>{try{const ev=await db.addReminder(r);setReminders(p=>[ev,...p]);toast_("Lembrete criado ✓");}catch(e){errToast(e);}}}
-        onUpdate={async(id,patch)=>{try{await db.updateReminder(id,patch);setReminders(p=>p.map(r=>r.id===id?{...r,...patch}:r));toast_("Lembrete atualizado ✓");}catch(e){errToast(e);}}}
-        onDelete={async id=>{try{await db.deleteReminder(id);setReminders(p=>p.filter(r=>r.id!==id));toast_("Removido ✓");}catch(e){errToast(e);}}}
+        onAdd={async r=>{try{const ev=await db.addReminder(r);setReminders(p=>[ev,...p]);toast_("Lembrete criado");}catch(e){errToast(e);}}}
+        onUpdate={async(id,patch)=>{try{await db.updateReminder(id,patch);setReminders(p=>p.map(r=>r.id===id?{...r,...patch}:r));toast_("Lembrete atualizado");}catch(e){errToast(e);}}}
+        onDelete={async id=>{try{await db.deleteReminder(id);setReminders(p=>p.filter(r=>r.id!==id));toast_("Removido");}catch(e){errToast(e);}}}
       />}
       {showCalendar&&<CalendarPanel
         onClose={()=>setShowCalendar(false)}
         events={[...calendarEvents,...reminders.filter(r=>r.dueDate&&!r.done&&(adminRole==="owner"||r.visibility!=="owner")).map(r=>({id:"rem_"+r.id,title:r.title,date:r.dueDate,type:"note",color:PRIO[r.priority]?.color||B.blue,auto:true,notes:r.body}))]}
         appointments={appointments} vehicles={vehicles} clients={clients}
-        onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Evento criado ✓");}catch(err){errToast(err);}}}
-        onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Evento atualizado ✓");}catch(err){errToast(err);}}}
-        onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Evento removido ✓");}catch(err){errToast(err);}}}
+        onAdd={async e=>{try{const r=await db.addCalendarEvent(e);setCalEvents(p=>[...p,r]);toast_("Evento criado");}catch(err){errToast(err);}}}
+        onUpdate={async(id,patch)=>{try{await db.updateCalendarEvent(id,patch);setCalEvents(p=>p.map(e=>e.id===id?{...e,...patch}:e));toast_("Evento atualizado");}catch(err){errToast(err);}}}
+        onDelete={async id=>{try{await db.deleteCalendarEvent(id);setCalEvents(p=>p.filter(e=>e.id!==id));toast_("Evento removido");}catch(err){errToast(err);}}}
       />}
       {/* Floating mini-menu — collapsible */}
       {(()=>{

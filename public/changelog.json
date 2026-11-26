@@ -3,6 +3,10 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "fix",
+        "text": "Símbolos ✓ e ✕ trocados por ícones de traço em botões, selos e listas; avisos de confirmação sem símbolo; PDF de recibo mostra \"Quitado\" sem caractere quebrado"
+      },
+      {
         "type": "feat",
         "text": "Catálogo de serviços (Mais > Catálogo de serviços): menu padrão com categoria, horas estimadas e valor. Ao digitar o nome na Nova tarefa, no orçamento ou no agendamento, o app sugere do catálogo e preenche o resto. Mudar o catálogo não altera OS já criadas"
       },

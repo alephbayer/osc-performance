@@ -3,6 +3,10 @@
     "date": "2026-11-26",
     "changes": [
       {
+        "type": "feat",
+        "text": "Catálogo de serviços (Mais > Catálogo de serviços): menu padrão com categoria, horas estimadas e valor. Ao digitar o nome na Nova tarefa, no orçamento ou no agendamento, o app sugere do catálogo e preenche o resto. Mudar o catálogo não altera OS já criadas"
+      },
+      {
         "type": "fix",
         "text": "iPhone: todas as janelas (confirmações, pagamento rápido, nova tarefa, fotos, configurações e outras) começam abaixo da barra de status"
       },

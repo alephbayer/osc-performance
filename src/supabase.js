@@ -1376,6 +1376,23 @@ export const db = {
     const { error } = await supabase.from("partial_charges").update({ canceled_at: new Date().toISOString() }).eq("id", id);
     if (error) throw error;
   },
+  // Catálogo de serviços (menu padrão). Valores são copiados para a tarefa ao escolher; mudar aqui não altera OS antiga.
+  async getServiceCatalog() {
+    const { data, error } = await supabase.from("service_catalog").select("*").order("name");
+    if (error) throw error; return data || [];
+  },
+  async addServiceCatalog(s) {
+    const { data, error } = await supabase.from("service_catalog").insert([s]).select().single();
+    if (error) throw error; return data;
+  },
+  async updateServiceCatalog(id, patch) {
+    const { data, error } = await supabase.from("service_catalog").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+    if (error) throw error; return data;
+  },
+  async deleteServiceCatalog(id) {
+    const { error } = await supabase.from("service_catalog").delete().eq("id", id);
+    if (error) throw error;
+  },
   async getDeliveries99() {
     const { data, error } = await supabase.from("deliveries_99").select("*").order("delivery_date", { ascending: false }).order("created_at", { ascending: false });
     if (error) throw error; return data || [];

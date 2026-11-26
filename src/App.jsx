@@ -9795,7 +9795,8 @@ function QuotesTab({quotes=[],clients=[],vehicles=[],adminRole,onAdd,onUpdate,on
       <div style={{marginBottom:10}}>
         <div style={{fontSize:11,color:B.gray400,fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>Adicionar item manualmente</div>
         <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-          <input value={newItem.label} onChange={e=>setNewItem(p=>({...p,label:e.target.value}))} placeholder="Nome do serviço"
+          <SvcPickInput value={newItem.label} onChange={v=>setNewItem(p=>({...p,label:v}))} placeholder="Nome do serviço (busca no catálogo)" division={form.division||"performance"} defaultRate={defaultRate}
+            onPick={sv=>{const q=Number(sv.hours||0)||(sv.rate_type==="qty"?1:0);setNewItem(p=>({...p,label:sv.name,...(sv.category?{category:sv.category}:{}),hours:q,price:Math.round(q*svcRate(sv,defaultRate)*100)/100}));}}
             style={{flex:2,minWidth:120,padding:"6px 8px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
           <input value={newItem.hours||""} type="number" placeholder="h" onChange={e=>setNewItemHours(parseFloat(e.target.value)||0)}
             style={{width:50,padding:"6px 8px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
@@ -10230,7 +10231,8 @@ function AppointmentsTab({appointments=[],vehicles=[],clients=[],employees=[],ad
               </div>);
             })}
             {showSvcForm===a.id&&<div style={{background:B.gray800,borderRadius:8,padding:10,marginTop:6,display:"flex",flexDirection:"column",gap:6}}>
-              <input value={svcForm.label} onChange={e=>setSvcForm(p=>({...p,label:e.target.value}))} placeholder="Nome do serviço *"
+              <SvcPickInput value={svcForm.label} onChange={v=>setSvcForm(p=>({...p,label:v}))} placeholder="Nome do serviço * (busca no catálogo)" division={svcForm.division} defaultRate={defaultRate}
+                onPick={sv=>{const q=Number(sv.hours||0)||(sv.rate_type==="qty"?1:0);const r=svcRate(sv,defaultRate);setSvcForm(p=>({...p,label:sv.name,division:sv.division==="both"?p.division:sv.division,category:sv.category||p.category,hours:q?String(q):"",rate:r?String(r):"",estimatedValue:q&&r?String(Math.round(q*r*100)/100):p.estimatedValue}));}}
                 style={{padding:"6px 9px",borderRadius:7,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:12,outline:"none"}}/>
               <div style={{display:"flex",gap:6}}>
                 <select value={svcForm.division} onChange={e=>setSvcForm(p=>({...p,division:e.target.value}))}
@@ -13954,7 +13956,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.244";
+const APP_VERSION = "2026.11.26.245";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -14754,19 +14756,142 @@ function OrderPartModal({target,vehicleId,onSubmit,onClose}) {
 }
 
 // Janela "Nova tarefa" da página do carro: nome, categoria, horas/preço, terceirizado e materiais
+// ─── Catálogo de serviços (menu padrão) ───────────────────────────────────────
+// Lista vinda da tabela service_catalog, disponível por contexto (sem passar props por todas as telas).
+// Ao escolher um serviço, nome/categoria/horas/valor são COPIADOS para a tarefa ou item: mudar o catálogo não altera OS antiga.
+const SvcCatalogCtx=React.createContext([]);
+const svcNorm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const svcDivLabel={performance:"Performance",finishing:"Finishing",both:"Ambas"};
+function svcMatches(catalog,q,division,limit=6){
+  const toks=svcNorm(q).split(/[^a-z0-9]+/).filter(t=>t.length>=2).map(t=>t.length>3?t.replace(/s$/,""):t);
+  if(!toks.length) return [];
+  return (catalog||[]).filter(s=>s.active!==false&&(!division||s.division==="both"||s.division===division))
+    .map(s=>{const n=svcNorm(`${s.name} ${s.category||""} ${s.notes||""}`);return {s,ok:toks.every(t=>n.includes(t)),starts:svcNorm(s.name).startsWith(toks[0])?1:0};})
+    .filter(x=>x.ok).sort((a,b)=>(b.starts-a.starts)||a.s.name.localeCompare(b.s.name,"pt-BR")).slice(0,limit).map(x=>x.s);
+}
+// Valor efetivo do serviço: por hora usa o R$/h próprio ou a MO padrão vigente
+const svcRate=(s,defaultRate)=>s.rate!=null?Number(s.rate):(s.rate_type==="qty"?0:Number(defaultRate||0));
+const svcHoursTxt=h=>String(Math.round(Number(h||0)*100)/100).replace(".",",");
+function svcEstLabel(s,defaultRate,showValues=true){
+  const q=Number(s.hours||0), isQty=s.rate_type==="qty";
+  const base=isQty?`${svcHoursTxt(q||1)} un`:(q?`${svcHoursTxt(q)} h`:"horas a definir");
+  const val=showValues?(isQty?(s.rate!=null?Number(s.rate)*(q||1):0):q*svcRate(s,defaultRate)):0;
+  return val>0?`${base} · ${fmtBRL(val)}`:base;
+}
+// Campo de nome do serviço com sugestões do catálogo. onPick(serviço) preenche o resto.
+function SvcPickInput({value,onChange,onPick,division,placeholder,style={},autoFocus,defaultRate=0,showValues=true}){
+  const catalog=React.useContext(SvcCatalogCtx)||[];
+  const [open,setOpen]=useState(false);
+  const list=open?svcMatches(catalog,value,division):[];
+  const {flex,minWidth,width,...inpStyle}=style;
+  return (<div style={{position:"relative",flex,minWidth,width}}>
+    <input value={value} autoFocus={autoFocus} autoComplete="off" placeholder={placeholder}
+      onChange={e=>{onChange(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),150)}
+      style={{...inpStyle,width:"100%",boxSizing:"border-box"}}/>
+    {list.length>0&&<div style={{position:"absolute",left:0,right:0,top:"100%",marginTop:4,zIndex:60,background:B.gray900,border:`1px solid ${B.gray600}`,borderRadius:8,overflow:"hidden",boxShadow:"0 8px 24px rgba(0,0,0,.45)"}}>
+      <div style={{padding:"5px 10px",fontSize:9,color:B.gray500,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${B.gray800}`}}>Catálogo</div>
+      {list.map(s=><div key={s.id} onMouseDown={e=>{e.preventDefault();onPick(s);setOpen(false);}}
+        style={{padding:"7px 10px",cursor:"pointer",borderBottom:`1px solid ${B.gray800}`}}>
+        <div style={{fontSize:12,color:B.white,lineHeight:1.3}}>{s.name}</div>
+        <div style={{fontSize:10,color:B.gray500,marginTop:2}}>{[s.category,svcEstLabel(s,defaultRate,showValues)].filter(Boolean).join(" · ")}</div>
+      </div>)}
+    </div>}
+  </div>);
+}
+
+// Tela de gestão do catálogo (gestor e administrativo)
+function ServiceCatalogModal({catalog=[],defaultRate=0,onAdd,onUpdate,onDelete,onClose}){
+  const [q,setQ]=useState("");
+  const [div,setDiv]=useState("performance");
+  const [showInactive,setShowInactive]=useState(false);
+  const [edit,setEdit]=useState(null);
+  const [saving,setSaving]=useState(false);
+  const num=v=>parseFloat(String(v??"").replace(",","."));
+  const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",width:"100%"};
+  const lab={fontSize:10,fontWeight:700,color:B.gray400,textTransform:"uppercase",letterSpacing:.8,marginBottom:4};
+  const catsFor=d=>d==="finishing"?CATEGORIES_FINISHING:d==="both"?[...CATEGORIES,...CATEGORIES_FINISHING.filter(c=>!CAT_MAP[c.id])]:CATEGORIES;
+  const nq=svcNorm(q).trim();
+  const list=catalog.filter(s=>(div==="all"||s.division===div||s.division==="both")&&(showInactive||s.active!==false)&&(!nq||svcNorm(`${s.name} ${s.category||""} ${s.notes||""}`).includes(nq)))
+    .sort((a,b)=>(a.category||"~").localeCompare(b.category||"~","pt-BR")||a.name.localeCompare(b.name,"pt-BR"));
+  const groups=[]; list.forEach(s=>{const k=s.category||"Sem categoria"; const g=groups.find(x=>x.k===k); g?g.items.push(s):groups.push({k,items:[s]});});
+  const inactiveCount=catalog.filter(s=>s.active===false).length;
+  const startNew=()=>setEdit({id:null,name:q.trim(),category:"",division:div==="all"?"performance":div,rate_type:div==="finishing"?"qty":"hour",hours:"",rate:"",notes:"",active:true});
+  const save=async()=>{
+    if(!edit.name.trim()||saving) return;
+    const h=num(edit.hours), r=num(edit.rate);
+    const row={name:edit.name.trim(),category:edit.category||null,division:edit.division,rate_type:edit.rate_type,hours:isFinite(h)?h:0,rate:edit.rate===""||!isFinite(r)?null:r,notes:edit.notes.trim()||null,active:!!edit.active};
+    setSaving(true);
+    try{ edit.id?await onUpdate(edit.id,row):await onAdd(row); setEdit(null); }finally{ setSaving(false); }
+  };
+  const del=async()=>{ if(!edit?.id||!window.confirm(`Excluir "${edit.name}" do catálogo? Tarefas já criadas não mudam.`)) return; await onDelete(edit.id); setEdit(null); };
+  const tab=(id,label)=><button key={id} onClick={()=>setDiv(id)} style={{padding:"5px 10px",borderRadius:99,border:`1px solid ${div===id?B.orange:B.gray600}`,background:div===id?`${B.orange}1f`:"none",color:div===id?B.orange:B.gray400,fontSize:11,cursor:"pointer"}}>{label}</button>;
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:9500,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",padding:MODAL_PAD,boxSizing:"border-box",fontFamily:"'Inter','Segoe UI',sans-serif"}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:16,width:"100%",maxWidth:560,maxHeight:"min(92vh, 100%)",display:"flex",flexDirection:"column",color:B.white,overflow:"hidden"}}>
+      <div style={{padding:"14px 16px",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700,letterSpacing:.2}}>Catálogo de serviços</div>
+          <div style={{fontSize:11,color:B.gray400,marginTop:2}}>Menu padrão. Por hora sem R$ próprio usa a MO vigente ({fmtBRL(defaultRate)}/h). Mudar aqui não altera OS já criadas.</div></div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",padding:4}}><IX s={16}/></button>
+      </div>
+      {edit?<div style={{padding:16,overflowY:"auto"}}>
+        <div style={{fontSize:12,color:B.gray400,marginBottom:12}}>{edit.id?"Editar serviço":"Novo serviço"}</div>
+        <div style={{marginBottom:10}}><div style={lab}>Nome *</div><input autoFocus value={edit.name} onChange={e=>setEdit(p=>({...p,name:e.target.value}))} placeholder="Ex.: Troca de óleo e filtro do motor" style={inp}/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          <div><div style={lab}>Divisão</div><select value={edit.division} onChange={e=>setEdit(p=>({...p,division:e.target.value}))} style={inp}>{["performance","finishing","both"].map(d=><option key={d} value={d}>{svcDivLabel[d]}</option>)}</select></div>
+          <div><div style={lab}>Categoria</div><select value={edit.category||""} onChange={e=>setEdit(p=>({...p,category:e.target.value}))} style={inp}><option value="">Sem categoria</option>{catsFor(edit.division).map(c=><option key={c.id} value={c.id}>{c.id}</option>)}</select></div>
+          <div><div style={lab}>Cobrança</div><select value={edit.rate_type} onChange={e=>setEdit(p=>({...p,rate_type:e.target.value}))} style={inp}><option value="hour">Por hora</option><option value="qty">Por unidade</option></select></div>
+          <div><div style={lab}>{edit.rate_type==="qty"?"Quantidade padrão":"Horas estimadas"}</div><input type="number" inputMode="decimal" value={edit.hours} onChange={e=>setEdit(p=>({...p,hours:e.target.value}))} placeholder={edit.rate_type==="qty"?"1":"0"} style={inp}/></div>
+          <div style={{gridColumn:"1 / -1"}}><div style={lab}>{edit.rate_type==="qty"?"R$ por unidade":"R$ por hora (vazio = MO padrão)"}</div><input type="number" inputMode="decimal" value={edit.rate} onChange={e=>setEdit(p=>({...p,rate:e.target.value}))} placeholder={edit.rate_type==="qty"?"0,00":`padrão ${fmtR2(defaultRate)}`} style={inp}/></div>
+        </div>
+        <div style={{marginBottom:10}}><div style={lab}>Observação interna</div><input value={edit.notes||""} onChange={e=>setEdit(p=>({...p,notes:e.target.value}))} placeholder="Ex.: preço varia com o carro; orçar caso a caso" style={inp}/></div>
+        <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:B.gray300,marginBottom:14,cursor:"pointer"}}><input type="checkbox" checked={!!edit.active} onChange={e=>setEdit(p=>({...p,active:e.target.checked}))}/> Ativo (aparece nas sugestões)</label>
+        <div style={{fontSize:11,color:B.gray400,marginBottom:14}}>Estimativa: {svcEstLabel({...edit,hours:num(edit.hours)||0,rate:edit.rate===""?null:num(edit.rate)},defaultRate)}</div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={save} disabled={!edit.name.trim()||saving} style={{flex:1,padding:"10px 0",borderRadius:9,background:B.orange,border:"none",color:B.white,fontWeight:700,cursor:"pointer",fontSize:13,opacity:edit.name.trim()&&!saving?1:.5}}>{saving?"Salvando...":"Salvar"}</button>
+          {edit.id&&<button onClick={del} style={{padding:"10px 14px",borderRadius:9,background:"none",border:`1px solid ${B.red}66`,color:B.red,cursor:"pointer",display:"flex",alignItems:"center"}}><ITrash s={14}/></button>}
+          <button onClick={()=>setEdit(null)} style={{padding:"10px 14px",borderRadius:9,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontSize:13}}>Voltar</button>
+        </div>
+      </div>:<>
+        <div style={{padding:"12px 16px",borderBottom:`1px solid ${B.gray700}`,flexShrink:0}}>
+          <div style={{display:"flex",gap:8,marginBottom:10}}>
+            <input value={q} onChange={e=>setQ(e.target.value)} type="search" placeholder={`Buscar entre ${catalog.length} serviços`} style={{...inp,flex:1}}/>
+            <button onClick={startNew} style={{padding:"8px 12px",borderRadius:8,background:B.orange,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>+ Novo</button>
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+            {tab("performance","Performance")}{tab("finishing","Finishing")}{tab("all","Todos")}
+            {inactiveCount>0&&<label style={{marginLeft:"auto",fontSize:11,color:B.gray400,display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}><input type="checkbox" checked={showInactive} onChange={e=>setShowInactive(e.target.checked)}/> inativos ({inactiveCount})</label>}
+          </div>
+        </div>
+        <div style={{overflowY:"auto",padding:"6px 16px 16px"}}>
+          {!list.length&&<div style={{fontSize:12,color:B.gray500,padding:"20px 0",textAlign:"center"}}>Nenhum serviço{nq?" para essa busca":""}.</div>}
+          {groups.map(g=><div key={g.k} style={{marginTop:10}}>
+            <div style={{fontSize:10,color:CAT_MAP[g.k]||CAT_MAP_FINISHING[g.k]||B.gray500,textTransform:"uppercase",letterSpacing:1.2,marginBottom:4}}>{g.k} <span style={{color:B.gray600}}>{g.items.length}</span></div>
+            {g.items.map(s=><div key={s.id} onClick={()=>setEdit({...s,category:s.category||"",hours:s.hours?String(s.hours):"",rate:s.rate!=null?String(s.rate):"",notes:s.notes||""})}
+              style={{padding:"8px 0",borderBottom:`1px solid ${B.gray700}`,cursor:"pointer",opacity:s.active===false?.45:1}}>
+              <div style={{fontSize:13,color:B.white,lineHeight:1.35}}>{s.name}</div>
+              <div style={{fontSize:11,color:B.gray500,marginTop:2}}>{[svcEstLabel(s,defaultRate),s.division!=="performance"?svcDivLabel[s.division]:null,s.notes].filter(Boolean).join(" · ")}</div>
+            </div>)}
+          </div>)}
+        </div>
+      </>}
+    </div>
+  </div>,document.body);
+}
+
 function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
   const cats=isFD?CATEGORIES_FINISHING:CATEGORIES;
   const [label,setLabel]=useState("");
   const [category,setCategory]=useState("");
   const [hours,setHours]=useState("");
   const [rate,setRate]=useState("");
+  const [pickType,setPickType]=useState(null); // tipo de cobrança vindo do catálogo, quando difere do padrão da divisão
   const [outsourced,setOutsourced]=useState(false);
   const [isDone,setIsDone]=useState(false);
   const [doneDate,setDoneDate]=useState(()=>todayLocal());
   const [mats,setMats]=useState([]);
   const [saving,setSaving]=useState(false);
   const num=v=>parseFloat(String(v||"").replace(",","."))||0;
-  const effRate=rate!==""?num(rate):Number(defaultRate||0);
+  const isQty=pickType?pickType==="qty":isFD;
+  const effRate=rate!==""?num(rate):(isQty&&!isFD?0:Number(defaultRate||0));
   const labor=num(hours)*effRate;
   const matTotal=mats.reduce((s,m)=>s+num(m.cost)*(1+(m.markup===""?50:num(m.markup))/100)*(num(m.qty)||1),0);
   const inp={padding:"8px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box",width:"100%"};
@@ -14776,7 +14901,8 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
     if(!label.trim()||saving) return;
     setSaving(true);
     const extra={
-      hours:num(hours)||(isFD?1:0),
+      hours:num(hours)||(isQty?1:0),
+      ...(pickType&&pickType!==(isFD?"qty":"hour")?{rateType:pickType}:{}),
       ratePerHour:rate!==""?num(rate):null,
       outsourced,
       ...(isDone?{done:true,completedAt:new Date((doneDate||todayLocal())+"T12:00:00").toISOString()}:{}),
@@ -14791,12 +14917,13 @@ function NewTaskModal({isFD,defaultRate,onSave,onClose}) {
         <div style={{fontSize:16,fontWeight:900,flex:1}}>Nova tarefa</div>
         <button onClick={onClose} style={{background:"none",border:"none",color:B.gray400,cursor:"pointer",fontSize:18}}>✕</button>
       </div>
-      <div style={{marginBottom:10}}><div style={lab}>Tarefa *</div><input autoFocus value={label} onChange={e=>setLabel(e.target.value)} placeholder="Ex.: Trocar kit de embreagem" style={inp}/></div>
+      <div style={{marginBottom:10}}><div style={lab}>Tarefa *</div><SvcPickInput autoFocus value={label} onChange={setLabel} division={isFD?"finishing":"performance"} defaultRate={defaultRate} placeholder="Digite para buscar no catálogo ou escreva livre" style={inp}
+        onPick={sv=>{setLabel(sv.name);if(sv.category&&cats.some(c=>c.id===sv.category))setCategory(sv.category);const t=sv.rate_type||"hour";setPickType(t);setHours(sv.hours?String(sv.hours):(t==="qty"?"1":""));setRate(sv.rate!=null?String(sv.rate):"");}}/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
         <div><div style={lab}>Categoria</div>
           <select value={category} onChange={e=>setCategory(e.target.value)} style={inp}><option value="">Sem categoria</option>{cats.map(c=><option key={c.id} value={c.id}>{c.id}</option>)}</select></div>
-        <div><div style={lab}>{isFD?"Quantidade":"Horas"}</div><input type="number" inputMode="decimal" value={hours} onChange={e=>setHours(e.target.value)} placeholder={isFD?"1":"0"} style={inp}/></div>
-        <div><div style={lab}>{isFD?"R$ por unidade":"R$ por hora"}</div><input type="number" inputMode="decimal" value={rate} onChange={e=>setRate(e.target.value)} placeholder={defaultRate?`padrão ${defaultRate}`:"padrão"} style={inp}/></div>
+        <div><div style={lab}>{isQty?"Quantidade":"Horas"}</div><input type="number" inputMode="decimal" value={hours} onChange={e=>setHours(e.target.value)} placeholder={isQty?"1":"0"} style={inp}/></div>
+        <div><div style={lab}>{isQty?"R$ por unidade":"R$ por hora"}</div><input type="number" inputMode="decimal" value={rate} onChange={e=>setRate(e.target.value)} placeholder={isQty&&!isFD?"0,00":defaultRate?`padrão ${defaultRate}`:"padrão"} style={inp}/></div>
         <div style={{display:"flex",alignItems:"flex-end"}}>
           <button onClick={()=>setOutsourced(o=>!o)} style={{width:"100%",padding:"9px 10px",borderRadius:8,border:`1px solid ${outsourced?"#a78bfa":B.gray600}`,background:outsourced?"#a78bfa22":"none",color:outsourced?"#c4b5fd":B.gray300,fontWeight:700,fontSize:12,cursor:"pointer"}}>{outsourced?"✓ Terceirizado":"Terceirizar"}</button>
         </div>
@@ -17875,6 +18002,8 @@ function MainApp() {
   const [vehicleOwners, setVehicleOwners]=useState([]);
   const [osHistory, setOsHistory]=useState([]);
   const [defaultRate,setDR]=useState(0);
+  const [svcCatalog,setSvcCatalog]=useState([]);
+  const [showSvcCatalog,setShowSvcCatalog]=useState(false);
   const [expenses,setExpenses]=useState([]);
   const [internalTransfers,setInternalTransfers]=useState([]);
   const [transfersLoaded,setTransfersLoaded]=useState(false);
@@ -18035,6 +18164,7 @@ function MainApp() {
       db.loadInternalTransfers().then(r=>{setInternalTransfers(r);setTransfersLoaded(true);}).catch(()=>{});
       db.loadAppointments().then(setAppts).catch(()=>{});
       db.loadQuotes().then(setQuotes).catch(()=>{});
+      db.getServiceCatalog().then(setSvcCatalog).catch(()=>{});
       db.loadAllClientVehicleNotes().then(setAllClientNotes).catch(()=>{});
       db.loadCalendarEvents().then(setCalEvents).catch(()=>{});
       db.loadReminders().then(setReminders).catch(()=>{});
@@ -19018,6 +19148,10 @@ function MainApp() {
       toast_(`R$/h atualizado: ${fmtBRL(r)} ✓${frozen?` · ${frozen} tarefas existentes mantêm ${fmtBRL(old)}`:""}`);
     }catch(e){errToast(e);}
   };
+  // ── Catálogo de serviços
+  const svcAdd=async row=>{ try{ const r=await db.addServiceCatalog(row); setSvcCatalog(p=>[...p,r]); toast_("Serviço adicionado ao catálogo"); }catch(e){errToast(e);} };
+  const svcUpdate=async(id,patch)=>{ try{ const r=await db.updateServiceCatalog(id,patch); setSvcCatalog(p=>p.map(x=>x.id===id?r:x)); toast_("Catálogo atualizado"); }catch(e){errToast(e);} };
+  const svcDelete=async id=>{ try{ await db.deleteServiceCatalog(id); setSvcCatalog(p=>p.filter(x=>x.id!==id)); toast_("Serviço removido do catálogo"); }catch(e){errToast(e);} };
   const saveCompany=async info=>{
     setCompany(info);
     try{ await db.setCompanyInfo(info); toast_("Dados da empresa salvos ✓"); }catch(e){errToast(e);}
@@ -19691,6 +19825,7 @@ function MainApp() {
     return(<div>
       <div style={{fontSize:22,fontWeight:900,color:B.white,letterSpacing:-.5,marginBottom:20}}>Mais</div>
       {(adminRole==="owner"||adminRole==="admin")&&<Item icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>} label="Calendário" sub="Lembretes, tarefas, férias, manutenções e entregas" color={B.blue} onClick={()=>goSection("calendario")}/>}
+      {(adminRole==="owner"||adminRole==="admin")&&<Item icon={<Ic n="list" s={18} c={B.orange}/>} label="Catálogo de serviços" sub={`Menu padrão: ${svcCatalog.filter(x=>x.active!==false).length} serviços, horas e valores`} color={B.orange} onClick={()=>setShowSvcCatalog(true)}/>}
       {/* Theme — available to all */}
       <Item icon={themeLabel.split(" ")[0]} label="Tema do app" sub={themeLabel} color={B.gray400} onClick={toggleTheme} right={<span style={{fontSize:12,color:B.gray400,fontWeight:700}}>{themeLabel}</span>}/>
       {/* Owner-only items */}
@@ -19750,7 +19885,7 @@ function MainApp() {
     }
   };
   const creditCtx={clientCredits,applyClientCredit};
-  return (<CreditCtx.Provider value={creditCtx}><div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
+  return (<CreditCtx.Provider value={creditCtx}><SvcCatalogCtx.Provider value={svcCatalog}><div key={theme} style={{height:"100%",overflow:"hidden",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,display:"flex"}}>
     {!online&&<div style={{position:"fixed",top:"calc(env(safe-area-inset-top) + 34px)",left:0,right:0,zIndex:2000,display:"flex",justifyContent:"center",pointerEvents:"none"}}><div style={{display:"inline-flex",alignItems:"center",gap:7,background:"#b91c1c",color:"#fff",fontSize:11,fontWeight:700,letterSpacing:.3,padding:"6px 13px",borderRadius:99,boxShadow:"0 4px 16px rgba(0,0,0,.28)"}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 015.17-2.39"/><path d="M10.71 5.05A16 16 0 0122.58 9"/><path d="M1.42 9a15.91 15.91 0 014.7-2.88"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Sem conexão · alterações não estão sendo salvas</div></div>}
 
     {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
@@ -20404,6 +20539,7 @@ function MainApp() {
     </div>{/* end scroll container */}
 
     {modal&&<ShareModal {...modal} onClose={()=>setMod(null)}/>}
+    {showSvcCatalog&&<ServiceCatalogModal catalog={svcCatalog} defaultRate={defaultRate} onAdd={svcAdd} onUpdate={svcUpdate} onDelete={svcDelete} onClose={()=>setShowSvcCatalog(false)}/>}
     {showCfg&&<SettingsPanel defaultRate={defaultRate} onSaveRate={saveRate} company={company} onSaveCompany={saveCompany} onClose={()=>setSCfg(false)}/>}
     {fuelModal&&<FuelQuickModal vehicles={vehicles} tasks={tasks} onClose={()=>setFuelModal(false)} onAddFuel={async(vid,fuel)=>{
       const v=vehicles.find(x=>x.id===vid);
@@ -20771,5 +20907,5 @@ function MainApp() {
         </div>);
       })()}
     </>}
-  </div></CreditCtx.Provider>);
+  </div></SvcCatalogCtx.Provider></CreditCtx.Provider>);
 }

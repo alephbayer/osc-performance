@@ -12,6 +12,14 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] **Aleph:** usar o orçamento prévio nos próximos atendimentos e conferir o catálogo (`analises/catalogo-*.md`); apontar grupos errados
 - [ ] Depois das outras fontes: comparar com tempos de manual; decidir se leva para o app (sugestão de preço no orçamento, alerta de valor fora da faixa, botão iniciar/parar tarefa para medir tempo real)
 
+## Catálogo de serviços (menu padrão)
+- [x] Análise (2026-11-26): não havia catálogo; serviço era texto livre na OS, orçamento e agendamento. 670 tarefas da Performance com 650 nomes diferentes, preços muito variados para o mesmo serviço, 165 tarefas a R$ 380/h (padrão hoje R$ 420), 185 sem valor, 18 sem categoria
+- [x] Tabela `service_catalog` (migration 064), tela Mais > Catálogo de serviços (gestor e administrativo) e sugestão do catálogo ao digitar o nome na Nova tarefa, no orçamento e no agendamento. Valores são copiados para a tarefa; mudar o catálogo não altera OS antiga. Por hora sem R$ próprio usa a MO vigente (v2026.11.26.245)
+- [x] Carga inicial: 79 serviços do estudo (`~/OSC/orcamentos/dados/catalogo.json`, sem "Outros" e "Parafusos e consumíveis"), com horas medianas, categoria e observação (orçar caso a caso / candidato a preço de tabela). `source_key` = `estudo:<id>`
+- [ ] **Aleph:** revisar o catálogo no app: nomes, categorias, horas (ex.: "Diagnóstico e conferência" veio com 0,1 h; "Primeira partida e break-in" sem horas), e dar preço fechado aos candidatos a tabela
+- [ ] Conferir no app ao vivo: abrir o catálogo, criar/editar um serviço, escolher um na Nova tarefa (Performance e Finishing), no orçamento e no agendamento
+- [ ] Depois: padronizar nomes das tarefas antigas? (só com OK, mexe em dados de produção) e ícones ✕/✓ que ainda aparecem na Nova tarefa e em avisos
+
 ## Entregas 99 (99Entrega)
 - [x] Base: tabela `deliveries_99` (migration 058) e tela Compras > Entregas 99, registro manual com link, status e custo; chefes sem valores (v2026.11.23.198)
 - [ ] **Aleph:** cadastro da empresa em 99app.com/99-entrega (formulário: nome, telefone, CNPJ, e-mail) -> completar cadastro no Portal 99Entrega Empresas -> pedir acesso à API (no portal ou api-suporte@99app.com). Atenção: a 99 anuncia API/Portal para quem faz mais de 300 entregas/mês; abaixo disso indica o app. Sem mensalidade, paga por km

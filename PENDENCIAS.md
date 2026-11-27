@@ -126,6 +126,14 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] 2 itens de vendas antigas (antes de hoje) vieram do estoque sem baixa. Conferir o saldo desses produtos (dados de produção: só com OK)
 - [ ] Ideias: venda a prazo parcelada; recibo com logo; vendas no portal do cliente
 
+## Mercado Livre (sessão dedicada, 2026-11-27)
+- Funcionando: OAuth (conta "OSC STORE", token renova sozinho), cron `ml-sync-entregas` a cada 15 min (7h-20h), envios, previsões, avisos por push, vínculo com pedidos de compra
+- [x] O ML bloqueou `/items` para o app (403 "Resource deprecated"): a `ml-sync` não consulta mais anúncios (cada rodada perdia ~6 s). Sem miniatura; o link é montado pelo código (`produto.mercadolivre.com.br/MLB-...`). Também bloqueados sem token: `/items`, `/sites/MLB/search`, `/products` (v.282, função v38)
+- [x] Segurança: a função aceita a chave pública do app. Removida a ação `disconnect` (e o botão no app); `connect` só aceita a mesma conta já registrada (`ml_tokens.ml_user_id`); `sync` ignora chamadas com menos de 45 s da anterior. **Trocar de conta:** apagar a linha de `ml_tokens` no Supabase e reconectar
+- [x] Avisos de push sem emoji
+- Testado: deploy e uma rodada do sync (108 pedidos, sem aviso, 1 vínculo). **Não testado:** reconectar (pelo "reautorizar"), o bloqueio de conta diferente e o limite de 45 s
+- [ ] Sugestões em aberto: alerta para item entregue há mais de 7 dias sem destino (hoje 6 itens com mais de 14 dias); mostrar no app o aviso (`warn`) da última rodada automática; procurar outra fonte de foto do anúncio
+
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor
 - [ ] Subir o backup (zip de `backup-AAAA-MM-DD/`) para o local privado e confirmar

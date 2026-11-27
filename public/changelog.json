@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Vendas: preço de custo opcional no item da prateleira, usado na margem (item vinculado ao estoque usa o custo do estoque)"
+      },
+      {
+        "type": "feat",
         "text": "Vendas: venda a prazo com vencimento; entra em \"A receber\" e vai para o financeiro só ao clicar em Receber"
       },
       {

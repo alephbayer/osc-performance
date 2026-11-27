@@ -14246,7 +14246,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.27.279";
+const APP_VERSION = "2026.11.27.280";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17773,6 +17773,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
   const [editItem,setEditItem]=useState(null);
   const [sfName,setSfName]=useState("");
   const [sfPrice,setSfPrice]=useState("");
+  const [sfCost,setSfCost]=useState("");
   const [sfCat,setSfCat]=useState("outros");
   const [sfStockId,setSfStockId]=useState("");
   const [per,setPer]=useState("month"); // month | 30 | all | custom
@@ -17807,7 +17808,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
       return [...c,{...it,qty:1}];
     });
   }
-  const shelfToCart=item=>{const st=item.stock_item_id?stockById(item.stock_item_id):null;addToCart({key:"sh"+item.id,name:item.name,price:Number(item.price)||0,shelf_item_id:item.id,stock_item_id:st?st.id:null,cost:st?Number(st.costPrice)||0:null,kind:"item"});};
+  const shelfToCart=item=>{const st=item.stock_item_id?stockById(item.stock_item_id):null;addToCart({key:"sh"+item.id,name:item.name,price:Number(item.price)||0,shelf_item_id:item.id,stock_item_id:st?st.id:null,cost:st?Number(st.costPrice)||0:(item.cost!=null?Number(item.cost):null),kind:"item"});};
   const stockToCart=s=>addToCart({key:"st"+s.id,name:s.brand?`${s.brand} ${s.name}`:s.name,price:Math.round((Number(s.salePrice)||0)*100)/100,stock_item_id:s.id,cost:Number(s.costPrice)||0,kind:"item"});
   const svcToCart=sv=>{const q=Number(sv.hours||0)||(sv.rate_type==="qty"?1:0);addToCart({key:"sv"+sv.id,name:sv.name,price:Math.round(q*svcRate(sv,defaultRate)*100)/100,catalog_id:sv.id,cost:null,kind:"service"});};
   function removeFromCart(key){setCart(c=>c.filter(x=>x.key!==key));}
@@ -17830,12 +17831,12 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
 
   function openShelfForm(item=null){
     setEditItem(item);
-    setSfName(item?.name||"");setSfPrice(item?.price||"");setSfCat(item?.category||"outros");setSfStockId(item?.stock_item_id||"");
+    setSfName(item?.name||"");setSfPrice(item?.price||"");setSfCost(item?.cost!=null?String(item.cost):"");setSfCat(item?.category||"outros");setSfStockId(item?.stock_item_id||"");
     setShowShelfForm(true);
   }
   async function saveShelfItem(){
     if(!sfName.trim()||!sfPrice) return;
-    const data={name:sfName.trim(),price:Number(sfPrice),category:sfCat,stock_item_id:sfStockId||null};
+    const data={name:sfName.trim(),price:Number(sfPrice),cost:sfCost===""||!isFinite(Number(sfCost))?null:Number(sfCost),category:sfCat,stock_item_id:sfStockId||null};
     if(editItem) await onUpdateShelfItem(editItem.id,data);
     else await onAddShelfItem(data);
     setShowShelfForm(false);
@@ -18005,7 +18006,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
         <div key={item.id} style={{background:B.gray800,borderRadius:12,padding:"12px 14px",border:`1px solid ${B.gray700}`,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
           <div style={{flex:1}}>
             <div style={{fontWeight:700,fontSize:14,color:B.white}}>{item.name}</div>
-            <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{item.category} · {fmtBRL(Number(item.price))}{st?` · baixa do estoque: ${st.name} (${st.qty} un.)`:""}</div>
+            <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{item.category} · {fmtBRL(Number(item.price))}{!st&&item.cost!=null?` · custo ${fmtBRL(Number(item.cost))}`:""}{st?` · baixa do estoque: ${st.name} (${st.qty} un.)`:""}</div>
           </div>
           <button onClick={()=>openShelfForm(item)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:13}}><Ic n="note"/></button>
           <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}><Ic n="trash"/></button>
@@ -18014,7 +18015,11 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
         <div style={{width:"100%",maxWidth:window.innerWidth>=700?480:undefined,background:B.gray900,borderRadius:window.innerWidth>=700?20:"20px 20px 0 0",padding:"20px 16px",paddingBottom:window.innerWidth>=700?20:"calc(40px + env(safe-area-inset-bottom))",border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
           <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:16}}>{editItem?"Editar item":"Novo item"}</div>
           <input value={sfName} onChange={e=>setSfName(e.target.value)} placeholder="Nome do item" style={{...inp,background:B.gray800,marginBottom:8}}/>
-          <input type="number" value={sfPrice} onChange={e=>setSfPrice(e.target.value)} placeholder="Preço (R$)" style={{...inp,background:B.gray800,marginBottom:8}}/>
+          <div style={{display:"flex",gap:8,marginBottom:8}}>
+            <input type="number" inputMode="decimal" value={sfPrice} onChange={e=>setSfPrice(e.target.value)} placeholder="Preço de venda (R$)" style={{...inp,background:B.gray800,flex:1}}/>
+            <input type="number" inputMode="decimal" value={sfCost} onChange={e=>setSfCost(e.target.value)} placeholder={sfStockId?"Custo: do estoque":"Custo (opcional)"} disabled={!!sfStockId} style={{...inp,background:B.gray800,flex:1,opacity:sfStockId?.5:1}}/>
+          </div>
+          {!sfStockId&&Number(sfCost)>0&&Number(sfPrice)>0&&<div style={{fontSize:11,color:B.gray500,marginTop:-2,marginBottom:8}}>Margem {fmtBRL(Number(sfPrice)-Number(sfCost))} ({Math.round((Number(sfPrice)-Number(sfCost))/Number(sfPrice)*100)}%)</div>}
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
             {cats.map(c=><button key={c} onClick={()=>setSfCat(c)} style={chip(sfCat===c)}>{c}</button>)}
           </div>
@@ -18057,7 +18062,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
             ["A prazo em aberto",fmtBRL(pendingTotal),`${pendingAll.length} venda${pendingAll.length!==1?"s":""}`]].map(([l,v,s])=>(
             <div key={l}><div style={{...lab,color:AC,marginBottom:4}}>{l}</div><div style={{fontSize:17,fontWeight:300,letterSpacing:".03em",color:B.white}}>{v}</div>{s&&<div style={{fontSize:10,color:B.gray500,marginTop:1}}>{s}</div>}</div>))}
         </div>
-        {withCost.length<paidSales.length&&<div style={{fontSize:10,color:B.gray500,marginTop:8}}>Margem calculada sobre {withCost.length} de {paidSales.length} vendas (as antigas e itens de prateleira sem estoque não têm custo).</div>}
+        {withCost.length<paidSales.length&&<div style={{fontSize:10,color:B.gray500,marginTop:8}}>Margem calculada sobre {withCost.length} de {paidSales.length} vendas (vendas antigas e itens de prateleira sem custo informado ficam de fora).</div>}
         {top.length>0&&<div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${AC}22`}}>
           <div style={{...lab,marginBottom:6}}>Mais vendidos</div>
           {top.map(t=><div key={t.name} style={{display:"flex",gap:8,fontSize:12,color:B.gray300,marginBottom:3}}><span style={{flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</span><span style={{color:B.gray500}}>{t.qty} un.</span><span style={{minWidth:80,textAlign:"right"}}>{fmtBRL(t.val)}</span></div>)}

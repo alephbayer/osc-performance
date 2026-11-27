@@ -116,6 +116,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Migration 070: `sales` (client_id, status paid/pending, due_date, paid_at, discount, created_by), `sale_items` (stock_item_id, cost, kind item/service, catalog_id), `payments.sale_id`. Só colunas novas; vendas antigas ficam "paid"
 - [x] Uma função só (`registerSale`) para a aba Vendas e o "Vender no balcão"; `deleteSaleFull` estorna o pagamento (vendas antigas sem `sale_id`: acha pagamento sem OS de mesmo valor no mesmo dia) e devolve ao estoque (opcional)
 - [x] Evoluções: venda a prazo (entra em "A receber" e no financeiro só ao Receber), recibo PDF/WhatsApp, cliente do cadastro (aparece no card do cliente em Clientes), serviços do catálogo, preço editável, divisão Performance/Finishing, nº da venda, filtros, resumo com ticket/margem/mais vendidos (só gestor)
+- [x] Item de prateleira com preço de custo opcional (migration 071, `shelf_items.cost`); entra na margem. Vinculado ao estoque usa o custo do estoque (v2026.11.27.280)
 - [x] Administrativo acessa Vendas (sem resumo de valores do período nem margem)
 - [x] Financeiro: custo das peças vendidas (itens com custo) soma no custo; a prazo soma no "A receber (saldo aberto)". Relatório PDF do financeiro: vendas filtradas por divisão e só as recebidas
 - [ ] **Aleph:** testar no app: venda com item do estoque (saldo cai), excluir (saldo volta e some do financeiro), venda a prazo → Receber, recibo no celular. Testado aqui só build e o PDF do recibo

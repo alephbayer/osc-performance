@@ -1233,7 +1233,7 @@ function businessDaysInfo(now){
   return {total,elapsed};
 }
 // ─── Painel "A receber" (gestor): quem cobrar e quanto deve entrar ─────────────
-function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate) {
+function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate,sales=[]) {
   const byClient={};
   const get=(cid)=>{const k=cid||"_none";return byClient[k]||(byClient[k]={id:k,name:(clients.find(c=>c.id===cid)?.name)||"Sem cliente",items:[],collect:0,receive:0,closed:0,credit:0});};
   // OS abertas
@@ -1259,19 +1259,29 @@ function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCred
     c.items.push({key:"h"+h.id,kind:"closed",label:v?`${vehTitle(v)||""} ${v.plate?`· ${v.plate}`:""}`.trim():(h.vehicle_label||"OS fechada"),total,invested:total,paid,collect:owed,receive:owed});
     c.collect+=owed; c.receive+=owed; c.closed+=owed;
   });
+  // Vendas a prazo (menu Vendas)
+  (sales||[]).filter(s=>s.status==="pending").forEach(s=>{
+    const t=Math.round((Number(s.total)||0)*100)/100; if(t<0.01) return;
+    let c;
+    if(s.client_id) c=get(s.client_id);
+    else { const k="_s"+String(s.client_name||"").trim().toLowerCase(); c=byClient[k]||(byClient[k]={id:k,name:s.client_name||"Sem cliente",items:[],collect:0,receive:0,closed:0,credit:0}); }
+    const due=s.due_date?` · vence ${new Date(s.due_date+"T12:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}`:"";
+    c.items.push({key:"s"+s.id,kind:"sale",label:`Venda${s.sale_number?` nº ${s.sale_number}`:""}${due}`,total:t,invested:t,paid:0,collect:t,receive:t});
+    c.collect+=t; c.receive+=t;
+  });
   // crédito do cliente abate o saldo dele
   Object.values(byClient).forEach(c=>{
-    const cr=c.id==="_none"?0:(clientCredits||[]).filter(x=>x.clientId===c.id).reduce((s,x)=>s+Number(x.amount),0);
+    const cr=(c.id==="_none"||String(c.id).startsWith("_s"))?0:(clientCredits||[]).filter(x=>x.clientId===c.id).reduce((s,x)=>s+Number(x.amount),0);
     c.credit=Math.min(cr,c.receive);
     c.collect=Math.max(0,c.collect-cr); c.receive=Math.max(0,c.receive-cr);
   });
   const list=Object.values(byClient).filter(c=>c.receive>=0.01).sort((a,b)=>b.collect-a.collect||b.receive-a.receive);
   return {list,collect:list.reduce((s,c)=>s+c.collect,0),receive:list.reduce((s,c)=>s+c.receive,0),closed:list.reduce((s,c)=>s+Math.min(c.closed,c.collect),0)};
 }
-function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate,hide}) {
+function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate,hide,sales=[]}) {
   const [open,setOpen]=useState(null);
   const [showAll,setShowAll]=useState(false);
-  const r=useMemo(()=>computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate),[vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate]);
+  const r=useMemo(()=>computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate,sales),[vehicles,tasks,payments,osHistory,clients,clientCredits,defaultRate,sales]);
   const m=v=>hide?"••••":fmtBRL(v);
   const toExec=Math.max(0,r.receive-r.collect);
   const rows=showAll?r.list:r.list.slice(0,5);
@@ -1293,7 +1303,7 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:700,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
               <div style={{fontSize:10,color:B.gray500,marginTop:1}}>
-                {c.items.length} OS · previsão {m(c.receive)}{c.closed>0.005&&<span style={{color:B.red,fontWeight:700}}> · {m(c.closed)} fechada</span>}{c.credit>0.005&&<span style={{color:B.blue}}> · <Ic n="pay"/> {m(c.credit)} crédito abatido</span>}
+                {c.items.length} {c.items.every(i=>i.kind==="sale")?(c.items.length>1?"vendas":"venda"):"OS"} · previsão {m(c.receive)}{c.closed>0.005&&<span style={{color:B.red,fontWeight:700}}> · {m(c.closed)} fechada</span>}{c.credit>0.005&&<span style={{color:B.blue}}> · <Ic n="pay"/> {m(c.credit)} crédito abatido</span>}
               </div>
             </div>
             <div style={{textAlign:"right"}}>
@@ -1303,7 +1313,8 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
           </button>
           {open===c.id&&<div style={{padding:"0 14px 10px"}}>
             {c.items.map(it=>{
-              const closed=it.kind==="closed";
+              const sale=it.kind==="sale";
+              const closed=it.kind==="closed"||sale;
               const T=Math.max(it.total,0.01);
               const wPaid=Math.min(100,it.paid/T*100);
               const wCollect=Math.min(100-wPaid,it.collect/T*100);
@@ -1315,7 +1326,7 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
               return (<div key={it.key} style={{background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px",marginTop:8}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                   <span style={{fontSize:13,fontWeight:800,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.label}</span>
-                  <span style={{fontSize:10,fontWeight:800,color:closed?B.red:B.green,background:`${closed?B.red:B.green}18`,borderRadius:6,padding:"2px 8px",flexShrink:0}}>{closed?"OS FECHADA":"OS ABERTA"}</span>
+                  <span style={{fontSize:10,fontWeight:800,color:closed?B.red:B.green,background:`${closed?B.red:B.green}18`,borderRadius:6,padding:"2px 8px",flexShrink:0}}>{sale?"VENDA A PRAZO":closed?"OS FECHADA":"OS ABERTA"}</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:10}}>
                   <span style={{fontSize:11,color:B.gray400}}>Cobrar agora</span>
@@ -1331,7 +1342,7 @@ function ReceivablesPanel({vehicles,tasks,payments,osHistory,clients,clientCredi
                   {!closed&&col("A executar",toExec,B.gray600)}
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",marginTop:10,paddingTop:8,borderTop:`1px solid ${B.gray700}`,fontSize:11,color:B.gray400}}>
-                  <span>Total da OS</span><span style={{fontWeight:700,color:B.gray200}}>{m(it.total)}</span>
+                  <span>{sale?"Total da venda":"Total da OS"}</span><span style={{fontWeight:700,color:B.gray200}}>{m(it.total)}</span>
                 </div>
               </div>);
             })}
@@ -7337,7 +7348,8 @@ function AccountModal({vehicle,tasks,payments,defaultRate,onAddPayment,onDeleteP
   </div>,document.body);
 }
 
-function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder,onImportNote,onSellItem,onUseItem,employees=[]}) {
+function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onGenerateOrder,onImportNote,onSellItem,onUseItem,employees=[],hideValues=false}) {
+  // hideValues: chefes (isChief) não veem custo, markup, preço nem compras
   const [stkView,setStkView]=useState("list");
   const [showImport,setShowImport]=useState(false);
   const [regSuppliers,setRegSuppliers]=useState([]);
@@ -7377,7 +7389,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
     setShowAdd(false);
   };
 
-  if(stkView==="usage") return <StockUsageView employees={employees} onBack={()=>setStkView("list")}/>;
+  if(stkView==="usage") return <StockUsageView employees={employees} hideValues={hideValues} onBack={()=>setStkView("list")}/>;
   return (<div>
     {/* Filters */}
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
@@ -7393,7 +7405,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       {(search||filterType)&&<button onClick={()=>{setSearch("");setFT("");}} style={{padding:"7px 12px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray200,cursor:"pointer",fontSize:13}}>Limpar filtros</button>}
       <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
         {onUseItem&&<button onClick={()=>setStkView("usage")} style={{padding:"8px 14px",borderRadius:8,background:`${B.blue}18`,border:`1px solid ${B.blue}66`,color:B.blue,cursor:"pointer",fontWeight:700,fontSize:13}}>Consumo interno</button>}
-        {onImportNote&&<button onClick={()=>setShowImport(true)} style={{padding:"8px 14px",borderRadius:8,background:`${B.purple}18`,border:`1px solid ${B.purple}66`,color:B.purple,cursor:"pointer",fontWeight:700,fontSize:13}}><Ic n="download"/> Importar nota</button>}
+        {onImportNote&&!hideValues&&<button onClick={()=>setShowImport(true)} style={{padding:"8px 14px",borderRadius:8,background:`${B.purple}18`,border:`1px solid ${B.purple}66`,color:B.purple,cursor:"pointer",fontWeight:700,fontSize:13}}><Ic n="download"/> Importar nota</button>}
         <button onClick={()=>setShowAdd(p=>!p)} style={{padding:"8px 16px",borderRadius:8,background:B.purple,border:"none",color:B.white,cursor:"pointer",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>
           <IPlus s={14} c={B.white}/>Novo produto
         </button>
@@ -7412,15 +7424,15 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
           {k:"location",ph:"Localização (ex: Prateleira A3)",fl:"1 1 180px"},
           {k:"notes",ph:"Observação interna (opcional)",fl:"1 1 100%"},
           {k:"minQty",ph:"Qtd mínima (ex: 2)",fl:"0 0 150px",tp:"number"},
-          {k:"costPrice",ph:"Custo unitário (R$)",fl:"0 0 150px",tp:"number"},
-          {k:"markup",ph:"Markup (ex: 100%)",fl:"0 0 140px",tp:"number"},
+          ...(hideValues?[]:[{k:"costPrice",ph:"Custo unitário (R$)",fl:"0 0 150px",tp:"number"},
+          {k:"markup",ph:"Markup (ex: 100%)",fl:"0 0 140px",tp:"number"}]),
         ].map(f=><input key={f.k} value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} type={f.tp||"text"}
           style={{flex:f.fl,padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none"}}/>)}
       </div>
       {/* preview sale price */}
-      <div style={{marginTop:8,fontSize:12,color:B.gray400}}>
+      {!hideValues&&<div style={{marginTop:8,fontSize:12,color:B.gray400}}>
         Custo inicial: <b style={{color:B.white}}>{fmtBRL(form.costPrice||0)}</b> + markup {form.markup||0}% → Preço de venda: <b style={{color:B.amber}}>{fmtBRL(Number(form.costPrice||0)*(1+Number(form.markup||0)/100))}</b> · O custo será recalculado automaticamente ao lançar compras.
-      </div>
+      </div>}
       {/* Photo upload */}
       <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
         {form.photo?<img src={form.photo} alt="" style={{width:60,height:60,objectFit:"cover",borderRadius:8,border:`1px solid ${B.gray600}`}}/>:null}
@@ -7435,7 +7447,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
     {/* Stock list */}
     {filtered.length===0?<div style={{textAlign:"center",padding:"48px 0",color:B.gray400}}><div style={{fontSize:40,marginBottom:12}}><Ic n="pkg"/></div><div style={{fontWeight:700,color:B.gray200,marginBottom:4}}>Estoque vazio</div><div style={{fontSize:13}}>Adicione produtos clicando em "Novo produto".</div></div>
       :<div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {filtered.map(item=><StockRow key={item.id} item={item} salePrice={salePrice(item)} onLightbox={setLB} onOpen={()=>setOpenItem(item)}/>)}
+        {filtered.map(item=><StockRow key={item.id} item={item} hideValues={hideValues} salePrice={salePrice(item)} onLightbox={setLB} onOpen={()=>setOpenItem(item)}/>)}
       </div>}
 
     {lightbox&&<div style={{position:"fixed",inset:0,padding:MODAL_PAD,boxSizing:"border-box",background:"rgba(0,0,0,.95)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLB(null)}>
@@ -7454,7 +7466,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
       onUpdatePurchase={onUpdatePurchase}
       onDeletePurchase={onDeletePurchase}
       onGenerateOrder={onGenerateOrder}
-      onSellItem={onSellItem} onUseItem={onUseItem} employees={employees}
+      onSellItem={hideValues?null:onSellItem} onUseItem={onUseItem} employees={employees} hideValues={hideValues}
       onClose={()=>setOpenItem(null)}/>}
   </div>);
 }
@@ -7463,7 +7475,7 @@ function StockTab({stock,purchases,onAdd,onUpdate,onDelete,onAddPurchase,onUpdat
 const isStockLow=s=>{const m=s.minQty??2;return m>0&&(Number(s.qty)||0)<m;};
 
 // ─── Stock row (list view) ────────────────────────────────────────────────────
-function StockUsageView({employees=[],onBack}) {
+function StockUsageView({employees=[],onBack,hideValues=false}) {
   const [rows,setRows]=useState(null); const [per,setPer]=useState("month"); const [open,setOpen]=useState({}); const [err,setErr]=useState("");
   useEffect(()=>{ db.getStockUsage().then(setRows).catch(e=>{setErr(errMsg(e)||"Erro ao carregar");setRows([]);}); },[]);
   const now=new Date(); const mStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
@@ -7484,7 +7496,7 @@ function StockUsageView({employees=[],onBack}) {
     {err&&<div style={{color:B.red,fontSize:12,marginBottom:10}}>{err}</div>}
     {rows===null&&<div style={{color:B.gray500,fontSize:13}}>Carregando…</div>}
     {rows&&!groups.length&&<div style={{color:B.gray500,fontSize:13}}>Nenhum consumo registrado no período. Use "Uso interno / insumo" no produto do estoque.</div>}
-    {groups.length>0&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+    {groups.length>0&&!hideValues&&<div style={{background:B.gray800,border:`1px solid ${B.gray700}`,borderRadius:12,padding:"12px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
       <span style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500}}>Custo total consumido</span>
       <span style={{fontSize:18,fontWeight:300,letterSpacing:".04em",color:B.white}}>{fmtBRL(total)}</span>
     </div>}
@@ -7495,7 +7507,7 @@ function StockUsageView({employees=[],onBack}) {
             <div style={{fontSize:13,fontWeight:700,color:B.white}}>{g.name}</div>
             <div style={{fontSize:10.5,color:B.gray500,marginTop:2}}>{g.items.length} {g.items.length!==1?"retiradas":"retirada"} · {nf(g.qty)} un.</div>
           </div>
-          <span style={{fontSize:15,fontWeight:300,letterSpacing:".04em",color:B.blue}}>{fmtBRL(g.cost)}</span>
+          {!hideValues&&<span style={{fontSize:15,fontWeight:300,letterSpacing:".04em",color:B.blue}}>{fmtBRL(g.cost)}</span>}
           <span style={{fontSize:11,color:B.gray500,display:"inline-block",transition:"transform .2s",transform:o?"rotate(90deg)":"none"}}>▸</span>
         </div>
         {o&&<div style={{padding:"0 14px 12px",display:"flex",flexDirection:"column",gap:6}}>
@@ -7503,7 +7515,7 @@ function StockUsageView({employees=[],onBack}) {
             <span style={{fontSize:10,color:B.gray500,flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{fd(r.used_at)}</span>
             <span style={{flex:1,minWidth:0,fontSize:12,color:B.white,wordBreak:"break-word"}}>{r.stock_name}{r.note&&<span style={{color:B.gray500}}> · {r.note}</span>}</span>
             <span style={{fontSize:11,color:B.gray300,flexShrink:0}}>{nf(r.qty)} un.</span>
-            <span style={{fontSize:11,color:B.gray500,flexShrink:0,minWidth:60,textAlign:"right"}}>{fmtBRL((Number(r.qty)||0)*(Number(r.unit_cost)||0))}</span>
+            {!hideValues&&<span style={{fontSize:11,color:B.gray500,flexShrink:0,minWidth:60,textAlign:"right"}}>{fmtBRL((Number(r.qty)||0)*(Number(r.unit_cost)||0))}</span>}
           </div>)}
         </div>}
       </div>); })}
@@ -7511,7 +7523,7 @@ function StockUsageView({employees=[],onBack}) {
   </div>);
 }
 
-function StockRow({item,salePrice,onLightbox,onOpen}) {
+function StockRow({item,salePrice,onLightbox,onOpen,hideValues=false}) {
   const low=isStockLow(item);
   return (<div style={{background:B.gray800,borderRadius:10,border:`1px solid ${low?B.red+"55":B.gray700}`,padding:"10px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} onClick={onOpen}>
     {/* photo thumb */}
@@ -7543,11 +7555,11 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
     </div>
 
     {/* prices */}
-    <div style={{display:"flex",gap:14,flexShrink:0}}>
+    {!hideValues&&<div style={{display:"flex",gap:14,flexShrink:0}}>
       <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.gray400}}>Custo</div><div style={{fontSize:13,fontWeight:700,color:B.white}}>{fmtBRL(item.costPrice)}</div></div>
       <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.gray400}}>Markup</div><div style={{fontSize:13,fontWeight:700,color:B.white}}>{item.markup}%</div></div>
       <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.amber}}>Venda</div><div style={{fontSize:13,fontWeight:800,color:B.amber}}>{fmtBRL(salePrice)}</div></div>
-    </div>
+    </div>}
 
     {/* open button */}
     <button onClick={e=>{e.stopPropagation();onOpen();}} style={{padding:"7px 13px",borderRadius:8,background:B.purpleBg,border:`1px solid ${B.purple}44`,color:B.purple,cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
@@ -7557,7 +7569,7 @@ function StockRow({item,salePrice,onLightbox,onOpen}) {
 }
 
 // ─── Stock product panel: product data + purchase history ─────────────────────
-function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder,onSellItem,onUseItem,employees=[]}) {
+function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPurchase,onUpdatePurchase,onDeletePurchase,onClose,onGenerateOrder,onSellItem,onUseItem,employees=[],hideValues=false}) {
   const [form,setForm]=useState({
     name:item.name, brand:item.brand, type:item.type, location:item.location||"", notes:item.notes||"",
     minQty:String(item.minQty??2), costPrice:String(item.costPrice), markup:String(item.markup), photo:item.photo||"",
@@ -7599,10 +7611,10 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
               <div style={{fontSize:10,color:B.purple,fontWeight:700,textTransform:"uppercase"}}>Saldo atual</div>
               <div style={{fontSize:22,fontWeight:900,color:B.white}}>{item.qty}</div>
             </div>
-            <div style={{flex:1,background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:10,padding:"10px 14px",textAlign:"center"}}>
+            {!hideValues&&<div style={{flex:1,background:B.amberBg,border:`1px solid ${B.amber}44`,borderRadius:10,padding:"10px 14px",textAlign:"center"}}>
               <div style={{fontSize:10,color:B.amber,fontWeight:700,textTransform:"uppercase"}}>Preço de venda</div>
               <div style={{fontSize:18,fontWeight:900,color:B.amber}}>{fmtBRL(salePrice)}</div>
-            </div>
+            </div>}
           </div>
 
           {/* Product data form */}
@@ -7636,7 +7648,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
                   style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
               </Field>
             </div>
-            <div style={{display:"flex",gap:8}}>
+            {!hideValues&&<><div style={{display:"flex",gap:8}}>
               <Field label="Custo unitário (R$)">
                 <input value={form.costPrice} onChange={e=>setForm(p=>({...p,costPrice:e.target.value}))} placeholder="0,00" type="number"
                   style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
@@ -7646,7 +7658,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
                   style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",width:"100%",boxSizing:"border-box"}}/>
               </Field>
             </div>
-            <div style={{fontSize:11.5,color:B.gray500}}>O custo unitário é atualizado automaticamente como a <b style={{color:B.gray300}}>média ponderada</b> das compras registradas. O preço de venda = custo médio × (1 + markup%).</div>
+            <div style={{fontSize:11.5,color:B.gray500}}>O custo unitário é atualizado automaticamente como a <b style={{color:B.gray300}}>média ponderada</b> das compras registradas. O preço de venda = custo médio × (1 + markup%).</div></>}
             <Field label="Foto do produto">
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 {form.photo?<img src={form.photo} alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,border:`1px solid ${B.gray600}`}}/>:null}
@@ -7751,8 +7763,8 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
               </button>
           </div>)})()}
 
-          {/* Purchase history */}
-          <div style={{marginTop:24,paddingTop:18,borderTop:`1px solid ${B.gray700}`}}>
+          {/* Purchase history (com valores: oculto para chefes) */}
+          {!hideValues&&<div style={{marginTop:24,paddingTop:18,borderTop:`1px solid ${B.gray700}`}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
               <div style={{fontSize:11,color:B.green,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>Histórico de compras</div>
               <button onClick={()=>setShowPF(p=>!p)} style={{padding:"6px 12px",borderRadius:8,background:B.greenBg,border:`1px solid ${B.green}44`,color:B.green,cursor:"pointer",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",gap:5}}>
@@ -7766,7 +7778,7 @@ function StockProductPanel({item,purchases,suppliers=[],onSave,onDelete,onAddPur
               :<div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {sortedPurchases.map(p=><PurchaseRow suppliers={suppliers} key={p.id} purchase={p} onUpdate={onUpdatePurchase} onDelete={onDeletePurchase}/>)}
               </div>}
-          </div>
+          </div>}
         </div>
       </div>
     </div>
@@ -8742,7 +8754,7 @@ function OsGroupedView({groups,sortVehicles,tasks,employees,clients,stock,defaul
 }
 
 // ─── Clients Monitor Tab ──────────────────────────────────────────────────────
-function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete,osHistory=[],payments=[],onAddClient,isOwner=false}) {
+function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdateName,onUpdatePhone,onUpdateEmail,onDelete,osHistory=[],payments=[],onAddClient,isOwner=false,sales=[]}) {
   const [search,setSearch]=useState("");
   const [open,setOpen]=useState(null);
   const [confirmDel,setConfirmDel]=useState(null);
@@ -8888,6 +8900,15 @@ function ClientsMonitorTab({clients,vehicles,tasks,employees,defaultRate,onUpdat
             </div>}
 
             <ClientPaymentsHistory cliV={cliVs} payments={payments} osHistory={osHistory}/>
+            {(()=>{const cs=sales.filter(x=>x.client_id===cli.id);if(!cs.length) return null;return(<div style={{marginTop:12}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500,marginBottom:6}}>Compras no balcão</div>
+              {cs.map(x=><div key={x.id} style={{display:"flex",gap:8,alignItems:"baseline",background:B.gray900,borderRadius:8,padding:"7px 10px",marginBottom:4,fontSize:12}}>
+                <span style={{fontSize:10,color:B.gray500,flexShrink:0}}>{new Date(x.sold_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"})}</span>
+                <span style={{flex:1,minWidth:0,color:B.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.description||(x.sale_items||[]).map(i=>i.name).join(", ")||"Venda"}</span>
+                {x.status==="pending"&&<span style={{fontSize:9,fontWeight:700,color:B.amber,flexShrink:0}}>A PRAZO</span>}
+                <span style={{color:B.gray300,flexShrink:0}}>{fmtBRL(x.total)}</span>
+              </div>)}
+            </div>);})()}
             {/* Action buttons */}
             <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
               {cli.phone&&<button onClick={()=>{ const d=cleanPhone(cli.phone); window.open(`https://wa.me/${d.length<=11?"55"+d:d}`,"_blank"); }} style={{padding:"7px 14px",borderRadius:8,background:B.wa,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
@@ -12581,7 +12602,7 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   };
 
   const divPayments=payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt)&&p.vehicleId); // OS payments only
-  const filteredSales=finDiv==="performance"?sales.filter(s=>inRange(s.soldAt||s.sold_at)):[];
+  const filteredSales=sales.filter(s=>(s.division||"performance")===finDiv&&s.status!=="pending"&&inRange(s.paid_at||s.soldAt||s.sold_at));
   const totalOSRevenue=divPayments.reduce((s,p)=>s+Number(p.amount),0);
   const totalSalesRevenue=filteredSales.reduce((s,sale)=>s+Number(sale.total),0);
   const totalRevenue=totalOSRevenue+totalSalesRevenue;
@@ -12775,9 +12796,13 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
 
   // Summary totals — revenue uses date filter, receivable is always global
   const totalRevenue=allDivPayments.reduce((s,p)=>s+Number(p.amount),0); // date-filtered
-  const totalCost=divTasks.filter(t=>t.done).reduce((s,t)=>s+taskCost(t,defaultRate).mat,0);
+  // Vendas de balcão: custo das peças vendidas (itens com custo gravado) entra no custo; venda a prazo entra no a receber
+  const divSales=sales.filter(s=>(s.division||"performance")===finDiv);
+  const salesCost=divSales.filter(s=>s.status!=="pending"&&inRange(s.paid_at||s.sold_at)).reduce((a,s)=>a+(s.sale_items||[]).reduce((b,i)=>b+(i.cost!=null?Number(i.cost)*(Number(i.qty)||0):0),0),0);
+  const salesPending=divSales.filter(s=>s.status==="pending").reduce((a,s)=>a+Number(s.total||0),0);
+  const totalCost=divTasks.filter(t=>t.done).reduce((s,t)=>s+taskCost(t,defaultRate).mat,0)+salesCost;
   const totalProfit=totalRevenue-totalCost;
-  const totalReceivable=vehicleRows.reduce((s,r)=>s+Math.max(0,r.balance),0); // always global
+  const totalReceivable=vehicleRows.reduce((s,r)=>s+Math.max(0,r.balance),0)+salesPending; // always global
   const totalPaidAll=vehicleRows.reduce((s,r)=>s+r.paid,0);
 
   return (<div>
@@ -12822,7 +12847,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:24}}>
       {[
         {label:"Receita (pagamentos)",value:totalRevenue,color:B.blue,bg:B.blueBg,icon:<IChart s={16} c={B.blue}/>},
-        {label:"Custo (material)",value:totalCost,color:B.red,bg:`${B.red}18`,icon:<IBox s={16} c={B.red}/>},
+        {label:salesCost>0?"Custo (material e vendas)":"Custo (material)",value:totalCost,color:B.red,bg:`${B.red}18`,icon:<IBox s={16} c={B.red}/>},
         {label:"Lucro",value:totalProfit,color:B.green,bg:B.greenBg,icon:<ITrendUp s={16} c={B.green}/>},
         {label:"A receber (saldo aberto)",value:totalReceivable,color:B.amber,bg:B.amberBg,icon:<IBank s={16} c={B.amber}/>},
       ].map(c=>(<div key={c.label} style={{background:c.bg,border:`1px solid ${c.color}44`,borderRadius:12,padding:"14px 16px"}}>
@@ -14144,7 +14169,7 @@ const ADMIN_SESSION_KEY = "osc_admin_session";
 // owner: sees everything. admin: everything except Financeiro. supervisor: only Mecânicos + Estoque.
 const ROLE_CONFIG = {
   owner:      { label:"Gestor",            tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","finance","purchases","investments","sales","materiais","entregas99","presenca","appointments","partners","suppliers","tools","insumos"], envVar:"VITE_OWNER_PASSWORD" },
-  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","materiais","entregas99","presenca","appointments","partners","suppliers","tools","insumos"],           envVar:"VITE_ADMIN_PASSWORD" },
+  admin:      { label:"Administrativo",    tabs:["mechanics","clients","finishing","stock","vehicles","clientsMonitor","purchases","investments","sales","materiais","entregas99","presenca","appointments","partners","suppliers","tools","insumos"],           envVar:"VITE_ADMIN_PASSWORD" },
   supervisor: { label:"Chefe de Oficina",  tabs:["mechanics","stock","investments","materiais","entregas99","presenca","partners","tools"],                                                                        envVar:"VITE_SUPERVISOR_PASSWORD" },
   painter:    { label:"Chefe de Pintura",  tabs:["finishing","stock","investments","materiais","entregas99","presenca","partners","tools"], envVar:"VITE_PAINTER_PASSWORD" },
 };
@@ -14221,7 +14246,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.26.278";
+const APP_VERSION = "2026.11.27.279";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17616,50 +17641,191 @@ function PresencaTab({employees, isOwner=false}) {
   </div>);
 }
 
-function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale,onUpdateSale}){
+// ─── Vendas: recibo em PDF ────────────────────────────────────────────────────
+async function generateSaleReceiptPDF({sale,client,company,noSave=false}){
+  const jsPDFCtor=await loadJsPDF();
+  const doc=new jsPDFCtor({unit:"mm",format:"a4"});
+  const W=210, H=297, mx=20, cw=W-mx*2;
+  const ink=[28,28,30], body=[70,70,75], gray=[130,130,135], line=[224,224,226];
+  const isFD=(sale.division||"performance")==="finishing";
+  const accent=isFD?[168,85,247]:[221,139,52];
+  const divisionName=isFD?"OSC Finishing Division":(company?.name||"OSC Group");
+  const pending=sale.status==="pending";
+  const nf=n=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const R=n=>"R$ "+nf(n);
+  const cap=(t,x,yy,size,color,op={})=>{doc.setFont("helvetica","normal");doc.setFontSize(size);doc.setTextColor(...color);const tx=String(t).toUpperCase();const cs=op.cs||0.8;let px=x;if(op.align==="right")px=x-doc.getTextWidth(tx)-cs*(tx.length-1);doc.text(tx,px,yy,{charSpace:cs});};
+  const hair=(yy,c=line,w=0.2,x1=mx,x2=W-mx)=>{doc.setDrawColor(...c);doc.setLineWidth(w);doc.line(x1,yy,x2,yy);};
+  const serif=(t,x,yy,sz,op={},color=ink)=>{doc.setFont("times","normal");doc.setFontSize(sz);doc.setTextColor(...color);doc.text(t,x,yy,op);};
+  const txt=(t,x,yy,{b=false,s=9,c=body,al}={})=>{doc.setFont("helvetica",b?"bold":"normal");doc.setFontSize(s);doc.setTextColor(...c);doc.text(t,x,yy,al?{align:al}:undefined);};
+  const fmtPh=v=>{ const d=String(v||"").replace(/\D/g,""); const n=(d.length>=12&&d.startsWith("55"))?d.slice(2):d; return n.length===11?`(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`:n.length===10?`(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`:String(v||""); };
+  const d14=String(company?.document||"").replace(/\D/g,"");
+  const cnpj=d14.length===14?`${d14.slice(0,2)}.${d14.slice(2,5)}.${d14.slice(5,8)}/${d14.slice(8,12)}-${d14.slice(12)}`:d14;
+  const contact=[company?.address,company?.phone&&`Tel: ${fmtPh(company.phone)}`,cnpj&&`CNPJ: ${cnpj}`].filter(Boolean).join("  ·  ");
+  const total=Number(sale.total)||0;
+  const items=sale.sale_items||[];
+  const sub=items.reduce((a,i)=>a+Number(i.price||0)*Number(i.qty||0),0);
+  const disc=Number(sale.discount)||Math.max(0,Math.round((sub-total)*100)/100);
+  const dt=new Date(sale.sold_at||Date.now());
+  const title=pending?"Comprovante de venda":"Recibo de venda";
+  doc.setFillColor(...accent); doc.rect(mx,20,10,0.9,"F");
+  cap(divisionName,mx,30,7.5,ink);
+  cap(`Emitido em ${fmtD()}`,W-mx,30,7,gray,{align:"right"});
+  if(contact) txt(doc.splitTextToSize(contact,cw)[0],mx,35,{s:7,c:gray});
+  serif(title,mx,54,28);
+  if(sale.sale_number) cap(`Nº ${sale.sale_number}`,W-mx,54,8,gray,{align:"right"});
+  let y=66; hair(y,ink,0.35); y+=10;
+  cap(pending?"Valor da venda":"Valor recebido",mx,y,6.5,gray); y+=12;
+  serif(R(total),mx,y,30); y+=8;
+  doc.setFont("times","italic"); doc.setFontSize(12); doc.setTextColor(...body);
+  const ext=doc.splitTextToSize(`(${extensoBRL(total)})`,cw); doc.text(ext,mx,y); y+=ext.length*5.2+8;
+  const who=client?.name||sale.client_name||"";
+  const para=pending
+    ?`Venda${who?` para ${who}`:""} no valor de ${R(total)}, a ser paga${sale.due_date?` até ${new Date(sale.due_date+"T12:00").toLocaleDateString("pt-BR")}`:" posteriormente"}.`
+    :`Recebemos${who?` de ${who}`:""} a importância de ${R(total)} (${extensoBRL(total)}), referente aos itens abaixo.`;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...body);
+  const pl=doc.splitTextToSize(para,cw); doc.text(pl,mx,y,{lineHeightFactor:1.5}); y+=pl.length*5.3+8;
+  // Itens
+  hair(y); y+=7;
+  cap("Item",mx,y,6.5,gray); cap("Qtd",mx+112,y,6.5,gray); cap("Unitário",mx+140,y,6.5,gray,{align:"right"}); cap("Total",W-mx,y,6.5,gray,{align:"right"}); y+=6;
+  items.forEach(i=>{
+    const nl=doc.splitTextToSize(String(i.name||""),104);
+    if(y+nl.length*4.6>H-80){ doc.addPage(); y=24; }
+    txt(nl,mx,y,{s:9.5,c:ink});
+    txt(String(Number(i.qty)||0),mx+112,y,{s:9.5});
+    txt(R(i.price),mx+140,y,{s:9.5,al:"right"});
+    txt(R(Number(i.price||0)*Number(i.qty||0)),W-mx,y,{s:9.5,c:ink,al:"right"});
+    y+=nl.length*4.6+2.4;
+  });
+  y+=2; hair(y); y+=8;
+  const row=(k,v,opt={})=>{ cap(k,mx,y,6.5,gray); txt(v,W-mx,y,{s:9.5,c:opt.c||ink,b:!!opt.b,al:"right"}); y+=8; };
+  if(disc>=0.01){ row("Subtotal",R(sub)); row("Desconto",`- ${R(disc)}`); }
+  row("Total",R(total),{b:true});
+  row("Data",isNaN(dt)?"":dt.toLocaleDateString("pt-BR"));
+  row("Forma de pagamento",pending?"A prazo":(payMethodLabel(sale.method)||"—"));
+  if(sale.description){ cap("Descrição",mx,y,6.5,gray); const nl=doc.splitTextToSize(sale.description,cw-50); txt(nl,W-mx,y,{s:9,al:"right"}); y+=nl.length*4.4+4; }
+  // Assinatura
+  y=Math.max(y+18,H-70);
+  const sx=W/2;
+  hair(y,ink,0.3,sx-45,sx+45);
+  doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(...ink); doc.text(divisionName,sx,y+6,{align:"center"});
+  if(cnpj){ doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray); doc.text(`CNPJ ${cnpj}`,sx,y+11,{align:"center"}); }
+  hair(H-16); cap(divisionName,mx,H-10,6.5,gray); cap(title,W-mx,H-10,6.5,gray,{align:"right"});
+  const fileName=`venda-${sale.sale_number||"avulsa"}-${String(sale.sold_at||"").slice(0,10)||new Date().toISOString().slice(0,10)}.pdf`;
+  if(!noSave) doc.save(fileName);
+  return {doc,fileName};
+}
+// Recibo da venda: PDF direto, ou compartilhar (celular) / abrir o WhatsApp do cliente
+async function saleReceipt({sale,client,company,wa=false}){
+  let out=null;
+  try{ out=await generateSaleReceiptPDF({sale,client,company,noSave:wa}); }
+  catch(e){ console.error(e); alert("Não foi possível gerar o recibo."); return; }
+  if(!wa) return;
+  const nome=String(client?.name||sale.client_name||"").trim().split(/\s+/)[0];
+  const pending=sale.status==="pending";
+  const text=[`Olá${nome?`, ${nome}`:""}!`,"",pending
+    ?`Segue o comprovante da sua compra${sale.sale_number?` (venda nº ${sale.sale_number})`:""}: *${fmtBRL(sale.total)}*${sale.due_date?`, para pagamento até ${new Date(sale.due_date+"T12:00").toLocaleDateString("pt-BR")}`:""}.`
+    :`Segue o recibo da sua compra${sale.sale_number?` (venda nº ${sale.sale_number})`:""}: *${fmtBRL(sale.total)}* (${payMethodLabel(sale.method)}).`,"","Obrigado!","OSC Group"].join("\n");
+  try{
+    const file=new File([out.doc.output("blob")],out.fileName,{type:"application/pdf"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],text}); return; }
+  }catch(e){ if(e&&e.name==="AbortError") return; }
+  out.doc.save(out.fileName);
+  const d=cleanPhone(client?.phone||"");
+  window.open(`https://wa.me/${d?(d.length<=11?"55"+d:d):""}?text=${encodeURIComponent(text)}`,"_blank");
+}
+
+// Cliente da venda: busca no cadastro ou nome livre
+function SaleClientPicker({clients,value,onChange,inputStyle}){
+  const [open,setOpen]=useState(false);
+  const q=(value.name||"").trim().toLowerCase();
+  const qd=q.replace(/\D/g,"");
+  const list=q&&!value.id?clients.filter(c=>(c.name||"").toLowerCase().includes(q)||(qd.length>=4&&cleanPhone(c.phone||"").includes(qd))).slice(0,6):[];
+  return (<div style={{position:"relative"}}>
+    <input value={value.name} onChange={e=>{onChange({id:null,name:e.target.value});setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),150)}
+      placeholder="Cliente: buscar no cadastro ou digitar o nome (opcional)" style={{...inputStyle,paddingRight:value.id?96:12}}/>
+    {value.id&&<span style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",display:"flex",alignItems:"center",gap:6}}>
+      <span style={{fontSize:9,fontWeight:700,letterSpacing:".14em",textTransform:"uppercase",color:"#06b6d4"}}>Cadastro</span>
+      <button onClick={()=>onChange({id:null,name:""})} style={{background:"none",border:"none",cursor:"pointer",color:B.gray400,padding:2}}><Ic n="x"/></button>
+    </span>}
+    {open&&list.length>0&&<div style={{position:"absolute",left:0,right:0,top:"100%",zIndex:20,marginTop:2,background:B.gray800,border:`1px solid ${B.gray600}`,borderRadius:8,overflow:"hidden",boxShadow:"0 8px 24px rgba(0,0,0,.4)"}}>
+      {list.map(c=><div key={c.id} onMouseDown={()=>{onChange({id:c.id,name:c.name||""});setOpen(false);}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,fontSize:13,color:B.white}}>
+        {c.name}{c.phone&&<span style={{fontSize:11,color:B.gray500,marginLeft:8}}>{c.phone}</span>}
+      </div>)}
+    </div>}
+  </div>);
+}
+
+function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,isOwner=false,company={},salePayments=()=>[],onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale,onReceiveSale,onUpdateSale}){
+  const AC="#06b6d4";
   const [view,setView]=useState("sell"); // sell | shelf | history
-  const [cart,setCart]=useState([]); // {id,name,price,qty,from_stock,stock_item_id}
+  const [cart,setCart]=useState([]); // {key,name,price,qty,stock_item_id,shelf_item_id,catalog_id,cost,kind}
+  const [division,setDivision]=useState("performance");
   const [method,setMethod]=useState("Pix");
+  const [dueDate,setDueDate]=useState("");
   const [saleNote,setSaleNote]=useState("");
-  const [saleClientName,setSaleClientName]=useState("");
+  const [saleClient,setSaleClient]=useState({id:null,name:""});
   const [saleDescription,setSaleDescription]=useState("");
   const [discountType,setDiscountType]=useState("percent"); // percent | value
   const [discountVal,setDiscountVal]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [lastSale,setLastSale]=useState(null);
   const [showShelfForm,setShowShelfForm]=useState(false);
   const [editItem,setEditItem]=useState(null);
   const [sfName,setSfName]=useState("");
   const [sfPrice,setSfPrice]=useState("");
   const [sfCat,setSfCat]=useState("outros");
   const [sfStockId,setSfStockId]=useState("");
+  const [per,setPer]=useState("month"); // month | 30 | all | custom
   const [histFrom,setHistFrom]=useState("");
   const [histTo,setHistTo]=useState("");
+  const [histStatus,setHistStatus]=useState("all"); // all | pending
+  const [histQ,setHistQ]=useState("");
   const [confirmDel,setConfirmDel]=useState(null);
-  const [stockSearch,setStockSearch]=useState("");
-  const [editSale,setEditSale]=useState(null); // {id, client_name, description, note}
+  const [delSale,setDelSale]=useState(null);
+  const [delRestock,setDelRestock]=useState(true);
+  const [recvSale,setRecvSale]=useState(null);
+  const [recvMethod,setRecvMethod]=useState("Pix");
+  const [recvDate,setRecvDate]=useState("");
+  const [search,setSearch]=useState("");
+  const [editSale,setEditSale]=useState(null); // {id, client:{id,name}, description, note}
 
+  const inp={width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"};
+  const lab={fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:B.gray500,marginBottom:8};
+  const chip=(on,color=AC)=>({padding:"5px 12px",borderRadius:99,border:`1px solid ${on?color:B.gray600}`,background:on?`${color}18`:"transparent",color:on?color:B.gray400,fontWeight:600,fontSize:11,cursor:"pointer"});
   const cats=["peças","acessórios","serviços","produtos","outros"];
-  const METHODS=PAY_METHODS.filter(m=>m!=="Boleto"&&m!=="Outro");
-  const cartSubtotal=cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const discountAmount=discountVal?(discountType==="percent"?cartSubtotal*(parseFloat(discountVal)||0)/100:Math.min(parseFloat(discountVal)||0,cartSubtotal)):0;
-  const cartTotal=Math.max(0,cartSubtotal-discountAmount);
+  const stockById=id=>stock.find(s=>s.id===id);
+  const cartSubtotal=cart.reduce((s,i)=>s+(Number(i.price)||0)*i.qty,0);
+  const discountAmount=discountVal?(discountType==="percent"?cartSubtotal*Math.min(100,parseFloat(discountVal)||0)/100:Math.min(parseFloat(discountVal)||0,cartSubtotal)):0;
+  const cartTotal=Math.max(0,Math.round((cartSubtotal-discountAmount)*100)/100);
+  const pending=method==="A prazo";
 
-  function addToCart(item,fromStock=false){
+  function addToCart(it){
+    setLastSale(null);
     setCart(c=>{
-      const ex=c.find(x=>x.id===item.id&&x.from_stock===fromStock);
-      if(ex) return c.map(x=>x.id===item.id&&x.from_stock===fromStock?{...x,qty:x.qty+1}:x);
-      return [...c,{id:item.id,name:item.name,price:Number(item.price),qty:1,from_stock:fromStock,stock_item_id:fromStock?item.id:item.stock_item_id}];
+      const ex=c.find(x=>x.key===it.key);
+      if(ex) return c.map(x=>x.key===it.key?{...x,qty:x.qty+1}:x);
+      return [...c,{...it,qty:1}];
     });
   }
-  function removeFromCart(id,fromStock){setCart(c=>c.filter(x=>!(x.id===id&&x.from_stock===fromStock)));}
-  function changeQty(id,fromStock,delta){setCart(c=>c.map(x=>x.id===id&&x.from_stock===fromStock?{...x,qty:Math.max(1,x.qty+delta)}:x));}
+  const shelfToCart=item=>{const st=item.stock_item_id?stockById(item.stock_item_id):null;addToCart({key:"sh"+item.id,name:item.name,price:Number(item.price)||0,shelf_item_id:item.id,stock_item_id:st?st.id:null,cost:st?Number(st.costPrice)||0:null,kind:"item"});};
+  const stockToCart=s=>addToCart({key:"st"+s.id,name:s.brand?`${s.brand} ${s.name}`:s.name,price:Math.round((Number(s.salePrice)||0)*100)/100,stock_item_id:s.id,cost:Number(s.costPrice)||0,kind:"item"});
+  const svcToCart=sv=>{const q=Number(sv.hours||0)||(sv.rate_type==="qty"?1:0);addToCart({key:"sv"+sv.id,name:sv.name,price:Math.round(q*svcRate(sv,defaultRate)*100)/100,catalog_id:sv.id,cost:null,kind:"service"});};
+  function removeFromCart(key){setCart(c=>c.filter(x=>x.key!==key));}
+  function changeQty(key,delta){setCart(c=>c.map(x=>x.key===key?{...x,qty:Math.max(1,x.qty+delta)}:x));}
+  function changePrice(key,v){setCart(c=>c.map(x=>x.key===key?{...x,price:v}:x));}
 
   async function finalizeSale(){
-    if(!cart.length) return;
-    const discNote=discountAmount>0?` [Desconto: ${discountType==="percent"?discountVal+"%":"R$"+discountVal} = −${fmtBRL(discountAmount)}]`:"";
-    const sale={total:cartTotal,method,note:(saleNote+discNote).trim(),client_name:saleClientName.trim()||null,description:saleDescription.trim()||null,division:"performance",sold_at:new Date().toISOString()};
-    const items=cart.map(i=>({shelf_item_id:i.from_stock?null:i.id,name:i.name,price:i.price,qty:i.qty,from_stock:i.from_stock}));
-    await onAddSale(sale,items);
-    setCart([]);setSaleNote("");setSaleClientName("");setSaleDescription("");setDiscountVal("");
+    if(!cart.length||busy) return;
+    setBusy(true);
+    const sale={total:cartTotal,discount:Math.round(discountAmount*100)/100,method:pending?"A prazo":method,status:pending?"pending":"paid",due_date:pending&&dueDate?dueDate:null,
+      note:saleNote.trim()||null,client_id:saleClient.id||null,client_name:saleClient.name.trim()||null,description:saleDescription.trim()||null,division,sold_at:new Date().toISOString()};
+    const items=cart.map(i=>({shelf_item_id:i.shelf_item_id||null,name:i.name,price:Math.round((Number(i.price)||0)*100)/100,qty:i.qty,from_stock:!!i.stock_item_id,stock_item_id:i.stock_item_id||null,cost:i.cost==null?null:Number(i.cost),kind:i.kind||"item",catalog_id:i.catalog_id||null}));
+    const r=await onAddSale(sale,items);
+    setBusy(false);
+    if(!r) return;
+    setLastSale(r);
+    setCart([]);setSaleNote("");setSaleClient({id:null,name:""});setSaleDescription("");setDiscountVal("");setDueDate("");
+    if(pending) setMethod("Pix");
   }
 
   function openShelfForm(item=null){
@@ -17675,206 +17841,318 @@ function SalesTab({shelfItems,sales,stock,onAddShelfItem,onUpdateShelfItem,onDel
     setShowShelfForm(false);
   }
 
+  // ── Histórico ──
+  const now=new Date();
+  const range=per==="month"?[new Date(now.getFullYear(),now.getMonth(),1),null]:per==="30"?[new Date(Date.now()-30*86400000),null]:per==="custom"?[histFrom?new Date(histFrom+"T00:00"):null,histTo?new Date(histTo+"T23:59:59"):null]:[null,null];
+  const hq=histQ.trim().toLowerCase();
   const filteredSales=sales.filter(s=>{
-    if(histFrom&&new Date(s.sold_at)<new Date(histFrom)) return false;
-    if(histTo&&new Date(s.sold_at)>new Date(histTo+"T23:59:59")) return false;
+    const d=new Date(s.sold_at);
+    if(range[0]&&d<range[0]) return false;
+    if(range[1]&&d>range[1]) return false;
+    if(histStatus==="pending"&&s.status!=="pending") return false;
+    if(hq&&![s.client_name,s.description,s.note,String(s.sale_number||""),...(s.sale_items||[]).map(i=>i.name)].some(t=>String(t||"").toLowerCase().includes(hq))) return false;
     return true;
   });
+  const itemsCost=s=>{const its=s.sale_items||[];if(!its.length||its.some(i=>i.kind!=="service"&&i.cost==null)) return null;return its.reduce((a,i)=>a+(Number(i.cost)||0)*(Number(i.qty)||0),0);};
+  const paidSales=filteredSales.filter(s=>s.status!=="pending");
+  const sumTotal=paidSales.reduce((a,s)=>a+Number(s.total||0),0);
+  const ticket=paidSales.length?sumTotal/paidSales.length:0;
+  const withCost=paidSales.filter(s=>itemsCost(s)!=null);
+  const marginVal=withCost.reduce((a,s)=>a+Number(s.total||0)-itemsCost(s),0);
+  const marginBase=withCost.reduce((a,s)=>a+Number(s.total||0),0);
+  const pendingAll=sales.filter(s=>s.status==="pending");
+  const pendingTotal=pendingAll.reduce((a,s)=>a+Number(s.total||0),0);
+  const top=(()=>{const m={};filteredSales.forEach(s=>(s.sale_items||[]).forEach(i=>{const k=String(i.name||"").trim();if(!k)return;const e=m[k]||(m[k]={name:k,qty:0,val:0});e.qty+=Number(i.qty)||0;e.val+=(Number(i.price)||0)*(Number(i.qty)||0);}));return Object.values(m).sort((a,b)=>b.val-a.val||b.qty-a.qty).slice(0,5);})();
+  const clientOf=s=>s.client_id?clients.find(c=>c.id===s.client_id):null;
+  const fdt=iso=>new Date(iso).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  const fdd=d=>d?new Date(d+"T12:00").toLocaleDateString("pt-BR"):"";
+  const today=todayISO();
 
-  const ViewBtn=({id,label})=><button onClick={()=>setView(id)} style={{flex:1,padding:"7px 0",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,background:view===id?"#06b6d4":B.gray700,color:view===id?B.white:B.gray400,transition:"all .2s"}}>{label}</button>;
+  const ViewBtn=({id,label})=><button onClick={()=>setView(id)} style={{flex:1,padding:"7px 0",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,background:view===id?AC:B.gray700,color:view===id?B.white:B.gray400,transition:"all .2s"}}>{label}{id==="history"&&pendingAll.length>0?` · ${pendingAll.length} a prazo`:""}</button>;
+  const iconBtn=(onClick,icon,color,title)=><button title={title} onClick={onClick} style={{height:26,minWidth:26,padding:"0 7px",borderRadius:6,background:`${color}18`,border:`1px solid ${color}44`,color,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{icon}</button>;
+  const modal=(content,onClose)=>createPortal(<div style={{position:"fixed",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+    <div style={{background:B.gray900,borderRadius:16,padding:20,margin:20,border:`1px solid ${B.gray700}`,maxWidth:420,width:"100%",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>{content}</div>
+  </div>,document.body);
+
+  const sq=search.trim();
+  const stockHits=sq?stock.filter(s=>stockSearchMatch(sq,(s.name||"")+" "+(s.brand||"")+" "+(s.type||""))).slice(0,10):[];
+  const svcHits=sq?catalog.filter(sv=>sv.active!==false&&(sv.division==="both"||sv.division===division)&&stockSearchMatch(sq,(sv.name||"")+" "+(sv.category||""))).slice(0,8):[];
 
   return(<div>
-    {/* View switcher */}
     <div style={{display:"flex",gap:6,marginBottom:20}}>
       <ViewBtn id="sell" label="Vender"/>
       <ViewBtn id="shelf" label="Prateleira"/>
       <ViewBtn id="history" label="Histórico"/>
     </div>
 
-    {/* ── SELL ── */}
+    {/* ── VENDER ── */}
     {view==="sell"&&<>
-      <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:10}}>Prateleira</div>
+      <div style={{display:"flex",gap:6,marginBottom:16}}>
+        {[["performance","Performance",B.orange],["finishing","Finishing",FD.primary]].map(([id,l,c])=><button key={id} onClick={()=>setDivision(id)} style={chip(division===id,c)}>{l}</button>)}
+      </div>
+
+      {lastSale&&<div style={{background:`${AC}12`,border:`1px solid ${AC}44`,borderRadius:12,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:160}}>
+          <div style={{fontSize:13,fontWeight:700,color:B.white}}>Venda{lastSale.sale_number?` nº ${lastSale.sale_number}`:""} registrada</div>
+          <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{fmtBRL(lastSale.total)} · {lastSale.status==="pending"?"a prazo":payMethodLabel(lastSale.method)}</div>
+        </div>
+        {iconBtn(()=>saleReceipt({sale:lastSale,client:clientOf(lastSale),company}),<><Ic n="download"/> Recibo</>,AC,"Baixar recibo em PDF")}
+        {iconBtn(()=>saleReceipt({sale:lastSale,client:clientOf(lastSale),company,wa:true}),<>WhatsApp</>,B.green,"Enviar recibo")}
+        <button onClick={()=>setLastSale(null)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500}}><Ic n="x"/></button>
+      </div>}
+
+      <div style={lab}>Prateleira</div>
       {shelfItems.length===0&&<div style={{color:B.gray600,fontSize:13,marginBottom:16}}>Nenhum item na prateleira. Adicione na aba Prateleira.</div>}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
-        {shelfItems.map(item=>(
-          <button key={item.id} onClick={()=>addToCart(item)} style={{background:B.gray800,border:`1px solid ${"#06b6d4"}33`,borderRadius:12,padding:"12px",textAlign:"left",cursor:"pointer",transition:"all .15s"}}>
+        {shelfItems.map(item=>{const st=item.stock_item_id?stockById(item.stock_item_id):null;return(
+          <button key={item.id} onClick={()=>shelfToCart(item)} style={{background:B.gray800,border:`1px solid ${AC}33`,borderRadius:12,padding:"12px",textAlign:"left",cursor:"pointer",transition:"all .15s"}}>
             <div style={{fontWeight:700,fontSize:13,color:B.white,marginBottom:2}}>{item.name}</div>
-            <div style={{fontSize:11,color:"#06b6d4",fontWeight:700}}>{fmtBRL(Number(item.price))}</div>
-            <div style={{fontSize:10,color:B.gray600,marginTop:2}}>{item.category}</div>
-          </button>
-        ))}
+            <div style={{fontSize:11,color:AC,fontWeight:700}}>{fmtBRL(Number(item.price))}</div>
+            <div style={{fontSize:10,color:B.gray600,marginTop:2}}>{item.category}{st?` · estoque ${st.qty} un.`:""}</div>
+          </button>);})}
       </div>
 
-      <div style={{fontSize:11,fontWeight:800,color:B.gray600,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Do estoque</div>
+      <div style={lab}>Estoque e serviços do catálogo</div>
       <div style={{position:"relative",marginBottom:8}}>
-        <input value={stockSearch} onChange={e=>setStockSearch(e.target.value)} placeholder="Buscar item do estoque..."
-          style={{width:"100%",padding:"8px 12px 8px 32px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar produto do estoque ou serviço…" style={{...inp,background:B.gray800,paddingLeft:32}}/>
         <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:B.gray500,fontSize:13}}><Ic n="search"/></span>
-        {stockSearch&&<button onClick={()=>setStockSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:12}}><Ic n="x"/></button>}
+        {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:B.gray400,fontSize:12}}><Ic n="x"/></button>}
       </div>
-      {stockSearch&&<div style={{background:B.gray800,borderRadius:8,border:`1px solid ${B.gray700}`,marginBottom:16,maxHeight:220,overflowY:"auto"}}>
-        {stock.filter(s=>(s.name||"").toLowerCase().includes(stockSearch.toLowerCase())||(s.brand||"").toLowerCase().includes(stockSearch.toLowerCase())).slice(0,12).map(s=>(
-          <div key={s.id} onClick={()=>{addToCart({id:s.id,name:s.name,price:s.salePrice||s.price||0,stock_item_id:s.id},true);setStockSearch("");}}
-            style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}
-            onMouseEnter={e=>e.currentTarget.style.background=B.gray700}
-            onMouseLeave={e=>e.currentTarget.style.background="none"}>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:13,color:B.white}}>{s.name}{s.brand?` · ${s.brand}`:""}</div>
-              <div style={{fontSize:11,color:B.gray400}}>Estoque: {s.qty} un.</div>
+      {sq&&<div style={{background:B.gray800,borderRadius:8,border:`1px solid ${B.gray700}`,marginBottom:16,maxHeight:280,overflowY:"auto"}}>
+        {stockHits.map(s=>(
+          <div key={s.id} onClick={()=>{stockToCart(s);setSearch("");}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}
+            onMouseEnter={e=>e.currentTarget.style.background=B.gray700} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:700,fontSize:13,color:B.white}}>{s.brand&&<span style={{color:B.amber,fontSize:11,fontWeight:800,letterSpacing:.7,textTransform:"uppercase",marginRight:6}}>{s.brand}</span>}{s.name}</div>
+              <div style={{fontSize:11,color:(Number(s.qty)||0)>0?B.gray400:B.red}}>Estoque: {s.qty} un.</div>
             </div>
-            <div style={{fontWeight:700,fontSize:13,color:"#06b6d4"}}>{fmtBRL(Number(s.salePrice||s.price||0))}</div>
+            <div style={{fontWeight:700,fontSize:13,color:AC}}>{fmtBRL(Number(s.salePrice)||0)}</div>
           </div>
         ))}
-        {stock.filter(s=>(s.name||"").toLowerCase().includes(stockSearch.toLowerCase())).length===0&&
-          <div style={{padding:"12px",textAlign:"center",color:B.gray500,fontSize:12}}>Nenhum item encontrado</div>}
+        {svcHits.map(sv=>{const q=Number(sv.hours||0)||(sv.rate_type==="qty"?1:0);const v=q*svcRate(sv,defaultRate);return(
+          <div key={sv.id} onClick={()=>{svcToCart(sv);setSearch("");}} style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${B.gray700}`,display:"flex",alignItems:"center",gap:8}}
+            onMouseEnter={e=>e.currentTarget.style.background=B.gray700} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:700,fontSize:13,color:B.white}}>{sv.name}</div>
+              <div style={{fontSize:11,color:B.gray400}}>Serviço{sv.rate_type!=="qty"&&q?` · ${String(q).replace(".",",")} h`:""}</div>
+            </div>
+            <div style={{fontWeight:700,fontSize:13,color:v?AC:B.gray500}}>{v?fmtBRL(v):"definir valor"}</div>
+          </div>);})}
+        {!stockHits.length&&!svcHits.length&&<div style={{padding:"12px",textAlign:"center",color:B.gray500,fontSize:12}}>Nada encontrado</div>}
       </div>}
-      {!stockSearch&&<div style={{marginBottom:16}}/>}
+      {!sq&&<div style={{marginBottom:16}}/>}
 
-      {/* Cart */}
-      {cart.length>0&&<>
-        <div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${"#06b6d4"}44`,marginBottom:16}}>
-          <div style={{fontSize:11,fontWeight:800,color:"#06b6d4",textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Carrinho</div>
-          {cart.map(item=>(
-            <div key={item.id+item.from_stock} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:700,fontSize:13,color:B.white}}>{item.name}</div>
-                <div style={{fontSize:11,color:B.gray400}}>{fmtBRL(item.price)} × {item.qty} = {fmtBRL(item.price*item.qty)}</div>
-              </div>
-              <button onClick={()=>changeQty(item.id,item.from_stock,-1)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-              <span style={{fontSize:13,fontWeight:700,color:B.white,minWidth:18,textAlign:"center"}}>{item.qty}</span>
-              <button onClick={()=>changeQty(item.id,item.from_stock,1)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-              <button onClick={()=>removeFromCart(item.id,item.from_stock)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.red}44`,background:`${B.red}18`,color:B.red,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="x"/></button>
-            </div>
-          ))}
-          <div style={{borderTop:`1px solid ${B.gray700}`,paddingTop:12,marginTop:4}}>
-            {/* Subtotal */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <span style={{color:B.gray400,fontSize:13}}>Subtotal</span>
-              <span style={{fontSize:14,color:B.gray300}}>{fmtBRL(cartSubtotal)}</span>
-            </div>
-            {/* Discount */}
-            <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
-              <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:`1px solid ${B.gray600}`,flexShrink:0}}>
-                <button onClick={()=>setDiscountType("percent")} style={{padding:"6px 10px",background:discountType==="percent"?B.amber+"33":B.gray700,color:discountType==="percent"?B.amber:B.gray400,border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>%</button>
-                <button onClick={()=>setDiscountType("value")} style={{padding:"6px 10px",background:discountType==="value"?B.amber+"33":B.gray700,color:discountType==="value"?B.amber:B.gray400,border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>R$</button>
-              </div>
-              <input type="number" value={discountVal} onChange={e=>setDiscountVal(e.target.value)} placeholder={discountType==="percent"?"Desconto %":"Desconto R$"} style={{flex:1,padding:"6px 10px",borderRadius:8,border:`1px solid ${discountVal?B.amber+"66":B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-              {discountVal&&<span style={{fontSize:12,color:B.amber,fontWeight:700,flexShrink:0}}>−{fmtBRL(discountAmount)}</span>}
-            </div>
-            {/* Total */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,paddingTop:8,borderTop:`1px solid ${B.gray700}`}}>
-              <span style={{fontWeight:800,color:B.white,fontSize:15}}>Total</span>
-              <div style={{textAlign:"right"}}>
-                {discountAmount>0&&<div style={{fontSize:11,color:B.gray500,textDecoration:"line-through"}}>{fmtBRL(cartSubtotal)}</div>}
-                <span style={{fontSize:22,fontWeight:900,color:"#06b6d4"}}>{fmtBRL(cartTotal)}</span>
+      {cart.length>0&&<div style={{background:B.gray800,borderRadius:14,padding:"14px 16px",border:`1px solid ${AC}44`,marginBottom:16}}>
+        <div style={{...lab,color:AC,marginBottom:12}}>Carrinho</div>
+        {cart.map(item=>{const st=item.stock_item_id?stockById(item.stock_item_id):null;const short=st&&item.qty>(Number(st.qty)||0);return(
+          <div key={item.key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:700,fontSize:13,color:B.white}}>{item.name}{item.kind==="service"&&<span style={{fontSize:9,fontWeight:700,letterSpacing:".14em",textTransform:"uppercase",color:B.gray500,marginLeft:6}}>serviço</span>}</div>
+              <div style={{fontSize:11,color:B.gray400,display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
+                R$ <input type="number" inputMode="decimal" value={item.price} onChange={e=>changePrice(item.key,e.target.value)} style={{width:72,padding:"2px 6px",borderRadius:5,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:11,outline:"none"}}/>
+                × {item.qty} = {fmtBRL((Number(item.price)||0)*item.qty)}
+                {short&&<span style={{color:B.red}}> · estoque {st.qty} un.</span>}
               </div>
             </div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-              {METHODS.map(m=><button key={m} onClick={()=>setMethod(m)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${method===m?"#06b6d4":B.gray600}`,background:method===m?"#06b6d418":B.gray700,color:method===m?"#06b6d4":B.gray300,fontWeight:700,fontSize:11,cursor:"pointer",textTransform:"capitalize"}}>{m}</button>)}
-            </div>
-            <input value={saleClientName} onChange={e=>setSaleClientName(e.target.value)} placeholder="Nome do cliente (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
-            <input value={saleDescription} onChange={e=>setSaleDescription(e.target.value)} placeholder="Descrição da venda (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
-            <input value={saleNote} onChange={e=>setSaleNote(e.target.value)} placeholder="Observação interna (opcional)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray900,color:B.white,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
-            <button onClick={finalizeSale} style={{width:"100%",padding:"12px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}><Ic n="done"/> Finalizar venda — {fmtBRL(cartTotal)}</button>
+            <button onClick={()=>changeQty(item.key,-1)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <span style={{fontSize:13,fontWeight:700,color:B.white,minWidth:18,textAlign:"center"}}>{item.qty}</span>
+            <button onClick={()=>changeQty(item.key,1)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray700,color:B.white,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+            <button onClick={()=>removeFromCart(item.key)} style={{width:26,height:26,borderRadius:6,border:`1px solid ${B.red}44`,background:`${B.red}18`,color:B.red,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="x"/></button>
+          </div>);})}
+        <div style={{borderTop:`1px solid ${B.gray700}`,paddingTop:12,marginTop:4}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{color:B.gray400,fontSize:13}}>Subtotal</span>
+            <span style={{fontSize:14,color:B.gray300}}>{fmtBRL(cartSubtotal)}</span>
           </div>
+          <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
+            <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:`1px solid ${B.gray600}`,flexShrink:0}}>
+              <button onClick={()=>setDiscountType("percent")} style={{padding:"6px 10px",background:discountType==="percent"?B.amber+"33":B.gray700,color:discountType==="percent"?B.amber:B.gray400,border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>%</button>
+              <button onClick={()=>setDiscountType("value")} style={{padding:"6px 10px",background:discountType==="value"?B.amber+"33":B.gray700,color:discountType==="value"?B.amber:B.gray400,border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>R$</button>
+            </div>
+            <input type="number" value={discountVal} onChange={e=>setDiscountVal(e.target.value)} placeholder={discountType==="percent"?"Desconto %":"Desconto R$"} style={{flex:1,padding:"6px 10px",borderRadius:8,border:`1px solid ${discountVal?B.amber+"66":B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
+            {discountVal&&<span style={{fontSize:12,color:B.amber,fontWeight:700,flexShrink:0}}>−{fmtBRL(discountAmount)}</span>}
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,paddingTop:8,borderTop:`1px solid ${B.gray700}`}}>
+            <span style={{fontWeight:800,color:B.white,fontSize:15}}>Total</span>
+            <div style={{textAlign:"right"}}>
+              {discountAmount>0&&<div style={{fontSize:11,color:B.gray500,textDecoration:"line-through"}}>{fmtBRL(cartSubtotal)}</div>}
+              <span style={{fontSize:22,fontWeight:900,color:AC}}>{fmtBRL(cartTotal)}</span>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+            {[...PAY_METHODS,"A prazo"].map(m=><button key={m} onClick={()=>setMethod(m)} style={chip(method===m,m==="A prazo"?B.amber:AC)}>{m}</button>)}
+          </div>
+          {pending&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:12,color:B.gray400,flexShrink:0}}>Vencimento</span>
+            <input type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)} style={{...inp,flex:1}}/>
+          </div>}
+          {pending&&<div style={{fontSize:11,color:B.amber,marginBottom:10,lineHeight:1.45}}>Entra em "A receber" e só vai para o financeiro quando for recebida no Histórico.</div>}
+          <div style={{marginBottom:8}}><SaleClientPicker clients={clients} value={saleClient} onChange={setSaleClient} inputStyle={inp}/></div>
+          {pending&&!saleClient.name.trim()&&<div style={{fontSize:11,color:B.red,marginBottom:8}}>Venda a prazo precisa do cliente.</div>}
+          <input value={saleDescription} onChange={e=>setSaleDescription(e.target.value)} placeholder="Descrição da venda (opcional, sai no recibo)" style={{...inp,marginBottom:8}}/>
+          <input value={saleNote} onChange={e=>setSaleNote(e.target.value)} placeholder="Observação interna (opcional)" style={{...inp,marginBottom:10}}/>
+          <button disabled={busy||(pending&&!saleClient.name.trim())} onClick={finalizeSale} style={{width:"100%",padding:"12px",borderRadius:10,background:AC,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",opacity:busy||(pending&&!saleClient.name.trim())?.5:1}}>
+            <Ic n="done"/> {busy?"Salvando…":`${pending?"Registrar venda a prazo":"Finalizar venda"} — ${fmtBRL(cartTotal)}`}
+          </button>
         </div>
-      </>}
+      </div>}
     </>}
 
-    {/* ── SHELF ── */}
+    {/* ── PRATELEIRA ── */}
     {view==="shelf"&&<>
-      <button onClick={()=>openShelfForm()} style={{width:"100%",padding:"10px",borderRadius:10,background:"#06b6d418",border:`1px solid ${"#06b6d4"}44`,color:"#06b6d4",fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:16}}>+ Novo item na prateleira</button>
-      {shelfItems.map(item=>(
+      <button onClick={()=>openShelfForm()} style={{width:"100%",padding:"10px",borderRadius:10,background:`${AC}18`,border:`1px solid ${AC}44`,color:AC,fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:16}}>+ Novo item na prateleira</button>
+      {shelfItems.map(item=>{const st=item.stock_item_id?stockById(item.stock_item_id):null;return(
         <div key={item.id} style={{background:B.gray800,borderRadius:12,padding:"12px 14px",border:`1px solid ${B.gray700}`,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
           <div style={{flex:1}}>
             <div style={{fontWeight:700,fontSize:14,color:B.white}}>{item.name}</div>
-            <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{item.category} · {fmtBRL(Number(item.price))}</div>
+            <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{item.category} · {fmtBRL(Number(item.price))}{st?` · baixa do estoque: ${st.name} (${st.qty} un.)`:""}</div>
           </div>
           <button onClick={()=>openShelfForm(item)} style={{width:32,height:32,borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:13}}><Ic n="note"/></button>
           <button onClick={()=>setConfirmDel(item.id)} style={{width:32,height:32,borderRadius:8,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:13}}><Ic n="trash"/></button>
-        </div>
-      ))}
+        </div>);})}
       {showShelfForm&&createPortal(<div style={{position:"fixed",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:window.innerWidth>=700?"center":"flex-end",justifyContent:"center"}} onClick={()=>setShowShelfForm(false)}>
         <div style={{width:"100%",maxWidth:window.innerWidth>=700?480:undefined,background:B.gray900,borderRadius:window.innerWidth>=700?20:"20px 20px 0 0",padding:"20px 16px",paddingBottom:window.innerWidth>=700?20:"calc(40px + env(safe-area-inset-bottom))",border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
           <div style={{fontWeight:800,fontSize:15,color:B.white,marginBottom:16}}>{editItem?"Editar item":"Novo item"}</div>
-          <input value={sfName} onChange={e=>setSfName(e.target.value)} placeholder="Nome do item" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
-          <input type="number" value={sfPrice} onChange={e=>setSfPrice(e.target.value)} placeholder="Preço (R$)" style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+          <input value={sfName} onChange={e=>setSfName(e.target.value)} placeholder="Nome do item" style={{...inp,background:B.gray800,marginBottom:8}}/>
+          <input type="number" value={sfPrice} onChange={e=>setSfPrice(e.target.value)} placeholder="Preço (R$)" style={{...inp,background:B.gray800,marginBottom:8}}/>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-            {cats.map(c=><button key={c} onClick={()=>setSfCat(c)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${sfCat===c?"#06b6d4":B.gray600}`,background:sfCat===c?"#06b6d418":B.gray700,color:sfCat===c?"#06b6d4":B.gray300,fontWeight:700,fontSize:11,cursor:"pointer"}}>{c}</button>)}
+            {cats.map(c=><button key={c} onClick={()=>setSfCat(c)} style={chip(sfCat===c)}>{c}</button>)}
           </div>
-          <select value={sfStockId} onChange={e=>setSfStockId(e.target.value)} style={{width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:sfStockId?B.white:B.gray400,fontSize:13,outline:"none",marginBottom:16,boxSizing:"border-box"}}>
+          <select value={sfStockId} onChange={e=>setSfStockId(e.target.value)} style={{...inp,background:B.gray800,color:sfStockId?B.white:B.gray400,marginBottom:6}}>
             <option value="">Vincular ao estoque (opcional)</option>
             {stock.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <button onClick={saveShelfItem} style={{width:"100%",padding:"11px",borderRadius:10,background:"#06b6d4",border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Salvar</button>
+          <div style={{fontSize:11,color:B.gray500,marginBottom:16}}>Vinculado: cada venda dá baixa no saldo desse produto.</div>
+          <button onClick={saveShelfItem} style={{width:"100%",padding:"11px",borderRadius:10,background:AC,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer"}}>Salvar</button>
         </div>
       </div>, document.body)}
-      {confirmDel&&createPortal(<div style={{position:"fixed",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setConfirmDel(null)}>
-        <div style={{background:B.gray900,borderRadius:16,padding:24,margin:20,border:`1px solid ${B.gray700}`}} onClick={e=>e.stopPropagation()}>
-          <div style={{fontWeight:700,color:B.white,marginBottom:16}}>Remover item da prateleira?</div>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>setConfirmDel(null)} style={{flex:1,padding:"9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontWeight:700}}>Cancelar</button>
-            <button onClick={async()=>{await onDeleteShelfItem(confirmDel);setConfirmDel(null);}} style={{flex:1,padding:"9px",borderRadius:8,background:`${B.red}22`,border:`1px solid ${B.red}55`,color:B.red,cursor:"pointer",fontWeight:700}}>Remover</button>
-          </div>
+      {confirmDel&&modal(<>
+        <div style={{fontWeight:700,color:B.white,marginBottom:16}}>Remover item da prateleira?</div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setConfirmDel(null)} style={{flex:1,padding:"9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontWeight:700}}>Cancelar</button>
+          <button onClick={async()=>{await onDeleteShelfItem(confirmDel);setConfirmDel(null);}} style={{flex:1,padding:"9px",borderRadius:8,background:`${B.red}22`,border:`1px solid ${B.red}55`,color:B.red,cursor:"pointer",fontWeight:700}}>Remover</button>
         </div>
-      </div>, document.body)}
+      </>,()=>setConfirmDel(null))}
     </>}
 
-    {/* ── HISTORY ── */}
+    {/* ── HISTÓRICO ── */}
     {view==="history"&&<>
-      <div style={{marginBottom:16}}>
-        <div style={{fontSize:11,fontWeight:800,color:B.gray500,textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Período</div>
-        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <input type="date" value={histFrom} onChange={e=>setHistFrom(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-          <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
-          <input type="date" value={histTo} onChange={e=>setHistTo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:13,outline:"none"}}/>
-          {(histFrom||histTo)&&<button onClick={()=>{setHistFrom("");setHistTo("");}} style={{padding:"7px 10px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontSize:12,flexShrink:0}}><Ic n="x"/></button>}
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+        {[["month","Este mês"],["30","30 dias"],["all","Tudo"],["custom","Período"]].map(([id,l])=><button key={id} onClick={()=>setPer(id)} style={chip(per===id)}>{l}</button>)}
+        <span style={{flex:1}}/>
+        {[["all","Todas"],["pending",`A prazo${pendingAll.length?` (${pendingAll.length})`:""}`]].map(([id,l])=><button key={id} onClick={()=>setHistStatus(id)} style={chip(histStatus===id,id==="pending"?B.amber:AC)}>{l}</button>)}
+      </div>
+      {per==="custom"&&<div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10}}>
+        <input type="date" value={histFrom} onChange={e=>setHistFrom(e.target.value)} style={{...inp,flex:1,background:B.gray800}}/>
+        <span style={{color:B.gray500,fontSize:12,flexShrink:0}}>→</span>
+        <input type="date" value={histTo} onChange={e=>setHistTo(e.target.value)} style={{...inp,flex:1,background:B.gray800}}/>
+      </div>}
+      <input value={histQ} onChange={e=>setHistQ(e.target.value)} placeholder="Buscar por cliente, item ou nº" style={{...inp,background:B.gray800,marginBottom:14}}/>
+
+      {isOwner?<div style={{background:`${AC}10`,border:`1px solid ${AC}33`,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:10}}>
+          {[["Recebido",fmtBRL(sumTotal),`${paidSales.length} venda${paidSales.length!==1?"s":""}`],
+            ["Ticket médio",fmtBRL(ticket),""],
+            ["Margem",marginBase?`${Math.round(marginVal/marginBase*100)}%`:"—",marginBase?fmtBRL(marginVal):"sem custo"],
+            ["A prazo em aberto",fmtBRL(pendingTotal),`${pendingAll.length} venda${pendingAll.length!==1?"s":""}`]].map(([l,v,s])=>(
+            <div key={l}><div style={{...lab,color:AC,marginBottom:4}}>{l}</div><div style={{fontSize:17,fontWeight:300,letterSpacing:".03em",color:B.white}}>{v}</div>{s&&<div style={{fontSize:10,color:B.gray500,marginTop:1}}>{s}</div>}</div>))}
         </div>
+        {withCost.length<paidSales.length&&<div style={{fontSize:10,color:B.gray500,marginTop:8}}>Margem calculada sobre {withCost.length} de {paidSales.length} vendas (as antigas e itens de prateleira sem estoque não têm custo).</div>}
+        {top.length>0&&<div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${AC}22`}}>
+          <div style={{...lab,marginBottom:6}}>Mais vendidos</div>
+          {top.map(t=><div key={t.name} style={{display:"flex",gap:8,fontSize:12,color:B.gray300,marginBottom:3}}><span style={{flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</span><span style={{color:B.gray500}}>{t.qty} un.</span><span style={{minWidth:80,textAlign:"right"}}>{fmtBRL(t.val)}</span></div>)}
+        </div>}
       </div>
-      <div style={{background:`${"#06b6d4"}18`,border:`1px solid ${"#06b6d4"}33`,borderRadius:12,padding:"12px 16px",marginBottom:16,textAlign:"center"}}>
-        <div style={{fontSize:10,color:"#06b6d4",fontWeight:800,textTransform:"uppercase",letterSpacing:.8}}>Total do período</div>
-        <div style={{fontSize:24,fontWeight:900,color:B.white}}>{fmtBRL(filteredSales.reduce((s,sale)=>s+Number(sale.total),0))}</div>
-        <div style={{fontSize:11,color:B.gray400}}>{filteredSales.length} venda{filteredSales.length!==1?"s":""}</div>
-      </div>
+      :<div style={{fontSize:11,color:B.gray500,marginBottom:12}}>{filteredSales.length} venda{filteredSales.length!==1?"s":""} no período{pendingAll.length?` · ${pendingAll.length} a prazo em aberto`:""}</div>}
+
       {filteredSales.length===0&&<div style={{color:B.gray600,fontSize:13,textAlign:"center",padding:20}}>Nenhuma venda no período</div>}
-      {filteredSales.map(sale=>(
-        <div key={sale.id} style={{background:B.gray800,borderRadius:12,padding:"12px 14px",border:`1px solid ${B.gray700}`,marginBottom:8}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <div style={{fontWeight:700,fontSize:14,color:B.white}}>{fmtBRL(Number(sale.total))}</div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:11,color:B.gray400,}}>{payMethodLabel(sale.method)}</span>
-              <button onClick={()=>setEditSale(editSale?.id===sale.id?null:{id:sale.id,client_name:sale.client_name||"",description:sale.description||"",note:sale.note||""})}
-                style={{width:26,height:26,borderRadius:6,background:`${B.blue}18`,border:`1px solid ${B.blue}44`,color:B.blue,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <IEdit s={11} c={B.blue}/>
-              </button>
-              <button onClick={()=>onDeleteSale(sale.id)} style={{width:26,height:26,borderRadius:6,background:`${B.red}18`,border:`1px solid ${B.red}44`,color:B.red,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="x"/></button>
+      {filteredSales.map(sale=>{
+        const isPend=sale.status==="pending";
+        const overdue=isPend&&sale.due_date&&sale.due_date<today;
+        const cost=itemsCost(sale);
+        const cli=clientOf(sale);
+        return(<div key={sale.id} style={{background:B.gray800,borderRadius:12,padding:"12px 14px",border:`1px solid ${isPend?B.amber+"55":B.gray700}`,marginBottom:8}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,gap:8}}>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,minWidth:0}}>
+              <span style={{fontWeight:700,fontSize:14,color:B.white}}>{fmtBRL(Number(sale.total))}</span>
+              {sale.sale_number&&<span style={{fontSize:10,color:B.gray500,letterSpacing:".08em"}}>Nº {sale.sale_number}</span>}
+              {(sale.division||"performance")==="finishing"&&<span style={{fontSize:9,fontWeight:700,letterSpacing:".14em",textTransform:"uppercase",color:FD.primary}}>Finishing</span>}
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+              {isPend?<span style={{fontSize:10,fontWeight:700,color:overdue?B.red:B.amber}}>A PRAZO{sale.due_date?` · ${overdue?"venceu":"vence"} ${fdd(sale.due_date)}`:""}</span>
+                :<span style={{fontSize:11,color:B.gray400}}>{payMethodLabel(sale.method)}</span>}
             </div>
           </div>
-          <div style={{fontSize:11,color:B.gray500}}>{new Date(sale.sold_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+          <div style={{fontSize:11,color:B.gray500}}>{fdt(sale.sold_at)}{sale.created_by?` · ${sale.created_by}`:""}</div>
           {editSale?.id===sale.id?(<div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6,padding:"10px",background:B.gray900,borderRadius:8,border:`1px solid ${B.blue}33`}}>
-            <input value={editSale.client_name} onChange={e=>setEditSale(p=>({...p,client_name:e.target.value}))} placeholder="Nome do cliente"
-              style={{padding:"6px 9px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-            <input value={editSale.description} onChange={e=>setEditSale(p=>({...p,description:e.target.value}))} placeholder="Descrição"
-              style={{padding:"6px 9px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
-            <input value={editSale.note} onChange={e=>setEditSale(p=>({...p,note:e.target.value}))} placeholder="Observação interna"
-              style={{padding:"6px 9px",borderRadius:6,border:`1px solid ${B.gray600}`,background:B.gray800,color:B.white,fontSize:12,outline:"none"}}/>
+            <SaleClientPicker clients={clients} value={editSale.client} onChange={c=>setEditSale(p=>({...p,client:c}))} inputStyle={{...inp,background:B.gray800,fontSize:12,padding:"6px 9px"}}/>
+            <input value={editSale.description} onChange={e=>setEditSale(p=>({...p,description:e.target.value}))} placeholder="Descrição" style={{...inp,background:B.gray800,fontSize:12,padding:"6px 9px"}}/>
+            <input value={editSale.note} onChange={e=>setEditSale(p=>({...p,note:e.target.value}))} placeholder="Observação interna" style={{...inp,background:B.gray800,fontSize:12,padding:"6px 9px"}}/>
+            {isPend&&<div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:11,color:B.gray400}}>Vencimento</span><input type="date" value={editSale.due_date||""} onChange={e=>setEditSale(p=>({...p,due_date:e.target.value}))} style={{...inp,background:B.gray800,fontSize:12,padding:"6px 9px",flex:1}}/></div>}
             <div style={{display:"flex",gap:6}}>
               <button onClick={async()=>{
-                await onUpdateSale(editSale.id,{client_name:editSale.client_name||null,description:editSale.description||null,note:editSale.note||null});
+                const patch={client_id:editSale.client.id||null,client_name:editSale.client.name.trim()||null,description:editSale.description.trim()||null,note:editSale.note.trim()||null};
+                if(isPend) patch.due_date=editSale.due_date||null;
+                await onUpdateSale(editSale.id,patch);
                 setEditSale(null);
               }} style={{flex:1,padding:"6px 0",borderRadius:7,background:B.blue,border:"none",color:B.white,fontWeight:700,fontSize:12,cursor:"pointer"}}>Salvar</button>
               <button onClick={()=>setEditSale(null)} style={{padding:"6px 12px",borderRadius:7,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,fontSize:12,cursor:"pointer"}}>Cancelar</button>
             </div>
           </div>):(<>
-            {sale.client_name&&<div style={{fontSize:12,color:B.blue,fontWeight:600,marginTop:3}}><Ic n="user"/> {sale.client_name}</div>}
+            {sale.client_name&&<div style={{fontSize:12,color:B.blue,fontWeight:600,marginTop:3}}><Ic n="user"/> {sale.client_name}{cli&&<span style={{fontSize:9,fontWeight:700,letterSpacing:".14em",textTransform:"uppercase",color:B.gray500,marginLeft:6}}>cadastro</span>}</div>}
             {sale.description&&<div style={{fontSize:12,color:B.white,marginTop:2}}>{sale.description}</div>}
             {sale.note&&<div style={{fontSize:11,color:B.gray400,marginTop:4}}>{sale.note}</div>}
           </>)}
           {(sale.sale_items||[]).map((item,i)=>(
-            <div key={i} style={{fontSize:11,color:B.gray400,marginTop:4}}>• {item.name} × {item.qty} — {fmtBRL(item.price*item.qty)}{item.from_stock?" (estoque)":""}</div>
+            <div key={i} style={{fontSize:11,color:B.gray400,marginTop:4}}>{item.name} × {item.qty} — {fmtBRL(item.price*item.qty)}<span style={{color:B.gray600}}>{item.kind==="service"?" · serviço":item.from_stock?" · estoque":""}</span></div>
           ))}
+          {Number(sale.discount)>0&&<div style={{fontSize:11,color:B.amber,marginTop:4}}>Desconto −{fmtBRL(sale.discount)}</div>}
+          {isOwner&&cost!=null&&!isPend&&<div style={{fontSize:11,color:B.gray500,marginTop:4}}>Custo {fmtBRL(cost)} · margem {fmtBRL(Number(sale.total)-cost)}{Number(sale.total)>0?` (${Math.round((Number(sale.total)-cost)/Number(sale.total)*100)}%)`:""}</div>}
+          <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
+            {isPend&&iconBtn(()=>{setRecvSale(sale);setRecvMethod("Pix");setRecvDate(todayISO());},<><Ic n="done"/> Receber</>,B.green,"Registrar recebimento")}
+            {iconBtn(()=>saleReceipt({sale,client:cli,company}),<><Ic n="download"/> Recibo</>,AC,"Baixar recibo em PDF")}
+            {iconBtn(()=>saleReceipt({sale,client:cli,company,wa:true}),<>WhatsApp</>,B.green,"Enviar recibo")}
+            <span style={{flex:1}}/>
+            {iconBtn(()=>setEditSale(editSale?.id===sale.id?null:{id:sale.id,client:{id:sale.client_id||null,name:sale.client_name||""},description:sale.description||"",note:sale.note||"",due_date:sale.due_date||""}),<IEdit s={11} c={B.blue}/>,B.blue,"Editar")}
+            {iconBtn(()=>{setDelSale(sale);setDelRestock(true);},<Ic n="trash"/>,B.red,"Excluir venda")}
+          </div>
+        </div>);
+      })}
+
+      {delSale&&(()=>{
+        const pays=salePayments(delSale);
+        const payTot=pays.reduce((a,p)=>a+Number(p.amount),0);
+        const back=(delSale.sale_items||[]).filter(i=>i.stock_item_id);
+        const legacy=(delSale.sale_items||[]).filter(i=>i.from_stock&&!i.stock_item_id);
+        return modal(<>
+          <div style={{fontWeight:700,color:B.white,marginBottom:10}}>Excluir venda{delSale.sale_number?` nº ${delSale.sale_number}`:""} de {fmtBRL(delSale.total)}?</div>
+          <div style={{fontSize:12,color:B.gray300,lineHeight:1.55,marginBottom:12}}>
+            {pays.length?<div>Estorna {fmtBRL(payTot)} do financeiro.</div>:<div>{delSale.status==="pending"?"Venda a prazo ainda não recebida: nada a estornar no financeiro.":"Nenhum pagamento encontrado para estornar."}</div>}
+            {back.length>0&&<label style={{display:"flex",gap:8,alignItems:"flex-start",marginTop:8,cursor:"pointer"}}>
+              <input type="checkbox" checked={delRestock} onChange={e=>setDelRestock(e.target.checked)} style={{marginTop:3}}/>
+              <span>Devolver ao estoque: {back.map(i=>`${i.name} × ${i.qty}`).join(", ")}</span>
+            </label>}
+            {legacy.length>0&&<div style={{color:B.amber,marginTop:8}}>Venda antiga sem vínculo com o estoque ({legacy.map(i=>i.name).join(", ")}): ajuste o saldo no Estoque, se precisar.</div>}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setDelSale(null)} style={{flex:1,padding:"9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontWeight:700}}>Cancelar</button>
+            <button onClick={async()=>{const s=delSale;setDelSale(null);await onDeleteSale(s,{restock:delRestock});}} style={{flex:1,padding:"9px",borderRadius:8,background:`${B.red}22`,border:`1px solid ${B.red}55`,color:B.red,cursor:"pointer",fontWeight:700}}>Excluir</button>
+          </div>
+        </>,()=>setDelSale(null));
+      })()}
+
+      {recvSale&&modal(<>
+        <div style={{fontWeight:700,color:B.white,marginBottom:4}}>Receber venda{recvSale.sale_number?` nº ${recvSale.sale_number}`:""}</div>
+        <div style={{fontSize:12,color:B.gray400,marginBottom:12}}>{recvSale.client_name||"Sem cliente"} · {fmtBRL(recvSale.total)}</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+          {PAY_METHODS.map(m=><button key={m} onClick={()=>setRecvMethod(m)} style={chip(recvMethod===m,B.green)}>{m}</button>)}
         </div>
-      ))}
+        <input type="date" value={recvDate} onChange={e=>setRecvDate(e.target.value)} style={{...inp,marginBottom:14}}/>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setRecvSale(null)} style={{flex:1,padding:"9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontWeight:700}}>Cancelar</button>
+          <button onClick={async()=>{const s=recvSale;setRecvSale(null);await onReceiveSale(s,{method:recvMethod,paidAt:recvDate||todayISO()});}} style={{flex:1,padding:"9px",borderRadius:8,background:B.green,border:"none",color:B.black,cursor:"pointer",fontWeight:800}}>Confirmar {fmtBRL(recvSale.total)}</button>
+        </div>
+      </>,()=>setRecvSale(null))}
     </>}
   </div>);
 }
@@ -19522,19 +19800,78 @@ function MainApp() {
     finally{ mlRecvBusy.current=false; }
   };
 
+  // ── Vendas: um caminho só para a aba Vendas e o "Vender no balcão" do Estoque ──
+  // Grava a venda, o pagamento (se à vista, ligado por sale_id) e dá baixa no estoque dos itens com stock_item_id.
+  const saleLabel=(s,items)=>{
+    const n=s.sale_number?`Venda nº ${s.sale_number}`:"Venda avulsa";
+    const what=s.description||(items||s.sale_items||[]).map(i=>i.name).slice(0,2).join(", ");
+    return [n,s.client_name,what].filter(Boolean).join(" · ");
+  };
+  const stockDelta=async(items,sign)=>{
+    const by={}; (items||[]).forEach(i=>{ if(i.stock_item_id) by[i.stock_item_id]=(by[i.stock_item_id]||0)+(Number(i.qty)||0); });
+    const ids=Object.keys(by); if(!ids.length) return [];
+    const out=[];
+    for(const id of ids){
+      const s=stock.find(x=>x.id===id); if(!s) continue;
+      const newQty=Math.max(0,Math.round(((Number(s.qty)||0)+sign*by[id])*100)/100);
+      await db.updateStock(id,{qty:newQty});
+      setStk(p=>p.map(x=>x.id===id?{...x,qty:newQty}:x));
+      out.push({name:s.name,qty:newQty});
+    }
+    return out;
+  };
+  const registerSale=async(sale,items)=>{
+    const total=Math.round((Number(sale.total)||0)*100)/100;
+    const pending=sale.status==="pending";
+    const soldAt=sale.sold_at||new Date().toISOString();
+    const row={...sale,total,status:pending?"pending":"paid",sold_at:soldAt,paid_at:pending?null:soldAt,due_date:pending?(sale.due_date||null):null,created_by:ROLE_CONFIG[adminRole]?.label||null};
+    const r=await db.addSale(row,items);
+    setSales(p=>[r,...p]);
+    if(!pending&&total>0){
+      const pay=await db.addPayment({vehicleId:null,amount:total,method:sale.method,note:saleLabel(r,items),paidAt:todayISO(),division:sale.division||"performance",saleId:r.id});
+      setPay(p=>[...p,pay]);
+    }
+    const st=await stockDelta(items,-1);
+    return {sale:r,stock:st};
+  };
+  // Venda a prazo → recebida: cria o pagamento e marca a venda como paga
+  const receiveSale=async(sale,{method,paidAt})=>{
+    try{
+      const pay=await db.addPayment({vehicleId:null,amount:Number(sale.total),method,note:saleLabel(sale),paidAt:paidAt||todayISO(),division:sale.division||"performance",saleId:sale.id});
+      setPay(p=>[...p,pay]);
+      const patch={status:"paid",paid_at:paidAt?new Date(paidAt+"T12:00:00").toISOString():new Date().toISOString(),method};
+      await db.updateSale(sale.id,patch);
+      setSales(p=>p.map(s=>s.id===sale.id?{...s,...patch}:s));
+      toast_(`Recebido ${fmtBRL(sale.total)}`);
+    }catch(e){errToast(e);}
+  };
+  // Pagamentos de uma venda. Vendas antigas (sem sale_id): pagamento sem OS de mesmo valor no mesmo dia.
+  const salePayments=sale=>{
+    const linked=payments.filter(p=>p.saleId===sale.id);
+    if(linked.length||sale.status==="pending") return linked;
+    const d=String(sale.sold_at||"").slice(0,10);
+    const m=payments.find(p=>!p.vehicleId&&!p.osHistoryId&&!p.saleId&&Math.abs(Number(p.amount)-Number(sale.total))<0.01&&String(p.paidAt||"").slice(0,10)===d);
+    return m?[m]:[];
+  };
+  // Excluir venda: estorna o pagamento e (opcional) devolve os itens ao estoque
+  const deleteSaleFull=async(sale,{restock=true}={})=>{
+    try{
+      const pays=salePayments(sale);
+      for(const p of pays) await db.deletePayment(p.id);
+      if(pays.length) setPay(p=>p.filter(x=>!pays.some(y=>y.id===x.id)));
+      if(restock) await stockDelta(sale.sale_items||[],1);
+      await db.deleteSale(sale.id);
+      setSales(p=>p.filter(s=>s.id!==sale.id));
+      toast_(`Venda excluída${pays.length?" · financeiro estornado":""}`);
+    }catch(e){errToast(e);}
+  };
   // Estoque → venda de balcão direta pelo produto (financeiro + baixa de saldo)
   const sellStockItem=async(it,{qty,price,method,client})=>{
     try{
       const q=Number(qty)||0, pr=Number(price)||0, total=Math.round(q*pr*100)/100;
-      const sale={total,method,note:`Venda direta do estoque${client?` · ${client}`:""}`,client_name:client||null,description:it.name,division:"performance",sold_at:new Date().toISOString()};
-      const r=await db.addSale(sale,[{shelf_item_id:null,name:it.name,price:pr,qty:q,from_stock:true}]);
-      setSales(p=>[r,...p]);
-      const pay=await db.addPayment({vehicleId:null,amount:total,method,note:`Venda: ${it.name}`,paidAt:new Date().toISOString(),division:"performance"});
-      setPay(p=>[...p,pay]);
-      const newQty=Math.max(0,(Number(it.qty)||0)-q);
-      await db.updateStock(it.id,{qty:newQty});
-      setStk(p=>p.map(s=>s.id===it.id?{...s,qty:newQty}:s));
-      toast_(`Venda de ${fmtBRL(total)} registrada · estoque ${newQty} un.`);
+      const sale={total,method,note:null,client_name:client||null,description:it.name,division:"performance",sold_at:new Date().toISOString()};
+      const {stock:st}=await registerSale(sale,[{shelf_item_id:null,name:it.name,price:pr,qty:q,from_stock:true,stock_item_id:it.id,cost:Number(it.costPrice)||0,kind:"item"}]);
+      toast_(`Venda de ${fmtBRL(total)} registrada${st[0]?` · estoque ${st[0].qty} un.`:""}`);
     }catch(e){errToast(e);throw e;}
   };
   // Estoque → uso interno/insumo: só dá baixa no saldo
@@ -19928,7 +20265,7 @@ function MainApp() {
       </div>
 
       <SL2 label="A receber"/>
-      <ReceivablesPanel vehicles={vehicles} tasks={tasks} payments={payments} osHistory={osHistory} clients={clients} clientCredits={clientCredits} defaultRate={defaultRate} hide={hideRevenue}/>
+      <ReceivablesPanel vehicles={vehicles} tasks={tasks} payments={payments} osHistory={osHistory} clients={clients} clientCredits={clientCredits} defaultRate={defaultRate} hide={hideRevenue} sales={sales}/>
 
       <SL2 label="Resumo do mês"/>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
@@ -20528,7 +20865,7 @@ function MainApp() {
       {/* ══ STOCK ══ */}
       {tab==="stock"&&allowedTabs.includes("stock")&&<>
         <TabHeader color={B.purple} title="Estoque" subtitle="Produtos, preços e quantidades · Vinculados às OSs"/>
-        <StockTab employees={employees} onSellItem={sellStockItem} onUseItem={useStockItem} stock={stock} purchases={stockPurchases} onImportNote={importStockNote} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
+        <StockTab employees={employees} hideValues={isChief(adminRole)} onSellItem={isChief(adminRole)?null:sellStockItem} onUseItem={useStockItem} stock={stock} purchases={stockPurchases} onImportNote={isChief(adminRole)?null:importStockNote} onAdd={addStock} onUpdate={updStock} onDelete={delStock} onAddPurchase={addPurchase} onUpdatePurchase={updatePurchase} onDeletePurchase={deletePurchase}
           onGenerateOrder={async inv=>{
             try{
               const r=await db.addInvestment({...inv,category:"materiais",createdBy:adminRole});
@@ -20544,7 +20881,7 @@ function MainApp() {
         <TabHeader color="#0891b2" title="Clientes" subtitle="Cadastro, contato e histórico de veículos"/>
         <ClientsMonitorTab clients={clients} vehicles={vehicles} tasks={tasks} employees={employees} defaultRate={defaultRate}
           onUpdateName={updCliN} onUpdatePhone={updCliP} onUpdateEmail={updCliE} onDelete={delCli}
-          osHistory={osHistory} payments={payments} onAddClient={addCliDirect} isOwner={adminRole==="owner"}/>
+          osHistory={osHistory} payments={payments} onAddClient={addCliDirect} isOwner={adminRole==="owner"} sales={sales}/>
       </>}
       {tab==="appointments"&&allowedTabs.includes("appointments")&&<>
         <TabHeader color="#8b5cf6" title="Agendamentos" subtitle="Pré-OS · Serviços planejados · Sinais e abonos"/>
@@ -20762,34 +21099,22 @@ function MainApp() {
       </>}
 
       {tab==="sales"&&allowedTabs.includes("sales")&&<>
-        <TabHeader color="#06b6d4" title="Vendas" subtitle="Venda avulsa de itens da prateleira ou do estoque"/>
+        <TabHeader color="#06b6d4" title="Vendas" subtitle="Balcão: itens da prateleira, do estoque e serviços do catálogo"/>
         <SalesTab
-          shelfItems={shelfItems} sales={sales} stock={stock}
+          shelfItems={shelfItems} sales={sales} stock={stock} clients={clients} catalog={svcCatalog} defaultRate={defaultRate}
+          isOwner={adminRole==="owner"} company={company} salePayments={salePayments}
           onAddShelfItem={async item=>{try{const r=await db.addShelfItem(item);setShelfItems(p=>[...p,r]);toast_("Item adicionado");}catch(e){errToast(e);}}}
           onUpdateShelfItem={async(id,patch)=>{try{const r=await db.updateShelfItem(id,patch);setShelfItems(p=>p.map(i=>i.id===id?r:i));toast_("Item atualizado");}catch(e){errToast(e);}}}
           onDeleteShelfItem={async id=>{try{await db.deleteShelfItem(id);setShelfItems(p=>p.filter(i=>i.id!==id));toast_("Item removido");}catch(e){errToast(e);}}}
           onAddSale={async(sale,items)=>{
             try{
-              const r=await db.addSale(sale,items);
-              setSales(p=>[r,...p]);
-              // Register in finance as payment
-              const pay=await db.addPayment({vehicleId:null,amount:sale.total,method:sale.method,note:sale.note||"Venda avulsa",paidAt:sale.sold_at||new Date().toISOString(),division:"performance"});
-              setPay(p=>[...p,pay]);
-              // Deduct stock quantity for stock items
-              for(const item of items){
-                if(item.from_stock&&item.stock_item_id){
-                  const stockItem=stock.find(s=>s.id===item.stock_item_id);
-                  if(stockItem){
-                    const newQty=Math.max(0,(stockItem.qty||0)-item.qty);
-                    await db.updateStock(item.stock_item_id,{qty:newQty});
-                    setStk(p=>p.map(s=>s.id===item.stock_item_id?{...s,qty:newQty}:s));
-                  }
-                }
-              }
-              toast_(`Venda de ${fmtBRL(sale.total)} registrada`);
-            }catch(e){errToast(e);}
+              const {sale:r}=await registerSale(sale,items);
+              toast_(sale.status==="pending"?`Venda a prazo de ${fmtBRL(sale.total)} registrada`:`Venda de ${fmtBRL(sale.total)} registrada`);
+              return r;
+            }catch(e){errToast(e);return null;}
           }}
-          onDeleteSale={async id=>{try{await db.deleteSale(id);setSales(p=>p.filter(s=>s.id!==id));toast_("Venda removida");}catch(e){errToast(e);}}}
+          onDeleteSale={deleteSaleFull}
+          onReceiveSale={receiveSale}
           onUpdateSale={async(id,patch)=>{try{await db.updateSale(id,patch);setSales(p=>p.map(s=>s.id===id?{...s,...patch}:s));toast_("Venda atualizada");}catch(e){errToast(e);}}}
         />
       </>}

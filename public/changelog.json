@@ -1,5 +1,50 @@
 [
   {
+    "date": "2026-11-27",
+    "changes": [
+      {
+        "type": "feat",
+        "text": "Vendas: venda a prazo com vencimento; entra em \"A receber\" e vai para o financeiro só ao clicar em Receber"
+      },
+      {
+        "type": "feat",
+        "text": "Vendas: recibo em PDF e envio pelo WhatsApp, logo após a venda e no histórico"
+      },
+      {
+        "type": "feat",
+        "text": "Vendas: cliente buscado no cadastro (ou nome livre); as compras aparecem no card do cliente"
+      },
+      {
+        "type": "feat",
+        "text": "Vendas: serviços do catálogo no carrinho, preço editável por item e escolha entre Performance e Finishing"
+      },
+      {
+        "type": "feat",
+        "text": "Vendas: histórico com número da venda, filtros por período, a prazo e busca; resumo com ticket médio, margem e mais vendidos (gestor)"
+      },
+      {
+        "type": "feat",
+        "text": "Vendas liberado para o Administrativo, sem o resumo de valores do período"
+      },
+      {
+        "type": "fix",
+        "text": "Vendas: venda pelo carrinho agora dá baixa no estoque, inclusive item da prateleira vinculado ao estoque"
+      },
+      {
+        "type": "fix",
+        "text": "Vendas: excluir venda pede confirmação, estorna o pagamento no financeiro e devolve os itens ao estoque"
+      },
+      {
+        "type": "fix",
+        "text": "Financeiro: custo das peças vendidas no balcão entra no custo do mês; vendas a prazo entram no a receber"
+      },
+      {
+        "type": "fix",
+        "text": "Estoque: chefes não veem mais custo, markup, preço de venda, compras nem o botão de vender no balcão"
+      }
+    ]
+  },
+  {
     "date": "2026-11-26",
     "changes": [
       {

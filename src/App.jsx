@@ -1266,8 +1266,10 @@ function computeReceivables(vehicles,tasks,payments,osHistory,clients,clientCred
     if(s.client_id) c=get(s.client_id);
     else { const k="_s"+String(s.client_name||"").trim().toLowerCase(); c=byClient[k]||(byClient[k]={id:k,name:s.client_name||"Sem cliente",items:[],collect:0,receive:0,closed:0,credit:0}); }
     const due=s.due_date?` · vence ${new Date(s.due_date+"T12:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}`:"";
-    c.items.push({key:"s"+s.id,kind:"sale",label:`Venda${s.sale_number?` nº ${s.sale_number}`:""}${due}`,total:t,invested:t,paid:0,collect:t,receive:t});
-    c.collect+=t; c.receive+=t;
+    const pd=Math.min(t,Math.round((payments||[]).filter(p=>p.saleId===s.id).reduce((a,p)=>a+Number(p.amount),0)*100)/100);
+    const rest=Math.round((t-pd)*100)/100; if(rest<0.01) return;
+    c.items.push({key:"s"+s.id,kind:"sale",label:`Venda${s.sale_number?` nº ${s.sale_number}`:""}${s.method==="Aportes"?" · aportes":""}${due}`,total:t,invested:t,paid:pd,collect:rest,receive:rest});
+    c.collect+=rest; c.receive+=rest;
   });
   // crédito do cliente abate o saldo dele
   Object.values(byClient).forEach(c=>{
@@ -12602,9 +12604,11 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   };
 
   const divPayments=payments.filter(p=>(p.division||"performance")===finDiv&&inRange(p.paidAt)&&p.vehicleId); // OS payments only
-  const filteredSales=sales.filter(s=>(s.division||"performance")===finDiv&&s.status!=="pending"&&inRange(s.paid_at||s.soldAt||s.sold_at));
+  // Vendas: entram pelos pagamentos ligados (sale_id) na data de cada aporte; vendas antigas sem vínculo entram pelo total
+  const salePays=payments.filter(p=>p.saleId&&(p.division||"performance")===finDiv&&inRange(p.paidAt));
+  const filteredSales=sales.filter(s=>(s.division||"performance")===finDiv&&s.status!=="pending"&&!payments.some(p=>p.saleId===s.id)&&inRange(s.paid_at||s.soldAt||s.sold_at));
   const totalOSRevenue=divPayments.reduce((s,p)=>s+Number(p.amount),0);
-  const totalSalesRevenue=filteredSales.reduce((s,sale)=>s+Number(sale.total),0);
+  const totalSalesRevenue=filteredSales.reduce((s,sale)=>s+Number(sale.total),0)+salePays.reduce((s,p)=>s+Number(p.amount),0);
   const totalRevenue=totalOSRevenue+totalSalesRevenue;
   const filteredExpenses=expenses.filter(e=>(e.division===finDiv||e.division==="ambos")&&(e.recurrent||inRange(e.date)));
   const totalExpenses=filteredExpenses.reduce((s,e)=>s+Number(e.amount),0);
@@ -12670,9 +12674,10 @@ async function generateFinancePDF({finDiv,from,to,payments,expenses,internalTran
   else filteredExpenses.forEach(e=>row(e.description||"Despesa",Number(e.amount),e.date?new Date(e.date+"T12:00").toLocaleDateString("pt-BR"):"",[ 220,38,38]));
   // Sales section
   // filteredSales already computed above
-  if(filteredSales.length>0){
+  if(filteredSales.length>0||salePays.length>0){
     y+=4;
-    sectionHeader(`VENDAS DIRETAS (${filteredSales.length})`);
+    sectionHeader(`VENDAS DIRETAS (${filteredSales.length+salePays.length})`);
+    salePays.forEach(p=>row(p.note||"Venda",Number(p.amount),`${payMethodLabel(p.method)}${p.paidAt?` · ${payDate(p.paidAt).toLocaleDateString("pt-BR")}`:""}`,[22,163,74]));
     filteredSales.forEach(s=>{
       const label=(s.client_name?`${s.client_name} — `:"")+(s.description||s.note||"Venda");
       const dateStr=s.soldAt||s.sold_at?new Date(s.soldAt||s.sold_at).toLocaleDateString("pt-BR"):"";
@@ -12799,7 +12804,7 @@ function FinanceTab({tasks,vehicles,clients,employees,payments,defaultRate,expen
   // Vendas de balcão: custo das peças vendidas (itens com custo gravado) entra no custo; venda a prazo entra no a receber
   const divSales=sales.filter(s=>(s.division||"performance")===finDiv);
   const salesCost=divSales.filter(s=>s.status!=="pending"&&inRange(s.paid_at||s.sold_at)).reduce((a,s)=>a+(s.sale_items||[]).reduce((b,i)=>b+(i.cost!=null?Number(i.cost)*(Number(i.qty)||0):0),0),0);
-  const salesPending=divSales.filter(s=>s.status==="pending").reduce((a,s)=>a+Number(s.total||0),0);
+  const salesPending=divSales.filter(s=>s.status==="pending").reduce((a,s)=>a+Math.max(0,Number(s.total||0)-payments.filter(p=>p.saleId===s.id).reduce((b,p)=>b+Number(p.amount),0)),0);
   const totalCost=divTasks.filter(t=>t.done).reduce((s,t)=>s+taskCost(t,defaultRate).mat,0)+salesCost;
   const totalProfit=totalRevenue-totalCost;
   const totalReceivable=vehicleRows.reduce((s,r)=>s+Math.max(0,r.balance),0)+salesPending; // always global
@@ -14246,7 +14251,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.27.280";
+const APP_VERSION = "2026.11.27.281";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -17642,7 +17647,7 @@ function PresencaTab({employees, isOwner=false}) {
 }
 
 // ─── Vendas: recibo em PDF ────────────────────────────────────────────────────
-async function generateSaleReceiptPDF({sale,client,company,noSave=false}){
+async function generateSaleReceiptPDF({sale,client,company,noSave=false,paid=0}){
   const jsPDFCtor=await loadJsPDF();
   const doc=new jsPDFCtor({unit:"mm",format:"a4"});
   const W=210, H=297, mx=20, cw=W-mx*2;
@@ -17680,7 +17685,7 @@ async function generateSaleReceiptPDF({sale,client,company,noSave=false}){
   const ext=doc.splitTextToSize(`(${extensoBRL(total)})`,cw); doc.text(ext,mx,y); y+=ext.length*5.2+8;
   const who=client?.name||sale.client_name||"";
   const para=pending
-    ?`Venda${who?` para ${who}`:""} no valor de ${R(total)}, a ser paga${sale.due_date?` até ${new Date(sale.due_date+"T12:00").toLocaleDateString("pt-BR")}`:" posteriormente"}.`
+    ?`Venda${who?` para ${who}`:""} no valor de ${R(total)}, a ser paga${sale.method==="Aportes"?" em aportes":""}${sale.due_date?` até ${new Date(sale.due_date+"T12:00").toLocaleDateString("pt-BR")}`:sale.method==="Aportes"?"":" posteriormente"}.${Number(paid)>0?` Já pago: ${R(paid)}; saldo: ${R(Math.max(0,total-Number(paid)))}.`:""}`
     :`Recebemos${who?` de ${who}`:""} a importância de ${R(total)} (${extensoBRL(total)}), referente aos itens abaixo.`;
   doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...body);
   const pl=doc.splitTextToSize(para,cw); doc.text(pl,mx,y,{lineHeightFactor:1.5}); y+=pl.length*5.3+8;
@@ -17701,7 +17706,8 @@ async function generateSaleReceiptPDF({sale,client,company,noSave=false}){
   if(disc>=0.01){ row("Subtotal",R(sub)); row("Desconto",`- ${R(disc)}`); }
   row("Total",R(total),{b:true});
   row("Data",isNaN(dt)?"":dt.toLocaleDateString("pt-BR"));
-  row("Forma de pagamento",pending?"A prazo":(payMethodLabel(sale.method)||"—"));
+  row("Forma de pagamento",pending?(sale.method==="Aportes"?"Aportes":"A prazo"):(payMethodLabel(sale.method)||"—"));
+  if(pending&&Number(paid)>0){ row("Já pago",R(paid)); row("Saldo em aberto",R(Math.max(0,total-Number(paid))),{b:true}); }
   if(sale.description){ cap("Descrição",mx,y,6.5,gray); const nl=doc.splitTextToSize(sale.description,cw-50); txt(nl,W-mx,y,{s:9,al:"right"}); y+=nl.length*4.4+4; }
   // Assinatura
   y=Math.max(y+18,H-70);
@@ -17715,15 +17721,15 @@ async function generateSaleReceiptPDF({sale,client,company,noSave=false}){
   return {doc,fileName};
 }
 // Recibo da venda: PDF direto, ou compartilhar (celular) / abrir o WhatsApp do cliente
-async function saleReceipt({sale,client,company,wa=false}){
+async function saleReceipt({sale,client,company,wa=false,paid=0}){
   let out=null;
-  try{ out=await generateSaleReceiptPDF({sale,client,company,noSave:wa}); }
+  try{ out=await generateSaleReceiptPDF({sale,client,company,noSave:wa,paid}); }
   catch(e){ console.error(e); alert("Não foi possível gerar o recibo."); return; }
   if(!wa) return;
   const nome=String(client?.name||sale.client_name||"").trim().split(/\s+/)[0];
   const pending=sale.status==="pending";
   const text=[`Olá${nome?`, ${nome}`:""}!`,"",pending
-    ?`Segue o comprovante da sua compra${sale.sale_number?` (venda nº ${sale.sale_number})`:""}: *${fmtBRL(sale.total)}*${sale.due_date?`, para pagamento até ${new Date(sale.due_date+"T12:00").toLocaleDateString("pt-BR")}`:""}.`
+    ?`Segue o comprovante da sua compra${sale.sale_number?` (venda nº ${sale.sale_number})`:""}: *${fmtBRL(sale.total)}*${sale.due_date?`, para pagamento até ${new Date(sale.due_date+"T12:00").toLocaleDateString("pt-BR")}`:""}.${Number(paid)>0?` Já recebemos ${fmtBRL(paid)}; falta *${fmtBRL(Math.max(0,Number(sale.total)-Number(paid)))}*.`:""}`
     :`Segue o recibo da sua compra${sale.sale_number?` (venda nº ${sale.sale_number})`:""}: *${fmtBRL(sale.total)}* (${payMethodLabel(sale.method)}).`,"","Obrigado!","OSC Group"].join("\n");
   try{
     const file=new File([out.doc.output("blob")],out.fileName,{type:"application/pdf"});
@@ -17755,7 +17761,7 @@ function SaleClientPicker({clients,value,onChange,inputStyle}){
   </div>);
 }
 
-function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,isOwner=false,company={},salePayments=()=>[],onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale,onReceiveSale,onUpdateSale}){
+function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,isOwner=false,company={},salePayments=()=>[],payments=[],onAddShelfItem,onUpdateShelfItem,onDeleteShelfItem,onAddSale,onDeleteSale,onReceiveSale,onRemoveContribution,onUpdateSale}){
   const AC="#06b6d4";
   const [view,setView]=useState("sell"); // sell | shelf | history
   const [cart,setCart]=useState([]); // {key,name,price,qty,stock_item_id,shelf_item_id,catalog_id,cost,kind}
@@ -17786,6 +17792,8 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
   const [delRestock,setDelRestock]=useState(true);
   const [recvSale,setRecvSale]=useState(null);
   const [recvMethod,setRecvMethod]=useState("Pix");
+  const [recvAmount,setRecvAmount]=useState("");
+  const [entryVal,setEntryVal]=useState("");
   const [recvDate,setRecvDate]=useState("");
   const [search,setSearch]=useState("");
   const [editSale,setEditSale]=useState(null); // {id, client:{id,name}, description, note}
@@ -17798,7 +17806,11 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
   const cartSubtotal=cart.reduce((s,i)=>s+(Number(i.price)||0)*i.qty,0);
   const discountAmount=discountVal?(discountType==="percent"?cartSubtotal*Math.min(100,parseFloat(discountVal)||0)/100:Math.min(parseFloat(discountVal)||0,cartSubtotal)):0;
   const cartTotal=Math.max(0,Math.round((cartSubtotal-discountAmount)*100)/100);
-  const pending=method==="A prazo";
+  const aportes=method==="Aportes";
+  const pending=method==="A prazo"||aportes;
+  // Aportes recebidos de uma venda (pagamentos com sale_id)
+  const paysOf=s=>payments.filter(p=>p.saleId===s.id).sort((a,b)=>String(a.paidAt).localeCompare(String(b.paidAt)));
+  const paidOf=s=>Math.round(paysOf(s).reduce((a,p)=>a+Number(p.amount),0)*100)/100;
 
   function addToCart(it){
     setLastSale(null);
@@ -17818,14 +17830,14 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
   async function finalizeSale(){
     if(!cart.length||busy) return;
     setBusy(true);
-    const sale={total:cartTotal,discount:Math.round(discountAmount*100)/100,method:pending?"A prazo":method,status:pending?"pending":"paid",due_date:pending&&dueDate?dueDate:null,
+    const sale={total:cartTotal,discount:Math.round(discountAmount*100)/100,method,status:pending?"pending":"paid",due_date:pending&&dueDate?dueDate:null,_entry:aportes?Math.min(cartTotal,parseFloat(entryVal)||0):0,
       note:saleNote.trim()||null,client_id:saleClient.id||null,client_name:saleClient.name.trim()||null,description:saleDescription.trim()||null,division,sold_at:new Date().toISOString()};
     const items=cart.map(i=>({shelf_item_id:i.shelf_item_id||null,name:i.name,price:Math.round((Number(i.price)||0)*100)/100,qty:i.qty,from_stock:!!i.stock_item_id,stock_item_id:i.stock_item_id||null,cost:i.cost==null?null:Number(i.cost),kind:i.kind||"item",catalog_id:i.catalog_id||null}));
     const r=await onAddSale(sale,items);
     setBusy(false);
     if(!r) return;
     setLastSale(r);
-    setCart([]);setSaleNote("");setSaleClient({id:null,name:""});setSaleDescription("");setDiscountVal("");setDueDate("");
+    setCart([]);setSaleNote("");setSaleClient({id:null,name:""});setSaleDescription("");setDiscountVal("");setDueDate("");setEntryVal("");
     if(pending) setMethod("Pix");
   }
 
@@ -17862,7 +17874,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
   const marginVal=withCost.reduce((a,s)=>a+Number(s.total||0)-itemsCost(s),0);
   const marginBase=withCost.reduce((a,s)=>a+Number(s.total||0),0);
   const pendingAll=sales.filter(s=>s.status==="pending");
-  const pendingTotal=pendingAll.reduce((a,s)=>a+Number(s.total||0),0);
+  const pendingTotal=pendingAll.reduce((a,s)=>a+Math.max(0,Number(s.total||0)-paidOf(s)),0);
   const top=(()=>{const m={};filteredSales.forEach(s=>(s.sale_items||[]).forEach(i=>{const k=String(i.name||"").trim();if(!k)return;const e=m[k]||(m[k]={name:k,qty:0,val:0});e.qty+=Number(i.qty)||0;e.val+=(Number(i.price)||0)*(Number(i.qty)||0);}));return Object.values(m).sort((a,b)=>b.val-a.val||b.qty-a.qty).slice(0,5);})();
   const clientOf=s=>s.client_id?clients.find(c=>c.id===s.client_id):null;
   const fdt=iso=>new Date(iso).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
@@ -17895,10 +17907,10 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
       {lastSale&&<div style={{background:`${AC}12`,border:`1px solid ${AC}44`,borderRadius:12,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:160}}>
           <div style={{fontSize:13,fontWeight:700,color:B.white}}>Venda{lastSale.sale_number?` nº ${lastSale.sale_number}`:""} registrada</div>
-          <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{fmtBRL(lastSale.total)} · {lastSale.status==="pending"?"a prazo":payMethodLabel(lastSale.method)}</div>
+          <div style={{fontSize:11,color:B.gray400,marginTop:2}}>{fmtBRL(lastSale.total)} · {lastSale.status==="pending"?(lastSale.method==="Aportes"?`aportes · falta ${fmtBRL(lastSale.total-paidOf(lastSale))}`:"a prazo"):payMethodLabel(lastSale.method)}</div>
         </div>
-        {iconBtn(()=>saleReceipt({sale:lastSale,client:clientOf(lastSale),company}),<><Ic n="download"/> Recibo</>,AC,"Baixar recibo em PDF")}
-        {iconBtn(()=>saleReceipt({sale:lastSale,client:clientOf(lastSale),company,wa:true}),<>WhatsApp</>,B.green,"Enviar recibo")}
+        {iconBtn(()=>saleReceipt({sale:lastSale,client:clientOf(lastSale),company,paid:paidOf(lastSale)}),<><Ic n="download"/> Recibo</>,AC,"Baixar recibo em PDF")}
+        {iconBtn(()=>saleReceipt({sale:lastSale,client:clientOf(lastSale),company,wa:true,paid:paidOf(lastSale)}),<>WhatsApp</>,B.green,"Enviar recibo")}
         <button onClick={()=>setLastSale(null)} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500}}><Ic n="x"/></button>
       </div>}
 
@@ -17981,19 +17993,25 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
             </div>
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-            {[...PAY_METHODS,"A prazo"].map(m=><button key={m} onClick={()=>setMethod(m)} style={chip(method===m,m==="A prazo"?B.amber:AC)}>{m}</button>)}
+            {[...PAY_METHODS,"A prazo","Aportes"].map(m=><button key={m} onClick={()=>setMethod(m)} style={chip(method===m,m==="A prazo"||m==="Aportes"?B.amber:AC)}>{m==="Aportes"?"Aportes (Pix)":m}</button>)}
           </div>
           {pending&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
             <span style={{fontSize:12,color:B.gray400,flexShrink:0}}>Vencimento</span>
             <input type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)} style={{...inp,flex:1}}/>
           </div>}
-          {pending&&<div style={{fontSize:11,color:B.amber,marginBottom:10,lineHeight:1.45}}>Entra em "A receber" e só vai para o financeiro quando for recebida no Histórico.</div>}
+          {aportes&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:12,color:B.gray400,flexShrink:0}}>1º aporte agora (Pix)</span>
+            <input type="number" inputMode="decimal" value={entryVal} onChange={e=>setEntryVal(e.target.value)} placeholder="0,00 (opcional)" style={{...inp,flex:1}}/>
+          </div>}
+          {pending&&<div style={{fontSize:11,color:B.amber,marginBottom:10,lineHeight:1.45}}>{aportes
+            ?"Cada aporte entra no financeiro na data em que chega. A venda fica em aberto e só é concluída (com o custo das peças no financeiro) quando os aportes completarem o total. Os itens saem do estoque agora."
+            :"Entra em \"A receber\" e só vai para o financeiro quando for recebida no Histórico."}</div>}
           <div style={{marginBottom:8}}><SaleClientPicker clients={clients} value={saleClient} onChange={setSaleClient} inputStyle={inp}/></div>
-          {pending&&!saleClient.name.trim()&&<div style={{fontSize:11,color:B.red,marginBottom:8}}>Venda a prazo precisa do cliente.</div>}
+          {pending&&!saleClient.name.trim()&&<div style={{fontSize:11,color:B.red,marginBottom:8}}>{aportes?"Venda por aportes":"Venda a prazo"} precisa do cliente.</div>}
           <input value={saleDescription} onChange={e=>setSaleDescription(e.target.value)} placeholder="Descrição da venda (opcional, sai no recibo)" style={{...inp,marginBottom:8}}/>
           <input value={saleNote} onChange={e=>setSaleNote(e.target.value)} placeholder="Observação interna (opcional)" style={{...inp,marginBottom:10}}/>
           <button disabled={busy||(pending&&!saleClient.name.trim())} onClick={finalizeSale} style={{width:"100%",padding:"12px",borderRadius:10,background:AC,border:"none",color:B.white,fontWeight:800,fontSize:14,cursor:"pointer",opacity:busy||(pending&&!saleClient.name.trim())?.5:1}}>
-            <Ic n="done"/> {busy?"Salvando…":`${pending?"Registrar venda a prazo":"Finalizar venda"} — ${fmtBRL(cartTotal)}`}
+            <Ic n="done"/> {busy?"Salvando…":`${aportes?"Registrar venda por aportes":pending?"Registrar venda a prazo":"Finalizar venda"} — ${fmtBRL(cartTotal)}`}
           </button>
         </div>
       </div>}
@@ -18045,7 +18063,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
         {[["month","Este mês"],["30","30 dias"],["all","Tudo"],["custom","Período"]].map(([id,l])=><button key={id} onClick={()=>setPer(id)} style={chip(per===id)}>{l}</button>)}
         <span style={{flex:1}}/>
-        {[["all","Todas"],["pending",`A prazo${pendingAll.length?` (${pendingAll.length})`:""}`]].map(([id,l])=><button key={id} onClick={()=>setHistStatus(id)} style={chip(histStatus===id,id==="pending"?B.amber:AC)}>{l}</button>)}
+        {[["all","Todas"],["pending",`Em aberto${pendingAll.length?` (${pendingAll.length})`:""}`]].map(([id,l])=><button key={id} onClick={()=>setHistStatus(id)} style={chip(histStatus===id,id==="pending"?B.amber:AC)}>{l}</button>)}
       </div>
       {per==="custom"&&<div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10}}>
         <input type="date" value={histFrom} onChange={e=>setHistFrom(e.target.value)} style={{...inp,flex:1,background:B.gray800}}/>
@@ -18059,7 +18077,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
           {[["Recebido",fmtBRL(sumTotal),`${paidSales.length} venda${paidSales.length!==1?"s":""}`],
             ["Ticket médio",fmtBRL(ticket),""],
             ["Margem",marginBase?`${Math.round(marginVal/marginBase*100)}%`:"—",marginBase?fmtBRL(marginVal):"sem custo"],
-            ["A prazo em aberto",fmtBRL(pendingTotal),`${pendingAll.length} venda${pendingAll.length!==1?"s":""}`]].map(([l,v,s])=>(
+            ["Em aberto",fmtBRL(pendingTotal),`${pendingAll.length} venda${pendingAll.length!==1?"s":""}`]].map(([l,v,s])=>(
             <div key={l}><div style={{...lab,color:AC,marginBottom:4}}>{l}</div><div style={{fontSize:17,fontWeight:300,letterSpacing:".03em",color:B.white}}>{v}</div>{s&&<div style={{fontSize:10,color:B.gray500,marginTop:1}}>{s}</div>}</div>))}
         </div>
         {withCost.length<paidSales.length&&<div style={{fontSize:10,color:B.gray500,marginTop:8}}>Margem calculada sobre {withCost.length} de {paidSales.length} vendas (vendas antigas e itens de prateleira sem custo informado ficam de fora).</div>}
@@ -18068,7 +18086,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
           {top.map(t=><div key={t.name} style={{display:"flex",gap:8,fontSize:12,color:B.gray300,marginBottom:3}}><span style={{flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</span><span style={{color:B.gray500}}>{t.qty} un.</span><span style={{minWidth:80,textAlign:"right"}}>{fmtBRL(t.val)}</span></div>)}
         </div>}
       </div>
-      :<div style={{fontSize:11,color:B.gray500,marginBottom:12}}>{filteredSales.length} venda{filteredSales.length!==1?"s":""} no período{pendingAll.length?` · ${pendingAll.length} a prazo em aberto`:""}</div>}
+      :<div style={{fontSize:11,color:B.gray500,marginBottom:12}}>{filteredSales.length} venda{filteredSales.length!==1?"s":""} no período{pendingAll.length?` · ${pendingAll.length} em aberto`:""}</div>}
 
       {filteredSales.length===0&&<div style={{color:B.gray600,fontSize:13,textAlign:"center",padding:20}}>Nenhuma venda no período</div>}
       {filteredSales.map(sale=>{
@@ -18084,7 +18102,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
               {(sale.division||"performance")==="finishing"&&<span style={{fontSize:9,fontWeight:700,letterSpacing:".14em",textTransform:"uppercase",color:FD.primary}}>Finishing</span>}
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-              {isPend?<span style={{fontSize:10,fontWeight:700,color:overdue?B.red:B.amber}}>A PRAZO{sale.due_date?` · ${overdue?"venceu":"vence"} ${fdd(sale.due_date)}`:""}</span>
+              {isPend?<span style={{fontSize:10,fontWeight:700,color:overdue?B.red:B.amber}}>{sale.method==="Aportes"?"APORTES":"A PRAZO"}{sale.due_date?` · ${overdue?"venceu":"vence"} ${fdd(sale.due_date)}`:""}</span>
                 :<span style={{fontSize:11,color:B.gray400}}>{payMethodLabel(sale.method)}</span>}
             </div>
           </div>
@@ -18112,11 +18130,21 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
             <div key={i} style={{fontSize:11,color:B.gray400,marginTop:4}}>{item.name} × {item.qty} — {fmtBRL(item.price*item.qty)}<span style={{color:B.gray600}}>{item.kind==="service"?" · serviço":item.from_stock?" · estoque":""}</span></div>
           ))}
           {Number(sale.discount)>0&&<div style={{fontSize:11,color:B.amber,marginTop:4}}>Desconto −{fmtBRL(sale.discount)}</div>}
+          {(()=>{const ps=paysOf(sale);const split=isPend||sale.method==="Aportes"||ps.length>1;if(!split||(!isPend&&!ps.length)) return null;const pd=paidOf(sale),T=Number(sale.total)||0,rest=Math.max(0,T-pd);return(<div style={{marginTop:8,background:B.gray900,borderRadius:8,padding:"8px 10px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:B.gray400,marginBottom:6}}><span>Pago {fmtBRL(pd)} de {fmtBRL(T)}</span>{isPend?<span style={{color:B.amber,fontWeight:700}}>falta {fmtBRL(rest)}</span>:<span style={{color:B.green,fontWeight:700}}>concluída</span>}</div>
+            <div style={{height:5,borderRadius:99,background:B.gray700,overflow:"hidden",marginBottom:ps.length?8:0}}><div style={{width:`${T?Math.min(100,pd/T*100):0}%`,height:"100%",background:isPend?B.amber:B.green}}/></div>
+            {ps.map(p=><div key={p.id} style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:B.gray300,marginTop:3}}>
+              <span style={{color:B.gray500,flexShrink:0}}>{payDate(p.paidAt).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}</span>
+              <span style={{flex:1}}>{payMethodLabel(p.method)}</span>
+              <span>{fmtBRL(p.amount)}</span>
+              <button title="Desfazer aporte" onClick={()=>{if(window.confirm(`Desfazer o aporte de ${fmtBRL(p.amount)}? Sai do financeiro${!isPend?" e a venda volta a ficar em aberto":""}.`)) onRemoveContribution(sale,p);}} style={{background:"none",border:"none",cursor:"pointer",color:B.gray500,padding:0,display:"flex"}}><Ic n="x"/></button>
+            </div>)}
+          </div>);})()}
           {isOwner&&cost!=null&&!isPend&&<div style={{fontSize:11,color:B.gray500,marginTop:4}}>Custo {fmtBRL(cost)} · margem {fmtBRL(Number(sale.total)-cost)}{Number(sale.total)>0?` (${Math.round((Number(sale.total)-cost)/Number(sale.total)*100)}%)`:""}</div>}
           <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
-            {isPend&&iconBtn(()=>{setRecvSale(sale);setRecvMethod("Pix");setRecvDate(todayISO());},<><Ic n="done"/> Receber</>,B.green,"Registrar recebimento")}
-            {iconBtn(()=>saleReceipt({sale,client:cli,company}),<><Ic n="download"/> Recibo</>,AC,"Baixar recibo em PDF")}
-            {iconBtn(()=>saleReceipt({sale,client:cli,company,wa:true}),<>WhatsApp</>,B.green,"Enviar recibo")}
+            {isPend&&iconBtn(()=>{setRecvSale(sale);setRecvMethod("Pix");setRecvDate(todayISO());setRecvAmount(String(Math.max(0,Math.round((Number(sale.total)-paidOf(sale))*100)/100)));},<><Ic n="done"/> {sale.method==="Aportes"?"Aporte":"Receber"}</>,B.green,"Registrar recebimento")}
+            {iconBtn(()=>saleReceipt({sale,client:cli,company,paid:paidOf(sale)}),<><Ic n="download"/> Recibo</>,AC,"Baixar recibo em PDF")}
+            {iconBtn(()=>saleReceipt({sale,client:cli,company,wa:true,paid:paidOf(sale)}),<>WhatsApp</>,B.green,"Enviar recibo")}
             <span style={{flex:1}}/>
             {iconBtn(()=>setEditSale(editSale?.id===sale.id?null:{id:sale.id,client:{id:sale.client_id||null,name:sale.client_name||""},description:sale.description||"",note:sale.note||"",due_date:sale.due_date||""}),<IEdit s={11} c={B.blue}/>,B.blue,"Editar")}
             {iconBtn(()=>{setDelSale(sale);setDelRestock(true);},<Ic n="trash"/>,B.red,"Excluir venda")}
@@ -18146,18 +18174,28 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
         </>,()=>setDelSale(null));
       })()}
 
-      {recvSale&&modal(<>
-        <div style={{fontWeight:700,color:B.white,marginBottom:4}}>Receber venda{recvSale.sale_number?` nº ${recvSale.sale_number}`:""}</div>
-        <div style={{fontSize:12,color:B.gray400,marginBottom:12}}>{recvSale.client_name||"Sem cliente"} · {fmtBRL(recvSale.total)}</div>
+      {recvSale&&(()=>{
+        const pd=paidOf(recvSale), rest=Math.max(0,Math.round((Number(recvSale.total)-pd)*100)/100);
+        const amt=Math.min(rest,Math.round((parseFloat(recvAmount)||0)*100)/100);
+        const isAp=recvSale.method==="Aportes";
+        return modal(<>
+        <div style={{fontWeight:700,color:B.white,marginBottom:4}}>{isAp?"Aporte na venda":"Receber venda"}{recvSale.sale_number?` nº ${recvSale.sale_number}`:""}</div>
+        <div style={{fontSize:12,color:B.gray400,marginBottom:12}}>{recvSale.client_name||"Sem cliente"} · total {fmtBRL(recvSale.total)}{pd>0?` · pago ${fmtBRL(pd)} · falta ${fmtBRL(rest)}`:""}</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <span style={{fontSize:12,color:B.gray400,flexShrink:0}}>Valor</span>
+          <input type="number" inputMode="decimal" value={recvAmount} onChange={e=>setRecvAmount(e.target.value)} style={{...inp,flex:1}}/>
+          {amt<rest-0.005&&<button onClick={()=>setRecvAmount(String(rest))} style={chip(false,B.green)}>Tudo</button>}
+        </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
           {PAY_METHODS.map(m=><button key={m} onClick={()=>setRecvMethod(m)} style={chip(recvMethod===m,B.green)}>{m}</button>)}
         </div>
-        <input type="date" value={recvDate} onChange={e=>setRecvDate(e.target.value)} style={{...inp,marginBottom:14}}/>
+        <input type="date" value={recvDate} onChange={e=>setRecvDate(e.target.value)} style={{...inp,marginBottom:8}}/>
+        <div style={{fontSize:11,color:B.gray500,marginBottom:14,lineHeight:1.45}}>{amt>=rest-0.005?"Completa o total: a venda é concluída e o custo das peças entra no financeiro.":`Fica faltando ${fmtBRL(rest-amt)}; a venda continua em aberto.`}</div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={()=>setRecvSale(null)} style={{flex:1,padding:"9px",borderRadius:8,background:B.gray700,border:`1px solid ${B.gray600}`,color:B.gray300,cursor:"pointer",fontWeight:700}}>Cancelar</button>
-          <button onClick={async()=>{const s=recvSale;setRecvSale(null);await onReceiveSale(s,{method:recvMethod,paidAt:recvDate||todayISO()});}} style={{flex:1,padding:"9px",borderRadius:8,background:B.green,border:"none",color:B.black,cursor:"pointer",fontWeight:800}}>Confirmar {fmtBRL(recvSale.total)}</button>
+          <button disabled={amt<=0} onClick={async()=>{const s=recvSale;setRecvSale(null);await onReceiveSale(s,{method:recvMethod,paidAt:recvDate||todayISO(),amount:amt});}} style={{flex:1,padding:"9px",borderRadius:8,background:B.green,border:"none",color:B.black,cursor:"pointer",fontWeight:800,opacity:amt>0?1:.5}}>Confirmar {fmtBRL(amt)}</button>
         </div>
-      </>,()=>setRecvSale(null))}
+      </>,()=>setRecvSale(null));})()}
     </>}
   </div>);
 }
@@ -19825,29 +19863,51 @@ function MainApp() {
     }
     return out;
   };
-  const registerSale=async(sale,items)=>{
+  // entry: aporte inicial (venda por aportes/a prazo). A venda só é concluída (status paid, custo no financeiro) quando os aportes somam o total.
+  const registerSale=async(sale,items,{entry=0,entryMethod="Pix"}={})=>{
     const total=Math.round((Number(sale.total)||0)*100)/100;
-    const pending=sale.status==="pending";
+    const ent=Math.min(total,Math.round((Number(entry)||0)*100)/100);
+    const pending=sale.status==="pending"&&ent<total-0.005;
     const soldAt=sale.sold_at||new Date().toISOString();
     const row={...sale,total,status:pending?"pending":"paid",sold_at:soldAt,paid_at:pending?null:soldAt,due_date:pending?(sale.due_date||null):null,created_by:ROLE_CONFIG[adminRole]?.label||null};
     const r=await db.addSale(row,items);
     setSales(p=>[r,...p]);
-    if(!pending&&total>0){
-      const pay=await db.addPayment({vehicleId:null,amount:total,method:sale.method,note:saleLabel(r,items),paidAt:todayISO(),division:sale.division||"performance",saleId:r.id});
+    const first=sale.status==="pending"?ent:total;
+    if(first>0){
+      const pay=await db.addPayment({vehicleId:null,amount:first,method:sale.status==="pending"?entryMethod:sale.method,note:saleLabel(r,items)+(sale.status==="pending"?" · aporte":""),paidAt:todayISO(),division:sale.division||"performance",saleId:r.id});
       setPay(p=>[...p,pay]);
     }
     const st=await stockDelta(items,-1);
     return {sale:r,stock:st};
   };
-  // Venda a prazo → recebida: cria o pagamento e marca a venda como paga
-  const receiveSale=async(sale,{method,paidAt})=>{
+  // Aporte (ou recebimento) de venda em aberto. Ao completar o total, conclui a venda.
+  const receiveSale=async(sale,{method,paidAt,amount})=>{
     try{
-      const pay=await db.addPayment({vehicleId:null,amount:Number(sale.total),method,note:saleLabel(sale),paidAt:paidAt||todayISO(),division:sale.division||"performance",saleId:sale.id});
+      const already=payments.filter(p=>p.saleId===sale.id).reduce((a,p)=>a+Number(p.amount),0);
+      const rest=Math.round((Number(sale.total)-already)*100)/100;
+      const amt=Math.min(rest,Math.round((Number(amount??rest)||0)*100)/100);
+      if(amt<=0) return;
+      const pay=await db.addPayment({vehicleId:null,amount:amt,method,note:saleLabel(sale)+(amt<rest-0.005||already>0?" · aporte":""),paidAt:paidAt||todayISO(),division:sale.division||"performance",saleId:sale.id});
       setPay(p=>[...p,pay]);
-      const patch={status:"paid",paid_at:paidAt?new Date(paidAt+"T12:00:00").toISOString():new Date().toISOString(),method};
-      await db.updateSale(sale.id,patch);
-      setSales(p=>p.map(s=>s.id===sale.id?{...s,...patch}:s));
-      toast_(`Recebido ${fmtBRL(sale.total)}`);
+      if(amt>=rest-0.005){
+        const patch={status:"paid",paid_at:paidAt?new Date(paidAt+"T12:00:00").toISOString():new Date().toISOString(),method:already>0?(sale.method==="A prazo"?"Aportes":sale.method):method};
+        await db.updateSale(sale.id,patch);
+        setSales(p=>p.map(s=>s.id===sale.id?{...s,...patch}:s));
+        toast_(`Venda concluída · ${fmtBRL(sale.total)} recebidos`);
+      } else toast_(`Aporte de ${fmtBRL(amt)} · falta ${fmtBRL(rest-amt)}`);
+    }catch(e){errToast(e);}
+  };
+  // Desfaz um aporte: apaga o pagamento e, se a venda estava concluída, volta para em aberto
+  const removeSaleContribution=async(sale,pay)=>{
+    try{
+      await db.deletePayment(pay.id);
+      setPay(p=>p.filter(x=>x.id!==pay.id));
+      if(sale.status!=="pending"){
+        const patch={status:"pending",paid_at:null};
+        await db.updateSale(sale.id,patch);
+        setSales(p=>p.map(s=>s.id===sale.id?{...s,...patch}:s));
+      }
+      toast_(`Aporte de ${fmtBRL(pay.amount)} desfeito`);
     }catch(e){errToast(e);}
   };
   // Pagamentos de uma venda. Vendas antigas (sem sale_id): pagamento sem OS de mesmo valor no mesmo dia.
@@ -21113,13 +21173,14 @@ function MainApp() {
           onDeleteShelfItem={async id=>{try{await db.deleteShelfItem(id);setShelfItems(p=>p.filter(i=>i.id!==id));toast_("Item removido");}catch(e){errToast(e);}}}
           onAddSale={async(sale,items)=>{
             try{
-              const {sale:r}=await registerSale(sale,items);
-              toast_(sale.status==="pending"?`Venda a prazo de ${fmtBRL(sale.total)} registrada`:`Venda de ${fmtBRL(sale.total)} registrada`);
+              const {_entry,...sl}=sale;
+              const {sale:r}=await registerSale(sl,items,{entry:_entry,entryMethod:"Pix"});
+              toast_(sale.status!=="pending"?`Venda de ${fmtBRL(sale.total)} registrada`:r.status==="paid"?`Venda de ${fmtBRL(sale.total)} concluída`:sale.method==="Aportes"?`Venda por aportes registrada${Number(_entry)>0?` · 1º aporte ${fmtBRL(_entry)}`:""}`:`Venda a prazo de ${fmtBRL(sale.total)} registrada`);
               return r;
             }catch(e){errToast(e);return null;}
           }}
           onDeleteSale={deleteSaleFull}
-          onReceiveSale={receiveSale}
+          onReceiveSale={receiveSale} onRemoveContribution={removeSaleContribution} payments={payments}
           onUpdateSale={async(id,patch)=>{try{await db.updateSale(id,patch);setSales(p=>p.map(s=>s.id===id?{...s,...patch}:s));toast_("Venda atualizada");}catch(e){errToast(e);}}}
         />
       </>}

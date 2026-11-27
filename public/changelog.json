@@ -4,6 +4,14 @@
     "changes": [
       {
         "type": "feat",
+        "text": "Vendas: pagamento em aportes (Pix), com 1º aporte opcional na hora; cada aporte entra no financeiro na data em que chega e a venda só é concluída, com o custo das peças, quando completar o total"
+      },
+      {
+        "type": "feat",
+        "text": "Vendas em aberto: aporte de qualquer valor, barra de pago e saldo, lista de aportes com opção de desfazer; recibo e \"A receber\" mostram o que falta"
+      },
+      {
+        "type": "feat",
         "text": "Vendas: preço de custo opcional no item da prateleira, usado na margem (item vinculado ao estoque usa o custo do estoque)"
       },
       {

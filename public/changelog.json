@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Nova OS pelo acesso rápido: cliente novo é salvo com nome e WhatsApp nos campos certos"
+      },
+      {
+        "type": "fix",
         "text": "Vendas: \"Recebido\" do histórico soma o que entrou no período, inclusive aportes de vendas em aberto; ticket médio considera todas as vendas do período"
       },
       {

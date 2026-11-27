@@ -132,6 +132,7 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Segurança: a função aceita a chave pública do app. Removida a ação `disconnect` (e o botão no app); `connect` só aceita a mesma conta já registrada (`ml_tokens.ml_user_id`); `sync` ignora chamadas com menos de 45 s da anterior. **Trocar de conta:** apagar a linha de `ml_tokens` no Supabase e reconectar
 - [x] Avisos de push sem emoji
 - Testado: deploy e uma rodada do sync (108 pedidos, sem aviso, 1 vínculo). **Não testado:** reconectar (pelo "reautorizar"), o bloqueio de conta diferente e o limite de 45 s
+- [x] Palavra-chave de entrega: o ML **não** a entrega pela API ao comprador. Testado no pedido da multimídia (tinha palavra-chave): `/orders`, `/shipments` (formato novo e antigo), `/history` e `/tracking` não a contêm; `/delivery_code`, `/delivery_password` e `/carrier` dão 404. Continua manual (`delivery_key`). A busca automática (`ml_key`) segue no código, caso o ML passe a enviar
 - [ ] Sugestões em aberto: alerta para item entregue há mais de 7 dias sem destino (hoje 6 itens com mais de 14 dias); mostrar no app o aviso (`warn`) da última rodada automática; procurar outra fonte de foto do anúncio
 
 ## Para o Aleph validar

@@ -3,6 +3,14 @@
     "date": "2026-11-27",
     "changes": [
       {
+        "type": "fix",
+        "text": "Mercado Livre: a sincronização ficou mais rápida (o ML deixou de liberar foto e detalhes dos anúncios; o link do anúncio continua)"
+      },
+      {
+        "type": "fix",
+        "text": "Mercado Livre: avisos de entrega sem emoji; a conta só pode ser reconectada com o mesmo usuário e o botão desconectar saiu"
+      },
+      {
         "type": "feat",
         "text": "Vendas: pagamento em aportes (Pix), com 1º aporte opcional na hora; cada aporte entra no financeiro na data em que chega e a venda só é concluída, com o custo das peças, quando completar o total"
       },

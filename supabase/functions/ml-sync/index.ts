@@ -83,9 +83,9 @@ async function notifyDeliveries(orderIds: string[]) {
   const dueToday = rows.filter((r: any) => live.includes(r.ship_status) && r.eta_at && brDay(r.eta_at) === today && !r.notif_today_at && !r.notif_route_at && !routeIds.has(r.id));
   const done = rows.filter((r: any) => r.ship_status === "delivered" && r.delivered_at && Date.now() - new Date(r.delivered_at).getTime() < 24 * 3600000 && !r.notif_delivered_at);
   const now = new Date().toISOString();
-  if (route.length) { await pushAdmins(route.length > 1 ? `🚚 ${route.length} peças saíram para entrega` : "🚚 Peça saiu para entrega", route); await sb.from("ml_purchase_items").update({ notif_route_at: now, notif_today_at: now }).in("id", route.map((r: any) => r.id)); }
-  if (dueToday.length) { await pushAdmins(dueToday.length > 1 ? `📦 ${dueToday.length} peças chegam hoje` : "📦 Peça chega hoje", dueToday); await sb.from("ml_purchase_items").update({ notif_today_at: now }).in("id", dueToday.map((r: any) => r.id)); }
-  if (done.length) { await pushAdmins(done.length > 1 ? `✅ ${done.length} peças entregues` : "✅ Peça entregue", done); await sb.from("ml_purchase_items").update({ notif_delivered_at: now }).in("id", done.map((r: any) => r.id)); }
+  if (route.length) { await pushAdmins(route.length > 1 ? `${route.length} peças saíram para entrega` : "Peça saiu para entrega", route); await sb.from("ml_purchase_items").update({ notif_route_at: now, notif_today_at: now }).in("id", route.map((r: any) => r.id)); }
+  if (dueToday.length) { await pushAdmins(dueToday.length > 1 ? `${dueToday.length} peças chegam hoje` : "Peça chega hoje", dueToday); await sb.from("ml_purchase_items").update({ notif_today_at: now }).in("id", dueToday.map((r: any) => r.id)); }
+  if (done.length) { await pushAdmins(done.length > 1 ? `${done.length} peças entregues` : "Peça entregue", done); await sb.from("ml_purchase_items").update({ notif_delivered_at: now }).in("id", done.map((r: any) => r.id)); }
   return route.length + dueToday.length + done.length;
 }
 
@@ -158,6 +158,8 @@ async function linkOrders() {
 
 async function sync(days: number) {
   const t = await getAccess();
+  // a função aceita a chave pública do app: evita rodadas seguidas (abuso ou clique duplo)
+  if (t.last_sync_at && Date.now() - new Date(t.last_sync_at).getTime() < 45000) return { ok: true, added: 0, orders: 0, warn: "", skipped: true };
   const uid = t.ml_user_id;
   const cutoff = Date.now() - days * 86400000;
   const orders: any[] = [];
@@ -177,29 +179,8 @@ async function sync(days: number) {
   { const seenO = new Set<string>(); const uniq = orders.filter((o) => !seenO.has(String(o.id)) && (seenO.add(String(o.id)), true)); orders.length = 0; orders.push(...uniq); }
   if (!orders.length) { await sb.from("ml_tokens").update({ last_sync_at: new Date().toISOString() }).eq("id", 1); return { ok: true, added: 0, orders: 0, warn }; }
 
-  // detalhes dos anúncios (link e miniatura)
-  const itemIds = [...new Set(orders.flatMap((o) => (o.order_items || []).map((i: any) => i.item?.id)).filter(Boolean))] as string[];
-  const info: Record<string, any> = {};
-  let itemsErr = "";
-  for (let i = 0; i < itemIds.length; i += 20) {
-    try {
-      const arr = await ml(`/items?ids=${itemIds.slice(i, i + 20).join(",")}&attributes=id,permalink,thumbnail,user_product_id,catalog_product_id`, t.access_token);
-      for (const x of arr) { if (x.code === 200) info[x.body.id] = x.body; else if (!itemsErr) itemsErr = `anúncio ${x.code} ${x.body?.message || x.body?.error || ""}`.trim(); }
-    } catch (e) { if (!itemsErr) itemsErr = (e as Error).message; }
-  }
-  // plano B: consulta anúncio por anúncio (alguns retornam 403 no lote); até 40 por rodada, só os que faltam
-  const missing = itemIds.filter((id) => !info[id]).slice(0, 40);
-  if (missing.length) {
-    let fb = "";
-    for (let i = 0; i < missing.length; i += 8) {
-      await Promise.all(missing.slice(i, i + 8).map(async (id) => {
-        try { const x = await ml(`/items/${id}?attributes=id,permalink,thumbnail,user_product_id,catalog_product_id`, t.access_token); if (x?.id) info[x.id] = x; }
-        catch (e) { if (!fb) fb = (e as Error).message; }
-      }));
-    }
-    if (fb && !itemsErr.includes(fb)) itemsErr = (itemsErr ? itemsErr + " | " : "") + fb;
-  }
-  if (itemIds.length && Object.keys(info).length < itemIds.length && itemsErr) warn = (warn ? warn + " · " : "") + `Detalhes de ${itemIds.length - Object.keys(info).length} anúncio(s) indisponíveis (` + itemsErr + ")";
+  // detalhes dos anúncios (/items): o ML bloqueou esse recurso para apps de comprador (403 "Resource deprecated"
+  // desde 11/2026). Não consultamos mais; o link é montado pelo código do anúncio e não há miniatura.
 
   // status de entrega (só pedidos ainda não entregues)
   const orderIds = orders.map((o) => String(o.id));
@@ -288,10 +269,8 @@ async function sync(days: number) {
         ship_probe: ship[String(o.id)]?.probe ?? null,
         paid_at: ((o.payments || []).map((p: any) => p.date_approved).filter(Boolean).sort()[0]) || null,
         seller: o.seller?.nickname || null,
-        permalink: info[iid]?.permalink || `https://produto.mercadolivre.com.br/${iid.replace(/^MLB/, "MLB-")}`,
-        thumbnail: info[iid]?.thumbnail || null,
-        user_product_id: info[iid]?.user_product_id || it.item?.user_product_id || null,
-        catalog_product_id: info[iid]?.catalog_product_id || null,
+        permalink: `https://produto.mercadolivre.com.br/${iid.replace(/^MLB/, "MLB-")}`,
+        user_product_id: it.item?.user_product_id || null,
       });
     }
   }
@@ -337,6 +316,9 @@ Deno.serve(async (req) => {
     if (action === "connect") {
       if (!body.code) return json({ ok: false, error: "Código de autorização ausente" }, 400);
       const d = await tokenCall({ grant_type: "authorization_code", code: String(body.code), redirect_uri: REDIRECT });
+      // a função aceita a chave pública do app: só reconecta a MESMA conta já registrada (trocar de conta = limpar ml_tokens no Supabase)
+      const { data: cur } = await sb.from("ml_tokens").select("ml_user_id").eq("id", 1).maybeSingle();
+      if (cur?.ml_user_id && d.user_id != null && String(d.user_id) !== String(cur.ml_user_id)) return json({ ok: false, error: "Esta não é a conta do Mercado Livre registrada no sistema" });
       let nickname = null;
       try { const me = await ml("/users/me", d.access_token); nickname = me.nickname || null; } catch { /* opcional */ }
       await saveTokens(d, { nickname });
@@ -345,10 +327,7 @@ Deno.serve(async (req) => {
     if (action === "sync") {
       return json(await sync(Math.min(Math.max(Number(body.days) || 90, 7), 365)));
     }
-    if (action === "disconnect") {
-      await sb.from("ml_tokens").delete().eq("id", 1);
-      return json({ ok: true });
-    }
+    // "disconnect" foi removido: qualquer um com a chave pública do app podia apagar a conexão
     return json({ ok: false, error: "Ação inválida" }, 400);
   } catch (e) {
     const m = (e as Error).message || String(e);

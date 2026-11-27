@@ -8090,7 +8090,6 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
     if(ok) setMsg(`${ok} ${ok!==1?"itens destinados":"item destinado"}`);
     if(fails.length) setErr(`${fails.length} não ${fails.length!==1?"foram destinados":"foi destinado"}: ${fails.join(" · ")}`);
   };
-  const disconnect=async()=>{ if(!window.confirm("Desconectar a conta do Mercado Livre? As compras já puxadas continuam na lista."))return; try{ await db.mlCall("disconnect"); setSt(s=>({...(s||{}),connected:false})); }catch(e){ setErr(errMsg(e)); } };
   const undoSupplies=async i=>{ if(!window.confirm(i.destination==="tool"?"Desfazer? A ferramenta sai da lista de Ferramentas e a compra volta para “Sem destino”.":"Desfazer? A despesa de insumos lançada no Financeiro será removida e a peça volta para “Sem destino”."))return; try{ await onUndoSupplies(i); await loadItems(); }catch(e){ setErr(errMsg(e)||"Erro ao desfazer"); } };
   const undoIgnore=async i=>{ try{ await db.setMLItem(i.id,{destination:null,assigned_by:null,assigned_at:null}); await loadItems(); }catch(e){ setErr(errMsg(e)); } };
   const fmtD=d=>d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"";
@@ -8202,7 +8201,6 @@ function MLPurchasesCard({vehicles=[],clients=[],tasks=[],stock=[],onAssign,onUn
       <span style={{flex:1}}/>
       {st?.connected&&<><button onClick={()=>doSync(false)} disabled={!!busy} style={{padding:"5px 12px",borderRadius:8,background:`${B.amber}18`,border:`1px solid ${B.amber}55`,color:B.amber,fontSize:12,fontWeight:700,cursor:"pointer",opacity:busy?.6:1}}>{busy==="sync"?"Sincronizando…":"↻ Sincronizar"}</button>
         {(adv||err)&&st.authUrl&&<a href={st.authUrl} style={{color:B.blue,fontSize:11,textDecoration:"none"}}>↻ reautorizar</a>}
-        {(adv||err)&&<button onClick={disconnect} style={{background:"none",border:"none",color:B.gray500,fontSize:11,cursor:"pointer"}}>desconectar</button>}
         {!err&&<button onClick={()=>setAdv(v=>!v)} aria-label="Mais opções" style={{background:"none",border:"none",color:B.gray500,fontSize:15,cursor:"pointer",padding:"0 4px",lineHeight:1}}>⋯</button>}</>}
     </div>
     {!open&&st?.connected&&(()=>{const c={};live.filter(i=>i.ship_status!=="delivered").forEach(i=>{const k=i.ship_status||"none";c[k]=(c[k]||0)+1;});const ks=["pending","handling","ready_to_ship","shipped","not_delivered","none"].filter(k=>c[k]);if(!ks.length)return null;const colr=k=>k==="shipped"?B.blue:k==="pending"||k==="none"?B.gray400:k==="not_delivered"?B.red:B.amber;return <div style={{display:"flex",gap:"3px 12px",flexWrap:"wrap",marginTop:8,paddingLeft:17}}>{ks.map(k=><span key={k} style={{fontSize:10.5,color:B.gray400,display:"inline-flex",alignItems:"center",gap:5}}><span style={{width:5,height:5,borderRadius:99,background:colr(k)}}/>{ML_SHIP[k]||"Sem status"} <b style={{color:B.gray200}}>{c[k]}</b></span>)}</div>;})()}
@@ -14251,7 +14249,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.27.281";
+const APP_VERSION = "2026.11.27.282";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);

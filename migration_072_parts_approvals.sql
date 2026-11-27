@@ -205,3 +205,6 @@ begin
     'company', (select jsonb_build_object('name', company_name, 'address', company_address, 'phone', company_phone, 'document', company_document) from settings where id = 1)
   );
 end $function$;
+
+-- realtime (aplicado junto com a correção 072b)
+alter publication supabase_realtime add table parts_approvals;

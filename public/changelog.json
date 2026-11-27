@@ -4,6 +4,10 @@
     "changes": [
       {
         "type": "fix",
+        "text": "Vendas: \"Recebido\" do histórico soma o que entrou no período, inclusive aportes de vendas em aberto; ticket médio considera todas as vendas do período"
+      },
+      {
+        "type": "fix",
         "text": "Mercado Livre: a sincronização ficou mais rápida (o ML deixou de liberar foto e detalhes dos anúncios; o link do anúncio continua)"
       },
       {

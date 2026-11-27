@@ -17866,8 +17866,14 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
   });
   const itemsCost=s=>{const its=s.sale_items||[];if(!its.length||its.some(i=>i.kind!=="service"&&i.cost==null)) return null;return its.reduce((a,i)=>a+(Number(i.cost)||0)*(Number(i.qty)||0),0);};
   const paidSales=filteredSales.filter(s=>s.status!=="pending");
-  const sumTotal=paidSales.reduce((a,s)=>a+Number(s.total||0),0);
-  const ticket=paidSales.length?sumTotal/paidSales.length:0;
+  // Recebido = dinheiro que entrou no período (aportes inclusive), como no Financeiro. Vendas antigas sem vínculo entram pelo total.
+  const inPer=d=>{const x=payDate(d);if(isNaN(x))return false;if(range[0]&&x<new Date(range[0].getFullYear(),range[0].getMonth(),range[0].getDate()))return false;if(range[1]&&x>range[1])return false;return true;};
+  const saleIds=new Set(sales.map(s=>s.id));
+  const perPays=payments.filter(p=>p.saleId&&saleIds.has(p.saleId)&&inPer(p.paidAt)&&(!hq||filteredSales.some(s=>s.id===p.saleId))&&(histStatus!=="pending"||filteredSales.some(s=>s.id===p.saleId)));
+  const legacyPaid=filteredSales.filter(s=>s.status!=="pending"&&!payments.some(p=>p.saleId===s.id));
+  const sumTotal=perPays.reduce((a,p)=>a+Number(p.amount||0),0)+legacyPaid.reduce((a,s)=>a+Number(s.total||0),0);
+  const recvCount=perPays.length+legacyPaid.length;
+  const ticket=filteredSales.length?filteredSales.reduce((a,s)=>a+Number(s.total||0),0)/filteredSales.length:0;
   const withCost=paidSales.filter(s=>itemsCost(s)!=null);
   const marginVal=withCost.reduce((a,s)=>a+Number(s.total||0)-itemsCost(s),0);
   const marginBase=withCost.reduce((a,s)=>a+Number(s.total||0),0);
@@ -17879,7 +17885,7 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
   const fdd=d=>d?new Date(d+"T12:00").toLocaleDateString("pt-BR"):"";
   const today=todayISO();
 
-  const ViewBtn=({id,label})=><button onClick={()=>setView(id)} style={{flex:1,padding:"7px 0",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,background:view===id?AC:B.gray700,color:view===id?B.white:B.gray400,transition:"all .2s"}}>{label}{id==="history"&&pendingAll.length>0?` · ${pendingAll.length} a prazo`:""}</button>;
+  const ViewBtn=({id,label})=><button onClick={()=>setView(id)} style={{flex:1,padding:"7px 0",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,background:view===id?AC:B.gray700,color:view===id?B.white:B.gray400,transition:"all .2s"}}>{label}{id==="history"&&pendingAll.length>0?` · ${pendingAll.length} em aberto`:""}</button>;
   const iconBtn=(onClick,icon,color,title)=><button title={title} onClick={onClick} style={{height:26,minWidth:26,padding:"0 7px",borderRadius:6,background:`${color}18`,border:`1px solid ${color}44`,color,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>{icon}</button>;
   const modal=(content,onClose)=>createPortal(<div style={{position:"fixed",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white,inset:0,background:"rgba(0,0,0,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
     <div style={{background:B.gray900,borderRadius:16,padding:20,margin:20,border:`1px solid ${B.gray700}`,maxWidth:420,width:"100%",boxSizing:"border-box"}} onClick={e=>e.stopPropagation()}>{content}</div>
@@ -18072,9 +18078,9 @@ function SalesTab({shelfItems,sales,stock,clients=[],catalog=[],defaultRate=0,is
 
       {isOwner?<div style={{background:`${AC}10`,border:`1px solid ${AC}33`,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:10}}>
-          {[["Recebido",fmtBRL(sumTotal),`${paidSales.length} venda${paidSales.length!==1?"s":""}`],
-            ["Ticket médio",fmtBRL(ticket),""],
-            ["Margem",marginBase?`${Math.round(marginVal/marginBase*100)}%`:"—",marginBase?fmtBRL(marginVal):"sem custo"],
+          {[["Recebido",fmtBRL(sumTotal),`${recvCount} pagamento${recvCount!==1?"s":""}${perPays.some(p=>{const s=sales.find(x=>x.id===p.saleId);return s&&(s.status==="pending"||s.method==="Aportes");})?" · inclui aportes":""}`],
+            ["Ticket médio",fmtBRL(ticket),`${filteredSales.length} venda${filteredSales.length!==1?"s":""}`],
+            ["Margem",marginBase?`${Math.round(marginVal/marginBase*100)}%`:"—",marginBase?`${fmtBRL(marginVal)} · concluídas`:paidSales.length?"sem custo":"nenhuma concluída"],
             ["Em aberto",fmtBRL(pendingTotal),`${pendingAll.length} venda${pendingAll.length!==1?"s":""}`]].map(([l,v,s])=>(
             <div key={l}><div style={{...lab,color:AC,marginBottom:4}}>{l}</div><div style={{fontSize:17,fontWeight:300,letterSpacing:".03em",color:B.white}}>{v}</div>{s&&<div style={{fontSize:10,color:B.gray500,marginTop:1}}>{s}</div>}</div>))}
         </div>

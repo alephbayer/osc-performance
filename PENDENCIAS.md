@@ -111,6 +111,18 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [ ] **Aleph:** ver se o Onmotor exporta as OSs em planilha; colocar as próximas em `~/OSC/importacao/originais/`
 - Regra para as próximas: OS em andamento entra como OS aberta com número novo; OS entregue vai para `os_history` (aí precisa da migration de origem)
 
+## Menu Vendas (sessão dedicada, 2026-11-27)
+- [x] Bugs: venda pelo carrinho não baixava o estoque; excluir venda não estornava o pagamento nem o estoque; chefes viam custo/preço/compras e "Vender no balcão" no Estoque (v2026.11.27.279)
+- [x] Migration 070: `sales` (client_id, status paid/pending, due_date, paid_at, discount, created_by), `sale_items` (stock_item_id, cost, kind item/service, catalog_id), `payments.sale_id`. Só colunas novas; vendas antigas ficam "paid"
+- [x] Uma função só (`registerSale`) para a aba Vendas e o "Vender no balcão"; `deleteSaleFull` estorna o pagamento (vendas antigas sem `sale_id`: acha pagamento sem OS de mesmo valor no mesmo dia) e devolve ao estoque (opcional)
+- [x] Evoluções: venda a prazo (entra em "A receber" e no financeiro só ao Receber), recibo PDF/WhatsApp, cliente do cadastro (aparece no card do cliente em Clientes), serviços do catálogo, preço editável, divisão Performance/Finishing, nº da venda, filtros, resumo com ticket/margem/mais vendidos (só gestor)
+- [x] Administrativo acessa Vendas (sem resumo de valores do período nem margem)
+- [x] Financeiro: custo das peças vendidas (itens com custo) soma no custo; a prazo soma no "A receber (saldo aberto)". Relatório PDF do financeiro: vendas filtradas por divisão e só as recebidas
+- [ ] **Aleph:** testar no app: venda com item do estoque (saldo cai), excluir (saldo volta e some do financeiro), venda a prazo → Receber, recibo no celular. Testado aqui só build e o PDF do recibo
+- [ ] **Aleph:** chefes não veem mais o histórico de compras no produto do Estoque (tinha valores), então não lançam compra por ali. Confirmar se está ok
+- [ ] 2 itens de vendas antigas (antes de hoje) vieram do estoque sem baixa. Conferir o saldo desses produtos (dados de produção: só com OK)
+- [ ] Ideias: venda a prazo parcelada; recibo com logo; vendas no portal do cliente
+
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor
 - [ ] Subir o backup (zip de `backup-AAAA-MM-DD/`) para o local privado e confirmar

@@ -3,6 +3,10 @@
     "date": "2026-11-27",
     "changes": [
       {
+        "type": "feat",
+        "text": "Aprovação de peças: no carro em serviço, \"Pedir aprovação de peças\" monta a lista (margem padrão 50%, peça importada com câmbio) e envia ao cliente; ele aprova ou recusa cada item no portal e os aprovados entram na OS e em Compras. Chefes montam o rascunho sem valores"
+      },
+      {
         "type": "fix",
         "text": "Nova OS pelo acesso rápido: cliente novo é salvo com nome e WhatsApp nos campos certos"
       },

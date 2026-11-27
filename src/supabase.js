@@ -385,6 +385,41 @@ export const db = {
   portalCreatePin(clientId, pin) { return this._portalRpc("portal_create_pin", { p_client_id: clientId, p_pin: pin }); },
   portalLogin(clientId, pin) { return this._portalRpc("portal_login", { p_client_id: clientId, p_pin: pin }); },
   portalLogout(token) { return this._portalRpc("portal_logout", { p_token: token }); },
+  portalDecideParts(token, id, decisions) { return this._portalRpc("portal_decide_parts", { p_token: token, p_id: id, p_decisions: decisions }); },
+
+  // ── Aprovação de peças pelo cliente (carro em serviço) ──
+  _mapPA(a) {
+    return { id: a.id, vehicleId: a.vehicle_id, clientId: a.client_id, division: a.division || "performance", status: a.status,
+      items: Array.isArray(a.items) ? a.items : [], note: a.note || "", validDays: a.valid_days || 3, validUntil: a.valid_until,
+      createdBy: a.created_by || "", createdAt: a.created_at, sentAt: a.sent_at, decidedAt: a.decided_at,
+      decidedMeta: a.decided_meta || null, totalApproved: a.total_approved != null ? Number(a.total_approved) : null, cancelledAt: a.cancelled_at };
+  },
+  async loadPartsApprovals() {
+    const { data, error } = await supabase.from("parts_approvals").select("*").neq("status", "cancelled").order("created_at", { ascending: false }).limit(500);
+    if (error) throw error;
+    return (data || []).map(a => this._mapPA(a));
+  },
+  async savePartsApproval(a) {
+    const row = { vehicle_id: a.vehicleId, client_id: a.clientId || null, division: a.division || "performance", status: a.status || "draft",
+      items: a.items || [], note: a.note || "", valid_days: Math.max(1, Number(a.validDays) || 3), created_by: a.createdBy || null };
+    const q = a.id ? supabase.from("parts_approvals").update(row).eq("id", a.id) : supabase.from("parts_approvals").insert(row);
+    const { data, error } = await q.select().single();
+    if (error) throw error;
+    return this._mapPA(data);
+  },
+  async cancelPartsApproval(id) {
+    const { data, error } = await supabase.from("parts_approvals").update({ status: "cancelled" }).eq("id", id).select().single();
+    if (error) throw error;
+    return this._mapPA(data);
+  },
+  async deletePartsApproval(id) {
+    const { error } = await supabase.from("parts_approvals").delete().eq("id", id);
+    if (error) throw error;
+  },
+  subscribePartsApprovals(cb) {
+    const ch = supabase.channel("osc-parts-approvals").on("postgres_changes", { event: "*", schema: "public", table: "parts_approvals" }, () => cb()).subscribe();
+    return () => supabase.removeChannel(ch);
+  },
   portalResetPin(clientId) { return this._portalRpc("portal_reset_pin", { p_client_id: clientId }); },
   async loadClientPortal(token) {
     const d = await this._portalRpc("portal_load", { p_token: token });
@@ -410,6 +445,7 @@ export const db = {
       quotes: (d.quotes || []).map(q => this._mapQuote(q)),
       clientCredits: (d.client_credits || []).map(r => ({ id: r.id, clientId: r.client_id, amount: Number(r.amount), note: r.note || "", createdAt: r.created_at, createdBy: r.created_by })),
       stock: d.stock || [],
+      partsApprovals: (d.parts_approvals || []).map(a => ({ id: a.id, vehicleId: a.vehicle_id, division: a.division, status: a.status, note: a.note || "", sentAt: a.sent_at, validUntil: a.valid_until, decidedAt: a.decided_at, totalApproved: a.total_approved != null ? Number(a.total_approved) : null, items: a.items || [] })),
       defaultRate: Number(d.default_rate || 0),
       company: d.company || {},
     };

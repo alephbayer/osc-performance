@@ -135,6 +135,16 @@ Lista viva do que ficou em aberto. **Leia no início de cada sessão e atualize 
 - [x] Palavra-chave de entrega: o ML **não** a entrega pela API ao comprador. Testado no pedido da multimídia (tinha palavra-chave): `/orders`, `/shipments` (formato novo e antigo), `/history` e `/tracking` não a contêm; `/delivery_code`, `/delivery_password` e `/carrier` dão 404. Continua manual (`delivery_key`). A busca automática (`ml_key`) segue no código, caso o ML passe a enviar
 - [ ] Sugestões em aberto: alerta para item entregue há mais de 7 dias sem destino (hoje 6 itens com mais de 14 dias); mostrar no app o aviso (`warn`) da última rodada automática; procurar outra fonte de foto do anúncio
 
+## Aprovação de peças pelo cliente (sessão dedicada, 2026-11-27)
+- Decidido (Aleph): aprovação no **portal** (celular + PIN), admin escolhe a tarefa de cada peça, lista com validade em dias (padrão 3), chefe pode montar rascunho sem valores
+- [x] Tabela `parts_approvals` (migration 072) + `portal_decide_parts` (só com sessão válida do portal; grava decisão, data/hora por item, IP e aparelho) + `portal_load` devolve a versão do cliente (nome, marca, qtd, valor final; sem custo nem margem). Trigger: lista enviada não muda nem se apaga (só cancela); decidida não cancela; vencida não aceita decisão. Realtime ligado na tabela
+- [x] Card do carro: botão "Pedir aprovação de peças" (gestor/administrativo e chefes) e status no topo (Rascunho, Aguardando cliente, Vencida, Aprovado, Aprovado parcial, Recusado; decidido some do topo após 7 dias). Envio: push ao cliente + WhatsApp pronto com o link do portal. Rascunho do chefe manda push aos admins
+- [x] Aprovados entram sozinhos (no banco): material na tarefa escolhida (ou tarefa nova) com custo e margem, ligado a um pedido em Compras com status "Aprovado" (falta o link para comprar); importada vai para Peças importadas. Recusados ficam só no registro. Push aos admins com a decisão (sem valores)
+- Testado: build e as funções do banco numa transação desfeita (decisão parcial recusada, token errado, 2ª decisão, editar/apagar/cancelar depois, vencida, versão do cliente sem custo). **Não testado:** as telas no app ao vivo (admin, chefe, portal) e os pushes
+- [ ] **Aleph:** testar com um carro e um cliente de teste: montar lista, enviar, aprovar parte no portal, conferir materiais, Compras e status no card
+- [ ] Limites: o preço final é arredondado em centavos por unidade (o total da OS pode diferir em centavos); a decisão é prova forte (sessão do portal), mas a tabela segue aberta à chave pública para leitura e para criar/cancelar listas (ver Segurança); chefe que abre rascunho de admin só vê, não edita
+- [ ] Ideias: lembrete quando a lista estiver para vencer; PDF da decisão como comprovante
+
 ## Para o Aleph validar
 - [ ] Chefe de Pintura: entrar com a senha nova e conferir que só aparecem os carros da Finishing, sem nenhum valor
 - [ ] Subir o backup (zip de `backup-AAAA-MM-DD/`) para o local privado e confirmar

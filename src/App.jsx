@@ -628,8 +628,9 @@ function PixPaymentBox() {
 }
 
 const PUSH_DISMISS_KEY="osc_portal_push_dismissed";
-function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[],clients=[],purchaseOrders=[],stock=[],onVehiclePhoto}) {
+function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHistory,defaultRate,onLogout,appointments=[],quotes=[],onApproveQuote,onRejectQuote,theme="dark",toggleTheme,themePref,clientCredits=[],clients=[],purchaseOrders=[],stock=[],onVehiclePhoto,partsApprovals=[],onDecideParts}) {
   const [openVid,setOpenVid]=useState(null);
+  const [openPA,setOpenPA]=useState(null);
   const [tab,setTab]=useState("active");
   const [pushStatus,setPushStatus]=useState(null);
   const [confirmQ,setConfirmQ]=useState(null); // {id, act:"approve"|"reject"}
@@ -687,7 +688,13 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
   const debtTotal=debtOS.reduce((a,b)=>a+b,0);
   const recentArrivals=cliVehicles.flatMap(v=>(v.importParts||[]).filter(p=>p.arrived&&p.arrivedAt&&Date.now()-new Date(p.arrivedAt).getTime()<3*86400000).map(p=>({p,v})));
   const nextAppt=[...cliAppts].filter(a=>a.scheduledDate).sort((a,b)=>String(a.scheduledDate).localeCompare(String(b.scheduledDate)))[0];
+  const pendingPA=partsApprovals.filter(a=>a.status==="sent"&&cliVehicleIds.has(a.vehicleId));
+  const recentPA=partsApprovals.filter(a=>a.status==="decided"&&cliVehicleIds.has(a.vehicleId)&&Date.now()-new Date(a.decidedAt||0).getTime()<3*86400000);
+  const paModalA=openPA&&partsApprovals.find(a=>a.id===openPA);
+  const paModal=paModalA?<PortalPartsModal a={paModalA} vehicle={vehicles.find(v=>v.id===paModalA.vehicleId)} onDecide={onDecideParts} onClose={()=>setOpenPA(null)}/>:null;
   const attention=[
+    ...pendingPA.map(a=>{const v=vehicles.find(x=>x.id===a.vehicleId);const exp=a.validUntil&&new Date(a.validUntil)<new Date();return {k:"pa"+a.id,c:exp?B.gray400:B.amber,t:exp?"Aprovação de peças vencida":`${a.items.length} ${a.items.length===1?"peça aguarda":"peças aguardam"} sua aprovação`,s:`${vehTitle(v)||"Veículo"} · ${exp?"fale com a oficina":"toque para aprovar ou recusar"}`,go:()=>setOpenPA(a.id),ic:'<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>'};}),
+    ...recentPA.map(a=>{const v=vehicles.find(x=>x.id===a.vehicleId);const ap=a.items.filter(i=>i.decision==="approved").length;return {k:"pd"+a.id,c:B.green,t:"Decisão de peças registrada",s:`${vehTitle(v)||"Veículo"} · ${ap} de ${a.items.length} aprovada${a.items.length!==1?"s":""}`,go:()=>setOpenPA(a.id),ic:'<path d="M20 6L9 17l-5-5"/>'};}),
     ...(pendingQuotes.length>0?[{k:"q",c:B.amber,t:`${pendingQuotes.length} orçamento${pendingQuotes.length!==1?"s":""} aguardando aprovação`,s:"Toque para revisar e aprovar",go:()=>setTab("quotes"),ic:'<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 14l2 2 4-4"/>'}]:[]),
     ...(debtTotal>=0.01?[{k:"d",c:B.red,t:"Saldo em aberto",s:`${fmtBRL(debtTotal)} em ${debtOS.length} OS anterior${debtOS.length!==1?"es":""}`,go:()=>setTab("account"),ic:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'}]:[]),
     ...recentArrivals.map(({p,v})=>({k:"a"+v.id+p.name,c:B.green,t:`${p.name||"Peça importada"} chegou`,s:vehTitle(v),go:()=>{setOpenVid(v.id);try{window.scrollTo({top:0});}catch{}},ic:'<path d="M20 6L9 17l-5-5"/>'})),
@@ -695,10 +702,12 @@ function ClientPortal({client,company={},vehicles,tasks,employees,payments,osHis
   ];
 
   if(openVid&&vehicles.some(x=>x.id===openVid)) return (<div style={{height:"100%",overflowY:"auto",WebkitOverflowScrolling:"touch",background:B.black}}>
+    {paModal}
     <PublicVehicleView vehicleId={openVid} vehicles={vehicles} tasks={tasks} employees={employees} clients={clients.length?clients:[client]} payments={payments} osHistory={osHistory} defaultRate={defaultRate} purchaseOrders={purchaseOrders} stock={stock} onPhoto={onVehiclePhoto?(url=>onVehiclePhoto(openVid,url)):undefined} onBack={()=>{setOpenVid(null);try{window.scrollTo({top:0});}catch{}}}/>
   </div>);
 
   return (<div style={{height:"100%",display:"flex",flexDirection:"column",background:B.black,fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+    {paModal}
 
     {/* Header */}
     <div style={{background:B.black,padding:"0 18px",paddingTop:"calc(40px + env(safe-area-inset-top))",position:"sticky",top:0,zIndex:20,flexShrink:0}}>
@@ -6183,6 +6192,9 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   const [tlNoteText,setTLNoteText]=useState("");
   const [pdfLoading,setPdfLoading]=useState(false);
   const [showPartial,setShowPartial]=useState(false);
+  const paCan=managerMode||isChief(_curRole);
+  const paList=usePartsApprovals(paCan);
+  const [showPA,setShowPA]=useState(false);
 
   const isFD=division==="finishing";
   const delivReady=deliveryReady(vehicle,tasks,isFD);
@@ -6231,6 +6243,8 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
   };
 
   // Informações do cabeçalho (mecânicos, status, cor, notas…): ao lado do nome no PC, abaixo da foto no celular
+  const paLast=paCan?paList.find(a=>a.vehicleId===vehicle.id&&(a.division||"performance")===division):null;
+  const paSt=paLast&&(paLast.status!=="decided"||Date.now()-new Date(paLast.decidedAt||0).getTime()<7*86400000)?paStatus(paLast):null;
   const headMeta=(<>
             {mechs.length>0&&<span style={{color:B.orange,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>{mechs.map(m=>m.name).join(", ")}</span>}
             <span style={{background:sc.bg,border:`1px solid ${sc.border}`,borderRadius:5,padding:"0px 6px",color:sc.color,fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}>{sc.icon}{sc.label}</span>
@@ -6238,6 +6252,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             {vehicle.notes&&<span style={{color:B.amber,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Obs.</span>}
             {photos.length>0&&<span style={{color:B.purple,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>{photos.length}</span>}
             {managerMode&&clientNotes.length>0&&<span style={{color:B.amber,background:`${B.amber}18`,border:`1px solid ${B.amber}44`,borderRadius:5,padding:"0px 6px",fontWeight:700,fontSize:10,display:"inline-flex",alignItems:"center",gap:3}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{clientNotes.length} nota{clientNotes.length!==1?"s":""}</span>}
+            {paSt&&<span title="Aprovação de peças" style={{color:paSt.c,fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}><Ic n="pkg" s={10}/>Peças: {paSt.label}</span>}
             {vehicle.urgent&&<span style={{color:"#fff",background:B.red,borderRadius:5,padding:"0px 7px",fontWeight:800,fontSize:10,display:"inline-flex",alignItems:"center",gap:3,animation:"pulse 1.5s infinite"}}>
               <svg width="9" height="9" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="0"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               URGENTE
@@ -6250,6 +6265,7 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
     {orderTarget&&<OrderPartModal target={orderTarget} vehicleId={vehicle.id}
       onClose={()=>setOrderTarget(null)}
       onSubmit={async(po)=>{ await onAddPurchaseOrder(po); }}/>}
+    {showPA&&paCan&&<PartsApprovalModal vehicle={vehicle} vts={vts} isFD={isFD} client={cli} list={paList} canValues={managerMode} onClose={()=>setShowPA(false)}/>}
     {showPartial&&managerMode&&<PartialChargeModal vehicle={vehicle} tasks={tasks} isFD={isFD} defaultRate={defaultRate} client={cli} employee={mech} company={company} onClose={()=>setShowPartial(false)}/>}
     {showDelivCheck&&<DeliveryCheckModal vehicle={vehicle} tasks={vts} isFD={isFD} managerMode={managerMode} actor={managerMode?(isOwner?"Gestor":"Admin"):(currentMechanic?.name||"Mecânico")} onUpdateVehicle={onUpdateVehicle} onClose={()=>setShowDelivCheck(false)}
       onPdf={()=>generateDeliveryCheckPDF(buildDeliveryInfo({vehicle,tasks:vts.filter(x=>!x.warranty),deliveryCheck:vehicle.deliveryCheck||{},client:clients.find(c=>c.id===vehicle.clientId),employees,company,isFD}),{save:true})}/>}
@@ -6354,6 +6370,10 @@ function VehicleCard(props){const {defaultOpen=false,hidePageBtn=false,openPageO
             <svg width="11" height="11" viewBox="0 0 24 24" fill={vehicle.urgent?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             {vehicle.urgent?"Urgente":"Prioridade"}
           </button>}
+          {paCan&&(()=>{const last=paLast;return <>
+            <button onClick={()=>setShowPA(true)} style={{background:`${B.amber}10`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700}}><Ic n="pkg" s={11}/>Pedir aprovação de peças</button>
+            {last&&<PartsApprovalChip a={last} onClick={()=>setShowPA(true)}/>}
+          </>;})()}
           {managerMode&&<button onClick={()=>setShowPartial(true)} style={{background:`${B.amber}10`,border:`1px solid ${B.amber}44`,borderRadius:6,padding:"4px 9px",cursor:"pointer",color:B.amber,display:"flex",alignItems:"center",gap:4,fontSize:11,fontWeight:700}}>
             <IFileText s={11} c={B.amber}/>Cobrança parcial
           </button>}
@@ -14249,7 +14269,7 @@ async function getPushSubscription() {
 // ─── Version & Changelog ─────────────────────────────────────────────────────
 // Retorno da autorização do Mercado Livre: guarda o código e leva direto à aba Fornecedores
 try{ const u=new URL(window.location.href); if(u.searchParams.get("state")==="osc_ml"&&u.searchParams.get("code")){ sessionStorage.setItem("osc_ml_code",u.searchParams.get("code")); sessionStorage.setItem("osc_nav","cadastros"); sessionStorage.setItem("osc_tab","suppliers"); window.history.replaceState({},"",u.pathname); } }catch{}
-const APP_VERSION = "2026.11.27.284";
+const APP_VERSION = "2026.11.27.285";
 
 function ChangelogModal({onClose}) {
   const [entries,setEntries]=useState([]);
@@ -15643,6 +15663,304 @@ function deliveryReady(vehicle,tasks,isFD){
   const dc=(vehicle.deliveryCheck&&typeof vehicle.deliveryCheck==="object")?vehicle.deliveryCheck:{};
   return l.every(t=>t.done&&dc[t.id]);
 }
+// ─── Aprovação de peças pelo cliente (carro já em serviço) ───
+// Lista montada no card do carro (chefe: rascunho sem valores; gestor/administrativo: custo, margem e envio).
+// O cliente aprova ou recusa cada item no portal (celular + PIN); a decisão é gravada só pela função
+// portal_decide_parts no banco, que também lança os aprovados na OS (material + pedido "Aprovado" para comprar).
+let _curRole=null; // perfil logado no app interno (definido no App); null no portal do mecânico
+const PA_MARKUP=50;
+const paNum=s=>{const n=Number(String(s??"").replace(/\./g,"").replace(",","."));return isFinite(n)?n:0;};
+const paNumIn=s=>{const t=String(s??"").trim();if(!t) return 0;return t.includes(",")?paNum(t):(Number(t)||0);};
+const paR2=n=>Math.round((Number(n)||0)*100)/100;
+function paCalc(it){
+  const qty=Number(it.qty)||1;
+  if(it.import){ const t=paR2(importFinal(it.import)); return {price:paR2(t/qty),total:t}; }
+  const cost=Number(it.cost)||0, mk=it.markup==null||it.markup===""?PA_MARKUP:Number(it.markup)||0;
+  const price=paR2(cost*(1+mk/100)); return {price,total:paR2(price*qty)};
+}
+function paStatus(a){
+  if(!a) return null;
+  if(a.status==="draft") return {k:"draft",label:"Rascunho",c:B.gray400};
+  if(a.status==="sent") return (a.validUntil&&new Date(a.validUntil)<new Date())?{k:"expired",label:"Vencida",c:B.red}:{k:"sent",label:"Aguardando cliente",c:B.amber};
+  if(a.status==="decided"){ const n=(a.items||[]).length, ap=(a.items||[]).filter(i=>i.decision==="approved").length;
+    return ap===n?{k:"ok",label:"Aprovado",c:B.green}:ap===0?{k:"no",label:"Recusado",c:B.red}:{k:"partial",label:"Aprovado parcial",c:B.blue}; }
+  return {k:"x",label:"Cancelada",c:B.gray500};
+}
+const paFmtDT=d=>d?new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+const paPortalUrl=()=>{try{return `${window.location.origin}/?portal=cliente`;}catch{return "/?portal=cliente";}};
+const _pa={list:null,subs:new Set(),busy:false,again:false,unsub:null};
+function paNotify(){ _pa.subs.forEach(f=>f()); }
+function paReload(){
+  if(_pa.busy){ _pa.again=true; return; }
+  _pa.busy=true;
+  db.loadPartsApprovals().then(l=>{_pa.list=l;}).catch(()=>{ if(!_pa.list) _pa.list=[]; })
+    .finally(()=>{ _pa.busy=false; paNotify(); if(_pa.again){ _pa.again=false; paReload(); } });
+}
+function paUpsert(a){ _pa.list=[a,...(_pa.list||[]).filter(x=>x.id!==a.id)].filter(x=>x.status!=="cancelled"); paNotify(); }
+function paRemove(id){ _pa.list=(_pa.list||[]).filter(x=>x.id!==id); paNotify(); }
+function usePartsApprovals(enabled){
+  const [,f]=useState(0);
+  useEffect(()=>{
+    if(!enabled) return;
+    const s=()=>f(x=>x+1); _pa.subs.add(s);
+    if(_pa.list===null) paReload();
+    if(!_pa.unsub) _pa.unsub=db.subscribePartsApprovals(paReload);
+    return()=>{ _pa.subs.delete(s); };
+  },[enabled]);
+  return enabled?(_pa.list||[]):[];
+}
+function paWhatsText(a,vehicle,client){
+  const n=(a.items||[]).length, tot=(a.items||[]).reduce((s,i)=>s+(Number(i.total)||0),0);
+  const first=String(client?.name||"").trim().split(/\s+/)[0]||"";
+  const until=a.validUntil?new Date(a.validUntil).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}):"";
+  return `Olá${first?", "+first:""}! Para continuar o serviço do ${vehTitle(vehicle)||vehicle.plate||"seu veículo"} precisamos da sua aprovação para ${n} ${n===1?"peça":"peças"} (total ${fmtBRL(tot)}).\n\nAprove ou recuse cada item no portal do cliente${until?` até ${until}`:""}:\n${paPortalUrl()}\n\nPrazos e valores podem variar conforme disponibilidade.`;
+}
+function paOpenWhats(a,vehicle,client){
+  const d=cleanPhone(client?.phone||"");
+  window.open(`https://wa.me/${d?(d.length<=11?"55"+d:d):""}?text=${encodeURIComponent(paWhatsText(a,vehicle,client))}`,"_blank");
+}
+
+// Chip de status no card do carro
+function PartsApprovalChip({a,onClick}){
+  const st=paStatus(a); if(!st) return null;
+  return <button onClick={onClick} title="Aprovação de peças" style={{background:"none",border:`1px solid ${st.c}55`,borderRadius:99,padding:"2px 8px",cursor:"pointer",color:st.c,fontSize:10.5,fontWeight:600,display:"inline-flex",alignItems:"center",gap:4,flex:"0 0 auto"}}>
+    <Ic n="pkg" s={11}/>Peças: {st.label}
+  </button>;
+}
+
+function PartsApprovalModal({vehicle,vts,isFD,client,list,canValues,onClose}){
+  const division=isFD?"finishing":"performance";
+  const mine=list.filter(a=>a.vehicleId===vehicle.id&&(a.division||"performance")===division);
+  const [edit,setEdit]=useState(null); // rascunho em edição
+  const [viewId,setViewId]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+  const [sentNow,setSentNow]=useState(null);
+  const inp={background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:8,padding:"7px 9px",color:B.white,fontSize:12.5,outline:"none",fontFamily:"inherit",minWidth:0,boxSizing:"border-box"};
+  const lbl={fontSize:10,color:B.gray500,marginBottom:3};
+  const sec=t=><div style={{fontSize:10,fontWeight:600,color:B.gray400,letterSpacing:1.2,margin:"16px 2px 6px"}}>{t}</div>;
+  const newItem=()=>({key:Math.random().toString(36).slice(2,9),name:"",brand:"",qty:"1",cost:"",markup:String(PA_MARKUP),taskId:vts[0]?.id||"",newTask:"",isImport:false,cur:"USD",amount:"",rate:"",taxPct:"",extra:""});
+  const toEdit=a=>({id:a?.id||null,note:a?.note||"",validDays:String(a?.validDays||3),items:(a?.items?.length?a.items:[null]).map(it=>it?{key:it.key,name:it.name||"",brand:it.brand||"",qty:String(it.qty??1),cost:it.cost!=null&&it.cost!==""?String(it.cost).replace(".",","):"",markup:String(it.markup??PA_MARKUP),taskId:it.taskId||"",newTask:it.newTask?.label||"",isImport:!!it.import,cur:it.import?.cur||"USD",amount:it.import?String(it.import.amount??"").replace(".",","):"",rate:it.import?String(it.import.rate??"").replace(".",","):"",taxPct:it.import?String(it.import.taxPct??""):"",extra:it.import?String(it.import.extra??"").replace(".",","):""}:newItem())});
+  const outItem=e=>{
+    const qty=Math.max(1,paNumIn(e.qty)||1);
+    const base={key:e.key,name:e.name.trim(),brand:e.brand.trim(),qty};
+    if(e.taskId&&e.taskId!=="__new") base.taskId=e.taskId; else base.newTask={label:e.newTask.trim()||"Peças aprovadas"};
+    if(e.isImport){ base.import={cur:e.cur,amount:paNumIn(e.amount),rate:paNumIn(e.rate),taxPct:paNumIn(e.taxPct),extra:paNumIn(e.extra)}; }
+    else { base.cost=e.cost===""?null:paNumIn(e.cost); base.markup=e.markup===""?PA_MARKUP:paNumIn(e.markup); }
+    const c=paCalc({...base,cost:base.cost||0}); base.price=c.price; base.total=c.total;
+    return base;
+  };
+  const setIt=(k,patch)=>setEdit(p=>({...p,items:p.items.map(i=>i.key===k?{...i,...patch}:i)}));
+  const model=vehTitle(vehicle)||vehicle.plate||"Veículo";
+  const save=async(send)=>{
+    setErr("");
+    const items=edit.items.filter(e=>e.name.trim()).map(outItem);
+    if(!items.length){ setErr("Inclua pelo menos uma peça com nome."); return; }
+    if(send){
+      if(!vehicle.clientId){ setErr("O veículo não tem cliente cadastrado."); return; }
+      const bad=items.find(i=>!(i.total>0)); if(bad){ setErr(`Falta o valor de "${bad.name}".`); return; }
+    }
+    if(send&&!window.confirm(`Enviar ${items.length} ${items.length===1?"item":"itens"} (${fmtBRL(items.reduce((s,i)=>s+i.total,0))}) para o cliente aprovar? Depois de enviada, a lista não pode ser alterada (só cancelada).`)) return;
+    setBusy(true);
+    try{
+      const a=await db.savePartsApproval({id:edit.id,vehicleId:vehicle.id,clientId:vehicle.clientId||null,division,status:send?"sent":"draft",items,note:edit.note.trim(),validDays:Math.max(1,Math.round(paNumIn(edit.validDays)||3)),createdBy:_curRole||""});
+      paUpsert(a);
+      if(send){
+        db.sendPushToClient(vehicle.clientId,`Aprovação de peças — ${model}`,`${items.length} ${items.length===1?"peça aguarda":"peças aguardam"} sua aprovação.`,"/?portal=cliente").catch(()=>{});
+        setSentNow(a); setEdit(null);
+      } else {
+        if(isChief(_curRole)) db.sendPushToAdmins(`Peças para aprovação — ${model}`,`Lista com ${items.length} ${items.length===1?"item":"itens"} montada pelo chefe. Complete os valores e envie.`,"/?",true).catch(()=>{});
+        setEdit(null);
+      }
+    }catch(e){ setErr(errMsg(e)||"Erro ao salvar"); }
+    setBusy(false);
+  };
+  const delDraft=async()=>{ if(!edit.id){ setEdit(null); return; } if(!window.confirm("Apagar este rascunho?")) return; setBusy(true); try{ await db.deletePartsApproval(edit.id); paRemove(edit.id); setEdit(null);}catch(e){ setErr(errMsg(e)); } setBusy(false); };
+  const cancelSent=async a=>{ if(!window.confirm("Cancelar esta lista? O cliente não poderá mais responder.")) return; setBusy(true); try{ await db.cancelPartsApproval(a.id); paRemove(a.id); setViewId(null);}catch(e){ setErr(errMsg(e)); } setBusy(false); };
+  const view=mine.find(a=>a.id===viewId);
+  const btn=(c,fill)=>({padding:"10px 14px",borderRadius:10,border:fill?"none":`1px solid ${c}66`,background:fill?c:"none",color:fill?B.black:c,fontSize:12.5,fontWeight:600,cursor:"pointer",opacity:busy?.6:1});
+  const editTotal=edit?edit.items.filter(e=>e.name.trim()).map(outItem).reduce((s,i)=>s+i.total,0):0;
+
+  let body;
+  if(sentNow){
+    body=<div style={{padding:"18px 2px"}}>
+      <div style={{fontSize:14,fontWeight:600,color:B.green,display:"flex",alignItems:"center",gap:6}}><Ic n="done"/>Lista enviada</div>
+      <div style={{fontSize:12,color:B.gray400,marginTop:6,lineHeight:1.5}}>O cliente recebeu um aviso no portal (se ativou as notificações). Envie também pelo WhatsApp. Válida até {paFmtDT(sentNow.validUntil)}.</div>
+      <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
+        <button onClick={()=>paOpenWhats(sentNow,vehicle,client)} style={{...btn(B.wa||B.green,true),color:B.white}}><Ic n="chat"/> WhatsApp</button>
+        <button onClick={()=>{try{navigator.clipboard.writeText(paWhatsText(sentNow,vehicle,client));alert("Mensagem copiada");}catch{}}} style={btn(B.gray300)}>Copiar mensagem</button>
+        <button onClick={()=>setSentNow(null)} style={btn(B.gray300)}>Voltar</button>
+      </div>
+    </div>;
+  } else if(edit){
+    body=<>
+      {edit.items.map((e,ix)=>{const o=outItem(e);return <div key={e.key} style={{border:`1px solid ${B.gray700}`,borderRadius:10,padding:10,marginTop:8,background:B.gray900}}>
+        <div style={{display:"flex",gap:6}}>
+          <input value={e.name} onChange={x=>setIt(e.key,{name:x.target.value})} placeholder={`Peça ${ix+1}`} style={{...inp,flex:2}}/>
+          <input value={e.brand} onChange={x=>setIt(e.key,{brand:x.target.value})} placeholder="Marca" style={{...inp,flex:1}}/>
+          <input value={e.qty} onChange={x=>setIt(e.key,{qty:x.target.value.replace(/[^\d,.]/g,"")})} inputMode="decimal" placeholder="Qtd" style={{...inp,width:52,textAlign:"center"}}/>
+          <button onClick={()=>setEdit(p=>({...p,items:p.items.filter(i=>i.key!==e.key)}))} aria-label="Remover" style={{background:"none",border:"none",color:B.gray500,cursor:"pointer",padding:"0 2px"}}><Ic n="x"/></button>
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:6,alignItems:"center"}}>
+          <select value={e.taskId||"__new"} onChange={x=>setIt(e.key,{taskId:x.target.value})} style={{...inp,flex:1}}>
+            {vts.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}
+            <option value="__new">Nova tarefa…</option>
+          </select>
+          {(!e.taskId||e.taskId==="__new")&&<input value={e.newTask} onChange={x=>setIt(e.key,{newTask:x.target.value})} placeholder="Nome da nova tarefa" style={{...inp,flex:1}}/>}
+        </div>
+        {canValues&&<>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:B.gray400,marginTop:8,cursor:"pointer"}}><input type="checkbox" checked={e.isImport} onChange={x=>setIt(e.key,{isImport:x.target.checked})}/>Peça importada</label>
+          {!e.isImport&&<div style={{display:"flex",gap:6,marginTop:6,alignItems:"flex-end"}}>
+            <div style={{flex:1}}><div style={lbl}>Custo unitário</div><input value={e.cost} onChange={x=>setIt(e.key,{cost:x.target.value.replace(/[^\d,.]/g,"")})} inputMode="decimal" placeholder="0,00" style={{...inp,width:"100%"}}/></div>
+            <div style={{width:74}}><div style={lbl}>Margem %</div><input value={e.markup} onChange={x=>setIt(e.key,{markup:x.target.value.replace(/[^\d,.]/g,"")})} inputMode="decimal" style={{...inp,width:"100%",textAlign:"center"}}/></div>
+          </div>}
+          {e.isImport&&<div style={{display:"grid",gridTemplateColumns:"70px 1fr 1fr",gap:6,marginTop:6}}>
+            <div><div style={lbl}>Moeda</div><select value={e.cur} onChange={x=>setIt(e.key,{cur:x.target.value})} style={{...inp,width:"100%"}}>{IMPORT_CURS.map(c=><option key={c}>{c}</option>)}</select></div>
+            <div><div style={lbl}>Valor total ({e.cur})</div><input value={e.amount} onChange={x=>setIt(e.key,{amount:x.target.value.replace(/[^\d,.]/g,"")})} inputMode="decimal" style={{...inp,width:"100%"}}/></div>
+            <div><div style={lbl}>Câmbio</div><input value={e.rate} onChange={x=>setIt(e.key,{rate:x.target.value.replace(/[^\d,.]/g,"")})} inputMode="decimal" style={{...inp,width:"100%"}}/></div>
+            <div/>
+            <div><div style={lbl}>Impostos %</div><input value={e.taxPct} onChange={x=>setIt(e.key,{taxPct:x.target.value.replace(/[^\d,.]/g,"")})} inputMode="decimal" style={{...inp,width:"100%"}}/></div>
+            <div><div style={lbl}>Frete e taxas R$</div><input value={e.extra} onChange={x=>setIt(e.key,{extra:x.target.value.replace(/[^\d,.]/g,"")})} inputMode="decimal" style={{...inp,width:"100%"}}/></div>
+          </div>}
+          <div style={{fontSize:11,color:B.gray400,marginTop:7,textAlign:"right"}}>Cliente vê: {o.qty>1&&!e.isImport?<>{o.qty} × {fmtBRL(o.price)} = </>:null}<b style={{color:B.white,fontWeight:600}}>{fmtBRL(o.total)}</b></div>
+        </>}
+      </div>;})}
+      <button onClick={()=>setEdit(p=>({...p,items:[...p.items,newItem()]}))} style={{...btn(B.amber),marginTop:10,width:"100%"}}>+ Peça</button>
+      {sec("Envio")}
+      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <div style={{width:110}}><div style={lbl}>Validade (dias)</div><input value={edit.validDays} onChange={x=>setEdit(p=>({...p,validDays:x.target.value.replace(/\D/g,"")}))} inputMode="numeric" style={{...inp,width:"100%",textAlign:"center"}}/></div>
+        <div style={{flex:1}}><div style={lbl}>Observação para o cliente (opcional)</div><input value={edit.note} onChange={x=>setEdit(p=>({...p,note:x.target.value}))} style={{...inp,width:"100%"}}/></div>
+      </div>
+      {canValues&&<div style={{display:"flex",justifyContent:"space-between",marginTop:14,fontSize:13}}><span style={{color:B.gray400}}>Total da lista</span><b style={{fontWeight:600}}>{fmtBRL(editTotal)}</b></div>}
+      {!canValues&&<div style={{fontSize:11,color:B.gray500,marginTop:12,lineHeight:1.5}}>O administrativo completa os valores e envia ao cliente.</div>}
+      <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
+        {canValues&&<button disabled={busy} onClick={()=>save(true)} style={{...btn(B.amber,true),flex:2}}>Enviar ao cliente</button>}
+        <button disabled={busy} onClick={()=>save(false)} style={{...btn(B.gray300),flex:1}}>Salvar rascunho</button>
+        <button disabled={busy} onClick={delDraft} style={btn(B.red)}>{edit.id?"Apagar":"Descartar"}</button>
+      </div>
+    </>;
+  } else if(view){
+    const st=paStatus(view); const tot=view.items.reduce((s,i)=>s+(Number(i.total)||0),0);
+    body=<>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginTop:12}}><span style={{color:st.c,fontSize:13,fontWeight:600}}>{st.label}</span><span style={{flex:1}}/>{canValues&&<span style={{fontSize:12,color:B.gray400}}>{view.status==="decided"?<>Aprovado <b style={{color:B.white,fontWeight:600}}>{fmtBRL(view.totalApproved||0)}</b> de {fmtBRL(tot)}</>:fmtBRL(tot)}</span>}</div>
+      <div style={{fontSize:11,color:B.gray500,marginTop:6,lineHeight:1.6}}>
+        Enviada em {paFmtDT(view.sentAt)}{view.validUntil?` · válida até ${paFmtDT(view.validUntil)}`:""}
+        {view.decidedAt&&<><br/>Decisão do cliente pelo portal (celular + PIN) em {paFmtDT(view.decidedAt)}{view.decidedMeta?.ip?` · IP ${String(view.decidedMeta.ip).split(",")[0]}`:""}</>}
+        {view.note&&<><br/>Observação: {view.note}</>}
+      </div>
+      {view.items.map(i=>{const dc=i.decision==="approved"?B.green:i.decision==="rejected"?B.red:B.gray500;const tk=vts.find(t=>t.id===i.taskId);return <div key={i.key} style={{borderBottom:`1px solid ${B.gray800}`,padding:"9px 2px",display:"flex",gap:10,alignItems:"flex-start"}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12.5}}>{i.brand?<span style={{color:B.amber,fontSize:"82%",fontWeight:700,textTransform:"uppercase",marginRight:4}}>{i.brand}</span>:null}{i.name} <span style={{color:B.gray500}}>× {i.qty}</span></div>
+          <div style={{fontSize:10.5,color:B.gray500,marginTop:2}}>{i.import?"Importada · ":""}{tk?tk.label:(i.newTask?.label||"Tarefa nova")}{canValues&&!i.import&&i.cost!=null?` · custo ${fmtBRL(i.cost)} + ${i.markup}%`:""}</div>
+          {i.decidedAt&&<div style={{fontSize:10.5,color:B.gray500,marginTop:2}}>{i.decision==="approved"?"Aprovado":"Recusado"} em {paFmtDT(i.decidedAt)}</div>}
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          {canValues&&<div style={{fontSize:12.5}}>{fmtBRL(i.total)}</div>}
+          <div style={{fontSize:10.5,color:dc,marginTop:2}}>{i.decision==="approved"?"Aprovado":i.decision==="rejected"?"Recusado":"Pendente"}</div>
+        </div>
+      </div>;})}
+      {view.status==="decided"&&<div style={{fontSize:11,color:B.gray500,marginTop:10,lineHeight:1.5}}>Os aprovados entraram nos materiais das tarefas e em Compras como "Aprovado" (falta o link para comprar). Peça importada entra em Peças importadas.</div>}
+      <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
+        {view.status==="sent"&&canValues&&<button onClick={()=>paOpenWhats(view,vehicle,client)} style={{...btn(B.wa||B.green,true),color:B.white}}><Ic n="chat"/> WhatsApp</button>}
+        {view.status==="sent"&&canValues&&<button disabled={busy} onClick={()=>cancelSent(view)} style={btn(B.red)}>Cancelar lista</button>}
+        <button onClick={()=>setViewId(null)} style={btn(B.gray300)}>Voltar</button>
+      </div>
+    </>;
+  } else {
+    body=<>
+      <div style={{fontSize:11.5,color:B.gray400,marginTop:12,lineHeight:1.55}}>Monte a lista de peças; o cliente aprova ou recusa cada item no portal e vê só o nome, a quantidade e o valor final.</div>
+      <button onClick={()=>{setErr("");setEdit(toEdit(null));}} style={{...btn(B.amber,true),marginTop:12,width:"100%"}}>Nova lista de peças</button>
+      {mine.length>0&&sec("Listas deste carro")}
+      {mine.map(a=>{const st=paStatus(a);const tot=a.items.reduce((s,i)=>s+(Number(i.total)||0),0);return <button key={a.id} onClick={()=>{setErr("");if(a.status==="draft"){ if(isChief(_curRole)&&a.createdBy&&!isChief(a.createdBy)) {setViewId(a.id);return;} setEdit(toEdit(a)); } else setViewId(a.id);}} style={{display:"flex",width:"100%",textAlign:"left",gap:10,alignItems:"center",background:B.gray900,border:`1px solid ${B.gray700}`,borderRadius:10,padding:"10px 12px",marginTop:6,cursor:"pointer",color:B.white}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12.5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.items.map(i=>i.name).join(", ")||"Sem itens"}</div>
+          <div style={{fontSize:10.5,color:B.gray500,marginTop:2}}>{a.items.length} {a.items.length===1?"item":"itens"} · {paFmtDT(a.sentAt||a.createdAt)}{a.status==="draft"&&a.createdBy&&isChief(a.createdBy)?" · montada pelo chefe":""}</div>
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          <div style={{fontSize:11,color:st.c}}>{st.label}</div>
+          {canValues&&tot>0&&<div style={{fontSize:11,color:B.gray400,marginTop:2}}>{fmtBRL(a.status==="decided"?(a.totalApproved||0):tot)}</div>}
+        </div>
+      </button>;})}
+    </>;
+  }
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:300,background:B.black,display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+    <div style={{padding:"calc(36px + env(safe-area-inset-top)) 16px 12px",borderBottom:`1px solid ${B.gray700}`,background:B.gray900}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:10,fontWeight:600,color:B.amber,letterSpacing:1.2}}>Aprovação de peças{isFD?" · Finishing":""}</div>
+          <div style={{fontSize:16,fontWeight:600,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><VehName v={vehicle} stack/><PlateTag v={vehicle} fs={10.5}/></div>
+        </div>
+        <button onClick={onClose} aria-label="Fechar" style={{width:40,height:40,borderRadius:99,border:`1px solid ${B.gray700}`,background:B.gray800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IX s={16} c={B.white}/></button>
+      </div>
+    </div>
+    <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"4px 16px calc(40px + env(safe-area-inset-bottom))"}}>
+      <div style={{maxWidth:620,margin:"0 auto"}}>
+        {err&&<div style={{marginTop:12,fontSize:12,color:B.red}}>{err}</div>}
+        {body}
+      </div>
+    </div>
+  </div>,document.body);
+}
+
+// Portal do cliente: aprovar ou recusar cada peça (só nome, quantidade e valor final)
+function PortalPartsModal({a,vehicle,onDecide,onClose}){
+  const [dec,setDec]=useState(()=>Object.fromEntries((a.items||[]).filter(i=>i.decision).map(i=>[i.key,i.decision])));
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+  const open=a.status==="sent";
+  const expired=open&&a.validUntil&&new Date(a.validUntil)<new Date();
+  const items=a.items||[];
+  const tot=items.reduce((s,i)=>s+(Number(i.total)||0),0);
+  const apTot=items.filter(i=>dec[i.key]==="approved").reduce((s,i)=>s+(Number(i.total)||0),0);
+  const allSet=items.every(i=>dec[i.key]);
+  const confirm=async()=>{
+    if(!allSet){ setErr("Aprove ou recuse cada item."); return; }
+    const nAp=items.filter(i=>dec[i.key]==="approved").length;
+    if(!window.confirm(`Confirmar: ${nAp} ${nAp===1?"item aprovado":"itens aprovados"} (${fmtBRL(apTot)}) e ${items.length-nAp} ${items.length-nAp===1?"recusado":"recusados"}? Depois de confirmada, a decisão fica registrada e não pode ser alterada.`)) return;
+    setBusy(true); setErr("");
+    try{ await onDecide(a,dec); onClose(); }catch(e){ setErr(errMsg(e)||"Erro ao registrar"); }
+    setBusy(false);
+  };
+  const chip=(k,v,label,c)=>{const on=dec[k]===v;return <button disabled={!open||expired||busy} onClick={()=>setDec(p=>({...p,[k]:v}))} style={{flex:1,padding:"8px 0",borderRadius:8,border:`1px solid ${on?c:B.gray700}`,background:on?`${c}22`:"none",color:on?c:B.gray400,fontSize:12,fontWeight:600,cursor:open&&!expired?"pointer":"default"}}>{label}</button>;};
+  return createPortal(<div style={{position:"fixed",inset:0,zIndex:400,background:B.black,display:"flex",flexDirection:"column",fontFamily:"'Inter','Segoe UI',sans-serif",color:B.white}}>
+    <div style={{padding:"calc(36px + env(safe-area-inset-top)) 18px 12px",borderBottom:`1px solid ${B.gray800}`}}>
+      <div style={{maxWidth:620,margin:"0 auto",display:"flex",alignItems:"center",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:10,fontWeight:600,color:B.amber,letterSpacing:1.2}}>Aprovação de peças</div>
+          <div style={{fontSize:16,fontWeight:600,marginTop:2}}>{vehicle?<VehName v={vehicle} stack/>:"Veículo"}</div>
+        </div>
+        <button onClick={onClose} aria-label="Fechar" style={{width:40,height:40,borderRadius:99,border:`1px solid ${B.gray700}`,background:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:B.white}}><Ic n="x" s={16}/></button>
+      </div>
+    </div>
+    <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"8px 18px calc(40px + env(safe-area-inset-bottom))"}}>
+      <div style={{maxWidth:620,margin:"0 auto"}}>
+        <div style={{fontSize:12,color:B.gray400,lineHeight:1.55,marginTop:8}}>
+          {open&&!expired&&<>Para continuar o serviço, precisamos da sua aprovação para as peças abaixo. Aprove ou recuse cada uma{a.validUntil?` até ${paFmtDT(a.validUntil)}`:""}.</>}
+          {expired&&<span style={{color:B.red}}>O prazo desta lista venceu em {paFmtDT(a.validUntil)}. Fale com a oficina para receber valores atualizados.</span>}
+          {a.status==="decided"&&<>Decisão registrada em {paFmtDT(a.decidedAt)}.</>}
+        </div>
+        {a.note&&<div style={{fontSize:12,color:B.gray300,marginTop:8,lineHeight:1.5}}>{a.note}</div>}
+        {items.map(i=><div key={i.key} style={{borderBottom:`1px solid ${B.gray800}`,padding:"12px 0"}}>
+          <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
+            <div style={{flex:1,minWidth:0,fontSize:13}}>{i.brand?<span style={{color:B.amber,fontSize:"82%",fontWeight:700,textTransform:"uppercase",marginRight:4}}>{i.brand}</span>:null}{i.name}{Number(i.qty)>1&&<span style={{color:B.gray500}}> × {i.qty}</span>}</div>
+            <div style={{fontSize:13,fontWeight:600,flexShrink:0}}>{fmtBRL(i.total)}</div>
+          </div>
+          {open?<div style={{display:"flex",gap:8,marginTop:8}}>{chip(i.key,"approved","Aprovar",B.green)}{chip(i.key,"rejected","Recusar",B.red)}</div>
+            :<div style={{fontSize:11,color:i.decision==="approved"?B.green:B.red,marginTop:4}}>{i.decision==="approved"?"Aprovado":"Recusado"}{i.decidedAt?` em ${paFmtDT(i.decidedAt)}`:""}</div>}
+        </div>)}
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:14,fontSize:13}}><span style={{color:B.gray400}}>{open?"Total aprovado":"Total aprovado"}</span><b style={{fontWeight:600}}>{fmtBRL(open?apTot:(a.totalApproved??apTot))}<span style={{color:B.gray500,fontWeight:400}}> de {fmtBRL(tot)}</span></b></div>
+        {open&&!expired&&<div style={{display:"flex",gap:8,marginTop:10}}>
+          <button disabled={busy} onClick={()=>setDec(Object.fromEntries(items.map(i=>[i.key,"approved"])))} style={{flex:1,padding:"9px 0",borderRadius:8,border:`1px solid ${B.gray700}`,background:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>Aprovar todos</button>
+          <button disabled={busy} onClick={()=>setDec(Object.fromEntries(items.map(i=>[i.key,"rejected"])))} style={{flex:1,padding:"9px 0",borderRadius:8,border:`1px solid ${B.gray700}`,background:"none",color:B.gray300,fontSize:12,cursor:"pointer"}}>Recusar todos</button>
+        </div>}
+        {err&&<div style={{fontSize:12,color:B.red,marginTop:10}}>{err}</div>}
+        {open&&!expired&&<button disabled={busy||!allSet} onClick={confirm} style={{width:"100%",marginTop:14,padding:"13px 0",borderRadius:12,border:"none",background:allSet?B.amber:B.gray700,color:allSet?B.black:B.gray400,fontSize:14,fontWeight:600,cursor:allSet?"pointer":"default"}}>{busy?"Registrando…":"Confirmar decisão"}</button>}
+        <div style={{fontSize:10.5,color:B.gray500,marginTop:12,lineHeight:1.5}}>Prazos e valores podem variar conforme disponibilidade das peças.</div>
+      </div>
+    </div>
+  </div>,document.body);
+}
+
 // ─── Cobrança parcial: escolher tarefas/itens da OS e gerar PDF (só owner/admin) ───
 // Itens são identificados por chave estável (tarefa + nome/marca da peça; despesa pelos seus dados), não por posição,
 // para que a trava de "já cobrado" (tabela partial_charges) não passe para o item errado se a lista mudar.
@@ -18505,6 +18823,16 @@ function ClientPortalRoot() {
   const quoteModel=qid=>{const q=data.quotes.find(x=>x.id===qid);return q?.vehicleId?vehTitle(data.vehicles.find(v=>v.id===q.vehicleId)):q?.tempModel;};
   return <div key={theme} style={{...shell,display:"flex",flexDirection:"column"}}><ErrorBoundary><ClientPortal client={cli} company={data.company} vehicles={data.vehicles} tasks={data.tasks.filter(t=>!isInternalTask(t))} employees={data.employees} payments={data.payments} osHistory={data.osHistory} defaultRate={data.defaultRate} onLogout={doLogout} appointments={data.appointments} quotes={data.quotes} theme={theme} toggleTheme={toggleTheme} themePref={themePref} clientCredits={data.clientCredits} clients={[cli]} purchaseOrders={data.purchaseOrders} stock={data.stock}
     onVehiclePhoto={async(vid,url)=>{const vv=data.vehicles.find(x=>x.id===vid);if(!vv) return; setData(d=>({...d,vehicles:d.vehicles.map(x=>x.id===vid?{...x,photo:url}:x)})); try{ await db.updateVehicle(vid,{photo:url}); }catch(e){ errToast(e); return; } db.sendPushToAdmins(`Foto de capa — ${vv.model||vv.plate||"Veículo"}`,`${cli.name} atualizou a foto do veículo`,"/?").catch(()=>{});}}
+    partsApprovals={data.partsApprovals||[]}
+    onDecideParts={async(a,dec)=>{
+      const r=await db.portalDecideParts(token,a.id,dec);
+      const v=data.vehicles.find(x=>x.id===a.vehicleId); const model=vehTitle(v)||v?.plate||"Veículo";
+      const nAp=Number(r?.approved||0), nRe=Number(r?.rejected||0);
+      // sem valores: o push chega também aos chefes
+      db.sendPushToAdmins(`Peças: decisão do cliente — ${model}`,`${cli.name||"Cliente"}: ${nAp} ${nAp===1?"aprovada":"aprovadas"}, ${nRe} ${nRe===1?"recusada":"recusadas"}.`,"/?").catch(()=>{});
+      toast_(nAp>0?"Decisão registrada. Obrigado!":"Decisão registrada");
+      try{ const d=await db.loadClientPortal(token); if(d) setData(d); }catch{}
+    }}
     onApproveQuote={async(qid,items)=>{try{await db.updateQuote(qid,{status:"approved",approvedAt:new Date().toISOString(),approvedItems:items});setQuote(qid,{status:"approved",approvedItems:items});toast_("Orçamento aprovado");pushQuoteDecision(data.quotes.find(q=>q.id===qid),true,quoteModel(qid),cli.name);}catch(e){errToast(e);}}}
     onRejectQuote={async(qid)=>{try{await db.updateQuote(qid,{status:"rejected",rejectedAt:new Date().toISOString()});setQuote(qid,{status:"rejected"});toast_("Orçamento recusado");pushQuoteDecision(data.quotes.find(q=>q.id===qid),false,quoteModel(qid),cli.name);}catch(e){errToast(e);}}}/></ErrorBoundary>
     {toast&&<Toast msg={toast} onDone={()=>setTst(null)}/>}</div>;
@@ -18695,6 +19023,7 @@ function MainApp() {
 
   // ── Admin push registration — offer when admin logs in ──
   const [adminPushStatus,setAdminPushStatus]=useState(null);
+  _curRole=adminRole||null;
   useEffect(()=>{ db.setAdminSession(!!adminRole); },[adminRole]);
   useEffect(()=>{
     if(!adminRole||!VAPID_PUBLIC_KEY) return;
